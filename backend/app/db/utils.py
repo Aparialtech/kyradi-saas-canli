@@ -2,7 +2,7 @@
 
 import logging
 
-from sqlalchemy import select, text
+from sqlalchemy import and_, select, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from sqlalchemy.exc import ProgrammingError
 
