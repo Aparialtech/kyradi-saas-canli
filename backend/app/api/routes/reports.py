@@ -5,7 +5,8 @@ from datetime import datetime, time, timedelta, timezone
 import asyncpg
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import ProgrammingError, func, select
+from sqlalchemy import func, select
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.session import get_session
