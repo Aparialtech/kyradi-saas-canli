@@ -13,10 +13,13 @@ export const http = axios.create({
 });
 
 http.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
   const token = tokenStorage.get();
   if (token) {
-    config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (env.TENANT_ID) {
+    config.headers["X-Tenant-ID"] = env.TENANT_ID;
   }
   return config;
 });

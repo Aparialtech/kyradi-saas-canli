@@ -1,4 +1,5 @@
 const DEFAULT_API_URL = "https://kyradi-saas-canli-production.up.railway.app";
+const DEFAULT_TENANT_ID = "9d876ed2-1b18-4d14-9795-aef482b06101";
 
 const normalize = (url: string | undefined): string => {
   if (!url || !url.trim()) return DEFAULT_API_URL;
@@ -12,6 +13,7 @@ const parseBoolean = (value: string | undefined, fallback: boolean) => {
 
 export const env = {
   API_URL: normalize(import.meta.env.VITE_API_URL),
+  TENANT_ID: (import.meta.env.VITE_TENANT_ID || DEFAULT_TENANT_ID).trim(),
   ENABLE_INTERNAL_RESERVATIONS: parseBoolean(import.meta.env.VITE_ENABLE_INTERNAL_RESERVATIONS, false),
   PUBLIC_CDN_BASE: import.meta.env.VITE_PUBLIC_CDN_BASE ?? "",
-};
+} as const;
