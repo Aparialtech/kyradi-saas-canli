@@ -37,9 +37,12 @@ def _coerce_plan_limits(raw: object | None) -> TenantPlanLimits:
     if raw is None:
         return TenantPlanLimits(
             max_locations=0,
-            max_storages=0,
             max_lockers=0,
-            max_reservations_per_day=0,
+            max_active_reservations=0,
+            max_users=0,
+            max_self_service_daily=0,
+            max_reservations_total=0,
+            max_report_exports_daily=0,
             max_storage_mb=0,
         )
 
@@ -62,9 +65,12 @@ def _coerce_plan_limits(raw: object | None) -> TenantPlanLimits:
 
     return TenantPlanLimits(
         max_locations=int(data.get("max_locations") or 0),
-        max_storages=int(data.get("max_storages") or 0),
         max_lockers=int(data.get("max_lockers") or 0),
-        max_reservations_per_day=int(data.get("max_reservations_per_day") or 0),
+        max_active_reservations=int(data.get("max_active_reservations") or 0),
+        max_users=int(data.get("max_users") or 0),
+        max_self_service_daily=int(data.get("max_self_service_daily") or 0),
+        max_reservations_total=int(data.get("max_reservations_total") or 0),
+        max_report_exports_daily=int(data.get("max_report_exports_daily") or 0),
         max_storage_mb=int(data.get("max_storage_mb") or 0),
     )
 
@@ -252,7 +258,7 @@ async def partner_summary(
         total_reservations=int(total_reservations or 0),
         report_exports_today=exports_today,
         storage_used_mb=storage_used_mb,
-        plan_limits=limits,
+        plan_limits=_coerce_plan_limits(limits),
         warnings=warnings,
         report_exports_reset_at=report_reset_at,
         report_exports_remaining=report_remaining,

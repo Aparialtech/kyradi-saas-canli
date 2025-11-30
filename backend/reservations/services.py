@@ -34,14 +34,44 @@ async def get_widget_config(session: AsyncSession, tenant_id: str, public_key: s
 
 
 def validate_origin(config: WidgetConfig, origin: str | None) -> str:
-    if not origin:
-        raise WidgetTokenError("İstek kaynağı doğrulanamadı")
+    """Origin doğrulama - demo tenant için gevşek, diğerleri için sıkı."""
+    if origin is None:
+        return None  # backend->backend çağrılarında engelleme
+
     parsed = urlparse(origin)
-    normalized = f"{parsed.scheme}://{parsed.netloc}"
-    allowed = {item.rstrip("/") for item in config.allowed_origins}
-    if normalized not in allowed:
-        raise WidgetTokenError("Bu domain için yetki bulunmuyor")
-    return normalized
+    normalized = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+
+    allowed_origins = getattr(config, "allowed_origins", None) or []
+    # allowed_origins string ise json veya virgül ayrımlı olabilir
+    if isinstance(allowed_origins, str):
+        try:
+            allowed_origins = json.loads(allowed_origins)
+        except Exception:
+            allowed_origins = [o.strip() for o in allowed_origins.split(",") if o.strip()]
+
+    normalized_allowed = {o.rstrip("/") for o in allowed_origins if o}
+
+    tenant = getattr(config, "tenant", None)
+    tenant_slug = getattr(tenant, "slug", None)
+    is_demo = getattr(tenant, "is_demo", False)
+
+    # Demo tenant için gevşek kabul
+    if tenant_slug == "demo-hotel" or is_demo:
+        if normalized_allowed and normalized not in normalized_allowed:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "validate_origin: demo tenant origin not in allowed list but accepted. tenant=%s origin=%s allowed=%s",
+                tenant_slug,
+                normalized,
+                normalized_allowed,
+            )
+        return normalized
+
+    if normalized_allowed and normalized in normalized_allowed:
+        return normalized
+
+    raise WidgetTokenError("Bu domain için yetki bulunmuyor")
 
 
 async def ensure_tenant_exists(session: AsyncSession, tenant_id: str) -> None:

@@ -249,6 +249,7 @@ async def _seed_demo_widget_config(session: AsyncSession, demo_tenant_id: str) -
                 widget_secret="demo-secret",
                 allowed_origins=[
                     "https://kyradi-saas-canli.vercel.app",
+                    "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
                     "http://localhost:5173",
                     "http://127.0.0.1:5173",
                 ],

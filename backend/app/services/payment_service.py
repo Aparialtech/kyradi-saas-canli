@@ -5,6 +5,8 @@ from typing import Optional
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from ..models import Payment, PaymentStatus, Reservation, Storage, Tenant
 from ..models.enums import PaymentMode, PaymentProvider
@@ -45,28 +47,49 @@ async def create_payment_for_reservation(
     
     # Get tenant payment config
     tenant = await session.get(Tenant, reservation.tenant_id)
-    tenant_metadata = tenant.metadata_ if tenant else {}
-    
-    # Override provider/mode from tenant config if available
-    provider = tenant_metadata.get("payment_provider", provider)
-    mode = tenant_metadata.get("payment_mode", mode)
-    
-    # Create payment record
-    payment = Payment(
-        tenant_id=reservation.tenant_id,
-        reservation_id=reservation.id,
-        storage_id=storage.id if storage else None,
-        provider=provider,
-        mode=mode,
-        status=PaymentStatus.PENDING.value,
-        amount_minor=reservation.amount_minor,
-        currency=reservation.currency,
-        meta={},
+    tenant_metadata = getattr(tenant, "metadata_", None)
+    if tenant_metadata is None:
+        tenant_metadata = {}
+    provider = (tenant_metadata or {}).get("payment_provider", provider)
+    mode = (tenant_metadata or {}).get("payment_mode", mode)
+
+    # Get or create payment per reservation to avoid duplicates
+    existing_payment = await session.scalar(
+        select(Payment).where(Payment.reservation_id == reservation.id)
     )
-    
-    session.add(payment)
-    await session.flush()
-    
+    if existing_payment:
+        existing_payment.provider = provider
+        existing_payment.mode = mode
+        existing_payment.amount_minor = reservation.amount_minor
+        existing_payment.currency = reservation.currency
+        existing_payment.storage_id = storage.id if storage else existing_payment.storage_id
+        await session.flush()
+        payment = existing_payment
+    else:
+        payment = Payment(
+            tenant_id=reservation.tenant_id,
+            reservation_id=reservation.id,
+            storage_id=storage.id if storage else None,
+            provider=provider,
+            mode=mode,
+            status=PaymentStatus.PENDING.value,
+            amount_minor=reservation.amount_minor,
+            currency=reservation.currency,
+            meta={},
+        )
+        session.add(payment)
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+            payment = await session.scalar(
+                select(Payment).where(Payment.reservation_id == reservation.id)
+            )
+            if payment is None:
+                raise
+        await session.refresh(payment)
+        # after commit ensure metadata updates can proceed without re-commit
+
     # If gateway demo mode, create checkout session
     if mode == PaymentMode.GATEWAY_DEMO.value and provider == PaymentProvider.MAGIC_PAY.value and create_checkout_session:
         try:
@@ -189,4 +212,3 @@ async def confirm_pos_payment(
     logger.info(f"Confirmed POS payment: payment_id={payment.id}, amount={payment.amount_minor}")
     
     return payment
-

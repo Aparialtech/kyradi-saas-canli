@@ -421,7 +421,16 @@ async def convert_widget_reservation_to_reservation(
         # tenant already fetched above, reuse it
         if tenant is None:
             tenant = await session.get(Tenant, tenant_id)
-        tenant_metadata = tenant.metadata_ if tenant else {}
+        tenant_metadata = getattr(tenant, "metadata_", None)
+        if tenant_metadata is None:
+            tenant_metadata = {}
+        if isinstance(tenant_metadata, str):
+            try:
+                import json
+
+                tenant_metadata = json.loads(tenant_metadata)
+            except Exception:
+                tenant_metadata = {}
         payment_mode = tenant_metadata.get("payment_mode", "GATEWAY_DEMO")
         
         payment = await create_payment_for_reservation(
