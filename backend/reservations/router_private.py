@@ -9,7 +9,7 @@ import asyncpg
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, select, text
-from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
@@ -25,12 +25,12 @@ config_router = APIRouter(prefix="/partners/widget-config", tags=["reservations"
 logger = logging.getLogger(__name__)
 
 DEFAULT_WIDGET_CONFIG = {
-    "widget_public_key": "",
-    "widget_secret": "",
-    "allowed_origins": [],
+    "widget_public_key": "demo-public-key",
+    "widget_secret": "demo-secret-key",
+    "allowed_origins": ["*"],
     "locale": "tr-TR",
     "theme": "light",
-    "kvkk_text": "",
+    "kvkk_text": "Bu sadece demo ortamıdır.",
     "form_defaults": {},
     "notification_preferences": {},
     "webhook_url": "",
@@ -147,7 +147,7 @@ async def get_widget_config_for_partner(
         stmt = select(WidgetConfig).where(WidgetConfig.tenant_id == tenant_id)
         config = (await session.execute(stmt)).scalar_one_or_none()
         return _as_response(config, tenant_id)
-    except (asyncpg.exceptions.UndefinedTableError, ProgrammingError) as exc:
+    except (asyncpg.exceptions.UndefinedTableError, ProgrammingError, SQLAlchemyError) as exc:
         if 'relation "widget_configs"' in str(exc):
             logger.warning("widget-config table missing, returning defaults")
             return _as_response(None, tenant_id)
@@ -196,7 +196,7 @@ async def create_or_update_widget_config(
         await session.commit()
         await session.refresh(config)
         return _as_response(config, tenant_id)
-    except (asyncpg.exceptions.UndefinedTableError, ProgrammingError) as exc:
+    except (asyncpg.exceptions.UndefinedTableError, ProgrammingError, SQLAlchemyError) as exc:
         if 'relation "widget_configs"' in str(exc):
             logger.warning("widget-config table missing on create/update, returning defaults")
             return _as_response(None, tenant_id)
