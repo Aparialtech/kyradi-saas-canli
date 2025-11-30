@@ -1,28 +1,8 @@
-const LOCAL_DEFAULT = "http://localhost:8000";
+const DEFAULT_API_URL = "https://kyradi-saas-canli-production.up.railway.app";
 
-const rawApiUrl = import.meta.env.VITE_API_URL?.trim();
-
-const resolveClientOrigin = () => {
-  if (typeof window === "undefined") {
-    return LOCAL_DEFAULT;
-  }
-  const hostname = window.location.hostname;
-  const isLocalhost =
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "[::1]" ||
-    hostname.endsWith(".local");
-  return isLocalhost ? LOCAL_DEFAULT : window.location.origin;
-};
-
-const normalizeApiUrl = () => {
-  if (!rawApiUrl || rawApiUrl === "auto") {
-    return resolveClientOrigin();
-  }
-  if (rawApiUrl.startsWith("/")) {
-    return `${resolveClientOrigin()}${rawApiUrl}`;
-  }
-  return rawApiUrl;
+const normalize = (url: string | undefined): string => {
+  if (!url || !url.trim()) return DEFAULT_API_URL;
+  return url.replace(/\/+$/, "");
 };
 
 const parseBoolean = (value: string | undefined, fallback: boolean) => {
@@ -31,7 +11,7 @@ const parseBoolean = (value: string | undefined, fallback: boolean) => {
 };
 
 export const env = {
-  API_URL: normalizeApiUrl(),
+  API_URL: normalize(import.meta.env.VITE_API_URL),
   ENABLE_INTERNAL_RESERVATIONS: parseBoolean(import.meta.env.VITE_ENABLE_INTERNAL_RESERVATIONS, false),
   PUBLIC_CDN_BASE: import.meta.env.VITE_PUBLIC_CDN_BASE ?? "",
 };
