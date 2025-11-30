@@ -3,7 +3,7 @@
 import logging
 
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from sqlalchemy.exc import ProgrammingError
 
 from ..core.config import settings
@@ -24,16 +24,28 @@ async def init_db(db_engine: AsyncEngine | None = None) -> None:
         await _ensure_ai_documents_table(conn)
         await _ensure_widget_tables(conn)
 
-    if settings.environment.lower() in {"local", "dev"}:
-        await _seed_defaults()
+    await _seed_defaults()
 
 
 async def _seed_defaults() -> None:
-    """
-    Temporary: disable seeding to avoid startup crashes
-    when certain tables (e.g., widget_configs) do not exist.
-    """
-    return
+    """Seed demo tenant and default admin users (idempotent and safe)."""
+    async with AsyncSessionMaker() as session:
+        try:
+            await _seed_demo_tenant_and_users(session)
+            await session.commit()
+        except ProgrammingError as e:
+            await session.rollback()
+            err_text = str(getattr(e, "orig", "")) or str(e)
+            if "UndefinedTable" in err_text or "does not exist" in err_text:
+                logger.warning(
+                    "Skipping seeding because required tables do not exist yet: %s",
+                    err_text,
+                )
+                return
+            raise
+        except Exception as exc:  # noqa: BLE001
+            await session.rollback()
+            logger.warning("Seeding failed (ignored): %s", exc, exc_info=True)
 
 
 async def _apply_local_ddl(conn) -> None:
@@ -153,3 +165,54 @@ async def _ensure_widget_tables(conn) -> None:
             await conn.execute(text(statement))
         except Exception:  # noqa: BLE001
             logger.debug("Skipping widget DDL statement: %s", statement.strip().splitlines()[0])
+
+
+async def _seed_demo_tenant_and_users(session: AsyncSession) -> None:
+    """Ensure demo tenant and default users exist."""
+    # Ensure tenant exists
+    tenant_stmt = select(Tenant).where(Tenant.slug == "demo-hotel")
+    tenant = (await session.execute(tenant_stmt)).scalar_one_or_none()
+    if tenant is None:
+        tenant = Tenant(
+            slug="demo-hotel",
+            name="Demo Hotel",
+            plan="standard",
+            is_active=True,
+        )
+        session.add(tenant)
+        await session.flush()
+        logger.info("Created demo tenant with slug 'demo-hotel'")
+    else:
+        logger.info("Demo tenant already exists, skipping creation")
+
+    # Partner admin user for demo tenant
+    demo_user_stmt = select(User).where(User.email == "admin@demo.com")
+    demo_user = (await session.execute(demo_user_stmt)).scalar_one_or_none()
+    if demo_user is None:
+        demo_user = User(
+            tenant_id=tenant.id,
+            email="admin@demo.com",
+            password_hash=get_password_hash("Kyradi!2025"),
+            role=UserRole.TENANT_ADMIN.value,
+            is_active=True,
+        )
+        session.add(demo_user)
+        logger.info("Created demo tenant admin user admin@demo.com")
+    else:
+        logger.info("Demo tenant admin user already exists, skipping creation")
+
+    # Platform super admin user
+    platform_admin_stmt = select(User).where(User.email == "admin@kyradi.com")
+    platform_admin = (await session.execute(platform_admin_stmt)).scalar_one_or_none()
+    if platform_admin is None:
+        platform_admin = User(
+            tenant_id=None,
+            email="admin@kyradi.com",
+            password_hash=get_password_hash("Kyradi!2025"),
+            role=UserRole.SUPER_ADMIN.value,
+            is_active=True,
+        )
+        session.add(platform_admin)
+        logger.info("Created platform super admin user admin@kyradi.com")
+    else:
+        logger.info("Platform super admin user already exists, skipping creation")
