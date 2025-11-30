@@ -216,3 +216,31 @@ async def _seed_demo_tenant_and_users(session: AsyncSession) -> None:
         logger.info("Created platform super admin user admin@kyradi.com")
     else:
         logger.info("Platform super admin user already exists, skipping creation")
+
+    # Ensure demo widget config exists (best effort)
+    try:
+        exists_row = await session.execute(text("SELECT to_regclass('public.widget_configs')"))
+        if exists_row.scalar():
+            cfg_stmt = select(WidgetConfig).where(WidgetConfig.tenant_id == tenant.id)
+            cfg = (await session.execute(cfg_stmt)).scalar_one_or_none()
+            if cfg is None:
+                cfg = WidgetConfig(
+                    tenant_id=tenant.id,
+                    widget_public_key="demo_public",
+                    widget_secret="demo_secret",
+                    allowed_origins=["*"],
+                    locale="tr-TR",
+                    theme="light",
+                    kvkk_text="",
+                    form_defaults={},
+                    notification_preferences={},
+                    webhook_url="",
+                )
+                session.add(cfg)
+                logger.info("Created demo widget config for tenant demo-hotel")
+            else:
+                logger.info("Demo widget config already exists, skipping creation")
+        else:
+            logger.warning("widget_configs table missing; skipping demo widget config seeding")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to seed demo widget config (ignored): %s", exc, exc_info=True)
