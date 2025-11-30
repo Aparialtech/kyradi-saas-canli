@@ -1,0 +1,1 @@
+"""KYRADİ backend package."""

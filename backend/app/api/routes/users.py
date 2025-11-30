@@ -1,0 +1,188 @@
+"""Tenant user management endpoints."""
+
+import logging
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ...core.config import settings
+from ...core.security import get_password_hash
+from ...db.session import get_session
+from ...dependencies import require_tenant_admin
+from ...models import User, UserRole
+from ...schemas import UserCreate, UserRead, UserUpdate
+from ...services.audit import record_audit
+from ...services.limits import ensure_user_limit
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+ALLOWED_TENANT_ROLES = {
+    UserRole.TENANT_ADMIN,
+    UserRole.HOTEL_MANAGER,
+    UserRole.STAFF,
+    UserRole.STORAGE_OPERATOR,
+    UserRole.ACCOUNTING,
+    UserRole.VIEWER,  # legacy/deprecated ama kabul edilsin
+}
+
+
+def _validate_role(role: UserRole) -> None:
+    if role not in ALLOWED_TENANT_ROLES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role for tenant user")
+
+
+@router.get("", response_model=List[UserRead])
+async def list_users(
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> List[UserRead]:
+    """List users for the current tenant."""
+    stmt = (
+        select(User)
+        .where(User.tenant_id == current_user.tenant_id)
+        .order_by(User.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    users = result.scalars().all()
+    return [UserRead.model_validate(user) for user in users]
+
+
+@router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    payload: UserCreate,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> UserRead:
+    """Create a new user under the tenant."""
+    _validate_role(payload.role)
+    if payload.is_active:
+        try:
+            await ensure_user_limit(session, current_user.tenant_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    existing = await session.execute(select(User).where(User.email == payload.email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+
+    user = User(
+        tenant_id=current_user.tenant_id,
+        email=payload.email,
+        password_hash=get_password_hash(payload.password),
+        role=payload.role.value,
+        is_active=payload.is_active,
+    )
+    session.add(user)
+    await session.flush()
+
+    # Log password in development mode
+    is_development = settings.environment.lower() in {"local", "dev", "development"}
+    if is_development:
+        logger.info(f"[USER CREATE] Email: {payload.email}")
+        logger.info(f"[USER CREATE] Password: {payload.password}")
+        logger.info(f"[USER CREATE] Role: {payload.role.value}")
+
+    await record_audit(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        action="tenant.user.create",
+        entity="users",
+        entity_id=user.id,
+        meta={"email": user.email, "role": user.role},
+    )
+
+    await session.commit()
+    await session.refresh(user)
+    return UserRead.model_validate(user)
+
+
+@router.patch("/{user_id}", response_model=UserRead)
+async def update_user(
+    user_id: str,
+    payload: UserUpdate,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> UserRead:
+    """Update tenant user attributes."""
+    user = (
+        await session.execute(
+            select(User).where(User.id == user_id, User.tenant_id == current_user.tenant_id)
+        )
+    ).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    if "role" in update_data and update_data["role"] is not None:
+        _validate_role(update_data["role"])
+        update_data["role"] = update_data["role"].value
+
+    reactivating = bool(update_data.get("is_active")) and not user.is_active
+    if reactivating:
+        try:
+            await ensure_user_limit(session, current_user.tenant_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    if "password" in update_data and update_data["password"]:
+        new_password = update_data.pop("password")
+        update_data["password_hash"] = get_password_hash(new_password)
+        # Log password in development mode
+        is_development = settings.environment.lower() in {"local", "dev", "development"}
+        if is_development:
+            logger.info(f"[USER PASSWORD UPDATE] Email: {user.email}")
+            logger.info(f"[USER PASSWORD UPDATE] New Password: {new_password}")
+    elif "password" in update_data:
+        update_data.pop("password")
+
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    await record_audit(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        action="tenant.user.update",
+        entity="users",
+        entity_id=user.id,
+        meta=payload.model_dump(exclude_unset=True, exclude={"password"}),
+    )
+
+    await session.commit()
+    await session.refresh(user)
+    return UserRead.model_validate(user)
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def deactivate_user(
+    user_id: str,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Deactivate a user instead of hard delete."""
+    user = (
+        await session.execute(
+            select(User).where(User.id == user_id, User.tenant_id == current_user.tenant_id)
+        )
+    ).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user.is_active = False
+
+    await record_audit(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        action="tenant.user.deactivate",
+        entity="users",
+        entity_id=user.id,
+    )
+
+    await session.commit()

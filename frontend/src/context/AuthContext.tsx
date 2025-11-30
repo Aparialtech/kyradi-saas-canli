@@ -1,0 +1,116 @@
+import type { PropsWithChildren } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useNavigate } from "react-router-dom";
+
+import { authService } from "../services/auth";
+import { tokenStorage } from "../lib/tokenStorage";
+import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
+
+interface AuthContextValue {
+  user: AuthUser | null;
+  token: string | null;
+  isLoading: boolean;
+  login: (payload: LoginPayload) => Promise<AuthUser>;
+  logout: () => void;
+  hasRole: (roles: UserRole | UserRole[]) => boolean;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: PropsWithChildren) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(tokenStorage.get());
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const initialize = async () => {
+      const storedToken = tokenStorage.get();
+      if (!storedToken) {
+        setIsLoading(false);
+        return;
+      }
+
+      setToken(storedToken);
+      try {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.error("Unable to fetch current user", error);
+        tokenStorage.clear();
+        setToken(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void initialize();
+  }, []);
+
+  const login = useCallback(async (payload: LoginPayload) => {
+    const response = await authService.login(payload);
+    
+    // If SMS verification is required, don't set token yet
+    if (response.status === "phone_verification_required") {
+      // Return a special response that the LoginPage can handle
+      throw new Error("PHONE_VERIFICATION_REQUIRED");
+    }
+    
+    if (!response.access_token) {
+      throw new Error("No access token received");
+    }
+    
+    tokenStorage.set(response.access_token);
+    setToken(response.access_token);
+
+    const currentUser = await authService.getCurrentUser();
+    setUser(currentUser);
+
+    return currentUser;
+  }, []);
+
+  const logout = useCallback(() => {
+    tokenStorage.clear();
+    setToken(null);
+    setUser(null);
+    navigate("/login");
+  }, [navigate]);
+
+  const hasRole = useCallback(
+    (roles: UserRole | UserRole[]) => {
+      if (!user) return false;
+      const roleList = Array.isArray(roles) ? roles : [roles];
+      return roleList.includes(user.role);
+    },
+    [user],
+  );
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      token,
+      isLoading,
+      login,
+      logout,
+      hasRole,
+    }),
+    [user, token, isLoading, login, logout, hasRole],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return ctx;
+}

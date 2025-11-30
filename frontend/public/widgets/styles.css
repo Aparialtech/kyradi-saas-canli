@@ -1,0 +1,165 @@
+.kyradi-reserve {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 16px;
+  padding: 16px;
+  max-width: 420px;
+  width: 100%;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+}
+
+.kyradi-reserve--dark {
+  background: #0f172a;
+  border-color: rgba(248, 250, 252, 0.1);
+  color: #f8fafc;
+}
+
+.kyradi-reserve__title {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+}
+
+.kyradi-reserve__form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.kyradi-reserve__form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  gap: 0.3rem;
+}
+
+.kyradi-reserve__form input,
+.kyradi-reserve__form select,
+.kyradi-reserve__form textarea {
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.kyradi-reserve--dark input,
+.kyradi-reserve--dark select,
+.kyradi-reserve--dark textarea {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+  border-color: rgba(248, 250, 252, 0.2);
+}
+
+.kyradi-reserve__consent {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kyradi-reserve__button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.8rem 1.2rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #fff;
+  cursor: pointer;
+}
+
+.kyradi-reserve__error {
+  color: #dc2626;
+  min-height: 1.2rem;
+  font-size: 0.85rem;
+}
+
+.kyradi-reserve__status {
+  margin: 0;
+  font-weight: 600;
+}
+
+.kyradi-reserve__muted {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.kyradi-reserve--dark .kyradi-reserve__muted {
+  color: rgba(248, 250, 252, 0.65);
+}
+
+/* Fieldset and legend styling for grouped fields */
+.kyradi-reserve__fieldset {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 0 0 1rem 0;
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.kyradi-reserve--dark .kyradi-reserve__fieldset {
+  border-color: rgba(248, 250, 252, 0.1);
+  background: rgba(248, 250, 252, 0.03);
+}
+
+.kyradi-reserve__legend {
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0 0.5rem;
+  color: rgba(15, 23, 42, 0.8);
+}
+
+.kyradi-reserve--dark .kyradi-reserve__legend {
+  color: rgba(248, 250, 252, 0.9);
+}
+
+.kyradi-reserve__required {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.kyradi-reserve__success-details {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.kyradi-reserve--dark .kyradi-reserve__success-details {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.kyradi-reserve__success-details p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.kyradi-reserve__success-details strong {
+  font-weight: 600;
+}
+
+/* Read-only input styling */
+.kyradi-reserve__readonly {
+  background-color: rgba(15, 23, 42, 0.05);
+  cursor: not-allowed;
+  color: rgba(15, 23, 42, 0.7);
+}
+
+.kyradi-reserve--dark .kyradi-reserve__readonly {
+  background-color: rgba(248, 250, 252, 0.05);
+  color: rgba(248, 250, 252, 0.7);
+}
+
+.kyradi-reserve__helper {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(15, 23, 42, 0.6);
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+.kyradi-reserve--dark .kyradi-reserve__helper {
+  color: rgba(248, 250, 252, 0.65);
+}

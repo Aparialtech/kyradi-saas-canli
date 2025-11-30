@@ -1,0 +1,31 @@
+═══════════════════════════════════════════════════════════════
+  EMAIL SERVİSİ KURULUMU - HEMEN YAPILACAKLAR
+═══════════════════════════════════════════════════════════════
+
+1. .env DOSYASINI AÇIN VE ŞUNLARI GÜNCELLEYİN:
+
+   Backend/.env dosyasında şu satırları bulun ve değiştirin:
+
+   SMTP_USER=doguncu13@gmail.com
+   SMTP_PASSWORD=xxxx xxxx xxxx xxxx  ← Gmail Uygulama Şifresi
+
+2. GMAIL UYGULAMA ŞİFRESİ ALIN:
+
+   a) https://myaccount.google.com/apppasswords adresine gidin
+   b) "Uygulama seç" > "Diğer" > "KYRADI" yazın
+   c) "Oluştur" butonuna tıklayın
+   d) 16 haneli şifreyi kopyalayın (boşluksuz: xxxxxxxxxxxxxxxx)
+   e) .env dosyasındaki SMTP_PASSWORD'a yapıştırın
+
+3. BACKEND'İ YENİDEN BAŞLATIN:
+
+   cd backend
+   poetry run uvicorn app.main:app --reload
+
+4. TEST EDİN:
+
+   Login sayfasında "Şifremi Unuttum" butonuna tıklayın
+   Email: doguncu13@gmail.com
+   Email adresinize link gelecek!
+
+═══════════════════════════════════════════════════════════════
