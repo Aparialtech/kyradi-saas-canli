@@ -2,6 +2,7 @@
 
 from datetime import datetime, time, timedelta, timezone
 from typing import List, Optional
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import Select, case, func, select
@@ -45,6 +46,7 @@ from ...services.limits import (
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+logger = logging.getLogger(__name__)
 
 TENANT_USER_ALLOWED_ROLES = {
     UserRole.TENANT_ADMIN,
@@ -216,199 +218,206 @@ async def admin_summary(
     _: None = Depends(require_admin_user),
 ) -> AdminSummary:
     """Return comprehensive global metrics for admin dashboard."""
-    now = datetime.now(timezone.utc)
-    day_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
-    day_end = day_start + timedelta(days=1)
-    week_start = now - timedelta(days=7)
-    month_start = now - timedelta(days=30)
+    try:
+        now = datetime.now(timezone.utc)
+        day_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
+        day_end = day_start + timedelta(days=1)
+        week_start = now - timedelta(days=7)
+        month_start = now - timedelta(days=30)
 
-    # Global tenant counts
-    total_tenants = await session.scalar(select(func.count()).select_from(Tenant))
-    active_tenants = await session.scalar(
-        select(func.count()).select_from(Tenant).where(Tenant.is_active == True)
-    )
-    
-    # Total users
-    total_users = await session.scalar(select(func.count()).select_from(User))
-    
-    # Total storages across all tenants
-    total_storages = await session.scalar(select(func.count()).select_from(Storage))
-    
-    # Reservations 24h and 7d
-    reservations_24h = await session.scalar(
-        select(func.count()).select_from(Reservation).where(
-            Reservation.created_at >= day_start,
-            Reservation.created_at < day_end,
+        # Global tenant counts
+        total_tenants = await session.scalar(select(func.count()).select_from(Tenant))
+        active_tenants = await session.scalar(
+            select(func.count()).select_from(Tenant).where(Tenant.is_active == True)
         )
-    )
-    reservations_7d = await session.scalar(
-        select(func.count()).select_from(Reservation).where(
-            Reservation.created_at >= week_start,
-        )
-    )
-    
-    # Total revenue and commission from settled payments (last 30 days)
-    revenue_stmt = (
-        select(
-            func.coalesce(func.sum(Settlement.total_amount_minor), 0),
-            func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0),
-        )
-        .where(
-            Settlement.status == "settled",
-            Settlement.created_at >= month_start,
-        )
-    )
-    revenue_result = await session.execute(revenue_stmt)
-    revenue_row = revenue_result.first()
-    total_revenue_minor = int(revenue_row[0] or 0)
-    total_commission_minor = int(revenue_row[1] or 0)
-    
-    # Tenant summaries with extended data
-    tenant_revenue_stmt = (
-        select(
-            Reservation.tenant_id,
-            func.coalesce(
-                func.sum(
-                    case(
-                        (
-                            (Reservation.start_at >= day_start)
-                            & (Reservation.start_at < day_end),
-                            Reservation.amount_minor,
-                        ),
-                        else_=0,
-                    )
-                ),
-                0,
-            ).label("today_revenue"),
-            func.coalesce(
-                func.sum(
-                    case(
-                        (Reservation.status == ReservationStatus.ACTIVE.value, 1),
-                        else_=0,
-                    )
-                ),
-                0,
-            ).label("active_reservations"),
-        )
-        .group_by(Reservation.tenant_id)
-        .where(Reservation.tenant_id.isnot(None))
-    )
-    tenant_revenue_result = await session.execute(tenant_revenue_stmt)
-    
-    # Get 30-day revenue and commission per tenant
-    tenant_30d_stmt = (
-        select(
-            Settlement.tenant_id,
-            func.coalesce(func.sum(Settlement.total_amount_minor), 0).label("revenue_30d"),
-            func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0).label("commission_30d"),
-        )
-        .where(
-            Settlement.status == "settled",
-            Settlement.created_at >= month_start,
-        )
-        .group_by(Settlement.tenant_id)
-    )
-    tenant_30d_result = await session.execute(tenant_30d_stmt)
-    tenant_30d_map = {row[0]: {"revenue": int(row[1] or 0), "commission": int(row[2] or 0)} for row in tenant_30d_result.all()}
-    
-    # Get tenant names
-    tenants_stmt = select(Tenant.id, Tenant.name, Tenant.slug)
-    tenants_result = await session.execute(tenants_stmt)
-    tenant_map = {row[0]: {"name": row[1], "slug": row[2]} for row in tenants_result.all()}
-    
-    summaries = []
-    for row in tenant_revenue_result.all():
-        tenant_id = row[0]
-        tenant_info = tenant_map.get(tenant_id, {"name": None, "slug": None})
-        tenant_30d = tenant_30d_map.get(tenant_id, {"revenue": 0, "commission": 0})
-        summaries.append(
-            AdminTenantSummary(
-                tenant_id=tenant_id,
-                tenant_name=tenant_info["name"],
-                tenant_slug=tenant_info["slug"],
-                today_revenue_minor=int(row[1] or 0),
-                active_reservations=int(row[2] or 0),
-                total_revenue_30d_minor=tenant_30d["revenue"],
-                total_commission_30d_minor=tenant_30d["commission"],
+        
+        # Total users
+        total_users = await session.scalar(select(func.count()).select_from(User))
+        
+        # Total storages across all tenants
+        total_storages = await session.scalar(select(func.count()).select_from(Storage))
+        
+        # Reservations 24h and 7d
+        reservations_24h = await session.scalar(
+            select(func.count()).select_from(Reservation).where(
+                Reservation.created_at >= day_start,
+                Reservation.created_at < day_end,
             )
         )
-    
-    # Daily revenue for last 30 days
-    daily_revenue_stmt = (
-        select(
-            func.date(Settlement.created_at).label("date"),
-            func.coalesce(func.sum(Settlement.total_amount_minor), 0).label("revenue"),
-            func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0).label("commission"),
-            func.count(Settlement.id).label("count"),
+        reservations_7d = await session.scalar(
+            select(func.count()).select_from(Reservation).where(
+                Reservation.created_at >= week_start,
+            )
         )
-        .where(
-            Settlement.status == "settled",
-            Settlement.created_at >= month_start,
+        
+        # Total revenue and commission from settled payments (last 30 days)
+        revenue_stmt = (
+            select(
+                func.coalesce(func.sum(Settlement.total_amount_minor), 0),
+                func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0),
+            )
+            .where(
+                Settlement.status == "settled",
+                Settlement.created_at >= month_start,
+            )
         )
-        .group_by(func.date(Settlement.created_at))
-        .order_by(func.date(Settlement.created_at))
-    )
-    daily_revenue_result = await session.execute(daily_revenue_stmt)
-    daily_revenue = [
-        AdminDailyRevenue(
-            date=row[0].isoformat() if isinstance(row[0], datetime) else str(row[0]),
-            revenue_minor=int(row[1] or 0),
-            commission_minor=int(row[2] or 0),
-            transaction_count=int(row[3] or 0),
+        revenue_result = await session.execute(revenue_stmt)
+        revenue_row = revenue_result.first()
+        total_revenue_minor = int(revenue_row[0] or 0)
+        total_commission_minor = int(revenue_row[1] or 0)
+        
+        # Tenant summaries with extended data
+        tenant_revenue_stmt = (
+            select(
+                Reservation.tenant_id,
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                (Reservation.start_at >= day_start)
+                                & (Reservation.start_at < day_end),
+                                Reservation.amount_minor,
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("today_revenue"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (Reservation.status == ReservationStatus.ACTIVE.value, 1),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("active_reservations"),
+            )
+            .group_by(Reservation.tenant_id)
+            .where(Reservation.tenant_id.isnot(None))
         )
-        for row in daily_revenue_result.all()
-    ]
-    
-    # Top 5 tenants by revenue
-    top_tenants_stmt = (
-        select(
-            Settlement.tenant_id,
-            func.coalesce(func.sum(Settlement.total_amount_minor), 0).label("revenue"),
-            func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0).label("commission"),
+        tenant_revenue_result = await session.execute(tenant_revenue_stmt)
+        
+        # Get 30-day revenue and commission per tenant
+        tenant_30d_stmt = (
+            select(
+                Settlement.tenant_id,
+                func.coalesce(func.sum(Settlement.total_amount_minor), 0).label("revenue_30d"),
+                func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0).label("commission_30d"),
+            )
+            .where(
+                Settlement.status == "settled",
+                Settlement.created_at >= month_start,
+            )
+            .group_by(Settlement.tenant_id)
         )
-        .where(
-            Settlement.status == "settled",
-            Settlement.created_at >= month_start,
+        tenant_30d_result = await session.execute(tenant_30d_stmt)
+        tenant_30d_map = {row[0]: {"revenue": int(row[1] or 0), "commission": int(row[2] or 0)} for row in tenant_30d_result.all()}
+        
+        # Get tenant names
+        tenants_stmt = select(Tenant.id, Tenant.name, Tenant.slug)
+        tenants_result = await session.execute(tenants_stmt)
+        tenant_map = {row[0]: {"name": row[1], "slug": row[2]} for row in tenants_result.all()}
+        
+        summaries = []
+        for row in tenant_revenue_result.all():
+            tenant_id = row[0]
+            tenant_info = tenant_map.get(tenant_id, {"name": None, "slug": None})
+            tenant_30d = tenant_30d_map.get(tenant_id, {"revenue": 0, "commission": 0})
+            summaries.append(
+                AdminTenantSummary(
+                    tenant_id=tenant_id,
+                    tenant_name=tenant_info["name"],
+                    tenant_slug=tenant_info["slug"],
+                    today_revenue_minor=int(row[1] or 0),
+                    active_reservations=int(row[2] or 0),
+                    total_revenue_30d_minor=tenant_30d["revenue"],
+                    total_commission_30d_minor=tenant_30d["commission"],
+                )
+            )
+        
+        # Daily revenue for last 30 days
+        daily_revenue_stmt = (
+            select(
+                func.date(Settlement.created_at).label("date"),
+                func.coalesce(func.sum(Settlement.total_amount_minor), 0).label("revenue"),
+                func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0).label("commission"),
+                func.count(Settlement.id).label("count"),
+            )
+            .where(
+                Settlement.status == "settled",
+                Settlement.created_at >= month_start,
+            )
+            .group_by(func.date(Settlement.created_at))
+            .order_by(func.date(Settlement.created_at))
         )
-        .group_by(Settlement.tenant_id)
-        .order_by(func.sum(Settlement.total_amount_minor).desc())
-        .limit(5)
-    )
-    top_tenants_result = await session.execute(top_tenants_stmt)
-    top_tenants = [
-        AdminTopTenant(
-            tenant_id=row[0],
-            tenant_name=tenant_map.get(row[0], {}).get("name", "Unknown"),
-            revenue_minor=int(row[1] or 0),
-            commission_minor=int(row[2] or 0),
+        daily_revenue_result = await session.execute(daily_revenue_stmt)
+        daily_revenue = [
+            AdminDailyRevenue(
+                date=row[0].isoformat() if isinstance(row[0], datetime) else str(row[0]),
+                revenue_minor=int(row[1] or 0),
+                commission_minor=int(row[2] or 0),
+                transaction_count=int(row[3] or 0),
+            )
+            for row in daily_revenue_result.all()
+        ]
+        
+        # Top 5 tenants by revenue
+        top_tenants_stmt = (
+            select(
+                Settlement.tenant_id,
+                func.coalesce(func.sum(Settlement.total_amount_minor), 0).label("revenue"),
+                func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0).label("commission"),
+            )
+            .where(
+                Settlement.status == "settled",
+                Settlement.created_at >= month_start,
+            )
+            .group_by(Settlement.tenant_id)
+            .order_by(func.sum(Settlement.total_amount_minor).desc())
+            .limit(5)
         )
-        for row in top_tenants_result.all()
-    ]
-    
-    # System health (simplified - can be enhanced with actual service checks)
-    system_health = SystemHealth(
-        email_service_status="ok",  # TODO: Implement actual health check
-        email_service_last_error=None,
-        sms_service_status="ok",  # TODO: Implement actual health check
-        sms_service_last_error=None,
-        payment_provider_status="ok",  # TODO: Implement actual health check
-        payment_provider_last_success=now,  # TODO: Get from actual payment logs
-    )
-    
-    return AdminSummary(
-        total_tenants=int(total_tenants or 0),
-        active_tenants=int(active_tenants or 0),
-        total_users=int(total_users or 0),
-        total_storages=int(total_storages or 0),
-        reservations_24h=int(reservations_24h or 0),
-        reservations_7d=int(reservations_7d or 0),
-        total_revenue_minor=total_revenue_minor,
-        total_commission_minor=total_commission_minor,
-        tenants=summaries,
-        daily_revenue_30d=daily_revenue,
-        top_tenants=top_tenants,
-        system_health=system_health,
-    )
+        top_tenants_result = await session.execute(top_tenants_stmt)
+        top_tenants = [
+            AdminTopTenant(
+                tenant_id=row[0],
+                tenant_name=tenant_map.get(row[0], {}).get("name", "Unknown"),
+                revenue_minor=int(row[1] or 0),
+                commission_minor=int(row[2] or 0),
+            )
+            for row in top_tenants_result.all()
+        ]
+        
+        # System health (simplified - can be enhanced with actual service checks)
+        system_health = SystemHealth(
+            email_service_status="ok",  # TODO: Implement actual health check
+            email_service_last_error=None,
+            sms_service_status="ok",  # TODO: Implement actual health check
+            sms_service_last_error=None,
+            payment_provider_status="ok",  # TODO: Implement actual health check
+            payment_provider_last_success=now,  # TODO: Get from actual payment logs
+        )
+        
+        return AdminSummary(
+            total_tenants=int(total_tenants or 0),
+            active_tenants=int(active_tenants or 0),
+            total_users=int(total_users or 0),
+            total_storages=int(total_storages or 0),
+            reservations_24h=int(reservations_24h or 0),
+            reservations_7d=int(reservations_7d or 0),
+            total_revenue_minor=total_revenue_minor,
+            total_commission_minor=total_commission_minor,
+            tenants=summaries,
+            daily_revenue_30d=daily_revenue,
+            top_tenants=top_tenants,
+            system_health=system_health,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("reports/summary: error while building summary")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not generate report summary.",
+        ) from exc
 
 
 @router.get("/audit-logs", response_model=AuditLogList)
