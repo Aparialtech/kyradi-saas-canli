@@ -10,6 +10,7 @@ from ..core.config import settings
 from ..core.security import get_password_hash
 from ..models import Tenant, User, UserRole
 from app.reservations.models import WidgetConfig
+from app.reservations.models import WidgetReservation
 from .base import Base
 from .session import AsyncSessionMaker, engine
 
@@ -23,6 +24,11 @@ async def init_db(db_engine: AsyncEngine | None = None) -> None:
         await _apply_local_ddl(conn)
         await _ensure_ai_documents_table(conn)
         await _ensure_widget_tables(conn)
+
+    try:
+        await ensure_widget_tables_exist()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("init_db: failed to ensure widget tables: %s", exc)
 
     await _seed_defaults()
 
@@ -167,6 +173,17 @@ async def _ensure_widget_tables(conn) -> None:
             logger.debug("Skipping widget DDL statement: %s", statement.strip().splitlines()[0])
 
 
+async def ensure_widget_tables_exist() -> None:
+    """Ensure widget-related tables exist using SQLAlchemy metadata."""
+    async with engine.begin() as conn:
+        def create_tables(sync_conn) -> None:
+            WidgetConfig.__table__.create(bind=sync_conn, checkfirst=True)
+            WidgetReservation.__table__.create(bind=sync_conn, checkfirst=True)
+
+        await conn.run_sync(create_tables)
+    logger.info("ensure_widget_tables_exist: widget tables ensured")
+
+
 async def _seed_demo_tenant_and_users(session: AsyncSession) -> None:
     """Ensure demo tenant and default users exist."""
     # Ensure tenant exists
@@ -217,30 +234,35 @@ async def _seed_demo_tenant_and_users(session: AsyncSession) -> None:
     else:
         logger.info("Platform super admin user already exists, skipping creation")
 
-    # Ensure demo widget config exists (best effort)
+    await _seed_demo_widget_config(session, tenant.id)
+
+
+async def _seed_demo_widget_config(session: AsyncSession, demo_tenant_id: str) -> None:
+    """Seed demo widget config if missing."""
     try:
-        exists_row = await session.execute(text("SELECT to_regclass('public.widget_configs')"))
-        if exists_row.scalar():
-            cfg_stmt = select(WidgetConfig).where(WidgetConfig.tenant_id == tenant.id)
-            cfg = (await session.execute(cfg_stmt)).scalar_one_or_none()
-            if cfg is None:
-                cfg = WidgetConfig(
-                    tenant_id=tenant.id,
-                    widget_public_key="demo_public",
-                    widget_secret="demo_secret",
-                    allowed_origins=["*"],
-                    locale="tr-TR",
-                    theme="light",
-                    kvkk_text="",
-                    form_defaults={},
-                    notification_preferences={},
-                    webhook_url="",
-                )
-                session.add(cfg)
-                logger.info("Created demo widget config for tenant demo-hotel")
-            else:
-                logger.info("Demo widget config already exists, skipping creation")
+        cfg_stmt = select(WidgetConfig).where(WidgetConfig.tenant_id == demo_tenant_id)
+        cfg = (await session.execute(cfg_stmt)).scalar_one_or_none()
+        if cfg is None:
+            cfg = WidgetConfig(
+                tenant_id=demo_tenant_id,
+                widget_public_key="demo-public-key",
+                widget_secret="demo-secret",
+                allowed_origins=[
+                    "https://kyradi-saas-canli.vercel.app",
+                    "http://localhost:5173",
+                    "http://127.0.0.1:5173",
+                ],
+                locale="tr-TR",
+                theme="light",
+                kvkk_text="",
+                form_defaults={},
+                notification_preferences={},
+                webhook_url="",
+            )
+            session.add(cfg)
+            await session.flush()
+            logger.info("Created demo widget config for tenant %s", demo_tenant_id)
         else:
-            logger.warning("widget_configs table missing; skipping demo widget config seeding")
+            logger.info("Demo widget config already exists for tenant %s, skipping", demo_tenant_id)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to seed demo widget config (ignored): %s", exc, exc_info=True)

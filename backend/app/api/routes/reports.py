@@ -5,14 +5,13 @@ from datetime import datetime, time, timedelta, timezone
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import DBAPIError, ProgrammingError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_operator
 from ...models import Locker, Reservation, ReservationStatus, User, Tenant, Payment
 from ...models.enums import PaymentStatus
-from app.reservations.models import WidgetReservation
 from ...schemas import PartnerSummary, TenantPlanLimits, LimitWarning
 from ...services.limits import (
     get_plan_limits_for_tenant,
@@ -25,6 +24,36 @@ from ...services.audit import record_audit
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 logger = logging.getLogger(__name__)
+
+
+async def _safe_scalar(session: AsyncSession, stmt, default_value, metric_name: str):
+    """Execute scalar query safely and rollback on failure."""
+    try:
+        result = await session.execute(stmt)
+        return result.scalar_one()
+    except (
+        ProgrammingError,
+        DBAPIError,
+    ) as exc:
+        logger.warning(
+            "reports/summary: metric %s failed with %s, returning default %s",
+            metric_name,
+            exc.__class__.__name__,
+            default_value,
+        )
+        try:
+            await session.rollback()
+        except Exception:
+            pass
+        return default_value
+    except Exception as exc:  # noqa: BLE001
+        logger.error("reports/summary: unexpected error for %s: %s", metric_name, exc)
+        try:
+            await session.rollback()
+        except Exception:
+            pass
+        return default_value
+
 
 def _fallback_summary() -> dict:
     now = datetime.now(timezone.utc)
@@ -73,132 +102,122 @@ async def partner_summary(
 
     tenant_id = getattr(current_user, "tenant_id", None)
     if not tenant_id:
-        logger.warning("reports/summary: current_user has no tenant_id, returning defaults")
+        logger.warning("reports/summary: current_user has no tenant_id; returning zeros")
         return defaults
+
+    tenant = await session.get(Tenant, tenant_id)
+    if tenant is None:
+        logger.warning("reports/summary: tenant not found; returning zeros")
+        return defaults
+
+    locker_stmt = select(func.count()).select_from(Locker).where(Locker.tenant_id == tenant_id)
+    locker_count = await _safe_scalar(session, locker_stmt, 0, "locker_count")
+
+    total_res_stmt = select(func.count()).select_from(Reservation).where(Reservation.tenant_id == tenant_id)
+    total_reservations = await _safe_scalar(session, total_res_stmt, 0, "total_reservations")
+
+    active_res_stmt = select(func.count()).select_from(Reservation).where(
+        Reservation.tenant_id == tenant_id,
+        Reservation.status.in_([ReservationStatus.RESERVED.value, ReservationStatus.ACTIVE.value]),
+    )
+    active_reservations = await _safe_scalar(session, active_res_stmt, 0, "active_reservations")
+
+    cancelled_res_stmt = select(func.count()).select_from(Reservation).where(
+        Reservation.tenant_id == tenant_id,
+        Reservation.status == ReservationStatus.CANCELLED.value,
+    )
+    cancelled_reservations = await _safe_scalar(session, cancelled_res_stmt, 0, "cancelled_reservations")
+
+    revenue_stmt = select(func.coalesce(func.sum(Payment.amount_minor), 0)).where(
+        Payment.tenant_id == tenant_id,
+        Payment.status == PaymentStatus.PAID.value,
+    )
+    revenue_minor = await _safe_scalar(session, revenue_stmt, 0, "revenue_minor")
 
     try:
-        tenant = await session.get(Tenant, tenant_id)
-        if tenant is None:
-            logger.warning("reports/summary: tenant not found, returning defaults")
-            return defaults
-
-        now = datetime.now(timezone.utc)
-        day_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
-        day_end = day_start + timedelta(days=1)
-
-        total_reservations = 0
-        active_reservations = 0
-        cancelled_reservations = 0
-
-        try:
-            total_reservations = (await session.execute(
-                select(func.count()).where(WidgetReservation.tenant_id == tenant_id)
-            )).scalar_one()
-            active_reservations = (await session.execute(
-                select(func.count()).where(
-                    WidgetReservation.tenant_id == tenant_id,
-                    WidgetReservation.status.in_(("pending", "confirmed")),
-                )
-            )).scalar_one()
-            cancelled_reservations = (await session.execute(
-                select(func.count()).where(
-                    WidgetReservation.tenant_id == tenant_id,
-                    WidgetReservation.status == ReservationStatus.CANCELLED.value,
-                )
-            )).scalar_one()
-        except SQLAlchemyError as e:
-            logger.warning("reports/summary: widget reservations table issue, returning defaults", exc_info=e)
-            await session.rollback()
-            return defaults
-
-        locker_count = (await session.execute(
-            select(func.count()).where(Locker.tenant_id == tenant_id)
-        )).scalar_one()
-
-        revenue = (await session.execute(
-            select(func.coalesce(func.sum(Payment.amount_minor), 0)).where(
-                Payment.tenant_id == tenant_id,
-                Payment.status == PaymentStatus.PAID.value,
-                Payment.paid_at >= day_start,
-                Payment.paid_at < day_end,
-            )
-        )).scalar_one() or 0
-
         exports_today = await report_exports_last24h(session, tenant_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("reports/summary: report_exports_last24h failed, defaulting to 0", exc_info=exc)
+        exports_today = 0
+
+    try:
         storage_used_mb = await get_storage_usage_mb(session, tenant_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("reports/summary: get_storage_usage_mb failed, defaulting to 0", exc_info=exc)
+        storage_used_mb = 0
+
+    try:
         self_service_today = await self_service_reservations_last24h(session, tenant_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("reports/summary: self_service_reservations_last24h failed, defaulting to 0", exc_info=exc)
+        self_service_today = 0
+
+    try:
         limits = await get_plan_limits_for_tenant(session, tenant_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("reports/summary: get_plan_limits_for_tenant failed, using empty limits", exc_info=exc)
+        limits = TenantPlanLimits()
 
-        occupancy_pct = 0.0
-        if locker_count:
-            occupancy_pct = round(min(active_reservations / locker_count * 100, 100), 2)
+    occupancy_pct = 0.0
+    if locker_count:
+        occupancy_pct = round(min(active_reservations / locker_count * 100, 100), 2)
 
-        warnings: list[LimitWarning] = []
-        report_reset_at = day_end
-        report_remaining = None
-        if limits.max_report_exports_daily is not None:
-            report_remaining = max(limits.max_report_exports_daily - exports_today, 0)
-        self_service_remaining = None
-        if limits.max_self_service_daily is not None:
-            self_service_remaining = max(limits.max_self_service_daily - self_service_today, 0)
+    warnings: list[LimitWarning] = []
+    report_reset_at = datetime.combine(datetime.now(timezone.utc).date(), time.min, tzinfo=timezone.utc) + timedelta(days=1)
+    report_remaining = None
+    if getattr(limits, "max_report_exports_daily", None) is not None:
+        report_remaining = max(limits.max_report_exports_daily - exports_today, 0)
+    self_service_remaining = None
+    if getattr(limits, "max_self_service_daily", None) is not None:
+        self_service_remaining = max(limits.max_self_service_daily - self_service_today, 0)
 
-        def maybe_warn(limit, usage: int, label: str) -> None:
-            if limit is None:
-                return
-            remaining = max(limit - usage, 0)
-            if limit == 0:
-                return
-            ratio = usage / limit
-            if ratio >= 1:
-                warnings.append(
-                    LimitWarning(
-                        type=label,
-                        message=f"{label} limiti aşıldı",
-                        remaining=0,
-                    )
+    def maybe_warn(limit, usage: int, label: str) -> None:
+        if limit is None:
+            return
+        remaining = max(limit - usage, 0)
+        if limit == 0:
+            return
+        ratio = usage / limit if limit else 0
+        if ratio >= 1:
+            warnings.append(
+                LimitWarning(
+                    type=label,
+                    message=f"{label} limiti aşıldı",
+                    remaining=0,
                 )
-            elif ratio >= 0.9:
-                warnings.append(
-                    LimitWarning(
-                        type=label,
-                        message=f"{label} limitine çok yaklaşıldı ({usage}/{limit})",
-                        remaining=remaining,
-                    )
+            )
+        elif ratio >= 0.9:
+            warnings.append(
+                LimitWarning(
+                    type=label,
+                    message=f"{label} limitine çok yaklaşıldı ({usage}/{limit})",
+                    remaining=remaining,
                 )
+            )
 
-        maybe_warn(limits.max_active_reservations, int(active_reservations), "Aktif rezervasyon")
-        maybe_warn(limits.max_reservations_total, int(total_reservations), "Toplam rezervasyon")
-        maybe_warn(limits.max_report_exports_daily, exports_today, "Rapor export")
-        maybe_warn(limits.max_self_service_daily, self_service_today, "Self-service rezervasyon")
-        maybe_warn(limits.max_storage_mb, storage_used_mb, "Depolama")
+    maybe_warn(getattr(limits, "max_active_reservations", None), int(active_reservations), "Aktif rezervasyon")
+    maybe_warn(getattr(limits, "max_reservations_total", None), int(total_reservations), "Toplam rezervasyon")
+    maybe_warn(getattr(limits, "max_report_exports_daily", None), exports_today, "Rapor export")
+    maybe_warn(getattr(limits, "max_self_service_daily", None), self_service_today, "Self-service rezervasyon")
+    maybe_warn(getattr(limits, "max_storage_mb", None), storage_used_mb, "Depolama")
 
-        return PartnerSummary(
-            active_reservations=int(active_reservations),
-            locker_occupancy_pct=occupancy_pct,
-            today_revenue_minor=int(revenue or 0),
-            total_reservations=int(total_reservations or 0),
-            report_exports_today=exports_today,
-            storage_used_mb=storage_used_mb,
-            plan_limits=limits,
-            warnings=warnings,
-            report_exports_reset_at=report_reset_at,
-            report_exports_remaining=report_remaining,
-            self_service_remaining=self_service_remaining,
-            total_revenue=int(revenue or 0),
-            cancelled_reservations=int(cancelled_reservations),
-            monthly_revenue=[],
-            monthly_reservations=[],
-        )
-    except SQLAlchemyError as e:
-        logger.error("reports/summary: database error, returning defaults", exc_info=e)
-        try:
-            await session.rollback()
-        except Exception:
-            pass
-        return defaults
-    except Exception as e:
-        logger.error("reports/summary: unexpected error, returning defaults", exc_info=e)
-        return defaults
+    return PartnerSummary(
+        active_reservations=int(active_reservations or 0),
+        locker_occupancy_pct=occupancy_pct,
+        today_revenue_minor=int(revenue_minor or 0),
+        total_reservations=int(total_reservations or 0),
+        report_exports_today=exports_today,
+        storage_used_mb=storage_used_mb,
+        plan_limits=limits,
+        warnings=warnings,
+        report_exports_reset_at=report_reset_at,
+        report_exports_remaining=report_remaining,
+        self_service_remaining=self_service_remaining,
+        total_revenue=int(revenue_minor or 0),
+        cancelled_reservations=int(cancelled_reservations or 0),
+        monthly_revenue=[],
+        monthly_reservations=[],
+    )
 
 
 @router.post("/reservations/export-log")
