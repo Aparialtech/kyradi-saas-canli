@@ -34,10 +34,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # allow all origins for now
-    allow_credentials=False,      # no cookies, just Authorization header
-    allow_methods=["*"],          # allow all HTTP methods
-    allow_headers=["*"],          # allow all headers
+    allow_origins=[
+        "https://kyradi-saas-canli.vercel.app",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,  # no cookies, just Authorization header
+    allow_methods=["*"],      # allow all HTTP methods
+    allow_headers=["*"],      # allow all headers
 )
 
 app.include_router(api_router)
