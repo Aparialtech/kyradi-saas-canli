@@ -3,7 +3,7 @@
 from datetime import datetime, time, timedelta, timezone
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.exc import DBAPIError, ProgrammingError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +24,49 @@ from ...services.audit import record_audit
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 logger = logging.getLogger(__name__)
+
+
+def _coerce_plan_limits(raw: object | None) -> TenantPlanLimits:
+    """
+    plan_limits DB tipini (PlanLimits, dict vs.) güvenli şekilde
+    API şemasındaki TenantPlanLimits tipine dönüştürür.
+
+    Hangi tür gelirse gelsin her zaman TenantPlanLimits döndürerek
+    Pydantic ValidationError almamayı garanti ediyoruz.
+    """
+    if raw is None:
+        return TenantPlanLimits(
+            max_locations=0,
+            max_storages=0,
+            max_lockers=0,
+            max_reservations_per_day=0,
+            max_storage_mb=0,
+        )
+
+    if isinstance(raw, TenantPlanLimits):
+        return raw
+
+    data = None
+    try:
+        if hasattr(raw, "model_dump"):
+            data = raw.model_dump()
+        elif isinstance(raw, dict):
+            data = raw
+        else:
+            data = raw.__dict__
+    except Exception:
+        data = {}
+
+    if not isinstance(data, dict):
+        data = {}
+
+    return TenantPlanLimits(
+        max_locations=int(data.get("max_locations") or 0),
+        max_storages=int(data.get("max_storages") or 0),
+        max_lockers=int(data.get("max_lockers") or 0),
+        max_reservations_per_day=int(data.get("max_reservations_per_day") or 0),
+        max_storage_mb=int(data.get("max_storage_mb") or 0),
+    )
 
 
 async def _safe_scalar(session: AsyncSession, stmt, default_value, metric_name: str):
@@ -89,7 +132,7 @@ async def partner_summary(
         total_reservations=0,
         report_exports_today=0,
         storage_used_mb=0,
-        plan_limits=TenantPlanLimits(),
+        plan_limits=_coerce_plan_limits(None),
         warnings=[],
         report_exports_reset_at=datetime.now(timezone.utc),
         report_exports_remaining=None,
@@ -153,10 +196,11 @@ async def partner_summary(
         self_service_today = 0
 
     try:
-        limits = await get_plan_limits_for_tenant(session, tenant_id)
+        limits_raw = await get_plan_limits_for_tenant(session, tenant_id)
+        limits = _coerce_plan_limits(limits_raw)
     except Exception as exc:  # noqa: BLE001
         logger.warning("reports/summary: get_plan_limits_for_tenant failed, using empty limits", exc_info=exc)
-        limits = TenantPlanLimits()
+        limits = _coerce_plan_limits(None)
 
     occupancy_pct = 0.0
     if locker_count:
