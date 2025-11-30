@@ -1,20 +1,9 @@
 {
-  "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "services": {
-      "backend": {
-        "path": "backend"
-      }
-    }
+    "builder": "dockerfile",
+    "dockerfilePath": "backend/Dockerfile"
   },
   "deploy": {
-    "services": {
-      "backend": {
-        "numReplicas": 1,
-        "healthcheckPath": "/health",
-        "restartPolicyType": "ON_FAILURE",
-        "restartPolicyMaxRetries": 10
-      }
-    }
+    "restartPolicyType": "ON_FAILURE"
   }
 }
