@@ -8,7 +8,8 @@ from typing import List, Optional
 import asyncpg
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import ProgrammingError, and_, select, text
+from sqlalchemy import and_, select, text
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session

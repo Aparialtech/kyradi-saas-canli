@@ -32,38 +32,21 @@ app = FastAPI(
     description="FastAPI backend for the KYRADİ SaaS platform.",
 )
 
-vercel_origins = {
-    "https://kyradi-saas-canli.vercel.app",
-    "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
-}
-
-local_origins = {
+extra_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-}
+    "https://kyradi-saas-canli.vercel.app",
+    "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
+]
 
-configured_origins = set()
-cors_from_settings = (
-    getattr(settings, "CORS_ORIGINS", None)
-    or getattr(settings, "CORS_ALLOW_ORIGINS", None)
-    or getattr(settings, "BACKEND_CORS_ORIGINS", None)
-    or []
-)
-if isinstance(cors_from_settings, str):
-    configured_origins.update({origin.strip() for origin in cors_from_settings.split(",") if origin.strip()})
-else:
-    configured_origins.update(cors_from_settings)
+base_origins = getattr(settings, "cors_allowed_origins", []) or []
 
-all_origins = sorted(vercel_origins | local_origins | configured_origins)
+# Listeyi eşsiz hale getir
+allowed_origins = sorted(set(base_origins + extra_origins))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://kyradi-saas-canli.vercel.app",
-        "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],      # allow all HTTP methods
     allow_headers=["*"],      # allow all headers
