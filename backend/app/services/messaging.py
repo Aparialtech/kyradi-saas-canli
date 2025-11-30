@@ -225,7 +225,16 @@ class EmailService:
             </body>
             </html>
             """
-            body_text = f"KYRADİ platformuna hoş geldiniz!\n\n{"Geçici şifreniz: " + temporary_password if temporary_password else ""}\n\nLütfen ilk girişinizde şifrenizi değiştirin."
+            if temporary_password:
+             temp_line = f"Geçici şifreniz: {temporary_password}\n\n"
+            else:
+                temp_line = ""
+
+            body_text = (
+    "KYRADİ platformuna hoş geldiniz!\n\n"
+    f"{temp_line}"
+    "Lütfen ilk girişinizde şifrenizi değiştirin."
+)
         else:
             subject = "Welcome to KYRADİ"
             body_html = f"""
