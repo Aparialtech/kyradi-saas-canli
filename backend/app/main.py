@@ -32,14 +32,36 @@ app = FastAPI(
     description="FastAPI backend for the KYRADİ SaaS platform.",
 )
 
+vercel_origins = [
+    "https://kyradi-saas-canli.vercel.app",
+    "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
+]
+
+local_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+configured_origins = getattr(settings, "CORS_ALLOW_ORIGINS", None) or getattr(
+    settings,
+    "BACKEND_CORS_ORIGINS",
+    [],
+)
+
+all_origins = list(
+    dict.fromkeys(
+        [
+            *configured_origins,
+            *vercel_origins,
+            *local_origins,
+        ]
+    )
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://kyradi-saas-canli.vercel.app",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_credentials=False,  # no cookies, just Authorization header
+    allow_origins=all_origins,
+    allow_credentials=True,
     allow_methods=["*"],      # allow all HTTP methods
     allow_headers=["*"],      # allow all headers
 )
