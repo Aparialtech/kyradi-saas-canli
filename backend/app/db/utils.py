@@ -4,6 +4,7 @@ import logging
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.exc import ProgrammingError
 
 from ..core.config import settings
 from ..core.security import get_password_hash
@@ -73,23 +74,34 @@ async def _seed_defaults() -> None:
                 )
             )
 
-        widget_cfg = await session.execute(
-            select(WidgetConfig).where(WidgetConfig.tenant_id == tenant.id)
-        )
-        if widget_cfg.scalar_one_or_none() is None:
-            session.add(
-                WidgetConfig(
-                    tenant_id=tenant.id,
-                    widget_public_key="demo-widget-key",
-                    widget_secret="demo-widget-secret",
-                    allowed_origins=[
-                        "http://localhost:5173",
-                        "http://localhost:4173",
-                        "https://panel.kyradi.com",
-                    ],
-                    kvkk_text="Rezervasyon oluştururken KVKK/GDPR koşullarını kabul etmiş olursunuz.",
-                )
+        try:
+            widget_cfg = await session.execute(
+                select(WidgetConfig).where(WidgetConfig.tenant_id == tenant.id)
             )
+            if widget_cfg.scalar_one_or_none() is None:
+                session.add(
+                    WidgetConfig(
+                        tenant_id=tenant.id,
+                        widget_public_key="demo-widget-key",
+                        widget_secret="demo-widget-secret",
+                        allowed_origins=[
+                            "http://localhost:5173",
+                            "http://localhost:4173",
+                            "https://panel.kyradi.com",
+                        ],
+                        kvkk_text="Rezervasyon oluştururken KVKK/GDPR koşullarını kabul etmiş olursunuz.",
+                    )
+                )
+        except ProgrammingError as e:
+            msg = str(getattr(e, "orig", e)).lower()
+            if "undefinedtable" in msg or 'relation "widget_configs" does not exist' in msg:
+                logger.warning(
+                    "Skipping widget default seeding because widget_configs table does not exist yet: %s",
+                    e,
+                )
+                await session.rollback()
+                return
+            raise
 
         await session.commit()
 
