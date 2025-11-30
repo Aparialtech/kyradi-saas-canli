@@ -5,12 +5,10 @@ import axios from "axios";
 
 import { authService } from "../../services/auth";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
-import { useTranslation } from "../../hooks/useTranslation";
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { t } = useTranslation();
   
   const token = searchParams.get("token");
   const [newPassword, setNewPassword] = useState<string>("");
@@ -163,4 +161,3 @@ export function ResetPasswordPage() {
     </div>
   );
 }
-

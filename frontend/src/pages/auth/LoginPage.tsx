@@ -12,7 +12,7 @@ import { tokenStorage } from "../../lib/tokenStorage";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, user, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const { t } = useTranslation();
 
   const [tenantSlug, setTenantSlug] = useState<string>("demo-hotel");

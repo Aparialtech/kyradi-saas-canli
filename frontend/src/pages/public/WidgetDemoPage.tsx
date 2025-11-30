@@ -20,6 +20,21 @@ const demoMessages: Record<SupportedLocale, { missing: string; ready: string; er
     ready: "Widget loaded. You can submit the form to create a reservation.",
     error: "Widget script could not load. Verify the CDN path.",
   },
+  "de-DE": {
+    missing: "Tenant-ID und Widget-Key sind erforderlich.",
+    ready: "Widget geladen. Sie können das Formular absenden, um eine Reservierung zu erstellen.",
+    error: "Widget-Skript konnte nicht geladen werden. CDN-Pfad prüfen.",
+  },
+  "zh-CN": {
+    missing: "需要 Tenant ID 和 widget key。",
+    ready: "组件已加载。填写表单即可创建预订。",
+    error: "组件脚本加载失败。请检查 CDN 路径。",
+  },
+  "es-ES": {
+    missing: "Se requieren Tenant ID y clave del widget.",
+    ready: "Widget cargado. Puedes enviar el formulario para crear una reserva.",
+    error: "No se pudo cargar el script del widget. Verifica la ruta CDN.",
+  },
 };
 
 export function WidgetDemoPage() {

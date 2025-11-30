@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { adminReportService } from "../../../services/admin/reports";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
 import { useToast } from "../../../hooks/useToast";
@@ -172,4 +171,3 @@ export function AdminRevenuePage() {
     </section>
   );
 }
-

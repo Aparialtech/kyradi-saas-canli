@@ -2,14 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { demoService } from "../../services/partner/demo";
 import { magicpayService } from "../../services/partner/magicpay";
 import { paymentService } from "../../services/partner/payments";
 import { http } from "../../lib/http";
 import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
-import { useTranslation } from "../../hooks/useTranslation";
 
 interface Reservation {
   id: string;
@@ -31,18 +29,9 @@ interface Reservation {
   } | null;
 }
 
-interface Storage {
-  id: string;
-  code: string;
-  status: string;
-}
-
 export function DemoPaymentFlowPage() {
   const { messages, push } = useToast();
-  const { t } = useTranslation();
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
-  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
-  const [scenario, setScenario] = useState<"pos" | "magicpay_success" | "magicpay_fail" | null>(null);
 
   // Get reservations list
   const reservationsQuery = useQuery({
@@ -65,27 +54,6 @@ export function DemoPaymentFlowPage() {
     enabled: !!selectedReservationId,
   });
 
-  // Convert widget reservation mutation
-  const convertMutation = useMutation({
-    mutationFn: (widgetReservationId: number) => demoService.convertWidgetReservation(widgetReservationId),
-    onSuccess: (data) => {
-      push({
-        title: "Rezervasyon Dönüştürüldü",
-        description: `Rezervasyon ID: ${data.reservation_id}, Depo ID: ${data.storage_id}`,
-        type: "success",
-      });
-      setSelectedReservationId(data.reservation_id);
-      reservationsQuery.refetch();
-    },
-    onError: (error) => {
-      push({
-        title: "Dönüştürme Hatası",
-        description: getErrorMessage(error),
-        type: "error",
-      });
-    },
-  });
-
   // POS payment confirmation mutation
   const confirmPosMutation = useMutation({
     mutationFn: (paymentId: string) => paymentService.confirmPos(paymentId),
@@ -97,7 +65,6 @@ export function DemoPaymentFlowPage() {
       });
       reservationQuery.refetch();
       reservationsQuery.refetch();
-      setScenario(null);
     },
     onError: (error) => {
       push({
@@ -121,7 +88,6 @@ export function DemoPaymentFlowPage() {
       });
       reservationQuery.refetch();
       reservationsQuery.refetch();
-      setScenario(null);
     },
     onError: (error) => {
       push({
@@ -166,7 +132,6 @@ export function DemoPaymentFlowPage() {
     }
 
     if (confirm("POS ödemesini onaylamak istediğinize emin misiniz?")) {
-      setScenario("pos");
       confirmPosMutation.mutate(payment.id);
     }
   };
@@ -201,7 +166,6 @@ export function DemoPaymentFlowPage() {
       return;
     }
 
-    setScenario("magicpay_success");
     magicpayCompleteMutation.mutate({ sessionId, result: "success" });
   };
 
@@ -236,7 +200,6 @@ export function DemoPaymentFlowPage() {
     }
 
     if (confirm("MagicPay ödemesini iptal etmek istediğinize emin misiniz?")) {
-      setScenario("magicpay_fail");
       magicpayCompleteMutation.mutate({ sessionId, result: "failed" });
     }
   };
@@ -462,4 +425,3 @@ export function DemoPaymentFlowPage() {
     </div>
   );
 }
-

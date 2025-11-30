@@ -5,7 +5,6 @@ import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useAuth } from "../../../context/AuthContext";
 
 // Placeholder service - gerçek API endpoint'leri eklenecek
 const partnerSettingsService = {
@@ -36,6 +35,7 @@ const partnerSettingsService = {
     };
   },
   async updateSettings(payload: any): Promise<void> {
+    void payload;
     // TODO: Gerçek API endpoint'i eklenecek
     return Promise.resolve();
   },
@@ -44,7 +44,6 @@ const partnerSettingsService = {
 export function PartnerSettingsPage() {
   const { t } = useTranslation();
   const { messages, push } = useToast();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -318,4 +317,3 @@ export function PartnerSettingsPage() {
     </section>
   );
 }
-

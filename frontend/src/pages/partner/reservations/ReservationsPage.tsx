@@ -10,7 +10,6 @@ import { getErrorMessage } from "../../../lib/httpError";
 import { env } from "../../../config/env";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { TranslationKey } from "../../../i18n/translations";
-import { http } from "../../../lib/http";
 
 const statusClassMap: Record<string, string> = {
   reserved: "badge badge--warning",
@@ -294,7 +293,6 @@ export function ReservationsPage() {
                     getStatusLabel,
                     maskIdentityNumber,
                     t,
-                    locale,
                   }),
                 )}
               </tbody>
@@ -326,7 +324,6 @@ function renderReservationRow({
   getStatusLabel,
   maskIdentityNumber,
   t,
-  locale,
 }: {
   reservation: Reservation;
   confirmMutation: UseMutationResult<Reservation, unknown, number>;
@@ -341,7 +338,6 @@ function renderReservationRow({
   getStatusLabel: (status: string) => string;
   maskIdentityNumber: (value?: string | null) => string | null;
   t: TranslateFn;
-  locale: string;
 }) {
   const identityNumber = reservation.tc_identity_number 
     ? `TC: ${maskIdentityNumber(reservation.tc_identity_number)}`

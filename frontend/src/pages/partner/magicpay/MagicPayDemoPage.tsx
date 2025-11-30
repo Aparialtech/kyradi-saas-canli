@@ -6,12 +6,10 @@ import { magicpayService } from "../../../services/partner/magicpay";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
-import { useTranslation } from "../../../hooks/useTranslation";
 
 export function MagicPayDemoPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { messages, push } = useToast();
-  const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const paymentInfoQuery = useQuery({
@@ -281,4 +279,3 @@ export function MagicPayDemoPage() {
     </div>
   );
 }
-

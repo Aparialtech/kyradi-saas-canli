@@ -1,17 +1,14 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 
 import { authService } from "../../services/auth";
 import { tokenStorage } from "../../lib/tokenStorage";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
-import { useTranslation } from "../../hooks/useTranslation";
 
 export function SMSVerificationPage() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
   
   // Get verification_id from location state or query params
   const initialVerificationId = (location.state as { verification_id?: string })?.verification_id || 
@@ -209,4 +206,3 @@ export function SMSVerificationPage() {
     </div>
   );
 }
-
