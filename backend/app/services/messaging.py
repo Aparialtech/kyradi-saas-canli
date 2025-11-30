@@ -214,41 +214,54 @@ class EmailService:
         
         if locale.startswith("tr"):
             subject = "KYRADİ'ye Hoş Geldiniz"
+            password_html = f"<p>Geçici şifreniz: <strong>{temporary_password}</strong></p>" if temporary_password else ""
             body_html = f"""
             <html>
             <body>
                 <h2>Hoş Geldiniz!</h2>
                 <p>KYRADİ platformuna kaydınız tamamlandı.</p>
-                {"<p>Geçici şifreniz: <strong>" + temporary_password + "</strong></p>" if temporary_password else ""}
+                {password_html}
                 <p>Lütfen ilk girişinizde şifrenizi değiştirin.</p>
                 <p>Saygılarımızla,<br>KYRADİ Ekibi</p>
             </body>
             </html>
             """
             if temporary_password:
-             temp_line = f"Geçici şifreniz: {temporary_password}\n\n"
+                body_text = (
+                    "KYRADİ platformuna hoş geldiniz!\n\n"
+                    f"Geçici şifreniz: {temporary_password}\n\n"
+                    "Lütfen ilk girişinizde şifrenizi değiştirin."
+                )
             else:
-                temp_line = ""
-
-            body_text = (
-    "KYRADİ platformuna hoş geldiniz!\n\n"
-    f"{temp_line}"
-    "Lütfen ilk girişinizde şifrenizi değiştirin."
-)
+                body_text = (
+                    "KYRADİ platformuna hoş geldiniz!\n\n"
+                    "Lütfen ilk girişinizde şifrenizi değiştirin."
+                )
         else:
             subject = "Welcome to KYRADİ"
+            password_html = f"<p>Your temporary password: <strong>{temporary_password}</strong></p>" if temporary_password else ""
             body_html = f"""
             <html>
             <body>
                 <h2>Welcome!</h2>
                 <p>Your KYRADİ platform registration is complete.</p>
-                {"<p>Your temporary password: <strong>" + temporary_password + "</strong></p>" if temporary_password else ""}
+                {password_html}
                 <p>Please change your password on first login.</p>
                 <p>Best regards,<br>KYRADİ Team</p>
             </body>
             </html>
             """
-            body_text = f"Welcome to KYRADİ platform!\n\n{"Your temporary password: " + temporary_password if temporary_password else ""}\n\nPlease change your password on first login."
+            if temporary_password:
+                body_text = (
+                    "Welcome to KYRADİ platform!\n\n"
+                    f"Your temporary password: {temporary_password}\n\n"
+                    "Please change your password on first login."
+                )
+            else:
+                body_text = (
+                    "Welcome to KYRADİ platform!\n\n"
+                    "Please change your password on first login."
+                )
         
         try:
             if provider == "sendgrid":
@@ -586,4 +599,3 @@ class SMSService:
 # Global instances
 email_service = EmailService()
 sms_service = SMSService()
-
