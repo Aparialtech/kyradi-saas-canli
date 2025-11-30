@@ -29,81 +29,11 @@ async def init_db(db_engine: AsyncEngine | None = None) -> None:
 
 
 async def _seed_defaults() -> None:
-    """Insert default admin and demo tenant if missing."""
-    async with AsyncSessionMaker() as session:
-        super_admin = await session.execute(
-            select(User).where(User.role == UserRole.SUPER_ADMIN.value)
-        )
-        super_admin_user = super_admin.scalar_one_or_none()
-        if super_admin_user is None:
-            super_admin_user = User(
-                email="admin@kyradi.com",
-                password_hash=get_password_hash("Kyradi!2025"),
-                role=UserRole.SUPER_ADMIN.value,
-                is_active=True,
-            )
-            session.add(super_admin_user)
-            await session.flush()
-        elif super_admin_user.email.endswith(".local"):
-            super_admin_user.email = "admin@kyradi.com"
-
-        demo_tenant = await session.execute(select(Tenant).where(Tenant.slug == "demo-hotel"))
-        tenant = demo_tenant.scalar_one_or_none()
-        if tenant is None:
-            tenant = Tenant(
-                slug="demo-hotel",
-                name="Demo Hotel",
-                plan="pro",
-                is_active=True,
-                brand_color="#00A389",
-            )
-            session.add(tenant)
-            await session.flush()
-
-        demo_admin = await session.execute(
-            select(User).where(User.email == "admin@demo.com")
-        )
-        if demo_admin.scalar_one_or_none() is None:
-            session.add(
-                User(
-                    tenant_id=tenant.id,
-                    email="admin@demo.com",
-                    password_hash=get_password_hash("Kyradi!2025"),
-                    role=UserRole.TENANT_ADMIN.value,
-                    is_active=True,
-                )
-            )
-
-        try:
-            widget_cfg = await session.execute(
-                select(WidgetConfig).where(WidgetConfig.tenant_id == tenant.id)
-            )
-            if widget_cfg.scalar_one_or_none() is None:
-                session.add(
-                    WidgetConfig(
-                        tenant_id=tenant.id,
-                        widget_public_key="demo-widget-key",
-                        widget_secret="demo-widget-secret",
-                        allowed_origins=[
-                            "http://localhost:5173",
-                            "http://localhost:4173",
-                            "https://panel.kyradi.com",
-                        ],
-                        kvkk_text="Rezervasyon oluştururken KVKK/GDPR koşullarını kabul etmiş olursunuz.",
-                    )
-                )
-        except ProgrammingError as e:
-            msg = str(getattr(e, "orig", e)).lower()
-            if "undefinedtable" in msg or 'relation "widget_configs" does not exist' in msg:
-                logger.warning(
-                    "Skipping widget default seeding because widget_configs table does not exist yet: %s",
-                    e,
-                )
-                await session.rollback()
-                return
-            raise
-
-        await session.commit()
+    """
+    Temporary: disable seeding to avoid startup crashes
+    when certain tables (e.g., widget_configs) do not exist.
+    """
+    return
 
 
 async def _apply_local_ddl(conn) -> None:
