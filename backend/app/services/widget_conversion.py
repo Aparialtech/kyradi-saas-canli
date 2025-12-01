@@ -1,4 +1,13 @@
-"""Convert widget reservations to normal reservations with storage assignment."""
+"""Convert widget reservations to normal reservations with storage assignment.
+
+Bu modül widget rezervasyonlarını normal rezervasyonlara çevirir ve ödeme kaydı oluşturur.
+
+PAYMENT FLOW:
+1. Widget reservation oluşturulur
+2. Normal reservation'a convert edilir
+3. get_or_create_payment ile SADECE 1 payment oluşturulur
+4. Duplicate payment INSERT denemesi YAPILMAZ
+"""
 
 from datetime import datetime, timezone, date, timedelta
 from typing import Optional
@@ -124,11 +133,18 @@ async def convert_widget_reservation_to_reservation(
 ) -> Reservation:
     """Convert a WidgetReservation to a normal Reservation with storage assignment.
     
-    This function:
-    1. Finds or assigns a storage
-    2. Converts WidgetReservation data to Reservation format
-    3. Creates the Reservation record
-    4. Updates storage status to OCCUPIED
+    Bu fonksiyon:
+    1. Storage bulur veya atar
+    2. WidgetReservation verisini Reservation formatına çevirir
+    3. Reservation kaydı oluşturur
+    4. Storage durumunu OCCUPIED yapar
+    5. get_or_create_payment ile SADECE 1 payment oluşturur (duplicate yok!)
+    
+    PAYMENT DUPLICATE KORUMASI:
+    - Payment oluşturma için get_or_create_payment kullanılır
+    - Bu fonksiyon önce mevcut payment kontrol eder
+    - Mevcut varsa tekrar INSERT yapmaz
+    - "Existing payment detected, skipping creation…" logu görürseniz duplicate engellendi demektir
     
     Args:
         session: Database session
@@ -152,6 +168,10 @@ async def convert_widget_reservation_to_reservation(
     
     # Check if already converted - if so, find and return the existing reservation
     if widget_reservation.status == "converted":
+        logger.info(
+            f"Widget reservation {widget_reservation_id} is already converted. "
+            f"Looking for existing reservation..."
+        )
         # Try to find the existing reservation by matching customer info and dates
         # Use first() instead of scalar_one_or_none() to avoid MultipleResultsFound error
         existing_reservation_stmt = select(Reservation).where(
@@ -182,12 +202,20 @@ async def convert_widget_reservation_to_reservation(
         existing_reservation = existing_result.scalars().first()
         
         if existing_reservation:
+            logger.info(
+                f"Found existing reservation {existing_reservation.id} for "
+                f"already-converted widget reservation {widget_reservation_id}"
+            )
             # Return the existing reservation instead of raising an error
             # This allows the user to see the already-converted reservation
             return existing_reservation
         else:
             # Status says converted but no reservation found - reset status and continue
             # This handles edge cases where conversion failed but status was set
+            logger.warning(
+                f"Widget reservation {widget_reservation_id} marked as converted but "
+                f"no matching reservation found. Resetting status to pending."
+            )
             widget_reservation.status = "pending"
             await session.flush()
     
@@ -224,6 +252,7 @@ async def convert_widget_reservation_to_reservation(
         # If pricing calculation fails, use default pricing
         # Note: We don't rollback here because pricing check happens before any writes
         # Default: 15 TL per hour, minimum 1 hour
+        logger.warning(f"Pricing calculation failed, using default: {pricing_exc}")
         duration_hours = max(int((end_at - start_at).total_seconds() // 3600) or 1, 1)
         amount_minor = duration_hours * 1500  # 15 TL per hour in kuruş
     
@@ -401,6 +430,10 @@ async def convert_widget_reservation_to_reservation(
         
         session.add(reservation)
         await session.flush()
+        
+        logger.info(
+            f"Created reservation {reservation.id} from widget reservation {widget_reservation_id}"
+        )
     except Exception as create_exc:
         # Rollback storage status change
         storage.status = StorageStatus.IDLE.value
@@ -411,11 +444,12 @@ async def convert_widget_reservation_to_reservation(
     widget_reservation.status = "converted"
     await session.flush()
     
-    # Create payment record automatically (idempotent - won't create duplicate)
-    # Payment will be created in PENDING status
-    # For gateway mode, checkout session will be created
+    # ============================================================
+    # PAYMENT CREATION - SINGLE SOURCE OF TRUTH
+    # get_or_create_payment kullanarak SADECE 1 payment oluştur
+    # ============================================================
     try:
-        from .payment_service import create_payment_for_reservation
+        from .payment_service import get_or_create_payment
         from .magicpay.client import DEMO_MODES
         import json as json_module
         
@@ -425,43 +459,107 @@ async def convert_widget_reservation_to_reservation(
             tenant = await session.get(Tenant, tenant_id)
         
         # Safely access tenant metadata with multiple fallbacks
-        tenant_metadata = None
-        if tenant is not None:
-            # Try different attribute names (metadata_ is the SQLAlchemy column name, metadata might be aliased)
-            tenant_metadata = getattr(tenant, "metadata_", None) or getattr(tenant, "metadata", None)
-        
-        if tenant_metadata is None:
-            tenant_metadata = {}
-        elif isinstance(tenant_metadata, str):
-            try:
-                tenant_metadata = json_module.loads(tenant_metadata)
-            except Exception:
-                tenant_metadata = {}
-        elif not isinstance(tenant_metadata, dict):
-            # Handle unexpected types
-            tenant_metadata = {}
-        
+        tenant_metadata = _get_tenant_metadata_safe(tenant)
         payment_mode = tenant_metadata.get("payment_mode", "GATEWAY_DEMO")
         
-        # Determine if we should create checkout session based on mode
-        is_demo_mode = payment_mode in DEMO_MODES or payment_mode.upper() == "GATEWAY_DEMO"
+        logger.info(
+            f"Creating payment for reservation {reservation.id} with mode={payment_mode}"
+        )
         
-        payment = await create_payment_for_reservation(
+        # get_or_create_payment handles duplicate protection internally
+        # If payment already exists (shouldn't happen for new reservation), it will be returned
+        # If not, a new payment will be created
+        payment, was_created = await get_or_create_payment(
             session,
-            reservation=reservation,
-            storage=storage,
+            reservation_id=reservation.id,
+            tenant_id=tenant_id,
+            amount_minor=amount_minor,
+            currency="TRY",
             mode=payment_mode,
-            create_checkout_session=is_demo_mode,
+            storage_id=storage.id,
+            metadata={
+                "widget_reservation_id": widget_reservation_id,
+                "created_via": "widget_conversion",
+            },
         )
         await session.flush()
         
-        logger.info(
-            f"Auto-created payment for converted reservation: reservation_id={reservation.id}, "
-            f"payment_id={payment.id}, mode={payment_mode}"
-        )
+        if was_created:
+            logger.info(
+                f"Created new payment {payment.id} for reservation {reservation.id}"
+            )
+        else:
+            logger.info(
+                f"Using existing payment {payment.id} for reservation {reservation.id} "
+                f"(was already created, skipping duplicate)"
+            )
+        
+        # Create checkout session for demo mode
+        is_demo_mode = payment_mode in DEMO_MODES or payment_mode.upper() == "GATEWAY_DEMO"
+        if is_demo_mode and not payment.provider_intent_id:
+            try:
+                from .magicpay.client import get_magicpay_client
+                from .magicpay.service import MagicPayService
+                
+                magicpay_client = get_magicpay_client(payment_mode=payment_mode)
+                magicpay_service = MagicPayService(magicpay_client)
+                
+                checkout_data = await magicpay_service.create_checkout_session(
+                    session=session,
+                    reservation=reservation,
+                    payment_mode=payment_mode,
+                )
+                
+                payment.provider_intent_id = checkout_data.get("session_id")
+                payment.meta = {
+                    **(payment.meta or {}),
+                    "checkout_url": checkout_data.get("checkout_url"),
+                    "expires_at": checkout_data.get("expires_at"),
+                    "session_id": checkout_data.get("session_id"),
+                }
+                await session.flush()
+                
+                logger.info(
+                    f"Created checkout session for payment {payment.id}: "
+                    f"checkout_url={checkout_data.get('checkout_url')}"
+                )
+            except Exception as checkout_exc:
+                logger.error(
+                    f"Failed to create checkout session for payment {payment.id}: {checkout_exc}",
+                    exc_info=True
+                )
+                # Payment still created, checkout session can be created later
+        
     except Exception as exc:
-        logger.error(f"Failed to create payment for converted reservation: {exc}", exc_info=True)
+        logger.error(
+            f"Failed to create payment for converted reservation {reservation.id}: {exc}",
+            exc_info=True
+        )
         # Don't fail conversion if payment creation fails
         # Payment can be created manually later
     
     return reservation
+
+
+def _get_tenant_metadata_safe(tenant: Optional[Tenant]) -> dict:
+    """Safely get tenant metadata as dict."""
+    if tenant is None:
+        return {}
+    
+    # Try different attribute names (metadata_ is the SQLAlchemy column name, metadata might be aliased)
+    tenant_metadata = getattr(tenant, "metadata_", None) or getattr(tenant, "metadata", None)
+    
+    if tenant_metadata is None:
+        return {}
+    
+    if isinstance(tenant_metadata, str):
+        import json
+        try:
+            return json.loads(tenant_metadata)
+        except Exception:
+            return {}
+    
+    if isinstance(tenant_metadata, dict):
+        return tenant_metadata
+    
+    return {}

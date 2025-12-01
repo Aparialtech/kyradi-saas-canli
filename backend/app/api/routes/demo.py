@@ -1,4 +1,11 @@
-"""Demo flow endpoints for testing the complete reservation → payment → settlement flow."""
+"""Demo flow endpoints for testing the complete reservation → payment → settlement flow.
+
+Bu modül demo akışı için test endpoint'leri sağlar.
+
+PAYMENT DUPLICATE KORUMASI:
+- Tüm payment işlemleri payment_service.get_or_create_payment üzerinden yapılır
+- link_payment_to_reservation ile duplicate linking engellenir
+"""
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -13,12 +20,15 @@ from ...dependencies import require_tenant_staff
 from ...models import Payment, PaymentStatus, Reservation, ReservationStatus, Storage, StorageStatus, User
 from ...schemas import StorageRead
 from ...services.payment_providers import get_payment_provider, FakePaymentProvider
+from ...services.payment_service import get_existing_payment, link_payment_to_reservation
 from ...services.revenue import calculate_settlement, mark_settlement_completed
 from ...services.storage_availability import is_storage_available
 from ...services.widget_conversion import convert_widget_reservation_to_reservation
 
 router = APIRouter(prefix="/demo", tags=["demo"])
 logger = logging.getLogger(__name__)
+
+
 @router.get("/available-storages", response_model=List[StorageRead])
 async def list_available_storages(
     start_at: datetime = Query(..., description="Reservation start datetime"),
@@ -54,6 +64,9 @@ async def list_available_storages(
         ):
             available.append(StorageRead.model_validate(storage))
 
+    logger.debug(
+        f"Available storages for {start_at} - {end_at}: {len(available)} out of {len(storages)}"
+    )
     return available
 
 
@@ -75,6 +88,11 @@ async def simulate_payment_success(
     
     Use this for testing the complete flow without actual payment gateway.
     """
+    logger.info(
+        f"Simulate payment request: intent_id={payment_intent_id}, "
+        f"user={current_user.email}, tenant={current_user.tenant_id}"
+    )
+    
     # Find payment by provider_intent_id
     stmt = select(Payment).where(
         Payment.provider_intent_id == payment_intent_id,
@@ -89,7 +107,8 @@ async def simulate_payment_success(
             detail="Payment not found",
         )
     
-    if payment.status == PaymentStatus.CAPTURED.value:
+    if payment.status in [PaymentStatus.CAPTURED.value, PaymentStatus.PAID.value]:
+        logger.info(f"Payment {payment.id} already completed with status={payment.status}")
         return {
             "ok": True,
             "message": "Payment already captured",
@@ -101,7 +120,7 @@ async def simulate_payment_success(
     payment.status = PaymentStatus.CAPTURED.value
     await session.flush()
     
-    # If payment doesn't have reservation_id, try to find it via widget_reservation_id in metadata
+    # If payment doesn't have reservation_id, try to link it
     if not payment.reservation_id and payment.meta:
         widget_reservation_id = payment.meta.get("widget_reservation_id")
         if widget_reservation_id:
@@ -109,16 +128,22 @@ async def simulate_payment_success(
             widget_reservation = await session.get(WidgetReservation, widget_reservation_id)
             if widget_reservation and widget_reservation.status == "converted":
                 # Try to find the converted reservation
-                from ...models import Reservation
                 stmt_res = select(Reservation).where(
                     Reservation.tenant_id == current_user.tenant_id,
                 ).order_by(Reservation.created_at.desc()).limit(1)
                 result_res = await session.execute(stmt_res)
                 latest_reservation = result_res.scalar_one_or_none()
                 if latest_reservation:
-                    payment.reservation_id = latest_reservation.id
-                    await session.flush()
-                    logger.info(f"Linked payment {payment.id} to reservation {latest_reservation.id}")
+                    # Use helper to safely link payment
+                    linked_payment = await link_payment_to_reservation(
+                        session,
+                        payment_id=payment.id,
+                        reservation_id=latest_reservation.id,
+                    )
+                    if linked_payment:
+                        logger.info(
+                            f"Linked payment {payment.id} to reservation {latest_reservation.id}"
+                        )
     
     # Create settlement if not exists
     from ...models import Settlement
@@ -147,10 +172,12 @@ async def simulate_payment_success(
             )
             session.add(settlement)
             await session.flush()
+            logger.info(f"Created settlement {settlement.id} without reservation")
         else:
             # Create settlement with default 5% commission
             settlement = await calculate_settlement(session, payment, commission_rate=5.0)
             await session.flush()
+            logger.info(f"Created settlement {settlement.id} for reservation {payment.reservation_id}")
     
     # Mark settlement as settled (use flush instead of commit to avoid double commit)
     settlement.status = "settled"
@@ -188,14 +215,24 @@ async def convert_widget_to_reservation(
 ) -> Dict[str, Any]:
     """Convert a WidgetReservation to a normal Reservation with storage assignment.
     
-    This endpoint:
-    1. Finds the WidgetReservation
-    2. Finds or assigns an available storage
-    3. Creates a normal Reservation
-    4. Updates storage status to OCCUPIED
+    Bu endpoint:
+    1. WidgetReservation'ı bulur
+    2. Uygun storage bulur/atar
+    3. Normal Reservation oluşturur
+    4. Storage durumunu OCCUPIED yapar
+    5. Payment oluşturur (widget_conversion içinde, duplicate yok!)
     
-    Use this to complete the widget → reservation flow.
+    PAYMENT DUPLICATE KORUMASI:
+    - Payment oluşturma widget_conversion.convert_widget_reservation_to_reservation
+      içinde yapılır
+    - get_or_create_payment kullanılır
+    - Duplicate INSERT yapılmaz
     """
+    logger.info(
+        f"Convert widget reservation request: widget_id={widget_reservation_id}, "
+        f"storage_id={storage_id}, user={current_user.email}"
+    )
+    
     try:
         reservation = await convert_widget_reservation_to_reservation(
             session,
@@ -206,45 +243,25 @@ async def convert_widget_to_reservation(
         )
         await session.flush()
         
-        # Link any pending payment to the new reservation
-        from reservations.models import WidgetReservation
+        # Check if payment was created by conversion
+        payment = await get_existing_payment(session, reservation.id)
         
-        widget_reservation = await session.get(WidgetReservation, widget_reservation_id)
-        if widget_reservation:
-            # Find payment by widget_reservation_id in metadata
-            stmt = select(Payment).where(
-                Payment.tenant_id == current_user.tenant_id,
-                Payment.status == PaymentStatus.PENDING.value,
+        if payment:
+            logger.info(
+                f"Found payment {payment.id} for reservation {reservation.id} "
+                f"(created by conversion)"
             )
-            result = await session.execute(stmt)
-            pending_payments = result.scalars().all()
-            
-            # Try to find payment linked to this widget reservation via metadata
-            for payment in pending_payments:
-                if payment.meta and payment.meta.get("widget_reservation_id") == widget_reservation_id:
-                    # Link payment to the new reservation
-                    payment.reservation_id = reservation.id
-                    await session.flush()
-                    logger.info(
-                        f"Linked payment {payment.id} to reservation {reservation.id} "
-                        f"for widget reservation {widget_reservation_id}"
-                    )
-                    break
-                elif not payment.reservation_id:
-                    # Orphan payment - link it if it's the most recent one for this tenant
-                    # Check if it was created around the same time as widget reservation
-                    payment.reservation_id = reservation.id
-                    await session.flush()
-                    logger.info(
-                        f"Linked orphan payment {payment.id} to reservation {reservation.id}"
-                    )
-                    break
+        else:
+            logger.warning(
+                f"No payment found for reservation {reservation.id} after conversion"
+            )
         
         await session.commit()
         
         logger.info(
             f"Widget reservation converted: widget_id={widget_reservation_id}, "
-            f"reservation_id={reservation.id}, storage_id={reservation.storage_id}"
+            f"reservation_id={reservation.id}, storage_id={reservation.storage_id}, "
+            f"payment_id={payment.id if payment else None}"
         )
         
         return {
@@ -254,23 +271,23 @@ async def convert_widget_to_reservation(
             "reservation_id": reservation.id,
             "storage_id": reservation.storage_id,
             "status": reservation.status,
+            "payment_id": payment.id if payment else None,
+            "payment_status": payment.status if payment else None,
         }
     except ValueError as exc:
         await session.rollback()
-        logger.error(f"ValueError in widget conversion: {exc}", exc_info=True)
+        error_msg = str(exc)
+        logger.error(f"ValueError in widget conversion: {error_msg}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
+            detail=error_msg,
         ) from exc
     except Exception as exc:
         await session.rollback()
         import traceback
         error_detail = str(exc)
-        error_traceback = traceback.format_exc()
-        logger.error(f"Unexpected error in widget conversion: {exc}", exc_info=True)
-        logger.error(f"Traceback: {error_traceback}")
+        logger.error(f"Unexpected error in widget conversion: {error_detail}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Conversion failed: {error_detail}",
         ) from exc
-

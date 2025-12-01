@@ -1,19 +1,33 @@
-"""MagicPay payment service for managing checkout sessions and payments."""
+"""MagicPay payment service for managing checkout sessions and payments.
 
-from typing import Optional
+Bu modül MagicPay checkout session ve payment işlemlerini yönetir.
+
+PAYMENT DUPLICATE KORUMASI:
+- get_or_create_payment helper kullanılır
+- Mevcut payment varsa tekrar INSERT yapılmaz
+- Her metod idempotent çalışır
+"""
+
+from typing import Optional, Dict, Any
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from ...models import Payment, PaymentStatus, Reservation, ReservationStatus
+from ..payment_service import get_or_create_payment, get_existing_payment
 from .client import get_magicpay_client, MagicPayClient
 
 logger = logging.getLogger(__name__)
 
 
 class MagicPayService:
-    """Service for managing MagicPay payment operations."""
+    """Service for managing MagicPay payment operations.
+    
+    Bu servis MagicPay checkout session ve payment işlemlerini yönetir.
+    Tüm payment oluşturma işlemleri payment_service.get_or_create_payment
+    üzerinden yapılır.
+    """
     
     def __init__(self, client: MagicPayClient):
         """Initialize MagicPay service.
@@ -28,78 +42,117 @@ class MagicPayService:
         session: AsyncSession,
         reservation: Reservation,
         payment_mode: str = "demo_local",
-    ) -> Payment:
+    ) -> Dict[str, Any]:
         """Create a checkout session for a reservation.
         
-        This method:
-        1. Creates a MagicPay checkout session
-        2. Creates a Payment record in database
-        3. Links payment to reservation
+        Bu metod:
+        1. Mevcut payment var mı kontrol eder (idempotent)
+        2. Yoksa yeni payment oluşturur
+        3. MagicPay checkout session oluşturur
+        4. Payment'ı günceller
+        
+        DUPLICATE KORUMASI:
+        - get_or_create_payment kullanarak duplicate payment engellenir
+        - Mevcut payment varsa "Existing payment detected" logu görülür
         
         Args:
             session: Database session
             reservation: Reservation to create payment for
-            payment_mode: Payment mode ("demo_local" | "live")
+            payment_mode: Payment mode ("demo_local" | "GATEWAY_DEMO" | "live")
         
         Returns:
-            Created Payment record
+            Dict with checkout session data (checkout_url, session_id, expires_at, payment)
         """
-        # Create checkout session via MagicPay client
+        logger.info(
+            f"Creating checkout session for reservation {reservation.id}, mode={payment_mode}"
+        )
+        
+        # ============================================================
+        # STEP 1: Get or create payment using helper (IDEMPOTENT)
+        # ============================================================
+        payment, was_created = await get_or_create_payment(
+            session,
+            reservation_id=reservation.id,
+            tenant_id=reservation.tenant_id,
+            amount_minor=reservation.amount_minor,
+            currency=reservation.currency,
+            provider="MAGIC_PAY",
+            mode=payment_mode,
+            storage_id=reservation.storage_id,
+            metadata={"payment_mode": payment_mode},
+        )
+        
+        if was_created:
+            logger.info(f"Created new payment {payment.id} for reservation {reservation.id}")
+        else:
+            logger.info(
+                f"Using existing payment {payment.id} for reservation {reservation.id} "
+                f"(duplicate prevented)"
+            )
+        
+        # ============================================================
+        # STEP 2: Check if checkout session already exists
+        # ============================================================
+        if payment.provider_intent_id and payment.meta and payment.meta.get("checkout_url"):
+            logger.info(
+                f"Checkout session already exists for payment {payment.id}: "
+                f"session_id={payment.provider_intent_id}"
+            )
+            return {
+                "checkout_url": payment.meta.get("checkout_url"),
+                "session_id": payment.provider_intent_id,
+                "expires_at": payment.meta.get("expires_at"),
+                "payment": payment,
+            }
+        
+        # ============================================================
+        # STEP 3: Create MagicPay checkout session
+        # ============================================================
         checkout_data = await self.client.create_checkout_session(
             amount_minor=reservation.amount_minor,
             currency=reservation.currency,
             reservation_id=reservation.id,
             customer_name=reservation.customer_name or "Guest",
-            customer_email=None,  # TODO: Add email to reservation if needed
+            customer_email=reservation.customer_email,
             metadata={
                 "reservation_id": reservation.id,
                 "tenant_id": reservation.tenant_id,
                 "storage_id": reservation.storage_id,
             },
         )
-        payment_metadata = {
+        
+        # ============================================================
+        # STEP 4: Update payment with checkout session info
+        # ============================================================
+        payment.provider = "MAGIC_PAY"
+        payment.mode = payment_mode
+        payment.provider_intent_id = checkout_data["session_id"]
+        payment.status = PaymentStatus.PENDING.value
+        payment.amount_minor = reservation.amount_minor
+        payment.currency = reservation.currency
+        payment.meta = {
+            **(payment.meta or {}),
             "payment_mode": payment_mode,
             "checkout_url": checkout_data["checkout_url"],
             "expires_at": checkout_data.get("expires_at"),
             "session_id": checkout_data["session_id"],
         }
-
-        # Check existing payment for this reservation (idempotent)
-        stmt = select(Payment).where(Payment.reservation_id == reservation.id)
-        existing_payment = (await session.execute(stmt)).scalar_one_or_none()
-
-        if existing_payment is not None:
-            existing_payment.provider = "MAGIC_PAY"
-            existing_payment.mode = payment_mode
-            existing_payment.provider_intent_id = checkout_data["session_id"]
-            existing_payment.status = PaymentStatus.PENDING.value
-            existing_payment.amount_minor = reservation.amount_minor
-            existing_payment.currency = reservation.currency
-            existing_payment.transaction_id = None
-            existing_payment.paid_at = None
-            existing_payment.meta = payment_metadata
-            await session.flush()
-            payment = existing_payment
-        else:
-            payment = Payment(
-                tenant_id=reservation.tenant_id,
-                reservation_id=reservation.id,
-                provider="MAGIC_PAY",
-                provider_intent_id=checkout_data["session_id"],
-                status=PaymentStatus.PENDING.value,
-                amount_minor=reservation.amount_minor,
-                currency=reservation.currency,
-                meta=payment_metadata,
-            )
-            session.add(payment)
-            await session.flush()
+        
+        await session.flush()
 
         logger.info(
             f"Created MagicPay checkout session: payment_id={payment.id}, "
-            f"session_id={checkout_data['session_id']}, reservation_id={reservation.id}"
+            f"session_id={checkout_data['session_id']}, "
+            f"checkout_url={checkout_data['checkout_url']}, "
+            f"reservation_id={reservation.id}"
         )
 
-        return payment
+        return {
+            "checkout_url": checkout_data["checkout_url"],
+            "session_id": checkout_data["session_id"],
+            "expires_at": checkout_data.get("expires_at"),
+            "payment": payment,
+        }
     
     async def complete_payment(
         self,
@@ -117,6 +170,17 @@ class MagicPayService:
         Returns:
             Updated Payment record
         """
+        logger.info(
+            f"Completing payment {payment.id} with result={result}"
+        )
+        
+        # Check if already completed
+        if payment.status in [PaymentStatus.PAID.value, PaymentStatus.CAPTURED.value]:
+            logger.info(
+                f"Payment {payment.id} already completed with status={payment.status}"
+            )
+            return payment
+        
         if result == "success":
             # Simulate successful payment
             payment_result = await self.client.simulate_success(payment.provider_intent_id)

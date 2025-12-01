@@ -1,7 +1,14 @@
-"""Payment service for creating and managing payments."""
+"""Payment service for creating and managing payments.
+
+GLOBAL PAYMENT RULES:
+1. Her reservation_id için sadece 1 payment olabilir
+2. Payment oluşturmadan önce mutlaka mevcut payment kontrolü yapılır
+3. Mevcut payment varsa tekrar insert yapılmaz, mevcut döndürülür
+4. Tüm payment işlemleri bu modül üzerinden yapılır (single source of truth)
+"""
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Tuple
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +21,26 @@ from ..models.enums import PaymentMode, PaymentProvider
 logger = logging.getLogger(__name__)
 
 
-async def get_or_create_payment_for_reservation(
+async def get_existing_payment(
+    session: AsyncSession,
+    reservation_id: str,
+) -> Optional[Payment]:
+    """Get existing payment for a reservation.
+    
+    Args:
+        session: Database session
+        reservation_id: Reservation ID
+        
+    Returns:
+        Payment if exists, None otherwise
+    """
+    result = await session.execute(
+        select(Payment).where(Payment.reservation_id == reservation_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_or_create_payment(
     session: AsyncSession,
     *,
     reservation_id: str,
@@ -25,12 +51,17 @@ async def get_or_create_payment_for_reservation(
     mode: str = PaymentMode.GATEWAY_DEMO.value,
     storage_id: Optional[str] = None,
     metadata: Optional[dict] = None,
-) -> tuple[Payment, bool]:
+) -> Tuple[Payment, bool]:
     """Get existing payment or create new one for a reservation (idempotent).
     
-    This function ensures only ONE payment exists per reservation.
-    If a payment already exists, it returns that payment.
-    If not, it creates a new one.
+    Bu fonksiyon reservation başına sadece 1 payment olmasını garanti eder.
+    Eğer payment zaten varsa, mevcut payment'ı döndürür.
+    Yoksa yeni payment oluşturur.
+    
+    DUPLICATE PAYMENT PROTECTION:
+    - Her çağrıda önce mevcut payment kontrol edilir
+    - Mevcut varsa "Existing payment detected, skipping creation…" logu yazılır
+    - Sadece yoksa yeni payment oluşturulur
     
     Args:
         session: Database session
@@ -46,21 +77,27 @@ async def get_or_create_payment_for_reservation(
     Returns:
         Tuple of (Payment, created) where created is True if new payment was created
     """
-    # First check if payment already exists
-    existing_payment = await session.scalar(
-        select(Payment).where(Payment.reservation_id == reservation_id)
-    )
+    # STEP 1: Check if payment already exists
+    existing_payment = await get_existing_payment(session, reservation_id)
     
     if existing_payment:
-        logger.debug(
-            f"Found existing payment for reservation {reservation_id}: payment_id={existing_payment.id}"
+        logger.info(
+            f"Existing payment detected, skipping creation. "
+            f"reservation_id={reservation_id}, payment_id={existing_payment.id}, "
+            f"status={existing_payment.status}"
         )
-        # Optionally update metadata/mode if provided
+        # Optionally update metadata if provided (but don't change core fields)
         if metadata:
             existing_payment.meta = {**(existing_payment.meta or {}), **metadata}
+            await session.flush()
         return existing_payment, False
     
-    # Create new payment
+    # STEP 2: Create new payment (no existing payment found)
+    logger.info(
+        f"Creating new payment for reservation_id={reservation_id}, "
+        f"amount={amount_minor}, provider={provider}, mode={mode}"
+    )
+    
     payment = Payment(
         tenant_id=tenant_id,
         reservation_id=reservation_id,
@@ -77,23 +114,30 @@ async def get_or_create_payment_for_reservation(
     try:
         await session.flush()
         logger.info(
-            f"Created new payment: payment_id={payment.id}, reservation_id={reservation_id}, "
-            f"amount={amount_minor}, provider={provider}, mode={mode}"
+            f"Payment created successfully: payment_id={payment.id}, "
+            f"reservation_id={reservation_id}"
         )
         return payment, True
-    except IntegrityError:
-        # Race condition - payment was created by another process
-        await session.rollback()
-        existing_payment = await session.scalar(
-            select(Payment).where(Payment.reservation_id == reservation_id)
+    except IntegrityError as e:
+        # Race condition - another process created payment between our check and insert
+        logger.warning(
+            f"Race condition detected during payment creation for reservation_id={reservation_id}. "
+            f"Fetching existing payment instead. Error: {e}"
         )
+        await session.rollback()
+        
+        # Fetch the payment that was created by the other process
+        existing_payment = await get_existing_payment(session, reservation_id)
         if existing_payment:
-            logger.warning(
-                f"Race condition: payment already exists for reservation {reservation_id}, "
-                f"using existing payment_id={existing_payment.id}"
+            logger.info(
+                f"Found existing payment after race condition: payment_id={existing_payment.id}"
             )
             return existing_payment, False
-        # Re-raise if we still can't find the payment
+        
+        # This should not happen, but re-raise if we still can't find the payment
+        logger.error(
+            f"Could not find payment after IntegrityError for reservation_id={reservation_id}"
+        )
         raise
 
 
@@ -108,11 +152,14 @@ async def create_payment_for_reservation(
 ) -> Payment:
     """Create a payment record for a reservation (idempotent).
     
-    This function:
-    1. Checks if payment already exists (idempotent)
-    2. Creates a Payment record (PENDING status) if needed
-    3. If mode is GATEWAY_DEMO, creates checkout session via MagicPay client
-    4. Links payment to reservation and storage
+    Bu fonksiyon:
+    1. Önce mevcut payment var mı kontrol eder (get_or_create_payment kullanarak)
+    2. Yoksa yeni Payment kaydı oluşturur
+    3. Demo mode ise MagicPay checkout session oluşturur
+    
+    DUPLICATE PROTECTION:
+    - get_or_create_payment fonksiyonu ile duplicate engellenir
+    - "Payment already linked to reservation…" logu duplicate durumunda yazılır
     
     Args:
         session: Database session
@@ -131,22 +178,14 @@ async def create_payment_for_reservation(
     
     # Get tenant payment config
     tenant = await session.get(Tenant, reservation.tenant_id)
-    tenant_metadata = getattr(tenant, "metadata_", None)
-    if tenant_metadata is None:
-        tenant_metadata = {}
-    if isinstance(tenant_metadata, str):
-        import json
-        try:
-            tenant_metadata = json.loads(tenant_metadata)
-        except Exception:
-            tenant_metadata = {}
+    tenant_metadata = _get_tenant_metadata(tenant)
     
     # Override provider/mode from tenant config if set
-    provider = (tenant_metadata or {}).get("payment_provider", provider)
-    mode = (tenant_metadata or {}).get("payment_mode", mode)
+    provider = tenant_metadata.get("payment_provider", provider)
+    mode = tenant_metadata.get("payment_mode", mode)
 
-    # Get or create payment (idempotent)
-    payment, created = await get_or_create_payment_for_reservation(
+    # Get or create payment (idempotent - handles duplicate protection)
+    payment, created = await get_or_create_payment(
         session,
         reservation_id=reservation.id,
         tenant_id=reservation.tenant_id,
@@ -158,8 +197,13 @@ async def create_payment_for_reservation(
         metadata={},
     )
     
-    # If existing payment found, update its fields if needed
+    # If existing payment found, log and optionally update
     if not created:
+        logger.info(
+            f"Payment already linked to reservation. "
+            f"reservation_id={reservation.id}, payment_id={payment.id}"
+        )
+        # Update fields if they changed
         payment.provider = provider
         payment.mode = mode
         payment.amount_minor = reservation.amount_minor
@@ -168,56 +212,103 @@ async def create_payment_for_reservation(
             payment.storage_id = storage.id
         await session.flush()
 
-    # If gateway demo mode, create checkout session
-    # Normalize mode for comparison
+    # Create checkout session for demo mode if needed
+    await _maybe_create_checkout_session(
+        session, payment, reservation, mode, provider, create_checkout_session
+    )
+    
+    logger.info(
+        f"Payment ready: payment_id={payment.id}, reservation_id={reservation.id}, "
+        f"provider={provider}, mode={mode}, amount={payment.amount_minor}, "
+        f"was_created={created}, has_checkout_url={bool(payment.meta and payment.meta.get('checkout_url'))}"
+    )
+    
+    return payment
+
+
+def _get_tenant_metadata(tenant: Optional[Tenant]) -> dict:
+    """Safely get tenant metadata as dict."""
+    if tenant is None:
+        return {}
+    
+    tenant_metadata = getattr(tenant, "metadata_", None) or getattr(tenant, "metadata", None)
+    
+    if tenant_metadata is None:
+        return {}
+    
+    if isinstance(tenant_metadata, str):
+        import json
+        try:
+            return json.loads(tenant_metadata)
+        except Exception:
+            return {}
+    
+    if isinstance(tenant_metadata, dict):
+        return tenant_metadata
+    
+    return {}
+
+
+async def _maybe_create_checkout_session(
+    session: AsyncSession,
+    payment: Payment,
+    reservation: Reservation,
+    mode: str,
+    provider: str,
+    create_checkout_session: bool,
+) -> None:
+    """Create checkout session for demo mode if needed."""
     from .magicpay.client import normalize_payment_mode, DEMO_MODES
+    
     normalized_mode = normalize_payment_mode(mode)
     is_demo_mode = normalized_mode == "demo" or mode in DEMO_MODES
     is_magicpay = provider == PaymentProvider.MAGIC_PAY.value or provider == "MAGIC_PAY"
     
-    if is_demo_mode and is_magicpay and create_checkout_session:
-        # Only create checkout session if not already created
-        if not payment.provider_intent_id:
-            try:
-                from .magicpay.client import get_magicpay_client
-                from .magicpay.service import MagicPayService
-                
-                magicpay_client = get_magicpay_client(payment_mode=mode)
-                magicpay_service = MagicPayService(magicpay_client)
-                
-                # Create checkout session
-                checkout_data = await magicpay_service.create_checkout_session(
-                    session=session,
-                    reservation=reservation,
-                    payment_mode=mode,
-                )
-                
-                # Update payment with session info
-                payment.provider_intent_id = checkout_data.get("session_id")
-                payment.meta = {
-                    **(payment.meta or {}),
-                    "checkout_url": checkout_data.get("checkout_url"),
-                    "expires_at": checkout_data.get("expires_at"),
-                    "session_id": checkout_data.get("session_id"),
-                }
-                
-                await session.flush()
-                
-                logger.info(
-                    f"Created MagicPay checkout session: payment_id={payment.id}, "
-                    f"reservation_id={reservation.id}, session_id={payment.provider_intent_id}"
-                )
-            except Exception as exc:
-                logger.error(f"Failed to create MagicPay checkout session: {exc}", exc_info=True)
-                # Don't fail payment creation if checkout session fails
-                # Payment will be created but without checkout URL
+    if not (is_demo_mode and is_magicpay and create_checkout_session):
+        return
     
-    logger.info(
-        f"Payment ready: payment_id={payment.id}, reservation_id={reservation.id}, "
-        f"provider={provider}, mode={mode}, amount={payment.amount_minor}, created={created}"
-    )
+    # Only create checkout session if not already created
+    if payment.provider_intent_id:
+        logger.debug(
+            f"Checkout session already exists for payment_id={payment.id}, "
+            f"session_id={payment.provider_intent_id}"
+        )
+        return
     
-    return payment
+    try:
+        from .magicpay.client import get_magicpay_client
+        from .magicpay.service import MagicPayService
+        
+        magicpay_client = get_magicpay_client(payment_mode=mode)
+        magicpay_service = MagicPayService(magicpay_client)
+        
+        # Create checkout session
+        checkout_data = await magicpay_service.create_checkout_session(
+            session=session,
+            reservation=reservation,
+            payment_mode=mode,
+        )
+        
+        # Update payment with session info
+        payment.provider_intent_id = checkout_data.get("session_id")
+        payment.meta = {
+            **(payment.meta or {}),
+            "checkout_url": checkout_data.get("checkout_url"),
+            "expires_at": checkout_data.get("expires_at"),
+            "session_id": checkout_data.get("session_id"),
+        }
+        
+        await session.flush()
+        
+        logger.info(
+            f"Created MagicPay checkout session: payment_id={payment.id}, "
+            f"reservation_id={reservation.id}, session_id={payment.provider_intent_id}, "
+            f"checkout_url={checkout_data.get('checkout_url')}"
+        )
+    except Exception as exc:
+        logger.error(f"Failed to create MagicPay checkout session: {exc}", exc_info=True)
+        # Don't fail payment creation if checkout session fails
+        # Payment will be created but without checkout URL
 
 
 async def confirm_pos_payment(
@@ -298,4 +389,62 @@ async def confirm_pos_payment(
     
     logger.info(f"Confirmed POS payment: payment_id={payment.id}, amount={payment.amount_minor}")
     
+    return payment
+
+
+async def link_payment_to_reservation(
+    session: AsyncSession,
+    *,
+    payment_id: str,
+    reservation_id: str,
+) -> Optional[Payment]:
+    """Link a payment to a reservation (only if not already linked).
+    
+    Bu fonksiyon:
+    1. Önce bu reservation için başka payment var mı kontrol eder
+    2. Varsa işlem yapmaz (duplicate önleme)
+    3. Yoksa payment'ı reservation'a bağlar
+    
+    Args:
+        session: Database session
+        payment_id: Payment ID
+        reservation_id: Reservation ID to link
+        
+    Returns:
+        Updated Payment or None if already linked to another payment
+    """
+    # Check if reservation already has a payment
+    existing_payment = await get_existing_payment(session, reservation_id)
+    if existing_payment:
+        if existing_payment.id == payment_id:
+            logger.debug(
+                f"Payment {payment_id} is already linked to reservation {reservation_id}"
+            )
+            return existing_payment
+        else:
+            logger.warning(
+                f"Reservation {reservation_id} already has a different payment "
+                f"(existing: {existing_payment.id}, attempted: {payment_id}). "
+                f"Skipping link operation."
+            )
+            return None
+    
+    # Get payment and link
+    payment = await session.get(Payment, payment_id)
+    if not payment:
+        logger.error(f"Payment {payment_id} not found")
+        return None
+    
+    # Check if this payment is already linked to another reservation
+    if payment.reservation_id and payment.reservation_id != reservation_id:
+        logger.warning(
+            f"Payment {payment_id} is already linked to reservation {payment.reservation_id}. "
+            f"Cannot link to {reservation_id}."
+        )
+        return None
+    
+    payment.reservation_id = reservation_id
+    await session.flush()
+    
+    logger.info(f"Linked payment {payment_id} to reservation {reservation_id}")
     return payment
