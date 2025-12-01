@@ -260,13 +260,15 @@ async def _seed_demo_widget_config(session: AsyncSession, demo_tenant_id: str) -
     """Seed demo widget config if missing.
     
     LAZY IMPORT: We import the model here to avoid circular imports.
+    Uses scalars().first() to handle multiple existing configs gracefully.
     """
     # Lazy import to avoid circular dependency
     from app.reservations.models import WidgetConfig
     
     try:
-        cfg_stmt = select(WidgetConfig).where(WidgetConfig.tenant_id == demo_tenant_id)
-        cfg = (await session.execute(cfg_stmt)).scalar_one_or_none()
+        cfg_stmt = select(WidgetConfig).where(WidgetConfig.tenant_id == demo_tenant_id).order_by(WidgetConfig.created_at)
+        cfg_result = await session.execute(cfg_stmt)
+        cfg = cfg_result.scalars().first()
         if cfg is None:
             cfg = WidgetConfig(
                 tenant_id=demo_tenant_id,
@@ -295,16 +297,22 @@ async def _seed_demo_widget_config(session: AsyncSession, demo_tenant_id: str) -
 
 
 async def _seed_demo_location_and_storage(session: AsyncSession, demo_tenant_id: str) -> None:
-    """Seed demo location and storage if missing (required for availability)."""
+    """Seed demo location and storage if missing (required for availability).
+    
+    Uses scalars().first() instead of scalar_one_or_none() to handle cases
+    where multiple rows exist (e.g., from previous seeding runs).
+    """
     from ..models import Location, Storage, StorageStatus
     
     DEMO_LOCATION_ID = "loc-demo-0001-0001-000000000001"
     DEMO_STORAGE_ID = "str-demo-0001-0001-000000000001"
     
     try:
-        # Check if demo location exists
-        loc_stmt = select(Location).where(Location.tenant_id == demo_tenant_id)
-        loc = (await session.execute(loc_stmt)).scalar_one_or_none()
+        # Check if demo location exists - use first() to avoid MultipleResultsFound
+        loc_stmt = select(Location).where(Location.tenant_id == demo_tenant_id).order_by(Location.created_at)
+        loc_result = await session.execute(loc_stmt)
+        loc = loc_result.scalars().first()
+        
         if loc is None:
             loc = Location(
                 id=DEMO_LOCATION_ID,
@@ -321,12 +329,13 @@ async def _seed_demo_location_and_storage(session: AsyncSession, demo_tenant_id:
             await session.flush()
             logger.info("Created demo location for tenant %s", demo_tenant_id)
         else:
-            DEMO_LOCATION_ID_ACTUAL = loc.id
             logger.info("Demo location already exists for tenant %s, using existing ID %s", demo_tenant_id, loc.id)
         
-        # Check if demo storage exists
-        storage_stmt = select(Storage).where(Storage.tenant_id == demo_tenant_id)
-        storage = (await session.execute(storage_stmt)).scalar_one_or_none()
+        # Check if demo storage exists - use first() to avoid MultipleResultsFound
+        storage_stmt = select(Storage).where(Storage.tenant_id == demo_tenant_id).order_by(Storage.created_at)
+        storage_result = await session.execute(storage_stmt)
+        storage = storage_result.scalars().first()
+        
         if storage is None:
             location_id_to_use = loc.id if loc else DEMO_LOCATION_ID
             storage = Storage(
