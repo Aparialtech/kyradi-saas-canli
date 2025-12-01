@@ -40,7 +40,13 @@ class ChatProviderBase(ABC):
 
     provider_name = "base"
 
-    def __init__(self, model: str, timeout: float = 20.0) -> None:
+    def __init__(self, model: str, timeout: float = 40.0) -> None:
+        """Initialize provider with model and timeout.
+        
+        Args:
+            model: Model identifier
+            timeout: Request timeout in seconds (default 40s for reliability)
+        """
         self.model = model
         self.timeout = timeout
 
