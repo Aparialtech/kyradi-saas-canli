@@ -411,11 +411,12 @@ async def convert_widget_reservation_to_reservation(
     widget_reservation.status = "converted"
     await session.flush()
     
-    # Create payment record automatically
+    # Create payment record automatically (idempotent - won't create duplicate)
     # Payment will be created in PENDING status
     # For gateway mode, checkout session will be created
     try:
         from .payment_service import create_payment_for_reservation
+        from .magicpay.client import DEMO_MODES
         import json as json_module
         
         # Determine payment mode from tenant config or default to GATEWAY_DEMO
@@ -442,12 +443,15 @@ async def convert_widget_reservation_to_reservation(
         
         payment_mode = tenant_metadata.get("payment_mode", "GATEWAY_DEMO")
         
+        # Determine if we should create checkout session based on mode
+        is_demo_mode = payment_mode in DEMO_MODES or payment_mode.upper() == "GATEWAY_DEMO"
+        
         payment = await create_payment_for_reservation(
             session,
             reservation=reservation,
             storage=storage,
             mode=payment_mode,
-            create_checkout_session=(payment_mode == "GATEWAY_DEMO"),
+            create_checkout_session=is_demo_mode,
         )
         await session.flush()
         

@@ -9,6 +9,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# Supported payment modes - normalized to these values
+DEMO_MODES = {"demo_local", "GATEWAY_DEMO", "demo", "fake"}
+LIVE_MODES = {"live", "GATEWAY_LIVE", "GATEWAY", "production"}
+
+
 class MagicPayClient(ABC):
     """Interface for MagicPay payment gateway client.
     
@@ -80,7 +85,7 @@ class FakeMagicPayClient(MagicPayClient):
     This implementation simulates MagicPay behavior without actual API calls.
     It generates fake session IDs, checkout URLs, and transaction IDs.
     
-    IMPORTANT: This should ONLY be used when payment_mode is "demo_local".
+    Supports payment modes: demo_local, GATEWAY_DEMO, demo, fake
     """
     
     def __init__(self, base_url: Optional[str] = None):
@@ -226,6 +231,27 @@ class RealMagicPayClient(MagicPayClient):
         raise ValueError("simulate_failure is only available in demo/local mode")
 
 
+def normalize_payment_mode(payment_mode: str) -> str:
+    """Normalize payment mode to standard values.
+    
+    Args:
+        payment_mode: Raw payment mode string
+        
+    Returns:
+        Normalized mode: "demo" or "live"
+    """
+    mode_lower = payment_mode.lower() if payment_mode else ""
+    
+    if payment_mode in DEMO_MODES or mode_lower in {"demo_local", "gateway_demo", "demo", "fake"}:
+        return "demo"
+    if payment_mode in LIVE_MODES or mode_lower in {"live", "gateway_live", "gateway", "production"}:
+        return "live"
+    
+    # Default to demo for unknown modes (safer than failing)
+    logger.warning(f"Unknown payment_mode '{payment_mode}', defaulting to demo mode")
+    return "demo"
+
+
 def get_magicpay_client(
     payment_mode: str,
     api_key: Optional[str] = None,
@@ -234,8 +260,12 @@ def get_magicpay_client(
 ) -> MagicPayClient:
     """Get MagicPay client instance based on payment mode.
     
+    Supported modes:
+    - Demo modes: "demo_local", "GATEWAY_DEMO", "demo", "fake" → FakeMagicPayClient
+    - Live modes: "live", "GATEWAY_LIVE", "GATEWAY", "production" → RealMagicPayClient
+    
     Args:
-        payment_mode: "demo_local" | "live"
+        payment_mode: Payment mode string (case-insensitive for most modes)
         api_key: API key (required for live mode)
         api_secret: API secret (required for live mode)
         base_url: Base URL (optional, defaults provided)
@@ -243,16 +273,21 @@ def get_magicpay_client(
     Returns:
         MagicPayClient instance
     """
-    if payment_mode == "demo_local":
+    normalized_mode = normalize_payment_mode(payment_mode)
+    
+    if normalized_mode == "demo":
+        logger.debug(f"Creating FakeMagicPayClient for mode: {payment_mode}")
         return FakeMagicPayClient(base_url=base_url)
-    elif payment_mode == "live":
+    elif normalized_mode == "live":
         if not api_key or not api_secret:
             raise ValueError("api_key and api_secret required for live mode")
+        logger.debug(f"Creating RealMagicPayClient for mode: {payment_mode}")
         return RealMagicPayClient(
             api_key=api_key,
             api_secret=api_secret,
             base_url=base_url or "https://api.magicpay.com",
         )
     else:
-        raise ValueError(f"Unknown payment_mode: {payment_mode}")
-
+        # This should not happen due to normalize_payment_mode defaulting to demo
+        logger.error(f"Unexpected normalized mode: {normalized_mode}, using demo client")
+        return FakeMagicPayClient(base_url=base_url)

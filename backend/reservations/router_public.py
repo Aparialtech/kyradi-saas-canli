@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
+import logging
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -26,6 +28,7 @@ from .services import (
 )
 
 router = APIRouter(prefix="/public/widget", tags=["widget"])
+logger = logging.getLogger(__name__)
 
 rate_limiter = RateLimiter(settings.rate_limit_public_per_min)
 
@@ -58,10 +61,17 @@ async def submit_reservation(
     authorization: str = Header(..., alias="Authorization"),
     session: AsyncSession = Depends(get_session),
 ) -> ReservationPublicResponse:
-    import logging
-    import traceback
-    logger = logging.getLogger(__name__)
+    """Create a widget reservation with automatic conversion and payment setup.
     
+    This endpoint:
+    1. Validates the widget token and payload
+    2. Creates a WidgetReservation
+    3. Automatically converts to a normal Reservation (with storage assignment)
+    4. Creates a single Payment record (via widget_conversion)
+    5. Returns reservation and payment info
+    
+    Note: Payment is created ONLY in widget_conversion to avoid duplicates.
+    """
     try:
         logger.info(f"Widget reservation request received. Payload keys: {list(payload.model_dump().keys())}")
     except Exception as log_exc:
@@ -196,12 +206,15 @@ async def submit_reservation(
     except RateLimitError as exc:
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)) from exc
 
+    # Variables to track flow results
+    widget_reservation = None
+    normal_reservation = None
+    payment_record = None
+    conversion_error = None
+    
     try:
         payload_dict = payload.model_dump()
         logger.info(f"Creating widget reservation for tenant {tenant_id}")
-        logger.debug(f"Payload start_datetime: {payload_dict.get('start_datetime')}, type: {type(payload_dict.get('start_datetime'))}")
-        logger.debug(f"Payload end_datetime: {payload_dict.get('end_datetime')}, type: {type(payload_dict.get('end_datetime'))}")
-        logger.debug(f"Payload guest: {payload_dict.get('guest')}")
         
         # Create widget reservation
         widget_reservation = await create_reservation(
@@ -216,12 +229,9 @@ async def submit_reservation(
         logger.info(f"Widget reservation created: {widget_reservation.id}")
         
         # Convert widget reservation to normal reservation with storage assignment
-        # Note: We try to convert automatically, but if it fails (e.g., no available storage),
-        # the user can convert manually later via the demo flow page
+        # This also creates the payment record (only place where payment is created!)
         from app.services.widget_conversion import convert_widget_reservation_to_reservation
         
-        normal_reservation = None
-        conversion_error = None
         try:
             logger.info(f"Attempting to convert widget reservation {widget_reservation.id} to normal reservation")
             normal_reservation = await convert_widget_reservation_to_reservation(
@@ -236,6 +246,22 @@ async def submit_reservation(
                 f"Auto-converted widget reservation {widget_reservation.id} "
                 f"to normal reservation {normal_reservation.id}"
             )
+            
+            # Get the payment created by widget_conversion
+            payment_stmt = select(Payment).where(Payment.reservation_id == normal_reservation.id)
+            payment_result = await session.execute(payment_stmt)
+            payment_record = payment_result.scalar_one_or_none()
+            
+            if payment_record:
+                logger.info(
+                    f"Found payment created by conversion: payment_id={payment_record.id}, "
+                    f"checkout_url={payment_record.meta.get('checkout_url') if payment_record.meta else None}"
+                )
+            else:
+                logger.warning(
+                    f"No payment found after conversion for reservation {normal_reservation.id}"
+                )
+                
         except ValueError as conv_exc:
             # If conversion fails, still return widget reservation info
             # but log the error - user can convert manually later
@@ -244,7 +270,6 @@ async def submit_reservation(
                 f"to normal reservation: {conv_exc}. User can convert manually."
             )
             conversion_error = str(conv_exc)
-            # Continue with widget reservation only - conversion can be done manually
             normal_reservation = None
         except Exception as conv_exc:
             # Log unexpected conversion errors but don't fail the whole request
@@ -255,104 +280,13 @@ async def submit_reservation(
             conversion_error = f"Conversion error: {str(conv_exc)}"
             normal_reservation = None
         
-        # Calculate amount using pricing service
-        from datetime import datetime, timezone
-        from app.services.pricing import calculate_reservation_price
-        
-        if widget_reservation.checkin_date and widget_reservation.checkout_date:
-            # Convert date to datetime (start of day for checkin, end of day for checkout)
-            start_at = datetime.combine(
-                widget_reservation.checkin_date,
-                datetime.min.time(),
-                tzinfo=timezone.utc,
-            )
-            end_at = datetime.combine(
-                widget_reservation.checkout_date,
-                datetime.max.time().replace(microsecond=0),
-                tzinfo=timezone.utc,
-            )
-            amount_minor = await calculate_reservation_price(
-                session,
-                tenant_id=tenant_id,
-                start_at=start_at,
-                end_at=end_at,
-            )
-        else:
-            # Default to 1 day if dates not provided
-            from datetime import timedelta
-            now = datetime.now(timezone.utc)
-            start_at = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            end_at = start_at + timedelta(days=1)
-            amount_minor = await calculate_reservation_price(
-                session,
-                tenant_id=tenant_id,
-                start_at=start_at,
-                end_at=end_at,
-            )
-        
-        # Create payment intent if payment provider is specified
-        # Default to "fake" provider for demo purposes if not specified
-        payment_provider = payload.payment_provider or "fake"
-        payment_url = None
-        payment_intent_id = None
-        payment_required = False
-        payment_record = None
-        
-        # For demo flow, always enable payments if provider is "fake" (demo mode)
-        # In production, check settings.payments_enabled
-        payments_allowed = settings.payments_enabled or (payment_provider == "fake")
-        
-        if payment_provider and payments_allowed:
-            try:
-                payment_required = True
-                logger.info(f"Creating payment intent with provider: {payment_provider}, amount: {amount_minor}")
-                provider = get_payment_provider(payment_provider)
-                payment_data = await provider.create_payment_intent(
-                    amount_minor=amount_minor,
-                    currency="TRY",
-                    metadata={
-                        "widget_reservation_id": widget_reservation.id,
-                        "reservation_id": normal_reservation.id if normal_reservation else None,
-                        "tenant_id": tenant_id,
-                        "guest_email": widget_reservation.guest_email,
-                    },
-                )
-                payment_intent_id = payment_data.get("intent_id")
-                payment_url = payment_data.get("payment_url")
-                logger.info(f"Payment intent created: {payment_intent_id}")
-            except Exception as payment_exc:
-                logger.error(f"Error creating payment intent: {payment_exc}", exc_info=True)
-                # Don't fail the whole request if payment creation fails
-                payment_required = False
-                payment_intent_id = None
-                payment_url = None
-            
-            # Create payment record - link to normal reservation if available
-            # If normal reservation doesn't exist yet, we'll update it later via convert endpoint
-            reservation_id_for_payment = normal_reservation.id if normal_reservation else None
-            payment_record = Payment(
-                tenant_id=tenant_id,
-                reservation_id=reservation_id_for_payment,  # May be None if conversion failed
-                provider=payment_provider,
-                provider_intent_id=payment_intent_id,
-                status=PaymentStatus.PENDING.value,
-                amount_minor=amount_minor,
-                currency="TRY",
-                meta={
-                    "widget_reservation_id": widget_reservation.id,
-                    "guest_email": widget_reservation.guest_email,
-                },
-            )
-            session.add(payment_record)
-            await session.flush()
-            # Note: If normal_reservation is None, payment.reservation_id will be updated later via convert endpoint
-        
         await session.commit()
+        
     except ValueError as exc:
         await session.rollback()
         error_msg = str(exc)
         # If it's a storage availability error, return 400 with helpful message
-        if "No available storage" in error_msg or "storage" in error_msg.lower():
+        if "No available storage" in error_msg or "storage" in error_msg.lower() or "depo" in error_msg.lower():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Depo bulunamadı: {error_msg}. Lütfen sistem yöneticisine başvurun.",
@@ -360,32 +294,46 @@ async def submit_reservation(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg) from exc
     except Exception as exc:
         await session.rollback()
-        import logging
         import traceback
-        logger = logging.getLogger(__name__)
         error_detail = str(exc)
         error_traceback = traceback.format_exc()
         error_type = type(exc).__name__
-        logger.error(f"Unexpected error in widget reservation submission: {error_type}: {error_detail}", exc_info=True)
-        logger.error(f"Traceback: {error_traceback}")
-        # Always return detailed error message for debugging
-        # Include error type and message for better debugging
-        error_message = f"Rezervasyon oluşturulurken bir hata oluştu: [{error_type}] {error_detail}"
+        logger.error(
+            f"Unexpected error in widget reservation submission: {error_type}: {error_detail}",
+            exc_info=True
+        )
+        # Return user-friendly error, not raw exception
+        error_message = "Rezervasyon oluşturulurken bir hata oluştu. Lütfen tekrar deneyin."
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_message,
         ) from exc
 
-    await log_reservation_audit(
-        session,
-        tenant_id=tenant_id,
-        reservation=widget_reservation,
-        actor_ip=client_ip,
-        origin=normalized_origin,
-    )
-    await session.commit()
-    await send_webhook(session, reservation=widget_reservation, config=config, event_type="reservation.created")
-    await session.commit()
+    # Log audit and send webhook
+    try:
+        await log_reservation_audit(
+            session,
+            tenant_id=tenant_id,
+            reservation=widget_reservation,
+            actor_ip=client_ip,
+            origin=normalized_origin,
+        )
+        await session.commit()
+        await send_webhook(session, reservation=widget_reservation, config=config, event_type="reservation.created")
+        await session.commit()
+    except Exception as audit_exc:
+        logger.warning(f"Failed to log audit or send webhook: {audit_exc}")
+        # Don't fail the response for audit/webhook errors
+
+    # Determine payment info from the payment created by conversion
+    payment_required = payment_record is not None
+    payment_url = None
+    payment_intent_id = None
+    
+    if payment_record:
+        payment_intent_id = payment_record.provider_intent_id
+        if payment_record.meta:
+            payment_url = payment_record.meta.get("checkout_url")
 
     return ReservationPublicResponse(
         id=widget_reservation.id,
