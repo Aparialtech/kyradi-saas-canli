@@ -36,10 +36,12 @@ class Staff(IdentifiedMixin, TimestampMixin, Base):
     )
     
     # Staff can be assigned to specific storages
+    # Using lazy="selectin" to avoid MissingGreenlet errors in async context
     assigned_storages: Mapped[List["Storage"]] = relationship(
         "Storage",
         secondary=staff_storage_association,
         back_populates="assigned_staff",
+        lazy="selectin",
     )
     
     # Staff can be assigned to specific locations (all storages in that location)

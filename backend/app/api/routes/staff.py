@@ -5,6 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_admin
@@ -20,16 +21,21 @@ async def list_staff(
     session: AsyncSession = Depends(get_session),
 ) -> List[StaffRead]:
     """List all staff for the tenant."""
-    stmt = select(Staff).where(Staff.tenant_id == current_user.tenant_id)
+    # Eager load assigned_storages to avoid MissingGreenlet error
+    stmt = (
+        select(Staff)
+        .where(Staff.tenant_id == current_user.tenant_id)
+        .options(selectinload(Staff.assigned_storages))
+    )
     result = await session.execute(stmt)
-    staff_list = result.scalars().all()
+    staff_list = result.scalars().unique().all()
     
     return [
         StaffRead(
             id=staff.id,
             tenant_id=staff.tenant_id,
             user_id=staff.user_id,
-            assigned_storage_ids=[s.id for s in staff.assigned_storages],
+            assigned_storage_ids=[s.id for s in (staff.assigned_storages or [])],
             assigned_location_ids=staff.assigned_location_ids.split(",") if staff.assigned_location_ids else [],
             created_at=staff.created_at,
         )
@@ -88,13 +94,21 @@ async def create_staff(
     
     session.add(staff)
     await session.commit()
-    await session.refresh(staff)
+    
+    # Reload staff with eager loading to avoid MissingGreenlet
+    stmt = (
+        select(Staff)
+        .where(Staff.id == staff.id)
+        .options(selectinload(Staff.assigned_storages))
+    )
+    result = await session.execute(stmt)
+    staff = result.scalar_one()
     
     return StaffRead(
         id=staff.id,
         tenant_id=staff.tenant_id,
         user_id=staff.user_id,
-        assigned_storage_ids=[s.id for s in staff.assigned_storages],
+        assigned_storage_ids=[s.id for s in (staff.assigned_storages or [])],
         assigned_location_ids=staff.assigned_location_ids.split(",") if staff.assigned_location_ids else [],
         created_at=staff.created_at,
     )
@@ -108,8 +122,16 @@ async def update_staff(
     session: AsyncSession = Depends(get_session),
 ) -> StaffRead:
     """Update staff assignment."""
-    staff = await session.get(Staff, staff_id)
-    if staff is None or staff.tenant_id != current_user.tenant_id:
+    # Fetch staff with eager loading
+    stmt = (
+        select(Staff)
+        .where(Staff.id == staff_id, Staff.tenant_id == current_user.tenant_id)
+        .options(selectinload(Staff.assigned_storages))
+    )
+    result = await session.execute(stmt)
+    staff = result.scalar_one_or_none()
+    
+    if staff is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff not found")
     
     # Update storages
@@ -126,13 +148,21 @@ async def update_staff(
         staff.assigned_location_ids = ",".join(payload.location_ids) if payload.location_ids else None
     
     await session.commit()
-    await session.refresh(staff)
+    
+    # Reload with eager loading to avoid MissingGreenlet
+    stmt = (
+        select(Staff)
+        .where(Staff.id == staff_id)
+        .options(selectinload(Staff.assigned_storages))
+    )
+    result = await session.execute(stmt)
+    staff = result.scalar_one()
     
     return StaffRead(
         id=staff.id,
         tenant_id=staff.tenant_id,
         user_id=staff.user_id,
-        assigned_storage_ids=[s.id for s in staff.assigned_storages],
+        assigned_storage_ids=[s.id for s in (staff.assigned_storages or [])],
         assigned_location_ids=staff.assigned_location_ids.split(",") if staff.assigned_location_ids else [],
         created_at=staff.created_at,
     )
@@ -151,4 +181,3 @@ async def delete_staff(
     
     await session.delete(staff)
     await session.commit()
-
