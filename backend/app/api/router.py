@@ -10,10 +10,12 @@ from typing import Optional
 from fastapi import APIRouter
 
 from app.core.config import settings
-from reservations import admin_router as widget_admin_router
-from reservations import reservations_router as widget_partner_router
-from reservations import public_router as widget_public_router
-from reservations import config_router as widget_config_router
+
+# Import reservation routers from app.reservations (NOT top-level reservations)
+from app.reservations.router_admin import router as widget_admin_router
+from app.reservations.router_partner import reservations_router as widget_partner_router
+from app.reservations.router_partner import config_router as widget_config_router
+from app.reservations.router_public import router as widget_public_router
 
 from .routes import (
     admin,
@@ -71,7 +73,7 @@ api_router.include_router(reports.router)
 api_router.include_router(revenue.router)
 api_router.include_router(webhooks.router)
 
-# Widget routes
+# Widget routes from app.reservations
 api_router.include_router(widget_public_router)
 api_router.include_router(widget_partner_router)
 api_router.include_router(widget_config_router)

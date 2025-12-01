@@ -204,3 +204,4 @@ async def create_or_update_widget_config(
     except Exception:
         logger.exception("widget-config: error on create/update for tenant_id=%s", tenant_id)
         return _as_response(None, tenant_id)
+

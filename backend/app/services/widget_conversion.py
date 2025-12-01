@@ -156,7 +156,7 @@ async def convert_widget_reservation_to_reservation(
     Returns:
         Created Reservation
     """
-    from reservations.models import WidgetReservation
+    from app.reservations.models import WidgetReservation
     
     # Get widget reservation
     widget_reservation = await session.get(WidgetReservation, widget_reservation_id)

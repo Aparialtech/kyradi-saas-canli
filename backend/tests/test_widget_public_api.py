@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from reservations.router_public import rate_limiter
-from reservations.models import WidgetConfig, WidgetReservation
+from app.reservations.router_public import rate_limiter
+from app.reservations.models import WidgetConfig, WidgetReservation
 
 
 @pytest.fixture(autouse=True)

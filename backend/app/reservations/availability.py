@@ -14,3 +14,4 @@ async def check_availability(
     """Stub for future availability checks."""
     # In future this can query tenant inventory or call external system.
     return True
+

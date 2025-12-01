@@ -36,7 +36,6 @@ class ReservationSubmit(BaseModel):
     disclosure_consent: bool = Field(default=False, description="Disclosure text consent (required)")
     captcha_token: Optional[str] = None
     guest: GuestInfo
-    # Payment fields
     payment_provider: Optional[str] = Field(default=None, description="Payment provider: paytr, iyzico, stripe")
     payment_intent_id: Optional[str] = Field(default=None, description="Payment intent ID if payment already initiated")
 
@@ -73,20 +72,20 @@ class WidgetReservationRead(BaseModel):
     checkin_date: Optional[date] = None
     checkout_date: Optional[date] = None
     baggage_count: Optional[int] = None
-    luggage_count: Optional[int] = None  # Alias
+    luggage_count: Optional[int] = None
     locker_size: Optional[str] = None
     guest_name: Optional[str] = None
     full_name: Optional[str] = None
     guest_email: Optional[str] = None
     guest_phone: Optional[str] = None
     phone_number: Optional[str] = None
-    tc_identity_number: Optional[str] = None  # Mask in logs - only show last 2 digits
+    tc_identity_number: Optional[str] = None
     passport_number: Optional[str] = None
     hotel_room_number: Optional[str] = None
     notes: Optional[str] = None
     luggage_type: Optional[str] = None
     luggage_description: Optional[str] = None
-    kvkk_approved: Optional[bool] = None  # Backward compatibility
+    kvkk_approved: Optional[bool] = None
     kvkk_consent: Optional[bool] = None
     terms_consent: Optional[bool] = None
     disclosure_consent: Optional[bool] = None
@@ -106,6 +105,8 @@ class WidgetConfigBase(BaseModel):
     theme: str = "light"
     kvkk_text: Optional[str] = None
     webhook_url: Optional[str] = None
+    form_defaults: Optional[dict] = None
+    notification_preferences: Optional[dict] = None
 
 
 class WidgetConfigCreate(WidgetConfigBase):
@@ -125,3 +126,4 @@ class WidgetConfigRead(WidgetConfigBase):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+

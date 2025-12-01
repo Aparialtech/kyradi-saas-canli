@@ -124,7 +124,7 @@ async def simulate_payment_success(
     if not payment.reservation_id and payment.meta:
         widget_reservation_id = payment.meta.get("widget_reservation_id")
         if widget_reservation_id:
-            from reservations.models import WidgetReservation
+            from app.reservations.models import WidgetReservation
             widget_reservation = await session.get(WidgetReservation, widget_reservation_id)
             if widget_reservation and widget_reservation.status == "converted":
                 # Try to find the converted reservation

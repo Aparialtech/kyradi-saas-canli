@@ -82,3 +82,4 @@ async def update_config(
     await session.commit()
     await session.refresh(config)
     return WidgetConfigRead.model_validate(config)
+

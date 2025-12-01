@@ -366,3 +366,4 @@ async def _verify_captcha(token: str | None, ip: str | None, payment_provider: s
     payload = response.json()
     if not payload.get("success"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Captcha doğrulaması başarısız")
+

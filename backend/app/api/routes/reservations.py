@@ -86,7 +86,7 @@ async def list_reservations(
         payment = payment_result.scalar_one_or_none()
         
         # Mask TCKN in response for security
-        from reservations.validation import mask_tckn
+        from app.reservations.validation import mask_tckn
         res_dict = {
             **res.__dict__,
             "tc_identity_number": mask_tckn(res.tc_identity_number) if res.tc_identity_number else None,
@@ -118,7 +118,7 @@ async def get_reservation(
     payment = payment_result.scalar_one_or_none()
     
     # Mask TCKN in response for security
-    from reservations.validation import mask_tckn
+    from app.reservations.validation import mask_tckn
     reservation_dict_data = {
         **reservation.__dict__,
         "tc_identity_number": mask_tckn(reservation.tc_identity_number) if reservation.tc_identity_number else None,

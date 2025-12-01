@@ -53,20 +53,19 @@ class WidgetReservation(Base):
     baggage_count: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     locker_size: Mapped[Optional[str]] = mapped_column(String(16), default=None)
     guest_name: Mapped[Optional[str]] = mapped_column(String(255), default=None)
-    full_name: Mapped[Optional[str]] = mapped_column(String(255), default=None)  # Alias for guest_name, more explicit
+    full_name: Mapped[Optional[str]] = mapped_column(String(255), default=None)
     guest_email: Mapped[Optional[str]] = mapped_column(String(255), default=None)
     guest_phone: Mapped[Optional[str]] = mapped_column(String(64), default=None)
-    phone_number: Mapped[Optional[str]] = mapped_column(String(64), default=None)  # Alias for guest_phone
-    # Sensitive: Turkish National ID - store securely, never log full value
+    phone_number: Mapped[Optional[str]] = mapped_column(String(64), default=None)
     tc_identity_number: Mapped[Optional[str]] = mapped_column(String(11), default=None, comment="TC Kimlik No - Sensitive data, mask in logs")
     passport_number: Mapped[Optional[str]] = mapped_column(String(20), default=None)
     hotel_room_number: Mapped[Optional[str]] = mapped_column(String(20), default=None)
-    luggage_count: Mapped[Optional[int]] = mapped_column(Integer, default=None)  # Alias for baggage_count
+    luggage_count: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     luggage_type: Mapped[Optional[str]] = mapped_column(String(64), default=None, comment="Luggage type: Cabin, Medium, Large, Backpack, Other")
     luggage_description: Mapped[Optional[str]] = mapped_column(Text, default=None, comment="Luggage content description/summary (max 500 chars)")
     notes: Mapped[Optional[str]] = mapped_column(Text, default=None)
     kvkk_approved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    kvkk_consent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # Alias for kvkk_approved
+    kvkk_consent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     terms_consent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     disclosure_consent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, comment="Disclosure text consent (required)")
     origin: Mapped[Optional[str]] = mapped_column(String(255), default=None)
@@ -90,3 +89,4 @@ class WebhookDelivery(Base):
     status_code: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     error: Mapped[Optional[str]] = mapped_column(Text, default=None)
     delivered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
