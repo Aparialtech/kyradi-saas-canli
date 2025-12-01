@@ -1,164 +1,167 @@
-"""OpenAI chat completion provider using official OpenAI SDK.
+"""OpenAI Chat Provider - Safe implementation that never crashes on import.
 
-Bu provider AsyncOpenAI client kullanır ve tüm AI isteklerini OpenAI'ya yönlendirir.
-Model: gpt-4.1-mini (default)
+This module wraps OpenAI in try/except to prevent backend crashes.
+If OpenAI is not available, the provider operates in disabled mode.
 """
-
-from __future__ import annotations
 
 import os
 import logging
-from typing import Any, Sequence
-
-from openai import AsyncOpenAI, AuthenticationError, RateLimitError, APIError, APITimeoutError
-
-from .base import ChatMessage, ChatProviderBase, LLMProviderError, ProviderResponse, ProviderUsage
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("kyradi.ai.openai")
 
+# Safe import of OpenAI - NEVER crash on import
+OPENAI_AVAILABLE = False
+AsyncOpenAI = None
+AuthenticationError = Exception
+RateLimitError = Exception
+APIError = Exception
+APITimeoutError = Exception
 
-class OpenAIChatProvider(ChatProviderBase):
-    """OpenAI Chat Completions provider using official SDK.
+try:
+    from openai import (
+        AsyncOpenAI as _AsyncOpenAI,
+        AuthenticationError as _AuthenticationError,
+        RateLimitError as _RateLimitError,
+        APIError as _APIError,
+        APITimeoutError as _APITimeoutError,
+    )
+    AsyncOpenAI = _AsyncOpenAI
+    AuthenticationError = _AuthenticationError
+    RateLimitError = _RateLimitError
+    APIError = _APIError
+    APITimeoutError = _APITimeoutError
+    OPENAI_AVAILABLE = True
+    logger.info("OpenAI library loaded successfully")
+except ImportError as e:
+    logger.warning(f"OpenAI library not installed: {e}")
+except Exception as e:
+    logger.warning(f"OpenAI import failed: {e}")
+
+
+class OpenAIChatProvider:
+    """OpenAI Chat Provider with safe initialization.
     
-    Features:
-    - AsyncOpenAI client for async operations
-    - Proper error handling (AuthenticationError, RateLimitError, etc.)
-    - Timeout handling (60s default)
-    - Structured logging
+    This provider:
+    - Never crashes on initialization
+    - Works in disabled mode if OpenAI is not available
+    - Returns safe error responses instead of raising exceptions
     """
-
+    
     provider_name = "openai"
-
-    def __init__(
-        self,
-        api_key: str,
-        model: str = "gpt-4.1-mini",
-        *,
-        base_url: str | None = None,
-        timeout: float = 60.0,
-    ) -> None:
+    
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o-mini"):
         """Initialize OpenAI provider.
         
         Args:
-            api_key: OpenAI API key
-            model: Model to use (default: gpt-4.1-mini)
-            base_url: Optional custom base URL
-            timeout: Request timeout in seconds (default: 60s)
-            
-        Raises:
-            ValueError: If api_key is empty
+            api_key: OpenAI API key (can be None)
+            model: Model to use (default: gpt-4o-mini)
         """
-        if not api_key:
-            raise ValueError("OpenAI API key is required")
+        self.model = model
+        self.api_key = api_key
+        self.client = None
+        self.enabled = False
+        self._error: Optional[str] = None
         
-        super().__init__(model=model, timeout=timeout)
-        
-        # Initialize AsyncOpenAI client
-        self.client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            timeout=timeout,
-        )
-        
-        logger.info(f"OpenAI provider initialized: model={model}, timeout={timeout}s")
-
-    async def chat(
-        self,
-        messages: Sequence[ChatMessage],
-        stream: bool = False,
-        **kwargs: Any,
-    ) -> ProviderResponse:
-        """Send chat completion request to OpenAI.
+        # Only enable if library is available AND api_key is provided
+        if not OPENAI_AVAILABLE:
+            self._error = "OpenAI library not installed"
+            logger.warning("OpenAI provider disabled: library not installed")
+        elif not api_key:
+            self._error = "OPENAI_API_KEY not configured"
+            logger.warning("OpenAI provider disabled: API key not configured")
+        else:
+            try:
+                self.client = AsyncOpenAI(api_key=api_key, timeout=60.0)
+                self.enabled = True
+                logger.info(f"OpenAI provider enabled: model={model}")
+            except Exception as e:
+                self._error = f"Failed to initialize OpenAI client: {e}"
+                logger.error(self._error)
+    
+    def is_available(self) -> bool:
+        """Check if this provider is available for use."""
+        return self.enabled
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get detailed status of this provider."""
+        return {
+            "available": self.enabled,
+            "provider": "openai",
+            "model": self.model,
+            "library_installed": OPENAI_AVAILABLE,
+            "api_key_configured": bool(self.api_key),
+            "error": self._error,
+        }
+    
+    async def chat(self, prompt: str) -> Dict[str, Any]:
+        """Send chat request to OpenAI.
         
         Args:
-            messages: List of chat messages [{"role": "...", "content": "..."}]
-            stream: Whether to stream (disabled for reliability)
-            **kwargs: Additional parameters (max_tokens, temperature, etc.)
+            prompt: User's prompt
             
         Returns:
-            ProviderResponse with text, usage, and raw response
-            
-        Raises:
-            LLMProviderError: On API errors
+            Dict with answer or error
         """
-        logger.debug(
-            f"OpenAI chat request: model={self.model}, "
-            f"messages={len(messages)}, stream={stream}"
-        )
+        if not self.enabled:
+            return {
+                "answer": "",
+                "success": False,
+                "error": self._error or "AI service disabled",
+            }
         
         try:
-            # Build parameters
-            params = {
+            completion = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=1000,
+                temperature=0.7,
+            )
+            
+            answer = completion.choices[0].message.content if completion.choices else ""
+            
+            return {
+                "answer": answer,
+                "success": True,
                 "model": self.model,
-                "messages": [dict(m) for m in messages],
-                "max_tokens": kwargs.get("max_tokens", 1000),
-                "temperature": kwargs.get("temperature", 0.7),
+                "usage": {
+                    "input_tokens": completion.usage.prompt_tokens if completion.usage else 0,
+                    "output_tokens": completion.usage.completion_tokens if completion.usage else 0,
+                }
             }
             
-            # Make API call
-            response = await self.client.chat.completions.create(**params)
-            
-            # Extract response
-            choice = response.choices[0] if response.choices else None
-            if not choice:
-                raise LLMProviderError(
-                    "OpenAI yanıtı boş (choices yok)",
-                    status_code=502,
-                )
-            
-            text = choice.message.content or ""
-            text = text.strip()
-            
-            # Extract usage
-            usage = ProviderUsage(
-                input_tokens=response.usage.prompt_tokens if response.usage else 0,
-                output_tokens=response.usage.completion_tokens if response.usage else 0,
-            )
-            
-            logger.info(
-                f"OpenAI response: tokens_in={usage.input_tokens}, "
-                f"tokens_out={usage.output_tokens}, text_length={len(text)}"
-            )
-            
-            return ProviderResponse(
-                text=text,
-                usage=usage,
-                raw=response.model_dump() if hasattr(response, 'model_dump') else {},
-            )
-            
-        except AuthenticationError as exc:
-            logger.error(f"OpenAI authentication error: {exc}")
-            raise LLMProviderError(
-                "AI servisi yapılandırılmamış: OPENAI_API_KEY eksik veya hatalı.",
-                status_code=401,
-            ) from exc
-            
-        except RateLimitError as exc:
-            logger.warning(f"OpenAI rate limit: {exc}")
-            raise LLMProviderError(
-                "OpenAI kullanım limiti doldu. Birkaç saniye sonra tekrar deneyin.",
-                status_code=429,
-            ) from exc
-            
-        except APITimeoutError as exc:
-            logger.error(f"OpenAI timeout: {exc}")
-            raise LLMProviderError(
-                f"OpenAI isteği {self.timeout} saniye sonra zaman aşımına uğradı.",
-                status_code=504,
-                is_timeout=True,
-            ) from exc
-            
-        except APIError as exc:
-            logger.error(f"OpenAI API error: {exc}")
-            status_code = getattr(exc, 'status_code', 502) or 502
-            raise LLMProviderError(
-                f"OpenAI hatası: {str(exc)}",
-                status_code=status_code,
-            ) from exc
-            
-        except Exception as exc:
-            logger.exception(f"Unexpected OpenAI error: {exc}")
-            raise LLMProviderError(
-                f"AI servisi şu anda kullanılamıyor: {str(exc)}",
-                status_code=500,
-            ) from exc
+        except AuthenticationError as e:
+            logger.error(f"OpenAI authentication error: {e}")
+            return {
+                "answer": "",
+                "success": False,
+                "error": "Invalid API key",
+            }
+        except RateLimitError as e:
+            logger.warning(f"OpenAI rate limit: {e}")
+            return {
+                "answer": "",
+                "success": False,
+                "error": "Rate limit exceeded, please try again later",
+            }
+        except APITimeoutError as e:
+            logger.error(f"OpenAI timeout: {e}")
+            return {
+                "answer": "",
+                "success": False,
+                "error": "Request timed out",
+            }
+        except APIError as e:
+            logger.error(f"OpenAI API error: {e}")
+            return {
+                "answer": "",
+                "success": False,
+                "error": f"API error: {str(e)}",
+            }
+        except Exception as e:
+            logger.exception(f"Unexpected OpenAI error: {e}")
+            return {
+                "answer": "",
+                "success": False,
+                "error": f"Unexpected error: {str(e)}",
+            }

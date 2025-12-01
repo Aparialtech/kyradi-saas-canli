@@ -1,8 +1,14 @@
-"""Aggregate API router for the KYRADİ backend."""
+"""Aggregate API router for the KYRADİ backend.
+
+This module assembles all API routers. AI router is imported safely
+so the backend NEVER crashes if AI dependencies are missing.
+"""
+
+import logging
+from typing import Optional
 
 from fastapi import APIRouter
 
-from app.ai import router as ai_router
 from app.core.config import settings
 from reservations import admin_router as widget_admin_router
 from reservations import reservations_router as widget_partner_router
@@ -32,7 +38,13 @@ from .routes import (
     webhooks,
 )
 
+logger = logging.getLogger("kyradi.api")
+
 api_router = APIRouter()
+
+# =============================================================================
+# CORE ROUTES - These must always work
+# =============================================================================
 
 api_router.include_router(auth.router)
 api_router.include_router(admin.router)
@@ -44,8 +56,10 @@ api_router.include_router(demo.router)
 api_router.include_router(locations.router)
 api_router.include_router(lockers.router)
 api_router.include_router(lockers.legacy_router)  # Backward compatibility
+
 if settings.enable_internal_reservations:
     api_router.include_router(reservations.router)
+
 api_router.include_router(public.router)
 api_router.include_router(payments.router)
 api_router.include_router(magicpay.router)
@@ -56,8 +70,43 @@ api_router.include_router(qr.router)
 api_router.include_router(reports.router)
 api_router.include_router(revenue.router)
 api_router.include_router(webhooks.router)
-api_router.include_router(ai_router)
+
+# Widget routes
 api_router.include_router(widget_public_router)
 api_router.include_router(widget_partner_router)
 api_router.include_router(widget_config_router)
 api_router.include_router(widget_admin_router)
+
+# =============================================================================
+# AI ROUTER - Optional, safe import
+# =============================================================================
+
+_ai_router_loaded = False
+_ai_error: Optional[str] = None
+
+try:
+    from app.ai import router as ai_router, is_ai_available
+    
+    if ai_router is not None:
+        api_router.include_router(ai_router)
+        _ai_router_loaded = True
+        logger.info("AI router registered successfully")
+    else:
+        _ai_error = "AI router is None"
+        logger.warning("AI router is None - AI endpoints disabled")
+except ImportError as e:
+    _ai_error = f"Import error: {e}"
+    logger.warning(f"AI router import failed: {e}")
+except Exception as e:
+    _ai_error = f"Unexpected error: {e}"
+    logger.error(f"AI router registration failed: {e}")
+
+
+def is_ai_router_enabled() -> bool:
+    """Check if AI router was successfully loaded."""
+    return _ai_router_loaded
+
+
+def get_ai_router_error() -> Optional[str]:
+    """Get AI router error if any."""
+    return _ai_error
