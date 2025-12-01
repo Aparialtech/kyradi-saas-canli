@@ -416,21 +416,30 @@ async def convert_widget_reservation_to_reservation(
     # For gateway mode, checkout session will be created
     try:
         from .payment_service import create_payment_for_reservation
+        import json as json_module
         
         # Determine payment mode from tenant config or default to GATEWAY_DEMO
         # tenant already fetched above, reuse it
         if tenant is None:
             tenant = await session.get(Tenant, tenant_id)
-        tenant_metadata = getattr(tenant, "metadata_", None)
+        
+        # Safely access tenant metadata with multiple fallbacks
+        tenant_metadata = None
+        if tenant is not None:
+            # Try different attribute names (metadata_ is the SQLAlchemy column name, metadata might be aliased)
+            tenant_metadata = getattr(tenant, "metadata_", None) or getattr(tenant, "metadata", None)
+        
         if tenant_metadata is None:
             tenant_metadata = {}
-        if isinstance(tenant_metadata, str):
+        elif isinstance(tenant_metadata, str):
             try:
-                import json
-
-                tenant_metadata = json.loads(tenant_metadata)
+                tenant_metadata = json_module.loads(tenant_metadata)
             except Exception:
                 tenant_metadata = {}
+        elif not isinstance(tenant_metadata, dict):
+            # Handle unexpected types
+            tenant_metadata = {}
+        
         payment_mode = tenant_metadata.get("payment_mode", "GATEWAY_DEMO")
         
         payment = await create_payment_for_reservation(

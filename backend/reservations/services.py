@@ -35,6 +35,11 @@ async def get_widget_config(session: AsyncSession, tenant_id: str, public_key: s
 
 def validate_origin(config: WidgetConfig, origin: str | None) -> str:
     """Origin doğrulama - demo tenant için gevşek, diğerleri için sıkı."""
+    import logging
+    import re
+    
+    logger = logging.getLogger(__name__)
+    
     if origin is None:
         return None  # backend->backend çağrılarında engelleme
 
@@ -51,26 +56,70 @@ def validate_origin(config: WidgetConfig, origin: str | None) -> str:
 
     normalized_allowed = {o.rstrip("/") for o in allowed_origins if o}
 
+    # Check tenant info from config
     tenant = getattr(config, "tenant", None)
-    tenant_slug = getattr(tenant, "slug", None)
-    is_demo = getattr(tenant, "is_demo", False)
+    tenant_slug = getattr(tenant, "slug", None) if tenant else None
+    is_demo = getattr(tenant, "is_demo", False) if tenant else False
+    tenant_id = getattr(config, "tenant_id", None)
+    widget_public_key = getattr(config, "widget_public_key", None)
+    
+    # Demo tenant detection: by slug, is_demo flag, or known demo widget key
+    is_demo_tenant = (
+        tenant_slug == "demo-hotel" 
+        or is_demo 
+        or widget_public_key == "demo-public-key"
+    )
 
-    # Demo tenant için gevşek kabul
-    if tenant_slug == "demo-hotel" or is_demo:
-        if normalized_allowed and normalized not in normalized_allowed:
-            import logging
-
-            logging.getLogger(__name__).warning(
-                "validate_origin: demo tenant origin not in allowed list but accepted. tenant=%s origin=%s allowed=%s",
-                tenant_slug,
+    # Demo tenant için gevşek kabul - Vercel preview URLs dahil
+    if is_demo_tenant:
+        # Accept any kyradi-saas-canli Vercel URL pattern
+        vercel_pattern = r"https://kyradi-saas-canli[^.]*\.vercel\.app"
+        is_vercel_preview = bool(re.match(vercel_pattern, normalized))
+        
+        if normalized in normalized_allowed or is_vercel_preview:
+            logger.debug(
+                "validate_origin: demo tenant origin accepted. tenant_id=%s origin=%s",
+                tenant_id,
                 normalized,
-                normalized_allowed,
             )
+            return normalized
+        
+        # Accept localhost for development
+        if "localhost" in normalized or "127.0.0.1" in normalized:
+            logger.debug(
+                "validate_origin: demo tenant localhost accepted. tenant_id=%s origin=%s",
+                tenant_id,
+                normalized,
+            )
+            return normalized
+        
+        # Still accept if in allowed list, or warn but accept for demo
+        logger.warning(
+            "validate_origin: demo tenant origin not in allowed list but accepted. tenant_id=%s origin=%s allowed=%s",
+            tenant_id,
+            normalized,
+            normalized_allowed,
+        )
         return normalized
 
+    # For non-demo tenants, strict validation
     if normalized_allowed and normalized in normalized_allowed:
         return normalized
+    
+    # Check for wildcard patterns in allowed_origins (e.g., *.vercel.app)
+    for allowed in normalized_allowed:
+        if "*" in allowed:
+            # Convert wildcard pattern to regex
+            pattern = allowed.replace(".", r"\.").replace("*", ".*")
+            if re.match(f"^{pattern}$", normalized):
+                return normalized
 
+    logger.warning(
+        "validate_origin: origin rejected. tenant_id=%s origin=%s allowed=%s",
+        tenant_id,
+        normalized,
+        normalized_allowed,
+    )
     raise WidgetTokenError("Bu domain için yetki bulunmuyor")
 
 

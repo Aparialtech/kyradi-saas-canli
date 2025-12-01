@@ -1,5 +1,6 @@
 const DEFAULT_API_URL = "https://kyradi-saas-canli-production.up.railway.app";
-const DEFAULT_TENANT_ID = "9d876ed2-1b18-4d14-9795-aef482b06101";
+// Demo tenant ID - matches backend seeding in db/utils.py
+const DEFAULT_TENANT_ID = "7d7417b7-17fe-4857-ab14-dd3f390ec497";
 
 const normalize = (url: string | undefined): string => {
   if (!url || !url.trim()) return DEFAULT_API_URL;

@@ -6,8 +6,9 @@ import { env } from "../../config/env";
 import { useLocale, type SupportedLocale } from "../../context/LocaleContext";
 import { useTranslation } from "../../hooks/useTranslation";
 
-const DEMO_TENANT = "8a19870a-bc02-4251-83b3-27125d817b20";
-const DEMO_WIDGET_KEY = "demo-widget-key";
+// Demo tenant - fixed ID that matches backend seeding
+const DEMO_TENANT = "7d7417b7-17fe-4857-ab14-dd3f390ec497";
+const DEMO_WIDGET_KEY = "demo-public-key";
 
 const demoMessages: Record<SupportedLocale, { missing: string; ready: string; error: string }> = {
   "tr-TR": {

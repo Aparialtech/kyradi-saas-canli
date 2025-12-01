@@ -186,11 +186,15 @@ async def ensure_widget_tables_exist() -> None:
 
 async def _seed_demo_tenant_and_users(session: AsyncSession) -> None:
     """Ensure demo tenant and default users exist."""
+    # Fixed demo tenant ID for consistent frontend access
+    DEMO_TENANT_ID = "7d7417b7-17fe-4857-ab14-dd3f390ec497"
+    
     # Ensure tenant exists
     tenant_stmt = select(Tenant).where(Tenant.slug == "demo-hotel")
     tenant = (await session.execute(tenant_stmt)).scalar_one_or_none()
     if tenant is None:
         tenant = Tenant(
+            id=DEMO_TENANT_ID,
             slug="demo-hotel",
             name="Demo Hotel",
             plan="standard",
@@ -198,7 +202,7 @@ async def _seed_demo_tenant_and_users(session: AsyncSession) -> None:
         )
         session.add(tenant)
         await session.flush()
-        logger.info("Created demo tenant with slug 'demo-hotel'")
+        logger.info("Created demo tenant with slug 'demo-hotel' and ID '%s'", DEMO_TENANT_ID)
     else:
         logger.info("Demo tenant already exists, skipping creation")
 
@@ -235,6 +239,7 @@ async def _seed_demo_tenant_and_users(session: AsyncSession) -> None:
         logger.info("Platform super admin user already exists, skipping creation")
 
     await _seed_demo_widget_config(session, tenant.id)
+    await _seed_demo_location_and_storage(session, tenant.id)
 
 
 async def _seed_demo_widget_config(session: AsyncSession, demo_tenant_id: str) -> None:
@@ -267,3 +272,55 @@ async def _seed_demo_widget_config(session: AsyncSession, demo_tenant_id: str) -
             logger.info("Demo widget config already exists for tenant %s, skipping", demo_tenant_id)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to seed demo widget config (ignored): %s", exc, exc_info=True)
+
+
+async def _seed_demo_location_and_storage(session: AsyncSession, demo_tenant_id: str) -> None:
+    """Seed demo location and storage if missing (required for availability)."""
+    from ..models import Location, Storage, StorageStatus
+    
+    DEMO_LOCATION_ID = "loc-demo-0001-0001-000000000001"
+    DEMO_STORAGE_ID = "str-demo-0001-0001-000000000001"
+    
+    try:
+        # Check if demo location exists
+        loc_stmt = select(Location).where(Location.tenant_id == demo_tenant_id)
+        loc = (await session.execute(loc_stmt)).scalar_one_or_none()
+        if loc is None:
+            loc = Location(
+                id=DEMO_LOCATION_ID,
+                tenant_id=demo_tenant_id,
+                name="Demo Lobi",
+                address="Demo Hotel, Taksim, Istanbul",
+                latitude=41.0082,
+                longitude=28.9784,
+                opening_hour=0,
+                closing_hour=24,
+                timezone="Europe/Istanbul",
+            )
+            session.add(loc)
+            await session.flush()
+            logger.info("Created demo location for tenant %s", demo_tenant_id)
+        else:
+            DEMO_LOCATION_ID_ACTUAL = loc.id
+            logger.info("Demo location already exists for tenant %s, using existing ID %s", demo_tenant_id, loc.id)
+        
+        # Check if demo storage exists
+        storage_stmt = select(Storage).where(Storage.tenant_id == demo_tenant_id)
+        storage = (await session.execute(storage_stmt)).scalar_one_or_none()
+        if storage is None:
+            location_id_to_use = loc.id if loc else DEMO_LOCATION_ID
+            storage = Storage(
+                id=DEMO_STORAGE_ID,
+                tenant_id=demo_tenant_id,
+                location_id=location_id_to_use,
+                code="DEMO-001",
+                status=StorageStatus.IDLE.value,
+                capacity=10,
+            )
+            session.add(storage)
+            await session.flush()
+            logger.info("Created demo storage for tenant %s", demo_tenant_id)
+        else:
+            logger.info("Demo storage already exists for tenant %s, skipping", demo_tenant_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to seed demo location/storage (ignored): %s", exc, exc_info=True)

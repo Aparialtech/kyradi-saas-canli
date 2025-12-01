@@ -14,6 +14,16 @@ class LimitWarning(BaseModel):
     remaining: Optional[int] = None
 
 
+class MonthlyRevenue(BaseModel):
+    month: str
+    amount_minor: int
+
+
+class MonthlyReservations(BaseModel):
+    month: str
+    count: int
+
+
 class PartnerSummary(BaseModel):
     active_reservations: int
     locker_occupancy_pct: float
@@ -26,6 +36,10 @@ class PartnerSummary(BaseModel):
     report_exports_reset_at: datetime
     report_exports_remaining: Optional[int] = None
     self_service_remaining: Optional[int] = None
+    total_revenue: int = 0
+    cancelled_reservations: int = 0
+    monthly_revenue: List[MonthlyRevenue] = []
+    monthly_reservations: List[MonthlyReservations] = []
 
 
 class AdminTenantSummary(BaseModel):

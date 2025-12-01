@@ -229,7 +229,7 @@ export function DemoPaymentFlowPage() {
               {reservationsQuery.isLoading ? (
                 <p>Yükleniyor...</p>
               ) : reservationsQuery.isError ? (
-                <p style={{ color: "#dc2626" }}>Hata: {getErrorMessage(reservationsQuery.error)}</p>
+                <p style={{ color: "#dc2626" }}>Demo akışı şu anda yüklenemedi. Lütfen sayfayı yenileyin.</p>
               ) : !reservationsQuery.data?.length ? (
                 <p>Henüz rezervasyon yok. Önce bir rezervasyon oluşturun.</p>
               ) : (

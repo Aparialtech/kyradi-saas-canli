@@ -1,1 +1,16 @@
-echo "tenacity" >> backend/requirements.txt
+cat <<EOF > requirements.txt
+fastapi
+uvicorn
+sqlalchemy
+asyncpg
+alembic
+python-dotenv
+pydantic
+tenacity
+httpx
+passlib[bcrypt]
+PyJWT
+requests
+cryptography
+jinja2
+EOF

@@ -6,7 +6,9 @@ from typing import Any
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError as PydanticValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 
@@ -54,19 +56,17 @@ class ValidationError(KyradiException):
 
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Global exception handler for FastAPI."""
-    # Log the exception
-    logger.error(
-        f"Unhandled exception: {type(exc).__name__}",
-        exc_info=exc,
-        extra={
-            "path": request.url.path,
-            "method": request.method,
-            "client": request.client.host if request.client else None,
-        },
-    )
+    # Extract tenant_id from headers if available
+    tenant_id = request.headers.get("X-Tenant-ID", "unknown")
     
     # Handle custom exceptions
     if isinstance(exc, KyradiException):
+        logger.warning(
+            "KyradiException: %s (tenant=%s, path=%s)",
+            exc.message,
+            tenant_id,
+            request.url.path,
+        )
         return JSONResponse(
             status_code=exc.status_code,
             content={
@@ -75,21 +75,97 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             },
         )
     
+    # Handle WidgetTokenError from common.security
+    exc_class_name = type(exc).__name__
+    if exc_class_name == "WidgetTokenError":
+        logger.warning(
+            "WidgetTokenError: %s (tenant=%s, path=%s)",
+            str(exc),
+            tenant_id,
+            request.url.path,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": str(exc)},
+        )
+    
     # Handle FastAPI/Starlette exceptions
     if isinstance(exc, StarletteHTTPException):
+        # Only log at warning level for client errors (4xx)
+        if exc.status_code >= 500:
+            logger.error(
+                "HTTPException %d: %s (tenant=%s, path=%s)",
+                exc.status_code,
+                exc.detail,
+                tenant_id,
+                request.url.path,
+            )
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
         )
     
-    if isinstance(exc, RequestValidationError):
+    # Handle Pydantic validation errors
+    if isinstance(exc, (RequestValidationError, PydanticValidationError)):
+        logger.warning(
+            "ValidationError: %s (tenant=%s, path=%s)",
+            str(exc)[:200],
+            tenant_id,
+            request.url.path,
+        )
+        errors = exc.errors() if hasattr(exc, "errors") else []
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
                 "detail": "Geçersiz istek verisi",
-                "errors": exc.errors(),
+                "errors": errors,
             },
         )
+    
+    # Handle SQLAlchemy IntegrityError (unique constraint violations, etc.)
+    if isinstance(exc, IntegrityError):
+        error_msg = str(exc.orig) if hasattr(exc, "orig") else str(exc)
+        logger.warning(
+            "IntegrityError: %s (tenant=%s, path=%s)",
+            error_msg[:200],
+            tenant_id,
+            request.url.path,
+        )
+        # Return a user-friendly message
+        if "unique" in error_msg.lower() or "duplicate" in error_msg.lower():
+            return JSONResponse(
+                status_code=status.HTTP_409_CONFLICT,
+                content={"detail": "Bu kayıt zaten mevcut."},
+            )
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": "Veritabanı kısıtlaması hatası."},
+        )
+    
+    # Handle other SQLAlchemy errors
+    if isinstance(exc, SQLAlchemyError):
+        logger.error(
+            "SQLAlchemyError: %s (tenant=%s, path=%s)",
+            str(exc)[:200],
+            tenant_id,
+            request.url.path,
+            exc_info=True,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Veritabanı hatası. Lütfen daha sonra tekrar deneyin."},
+        )
+    
+    # Log unexpected exceptions with full traceback (only once)
+    logger.error(
+        "Unhandled exception: %s: %s (tenant=%s, path=%s, method=%s)",
+        type(exc).__name__,
+        str(exc)[:500],
+        tenant_id,
+        request.url.path,
+        request.method,
+        exc_info=True,
+    )
     
     # Handle unexpected exceptions
     return JSONResponse(
