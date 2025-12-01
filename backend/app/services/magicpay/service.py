@@ -57,32 +57,48 @@ class MagicPayService:
                 "storage_id": reservation.storage_id,
             },
         )
-        
-        # Create payment record
-        payment = Payment(
-            tenant_id=reservation.tenant_id,
-            reservation_id=reservation.id,
-            provider="MAGIC_PAY",
-            provider_intent_id=checkout_data["session_id"],
-            status=PaymentStatus.PENDING.value,
-            amount_minor=reservation.amount_minor,
-            currency=reservation.currency,
-            meta={
-                "payment_mode": payment_mode,
-                "checkout_url": checkout_data["checkout_url"],
-                "expires_at": checkout_data.get("expires_at"),
-                "session_id": checkout_data["session_id"],
-            },
-        )
-        
-        session.add(payment)
-        await session.flush()
-        
+        payment_metadata = {
+            "payment_mode": payment_mode,
+            "checkout_url": checkout_data["checkout_url"],
+            "expires_at": checkout_data.get("expires_at"),
+            "session_id": checkout_data["session_id"],
+        }
+
+        # Check existing payment for this reservation (idempotent)
+        stmt = select(Payment).where(Payment.reservation_id == reservation.id)
+        existing_payment = (await session.execute(stmt)).scalar_one_or_none()
+
+        if existing_payment is not None:
+            existing_payment.provider = "MAGIC_PAY"
+            existing_payment.mode = payment_mode
+            existing_payment.provider_intent_id = checkout_data["session_id"]
+            existing_payment.status = PaymentStatus.PENDING.value
+            existing_payment.amount_minor = reservation.amount_minor
+            existing_payment.currency = reservation.currency
+            existing_payment.transaction_id = None
+            existing_payment.paid_at = None
+            existing_payment.meta = payment_metadata
+            await session.flush()
+            payment = existing_payment
+        else:
+            payment = Payment(
+                tenant_id=reservation.tenant_id,
+                reservation_id=reservation.id,
+                provider="MAGIC_PAY",
+                provider_intent_id=checkout_data["session_id"],
+                status=PaymentStatus.PENDING.value,
+                amount_minor=reservation.amount_minor,
+                currency=reservation.currency,
+                meta=payment_metadata,
+            )
+            session.add(payment)
+            await session.flush()
+
         logger.info(
             f"Created MagicPay checkout session: payment_id={payment.id}, "
             f"session_id={checkout_data['session_id']}, reservation_id={reservation.id}"
         )
-        
+
         return payment
     
     async def complete_payment(
@@ -174,4 +190,3 @@ class MagicPayService:
         
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
-
