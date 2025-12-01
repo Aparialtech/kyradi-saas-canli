@@ -94,6 +94,7 @@ export function FloatingChatWidget() {
             userId={userId!}
             locale={locale}
             theme="light"
+            useAssistantEndpoint={true}
           />
         )}
       </div>
