@@ -1,7 +1,11 @@
 """Aggregate API router for the KYRADİ backend.
 
-This module assembles all API routers. AI router is imported safely
-so the backend NEVER crashes if AI dependencies are missing.
+This module assembles all API routers. 
+
+Import order matters to avoid circular imports:
+1. Core routes (auth, admin, etc.) 
+2. Reservation routes (direct imports from router files)
+3. AI router (optional, safe import)
 """
 
 import logging
@@ -11,7 +15,8 @@ from fastapi import APIRouter
 
 from app.core.config import settings
 
-# Import reservation routers from app.reservations (NOT top-level reservations)
+# Import reservation routers DIRECTLY from router files (not from __init__)
+# This avoids circular imports
 from app.reservations.router_admin import router as widget_admin_router
 from app.reservations.router_partner import reservations_router as widget_partner_router
 from app.reservations.router_partner import config_router as widget_config_router
@@ -73,7 +78,10 @@ api_router.include_router(reports.router)
 api_router.include_router(revenue.router)
 api_router.include_router(webhooks.router)
 
-# Widget routes from app.reservations
+# =============================================================================
+# WIDGET RESERVATION ROUTES
+# =============================================================================
+
 api_router.include_router(widget_public_router)
 api_router.include_router(widget_partner_router)
 api_router.include_router(widget_config_router)

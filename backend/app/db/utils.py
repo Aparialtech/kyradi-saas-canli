@@ -1,20 +1,28 @@
-"""Utility helpers for database management."""
+"""Utility helpers for database management.
+
+IMPORTANT: This module must NOT import app.reservations.models at the top level
+to avoid circular imports. Use lazy imports inside functions instead.
+"""
 
 import logging
+from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, select, text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from sqlalchemy.exc import ProgrammingError
 
 from ..core.config import settings
 from ..core.security import get_password_hash
 from ..models import Tenant, User, UserRole
-from app.reservations.models import WidgetConfig
-from app.reservations.models import WidgetReservation
 from .base import Base
 from .session import AsyncSessionMaker, engine
 
+# Type hints only - no runtime import
+if TYPE_CHECKING:
+    from app.reservations.models import WidgetConfig, WidgetReservation
+
 logger = logging.getLogger(__name__)
+
 
 async def init_db(db_engine: AsyncEngine | None = None) -> None:
     """Create all tables (useful for local development)."""
@@ -174,7 +182,13 @@ async def _ensure_widget_tables(conn) -> None:
 
 
 async def ensure_widget_tables_exist() -> None:
-    """Ensure widget-related tables exist using SQLAlchemy metadata."""
+    """Ensure widget-related tables exist using SQLAlchemy metadata.
+    
+    LAZY IMPORT: We import the models here to avoid circular imports.
+    """
+    # Lazy import to avoid circular dependency
+    from app.reservations.models import WidgetConfig, WidgetReservation
+    
     async with engine.begin() as conn:
         def create_tables(sync_conn) -> None:
             WidgetConfig.__table__.create(bind=sync_conn, checkfirst=True)
@@ -243,7 +257,13 @@ async def _seed_demo_tenant_and_users(session: AsyncSession) -> None:
 
 
 async def _seed_demo_widget_config(session: AsyncSession, demo_tenant_id: str) -> None:
-    """Seed demo widget config if missing."""
+    """Seed demo widget config if missing.
+    
+    LAZY IMPORT: We import the model here to avoid circular imports.
+    """
+    # Lazy import to avoid circular dependency
+    from app.reservations.models import WidgetConfig
+    
     try:
         cfg_stmt = select(WidgetConfig).where(WidgetConfig.tenant_id == demo_tenant_id)
         cfg = (await session.execute(cfg_stmt)).scalar_one_or_none()
