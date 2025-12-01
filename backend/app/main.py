@@ -8,8 +8,12 @@ except Exception:  # noqa: BLE001 - uvloop is optional
     uvloop = None
 
 import logging
-from fastapi import FastAPI
+import re
+from typing import Callable
+
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from .api import api_router
 from .core.config import settings
@@ -33,15 +37,98 @@ app = FastAPI(
     description="FastAPI backend for the KYRADİ SaaS platform.",
 )
 
-# CORS Configuration - Allow all origins for maximum compatibility
-# In production, you may want to restrict this to specific domains
+# =============================================================================
+# CORS Configuration - Fixed for credentials mode
+# =============================================================================
+# When credentials: "include" is used in frontend fetch requests,
+# Access-Control-Allow-Origin CANNOT be "*". It must be the specific origin.
+
+# Explicitly allowed origins
+ALLOWED_ORIGINS = [
+    # Production
+    "https://kyradi-saas-canli.vercel.app",
+    "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
+    # Local development
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
+
+# Patterns for dynamic origins (Vercel preview URLs)
+ALLOWED_ORIGIN_PATTERNS = [
+    r"https://kyradi-saas-canli-[a-z0-9-]+\.vercel\.app",
+    r"https://kyradi-[a-z0-9-]+\.vercel\.app",
+]
+
+
+def is_origin_allowed(origin: str | None) -> bool:
+    """Check if origin is in allowed list or matches allowed patterns."""
+    if not origin:
+        return False
+    
+    # Check exact match
+    if origin in ALLOWED_ORIGINS:
+        return True
+    
+    # Check pattern match (Vercel preview URLs)
+    for pattern in ALLOWED_ORIGIN_PATTERNS:
+        if re.match(pattern, origin):
+            return True
+    
+    return False
+
+
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    """Custom CORS middleware that handles dynamic Vercel preview URLs.
+    
+    This middleware properly handles credentials mode by returning the
+    actual origin instead of "*" when the origin is allowed.
+    """
+    
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        origin = request.headers.get("origin")
+        
+        # Log CORS requests (debug level to avoid log spam)
+        if origin:
+            logger.debug(f"CORS request from origin={origin}")
+        
+        # Handle preflight (OPTIONS) requests
+        if request.method == "OPTIONS":
+            response = Response(status_code=200)
+            if origin and is_origin_allowed(origin):
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Requested-With, X-Tenant-ID, X-Widget-Token, X-Widget-Key, Accept, Origin"
+                response.headers["Access-Control-Max-Age"] = "600"  # Cache preflight for 10 minutes
+            return response
+        
+        # Process the actual request
+        response = await call_next(request)
+        
+        # Add CORS headers to response
+        if origin and is_origin_allowed(origin):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Expose-Headers"] = "Content-Length, X-Request-ID"
+        
+        return response
+
+
+# Add custom CORS middleware
+app.add_middleware(DynamicCORSMiddleware)
+
+# Also add standard CORS middleware as fallback for non-credential requests
+# This handles cases where credentials are not included
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With", "X-Tenant-ID", "X-Widget-Token", "X-Widget-Key", "Accept", "Origin"],
+    expose_headers=["Content-Length", "X-Request-ID"],
+    max_age=600,
 )
 
 app.include_router(api_router)
@@ -53,6 +140,9 @@ app.add_exception_handler(Exception, global_exception_handler)
 @app.on_event("startup")
 async def startup_event() -> None:
     """Auto-create database tables and log AI status."""
+    logger.info("Starting Kyradi backend...")
+    logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
+    
     if settings.environment.lower() in {"local", "dev"}:
         await init_db()
     
