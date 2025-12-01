@@ -1,23 +1,23 @@
-"""FastAPI router exposing AI ingestion, chat, and assistant endpoints.
+"""FastAPI router for Kyradi AI Assistant.
 
-Bu modül Kyradi AI Asistanı için tüm endpoint'leri sağlar.
-- /ai/chat - Temel chat endpoint
-- /ai/assistant - Basit assistant endpoint (auth opsiyonel)
-- /ai/health - Health check
-- /ai/ingest - Doküman yükleme
+Endpoints:
+- GET  /ai/health    - Health check
+- POST /ai/assistant - Kyradi asistan (auth yok)
+- POST /ai/chat      - RAG destekli chat (auth gerekli)
+- POST /ai/ingest    - Doküman yükleme (auth gerekli)
 """
 
 from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import time
 import traceback
 from datetime import datetime, timezone
 from typing import Any, Optional, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,8 +27,8 @@ from app.dependencies import get_current_active_user
 from app.models import User
 
 from .observability import AIObservation, generate_request_id, log_ai_interaction
-from .prompts import KYRADI_SYSTEM_PROMPT, SYSTEM_PROMPT_TR, ERROR_ANALYSIS_PROMPT
-from .providers import get_chat_provider
+from .prompts import SYSTEM_PROMPT
+from .providers import get_chat_provider, check_ai_available
 from .providers.base import LLMProviderError
 from .rag.chunker import chunk_text, strip_html
 from .rag.embeddings import EmbeddingError, embed_texts
@@ -44,36 +44,44 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 # REQUEST/RESPONSE MODELS
 # =============================================================================
 
-class IngestRequest(BaseModel):
-    tenant_id: str = Field(..., description="Tenant scope")
-    title: str | None = Field(default=None, max_length=255)
-    text: str = Field(..., min_length=1)
-    url: str | None = Field(default=None, max_length=1024)
-    mime: str = Field(default="text/plain", pattern=r"^text/(plain|html)$")
+class AssistantRequest(BaseModel):
+    """Request for Kyradi AI Assistant."""
+    question: str = Field(..., min_length=1, max_length=4000, alias="message", description="User's question")
+    tenant_id: Optional[str] = Field(default=None, description="Optional tenant ID")
+    locale: str = Field(default="tr-TR", max_length=16)
+    
+    class Config:
+        populate_by_name = True  # Allow both 'question' and 'message'
 
 
-class IngestResponse(BaseModel):
-    ok: bool
-    count: int
+class AssistantResponse(BaseModel):
+    """Response from Kyradi AI Assistant."""
+    answer: str
+    request_id: str
+    model: str
+    latency_ms: float
+    success: bool = True
+    error: Optional[str] = None
+
+
+class HealthResponse(BaseModel):
+    """Health check response."""
+    status: str
+    provider: str
+    model: str
+    ai_enabled: bool
+    timestamp: str
+    message: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
+    """Full chat request with RAG support."""
     tenant_id: str
     user_id: str
     message: str = Field(..., min_length=1)
     locale: str = Field(default="tr-TR", max_length=16)
     use_rag: bool = True
     top_k: int = Field(default=6, ge=1, le=12)
-    stream: bool = False
-    metadata: dict[str, Any] | None = None
-
-
-class AssistantRequest(BaseModel):
-    """Simplified assistant request for public/unauthenticated access."""
-    message: str = Field(..., min_length=1, max_length=4000, description="User's question")
-    tenant_id: Optional[str] = Field(default=None, description="Optional tenant ID")
-    locale: str = Field(default="tr-TR", max_length=16)
-    use_technical_mode: bool = Field(default=True, description="Use technical Kyradi prompt")
     metadata: dict[str, Any] | None = None
 
 
@@ -95,165 +103,132 @@ class ChatResponse(BaseModel):
     request_id: str
 
 
-class AssistantResponse(BaseModel):
-    """Assistant response model."""
-    answer: str
-    request_id: str
-    usage: Usage
-    latency_ms: float
-    model: str
-    success: bool = True
-    error: Optional[str] = None
+class IngestRequest(BaseModel):
+    tenant_id: str = Field(..., description="Tenant scope")
+    title: str | None = Field(default=None, max_length=255)
+    text: str = Field(..., min_length=1)
+    url: str | None = Field(default=None, max_length=1024)
+    mime: str = Field(default="text/plain", pattern=r"^text/(plain|html)$")
 
 
-class HealthResponse(BaseModel):
-    """Health check response."""
-    status: str
-    provider: str
-    model: str
-    timestamp: str
-
-
-class ErrorResponse(BaseModel):
-    """Standard error response."""
-    error: str
-    detail: Optional[str] = None
-    request_id: Optional[str] = None
+class IngestResponse(BaseModel):
+    ok: bool
+    count: int
 
 
 # =============================================================================
-# HEALTH ENDPOINT
+# HEALTH CHECK ENDPOINT
 # =============================================================================
 
 @router.get("/health", response_model=HealthResponse)
 async def ai_health_check() -> HealthResponse:
-    """Check AI service health and provider availability.
+    """Check AI service health.
     
     Returns:
         Health status with provider info
     """
+    is_available, message = check_ai_available()
+    
+    if not is_available:
+        return HealthResponse(
+            status="error",
+            provider="openai",
+            model=settings.ai_model or "gpt-4.1-mini",
+            ai_enabled=False,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            message=message,
+        )
+    
     try:
         provider = get_chat_provider()
         return HealthResponse(
             status="ok",
             provider=provider.provider_name,
             model=provider.model,
+            ai_enabled=True,
             timestamp=datetime.now(timezone.utc).isoformat(),
+            message="AI servisi hazır",
         )
     except Exception as exc:
         logger.error(f"AI health check failed: {exc}")
         return HealthResponse(
             status="error",
-            provider="unknown",
-            model="unknown",
+            provider="openai",
+            model=settings.ai_model or "gpt-4.1-mini",
+            ai_enabled=False,
             timestamp=datetime.now(timezone.utc).isoformat(),
+            message=str(exc),
         )
 
 
 # =============================================================================
-# ASSISTANT ENDPOINT (Simplified, Auth Optional)
+# ASSISTANT ENDPOINT (NO AUTH REQUIRED)
 # =============================================================================
 
 @router.post("/assistant", response_model=AssistantResponse)
-async def assistant_chat(
+async def kyradi_assistant(
     payload: AssistantRequest,
     request: Request,
 ) -> AssistantResponse:
-    """Simplified assistant endpoint for Kyradi AI chat.
+    """Kyradi AI Assistant endpoint.
     
     This endpoint:
-    - Does NOT require authentication (for demo/public access)
-    - Uses the comprehensive Kyradi system prompt
-    - Has built-in error handling and retry logic
-    - Returns structured JSON response always
+    - Does NOT require authentication
+    - Uses comprehensive Kyradi system prompt
+    - Only answers Kyradi-related questions
+    - Has proper error handling
     
     Args:
-        payload: AssistantRequest with message
+        payload: AssistantRequest with question
         request: FastAPI request object
         
     Returns:
-        AssistantResponse with answer or error
+        AssistantResponse with answer
     """
     request_id = generate_request_id()
     start_time = time.perf_counter()
+    model_name = settings.ai_model or "gpt-4.1-mini"
     
     # Log incoming request
+    client_ip = request.client.host if request.client else "unknown"
     logger.info(
         f"Assistant request: request_id={request_id}, "
-        f"message_length={len(payload.message)}, "
-        f"locale={payload.locale}, "
-        f"tenant_id={payload.tenant_id or 'none'}, "
-        f"client={request.client.host if request.client else 'unknown'}"
+        f"question_length={len(payload.question)}, "
+        f"client={client_ip}"
     )
+    
+    # Check if API key is configured
+    api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logger.error("OPENAI_API_KEY not configured")
+        return AssistantResponse(
+            answer="",
+            request_id=request_id,
+            model=model_name,
+            latency_ms=0,
+            success=False,
+            error="AI servisi yapılandırılmamış: OPENAI_API_KEY eksik.",
+        )
     
     try:
         # Get provider
-        try:
-            provider = get_chat_provider()
-        except Exception as provider_exc:
-            logger.error(f"Failed to get AI provider: {provider_exc}")
-            return AssistantResponse(
-                answer="",
-                request_id=request_id,
-                usage=Usage(),
-                latency_ms=0,
-                model="unknown",
-                success=False,
-                error=f"AI servisi şu anda kullanılamıyor: {str(provider_exc)}",
-            )
+        provider = get_chat_provider()
         
-        # Build messages with appropriate system prompt
-        system_prompt = KYRADI_SYSTEM_PROMPT if payload.use_technical_mode else SYSTEM_PROMPT_TR
-        
-        messages: list[dict[str, str]] = [
-            {"role": "system", "content": system_prompt.strip()},
-            {"role": "user", "content": payload.message.strip()},
+        # Build messages
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": payload.question.strip()},
         ]
         
-        # Call LLM provider with timeout and error handling
-        try:
-            provider_response = await provider.chat(
-                messages,
-                stream=False,  # Disable streaming for reliability
-            )
-        except LLMProviderError as llm_exc:
-            latency_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
-                f"LLM provider error: request_id={request_id}, "
-                f"error={llm_exc}, is_timeout={llm_exc.is_timeout}"
-            )
-            
-            # Log failed interaction
-            log_ai_interaction(
-                AIObservation(
-                    request_id=request_id,
-                    provider=provider.provider_name,
-                    model=provider.model,
-                    latency_ms=latency_ms,
-                    tokens_in=0,
-                    tokens_out=0,
-                    success=False,
-                    prompt=payload.message,
-                    response=None,
-                    metadata=payload.metadata or {},
-                    error=str(llm_exc),
-                )
-            )
-            
-            error_msg = "LLM isteği zaman aşımına uğradı" if llm_exc.is_timeout else str(llm_exc)
-            return AssistantResponse(
-                answer="",
-                request_id=request_id,
-                usage=Usage(),
-                latency_ms=round(latency_ms, 2),
-                model=provider.model,
-                success=False,
-                error=error_msg,
-            )
+        # Call OpenAI
+        response = await provider.chat(
+            messages,
+            max_tokens=1000,
+            temperature=0.7,
+        )
         
         latency_ms = (time.perf_counter() - start_time) * 1000
-        answer_text = provider_response.text.strip()
-        usage = provider_response.usage
+        answer = response.text.strip()
         
         # Log successful interaction
         log_ai_interaction(
@@ -262,33 +237,50 @@ async def assistant_chat(
                 provider=provider.provider_name,
                 model=provider.model,
                 latency_ms=latency_ms,
-                tokens_in=usage.input_tokens,
-                tokens_out=usage.output_tokens,
+                tokens_in=response.usage.input_tokens,
+                tokens_out=response.usage.output_tokens,
                 success=True,
-                prompt=payload.message,
-                response=answer_text[:500],  # Truncate for logging
-                metadata={
-                    **(payload.metadata or {}),
-                    "tenant_id": payload.tenant_id,
-                    "locale": payload.locale,
-                },
+                prompt=payload.question[:200],
+                response=answer[:200],
+                metadata={"tenant_id": payload.tenant_id, "locale": payload.locale},
             )
         )
         
         logger.info(
             f"Assistant response: request_id={request_id}, "
             f"latency_ms={latency_ms:.2f}, "
-            f"tokens_in={usage.input_tokens}, tokens_out={usage.output_tokens}, "
-            f"answer_length={len(answer_text)}"
+            f"tokens_in={response.usage.input_tokens}, "
+            f"tokens_out={response.usage.output_tokens}"
         )
         
         return AssistantResponse(
-            answer=answer_text,
+            answer=answer,
             request_id=request_id,
-            usage=Usage(input_tokens=usage.input_tokens, output_tokens=usage.output_tokens),
-            latency_ms=round(latency_ms, 2),
             model=provider.model,
+            latency_ms=round(latency_ms, 2),
             success=True,
+        )
+        
+    except LLMProviderError as exc:
+        latency_ms = (time.perf_counter() - start_time) * 1000
+        logger.error(f"LLM provider error: request_id={request_id}, error={exc}")
+        
+        # Map error to user-friendly message
+        error_msg = str(exc)
+        if exc.status_code == 401:
+            error_msg = "AI servisi yapılandırılmamış: OPENAI_API_KEY eksik veya hatalı."
+        elif exc.status_code == 429:
+            error_msg = "OpenAI kullanım limiti doldu. Birkaç saniye sonra tekrar deneyin."
+        elif exc.is_timeout:
+            error_msg = "AI isteği zaman aşımına uğradı. Lütfen tekrar deneyin."
+        
+        return AssistantResponse(
+            answer="",
+            request_id=request_id,
+            model=model_name,
+            latency_ms=round(latency_ms, 2),
+            success=False,
+            error=error_msg,
         )
         
     except Exception as exc:
@@ -302,12 +294,160 @@ async def assistant_chat(
         return AssistantResponse(
             answer="",
             request_id=request_id,
-            usage=Usage(),
+            model=model_name,
             latency_ms=round(latency_ms, 2),
-            model="unknown",
             success=False,
-            error=f"Beklenmeyen hata: {str(exc)}",
+            error=f"AI servisi şu anda kullanılamıyor: {str(exc)}",
         )
+
+
+# =============================================================================
+# CHAT ENDPOINT (AUTH REQUIRED, RAG SUPPORT)
+# =============================================================================
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat_completion(
+    payload: ChatRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> ChatResponse:
+    """Chat endpoint with RAG support.
+    
+    Requires authentication.
+    """
+    tenant_id = _ensure_tenant_access(payload.tenant_id, current_user)
+    request_id = generate_request_id()
+    identity = f"{request.client.host or 'unknown'}:{payload.user_id}:{tenant_id}"
+
+    logger.info(
+        f"Chat request: request_id={request_id}, tenant_id={tenant_id}, "
+        f"user_id={payload.user_id}, use_rag={payload.use_rag}"
+    )
+
+    try:
+        await rate_limiter.check(identity)
+    except RateLimitError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Hız sınırı aşıldı",
+            headers={"Retry-After": "60"},
+        ) from exc
+
+    # Check API key
+    api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI servisi yapılandırılmamış: OPENAI_API_KEY eksik.",
+        )
+
+    try:
+        provider = get_chat_provider()
+    except Exception as exc:
+        logger.error(f"Failed to get AI provider: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+    # RAG search
+    rag_sources: list[dict[str, str]] = []
+    rag_notice: str | None = None
+
+    if payload.use_rag:
+        try:
+            rag_sources = await semantic_search(
+                session,
+                tenant_id,
+                payload.message,
+                top_k=payload.top_k,
+            )
+        except EmbeddingError as exc:
+            logger.warning("RAG embedding failed (tenant=%s): %s", tenant_id, exc)
+            rag_notice = str(exc)
+        except Exception as exc:
+            logger.exception("RAG search failed: %s", exc)
+            rag_notice = "Dayanaklar yüklenirken hata oluştu."
+
+    # Build prompt
+    sources_summary = _format_sources_for_prompt(rag_sources, rag_notice)
+    user_prompt = f"Soru: {payload.message.strip()}\n\nDayanaklar:\n{sources_summary}"
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    start = time.perf_counter()
+    try:
+        provider_response = await provider.chat(messages, max_tokens=1000)
+    except LLMProviderError as exc:
+        latency_ms = (time.perf_counter() - start) * 1000
+        log_ai_interaction(
+            AIObservation(
+                request_id=request_id,
+                provider=provider.provider_name,
+                model=provider.model,
+                latency_ms=latency_ms,
+                tokens_in=0,
+                tokens_out=0,
+                success=False,
+                prompt=user_prompt[:200],
+                response=None,
+                metadata=payload.metadata or {},
+                error=str(exc),
+            )
+        )
+        
+        if exc.status_code == 401:
+            detail = "AI servisi yapılandırılmamış: OPENAI_API_KEY eksik veya hatalı."
+        elif exc.status_code == 429:
+            detail = "OpenAI kullanım limiti doldu. Birkaç saniye sonra tekrar deneyin."
+        elif exc.is_timeout:
+            detail = "AI isteği zaman aşımına uğradı."
+        else:
+            detail = str(exc)
+        
+        raise HTTPException(
+            status_code=exc.status_code or 500,
+            detail=detail,
+        ) from exc
+
+    latency_ms = (time.perf_counter() - start) * 1000
+    answer_text = provider_response.text.strip()
+    usage = provider_response.usage
+
+    log_ai_interaction(
+        AIObservation(
+            request_id=request_id,
+            provider=provider.provider_name,
+            model=provider.model,
+            latency_ms=latency_ms,
+            tokens_in=usage.input_tokens,
+            tokens_out=usage.output_tokens,
+            success=True,
+            prompt=user_prompt[:200],
+            response=answer_text[:200],
+            metadata={**(payload.metadata or {}), "tenant_id": tenant_id},
+        )
+    )
+
+    logger.info(
+        f"Chat response: request_id={request_id}, latency_ms={latency_ms:.2f}, "
+        f"tokens_in={usage.input_tokens}, tokens_out={usage.output_tokens}"
+    )
+
+    response_sources = [Source(title=src["title"], snippet=src["snippet"]) for src in rag_sources]
+    if not response_sources and rag_notice:
+        response_sources.append(Source(title="Dayanak kullanılamadı", snippet=rag_notice))
+
+    return ChatResponse(
+        answer=answer_text,
+        sources=response_sources,
+        usage=Usage(input_tokens=usage.input_tokens, output_tokens=usage.output_tokens),
+        latency_ms=round(latency_ms, 2),
+        request_id=request_id,
+    )
 
 
 # =============================================================================
@@ -320,7 +460,7 @@ async def ingest_documents(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ) -> IngestResponse:
-    """Ingest tenant documents and store embeddings in pgvector."""
+    """Ingest tenant documents and store embeddings."""
     tenant_id = _ensure_tenant_access(payload.tenant_id, current_user)
     normalized_text = _normalize_text(payload.text, payload.mime)
     if not normalized_text:
@@ -356,146 +496,6 @@ async def ingest_documents(
 
     count = await upsert_documents(session, tenant_id, docs)
     return IngestResponse(ok=True, count=count)
-
-
-# =============================================================================
-# CHAT ENDPOINT (Full Featured, Requires Auth)
-# =============================================================================
-
-@router.post("/chat", response_model=ChatResponse)
-async def chat_completion(
-    payload: ChatRequest,
-    request: Request,
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_active_user),
-) -> ChatResponse:
-    """Return an AI-generated answer using optional RAG context.
-    
-    This endpoint requires authentication and supports RAG (Retrieval Augmented Generation).
-    """
-    tenant_id = _ensure_tenant_access(payload.tenant_id, current_user)
-    request_id = generate_request_id()
-    identity = f"{request.client.host or 'unknown'}:{payload.user_id}:{tenant_id}"
-
-    logger.info(
-        f"Chat request: request_id={request_id}, tenant_id={tenant_id}, "
-        f"user_id={payload.user_id}, use_rag={payload.use_rag}"
-    )
-
-    try:
-        await rate_limiter.check(identity)
-    except RateLimitError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Hız sınırı aşıldı",
-            headers={"Retry-After": "60"},
-        ) from exc
-
-    try:
-        provider = get_chat_provider()
-    except Exception as exc:
-        logger.error(f"Failed to get AI provider: {exc}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={"message": "AI servisi şu anda kullanılamıyor", "request_id": request_id},
-        ) from exc
-
-    rag_sources: list[dict[str, str]] = []
-    rag_notice: str | None = None
-
-    if payload.use_rag:
-        try:
-            rag_sources = await semantic_search(
-                session,
-                tenant_id,
-                payload.message,
-                top_k=payload.top_k,
-            )
-        except EmbeddingError as exc:
-            logger.warning("RAG embedding failed (tenant=%s): %s", tenant_id, exc)
-            rag_notice = str(exc)
-            rag_sources = []
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.exception("RAG search failed: %s", exc)
-            rag_sources = []
-            rag_notice = "Dayanaklar yüklenirken hata oluştu."
-
-    sources_summary = _format_sources_for_prompt(rag_sources, rag_notice)
-    user_prompt = f"Soru: {payload.message.strip()}\n\nDayanaklar:\n{sparse_newlines(sources_summary)}"
-    messages: list[dict[str, str]] = [
-        {"role": "system", "content": KYRADI_SYSTEM_PROMPT.strip()},
-        {"role": "user", "content": user_prompt},
-    ]
-
-    start = time.perf_counter()
-    try:
-        provider_response = await provider.chat(
-            messages,
-            stream=payload.stream,
-        )
-    except LLMProviderError as exc:
-        latency_ms = (time.perf_counter() - start) * 1000
-        log_ai_interaction(
-            AIObservation(
-                request_id=request_id,
-                provider=provider.provider_name,
-                model=provider.model,
-                latency_ms=latency_ms,
-                tokens_in=0,
-                tokens_out=0,
-                success=False,
-                prompt=user_prompt,
-                response=None,
-                metadata=payload.metadata or {},
-                error=str(exc),
-            )
-        )
-        status_code = status.HTTP_504_GATEWAY_TIMEOUT if exc.is_timeout else status.HTTP_502_BAD_GATEWAY
-        detail = str(exc) or (
-            "LLM isteği zaman aşımına uğradı" if exc.is_timeout else "LLM sağlayıcısı hata verdi"
-        )
-        raise HTTPException(
-            status_code=status_code,
-            detail={"message": detail, "request_id": request_id},
-        ) from exc
-
-    latency_ms = (time.perf_counter() - start) * 1000
-    answer_text = provider_response.text.strip()
-    usage = provider_response.usage
-
-    log_ai_interaction(
-        AIObservation(
-            request_id=request_id,
-            provider=provider.provider_name,
-            model=provider.model,
-            latency_ms=latency_ms,
-            tokens_in=usage.input_tokens,
-            tokens_out=usage.output_tokens,
-            success=True,
-            prompt=user_prompt,
-            response=answer_text,
-            metadata={**(payload.metadata or {}), "tenant_id": tenant_id},
-        )
-    )
-
-    logger.info(
-        f"Chat response: request_id={request_id}, latency_ms={latency_ms:.2f}, "
-        f"tokens_in={usage.input_tokens}, tokens_out={usage.output_tokens}"
-    )
-
-    response_sources = [Source(title=src["title"], snippet=src["snippet"]) for src in rag_sources]
-    if not response_sources and rag_notice:
-        response_sources.append(
-            Source(title="Dayanak kullanılamadı", snippet=rag_notice),
-        )
-
-    return ChatResponse(
-        answer=answer_text,
-        sources=response_sources,
-        usage=Usage(input_tokens=usage.input_tokens, output_tokens=usage.output_tokens),
-        latency_ms=round(latency_ms, 2),
-        request_id=request_id,
-    )
 
 
 # =============================================================================
@@ -536,7 +536,3 @@ def _format_sources_for_prompt(
         snippet = (src.get("snippet") or src.get("content") or "").replace("\n", " ").strip()
         lines.append(f"- ({idx}) {src.get('title', 'Doküman')}: {snippet[:320]}")
     return "\n".join(lines)
-
-
-def sparse_newlines(text: str) -> str:
-    return "\n".join(line.strip() for line in text.splitlines() if line.strip())

@@ -110,7 +110,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("PROVIDER", "AI_PROVIDER"),
     )
     ai_model: str = Field(
-        default="gpt-4.1",
+        default="gpt-4.1-mini",
         validation_alias=AliasChoices("MODEL", "AI_MODEL"),
     )
     openai_api_key: Optional[str] = Field(

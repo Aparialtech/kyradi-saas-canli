@@ -22,9 +22,10 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        # TODO: Add file handler for production
     ],
 )
+
+logger = logging.getLogger("kyradi")
 
 app = FastAPI(
     title="KYRADİ API",
@@ -32,24 +33,15 @@ app = FastAPI(
     description="FastAPI backend for the KYRADİ SaaS platform.",
 )
 
-extra_origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://kyradi-saas-canli.vercel.app",
-    "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
-]
-
-base_origins = getattr(settings, "cors_allowed_origins", []) or []
-
-# Listeyi eşsiz hale getir
-allowed_origins = sorted(set(base_origins + extra_origins))
-
+# CORS Configuration - Allow all origins for maximum compatibility
+# In production, you may want to restrict this to specific domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
-    allow_methods=["*"],      # allow all HTTP methods
-    allow_headers=["*"],      # allow all headers
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],
 )
 
 app.include_router(api_router)
@@ -60,9 +52,17 @@ app.add_exception_handler(Exception, global_exception_handler)
 
 @app.on_event("startup")
 async def startup_event() -> None:
-    """Auto-create database tables in local environments."""
+    """Auto-create database tables and log AI status."""
     if settings.environment.lower() in {"local", "dev"}:
         await init_db()
+    
+    # Log AI configuration status
+    import os
+    openai_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        logger.info(f"AI service configured: model={settings.ai_model}")
+    else:
+        logger.warning("AI service NOT configured: OPENAI_API_KEY missing")
 
 
 @app.get("/health", tags=["system"])

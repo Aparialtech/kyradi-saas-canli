@@ -1,18 +1,16 @@
-"""OpenAI chat completion provider with enhanced error handling and retry logic."""
+"""OpenAI chat completion provider using official OpenAI SDK.
+
+Bu provider AsyncOpenAI client kullanır ve tüm AI isteklerini OpenAI'ya yönlendirir.
+Model: gpt-4.1-mini (default)
+"""
 
 from __future__ import annotations
 
+import os
 import logging
 from typing import Any, Sequence
 
-import httpx
-from tenacity import (
-    AsyncRetrying,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-    before_sleep_log,
-)
+from openai import AsyncOpenAI, AuthenticationError, RateLimitError, APIError, APITimeoutError
 
 from .base import ChatMessage, ChatProviderBase, LLMProviderError, ProviderResponse, ProviderUsage
 
@@ -20,14 +18,13 @@ logger = logging.getLogger("kyradi.ai.openai")
 
 
 class OpenAIChatProvider(ChatProviderBase):
-    """Adapter for the OpenAI Chat Completions API.
+    """OpenAI Chat Completions provider using official SDK.
     
     Features:
-    - Automatic retry on transient errors (3 attempts)
-    - Exponential backoff
-    - Proper timeout handling (40s default)
-    - Structured error responses
-    - Rate limit handling
+    - AsyncOpenAI client for async operations
+    - Proper error handling (AuthenticationError, RateLimitError, etc.)
+    - Timeout handling (60s default)
+    - Structured logging
     """
 
     provider_name = "openai"
@@ -35,16 +32,35 @@ class OpenAIChatProvider(ChatProviderBase):
     def __init__(
         self,
         api_key: str,
-        model: str,
+        model: str = "gpt-4.1-mini",
         *,
         base_url: str | None = None,
-        timeout: float = 40.0,  # Increased timeout for reliability
+        timeout: float = 60.0,
     ) -> None:
+        """Initialize OpenAI provider.
+        
+        Args:
+            api_key: OpenAI API key
+            model: Model to use (default: gpt-4.1-mini)
+            base_url: Optional custom base URL
+            timeout: Request timeout in seconds (default: 60s)
+            
+        Raises:
+            ValueError: If api_key is empty
+        """
         if not api_key:
-            raise ValueError("OpenAI API key missing")
+            raise ValueError("OpenAI API key is required")
+        
         super().__init__(model=model, timeout=timeout)
-        self.api_key = api_key
-        self.base_url = (base_url or "https://api.openai.com").rstrip("/")
+        
+        # Initialize AsyncOpenAI client
+        self.client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=timeout,
+        )
+        
+        logger.info(f"OpenAI provider initialized: model={model}, timeout={timeout}s")
 
     async def chat(
         self,
@@ -55,137 +71,94 @@ class OpenAIChatProvider(ChatProviderBase):
         """Send chat completion request to OpenAI.
         
         Args:
-            messages: List of chat messages
-            stream: Whether to use streaming (currently disabled for reliability)
-            **kwargs: Additional parameters for the API
+            messages: List of chat messages [{"role": "...", "content": "..."}]
+            stream: Whether to stream (disabled for reliability)
+            **kwargs: Additional parameters (max_tokens, temperature, etc.)
             
         Returns:
             ProviderResponse with text, usage, and raw response
             
         Raises:
-            LLMProviderError: On API errors, timeouts, or invalid responses
+            LLMProviderError: On API errors
         """
-        payload: dict[str, Any] = {
-            "model": self.model,
-            "messages": list(messages),
-            "stream": False,  # Always disable streaming for reliability
-        }
-        payload.update(kwargs)
-
         logger.debug(
-            f"OpenAI request: model={self.model}, message_count={len(messages)}, "
-            f"timeout={self.timeout}"
+            f"OpenAI chat request: model={self.model}, "
+            f"messages={len(messages)}, stream={stream}"
         )
-
+        
         try:
-            data = await self._request("/v1/chat/completions", payload)
-        except httpx.TimeoutException as exc:
-            logger.error(f"OpenAI timeout after {self.timeout}s: {exc}")
+            # Build parameters
+            params = {
+                "model": self.model,
+                "messages": [dict(m) for m in messages],
+                "max_tokens": kwargs.get("max_tokens", 1000),
+                "temperature": kwargs.get("temperature", 0.7),
+            }
+            
+            # Make API call
+            response = await self.client.chat.completions.create(**params)
+            
+            # Extract response
+            choice = response.choices[0] if response.choices else None
+            if not choice:
+                raise LLMProviderError(
+                    "OpenAI yanıtı boş (choices yok)",
+                    status_code=502,
+                )
+            
+            text = choice.message.content or ""
+            text = text.strip()
+            
+            # Extract usage
+            usage = ProviderUsage(
+                input_tokens=response.usage.prompt_tokens if response.usage else 0,
+                output_tokens=response.usage.completion_tokens if response.usage else 0,
+            )
+            
+            logger.info(
+                f"OpenAI response: tokens_in={usage.input_tokens}, "
+                f"tokens_out={usage.output_tokens}, text_length={len(text)}"
+            )
+            
+            return ProviderResponse(
+                text=text,
+                usage=usage,
+                raw=response.model_dump() if hasattr(response, 'model_dump') else {},
+            )
+            
+        except AuthenticationError as exc:
+            logger.error(f"OpenAI authentication error: {exc}")
             raise LLMProviderError(
-                f"OpenAI isteği {self.timeout} saniye sonra zaman aşımına uğradı",
+                "AI servisi yapılandırılmamış: OPENAI_API_KEY eksik veya hatalı.",
+                status_code=401,
+            ) from exc
+            
+        except RateLimitError as exc:
+            logger.warning(f"OpenAI rate limit: {exc}")
+            raise LLMProviderError(
+                "OpenAI kullanım limiti doldu. Birkaç saniye sonra tekrar deneyin.",
+                status_code=429,
+            ) from exc
+            
+        except APITimeoutError as exc:
+            logger.error(f"OpenAI timeout: {exc}")
+            raise LLMProviderError(
+                f"OpenAI isteği {self.timeout} saniye sonra zaman aşımına uğradı.",
                 status_code=504,
                 is_timeout=True,
             ) from exc
-        except httpx.HTTPStatusError as exc:
-            status_code = exc.response.status_code
-            error_text = exc.response.text[:500]  # Truncate for logging
-            logger.error(f"OpenAI HTTP error: status={status_code}, response={error_text}")
             
-            # Handle specific error codes
-            if status_code == 429:
-                raise LLMProviderError(
-                    "OpenAI rate limit aşıldı. Lütfen biraz bekleyip tekrar deneyin.",
-                    status_code=429,
-                ) from exc
-            elif status_code == 401:
-                raise LLMProviderError(
-                    "OpenAI API key geçersiz",
-                    status_code=401,
-                ) from exc
-            elif status_code == 503:
-                raise LLMProviderError(
-                    "OpenAI servisi şu anda kullanılamıyor",
-                    status_code=503,
-                ) from exc
-            else:
-                raise LLMProviderError(
-                    f"OpenAI hatası: {error_text}",
-                    status_code=status_code,
-                ) from exc
-        except httpx.RequestError as exc:
-            logger.error(f"OpenAI transport error: {exc}")
+        except APIError as exc:
+            logger.error(f"OpenAI API error: {exc}")
+            status_code = getattr(exc, 'status_code', 502) or 502
             raise LLMProviderError(
-                f"OpenAI bağlantı hatası: {str(exc)}",
-                status_code=502,
+                f"OpenAI hatası: {str(exc)}",
+                status_code=status_code,
             ) from exc
-
-        # Parse response
-        choices = data.get("choices", [])
-        if not choices:
-            logger.error(f"OpenAI response missing choices: {data}")
+            
+        except Exception as exc:
+            logger.exception(f"Unexpected OpenAI error: {exc}")
             raise LLMProviderError(
-                "OpenAI yanıtı geçersiz (choices boş)",
-                status_code=502,
-            )
-        
-        text = choices[0].get("message", {}).get("content", "").strip()
-        if not text:
-            logger.warning(f"OpenAI returned empty content: {data}")
-        
-        usage_data = data.get("usage") or {}
-        usage = ProviderUsage(
-            input_tokens=usage_data.get("prompt_tokens", 0),
-            output_tokens=usage_data.get("completion_tokens", 0),
-        )
-        
-        logger.debug(
-            f"OpenAI response: tokens_in={usage.input_tokens}, "
-            f"tokens_out={usage.output_tokens}, text_length={len(text)}"
-        )
-        
-        return ProviderResponse(text=text, usage=usage, raw=data)
-
-    async def _request(
-        self,
-        path: str,
-        payload: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Make HTTP request to OpenAI API with retry logic.
-        
-        Args:
-            path: API endpoint path
-            payload: Request payload
-            
-        Returns:
-            JSON response from API
-            
-        Raises:
-            httpx.TimeoutException: On timeout
-            httpx.HTTPStatusError: On HTTP errors
-            httpx.RequestError: On transport errors
-        """
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        url = f"{self.base_url}{path}"
-        
-        # Retry configuration
-        retryer = AsyncRetrying(
-            stop=stop_after_attempt(3),
-            wait=wait_exponential(multiplier=1, min=1, max=10),
-            retry=retry_if_exception_type((httpx.RequestError, httpx.TimeoutException)),
-            before_sleep=before_sleep_log(logger, logging.WARNING),
-            reraise=True,
-        )
-
-        async for attempt in retryer:
-            with attempt:
-                logger.debug(f"OpenAI request attempt {attempt.retry_state.attempt_number}")
-                async with httpx.AsyncClient(timeout=self.timeout) as client:
-                    response = await client.post(url, headers=headers, json=payload)
-                    response.raise_for_status()
-                    return response.json()
-
-        # This should never be reached due to reraise=True
-        raise LLMProviderError("OpenAI request did not complete after retries")
+                f"AI servisi şu anda kullanılamıyor: {str(exc)}",
+                status_code=500,
+            ) from exc
