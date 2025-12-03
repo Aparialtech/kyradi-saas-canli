@@ -174,8 +174,62 @@ export function RevenueDashboard() {
         </div>
       )}
 
-      {revenueQuery.isLoading && <div>Yükleniyor...</div>}
-      {revenueQuery.isError && <div style={{ color: "#dc2626" }}>Gelir verileri yüklenemedi</div>}
+      {/* Loading State */}
+      {(revenueQuery.isLoading || dailyQuery.isLoading) && !dailyQuery.data && !revenueQuery.data && (
+        <div
+          style={{
+            background: "#fff",
+            padding: "2rem",
+            borderRadius: "12px",
+            textAlign: "center",
+            color: "#64748b",
+          }}
+        >
+          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>⏳</div>
+          <p>Gelir verileri yükleniyor...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {(revenueQuery.isError || dailyQuery.isError) && (
+        <div
+          style={{
+            background: "#fef2f2",
+            padding: "2rem",
+            borderRadius: "12px",
+            textAlign: "center",
+            border: "1px solid #fecaca",
+          }}
+        >
+          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>⚠️</div>
+          <p style={{ color: "#dc2626", fontWeight: 600, marginBottom: "0.5rem" }}>
+            Gelir verileri yüklenemedi
+          </p>
+          <p style={{ color: "#991b1b", fontSize: "0.875rem" }}>
+            Lütfen sayfayı yenileyerek tekrar deneyin.
+          </p>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!revenueQuery.isLoading && !dailyQuery.isLoading && !revenueQuery.isError && !dailyQuery.isError && 
+       !dailyQuery.data && !revenueQuery.data && (
+        <div
+          style={{
+            background: "#fff",
+            padding: "3rem",
+            borderRadius: "12px",
+            textAlign: "center",
+            color: "#64748b",
+          }}
+        >
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📊</div>
+          <p style={{ fontWeight: 600, color: "#334155", marginBottom: "0.5rem" }}>
+            Henüz gelir kaydı bulunmuyor
+          </p>
+          <p>Rezervasyonlar tamamlandıkça gelir verileri burada görüntülenecektir.</p>
+        </div>
+      )}
     </section>
   );
 }

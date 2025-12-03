@@ -7,20 +7,31 @@ import axios, { type AxiosError } from "axios";
 const errorTranslations: Record<string, string> = {
   // Plan limits
   "Plan limit reached: maximum locations for this tenant": 
-    "Plan limitine ulaşıldı. Bu otel için en fazla izin verilen lokasyon sayısına ulaştınız.",
+    "Plan limitine ulaşıldı. Bu otel için en fazla izin verilen lokasyon sayısına ulaştınız. Planınızı yükselterek daha fazla lokasyon ekleyebilirsiniz.",
   "Plan limit reached: maximum storages for this tenant": 
-    "Plan limitine ulaşıldı. Bu otel için en fazla izin verilen depo sayısına ulaştınız.",
+    "Plan limitine ulaşıldı. Bu otel için en fazla izin verilen depo sayısına ulaştınız. Planınızı yükselterek daha fazla depo ekleyebilirsiniz.",
   "Plan limit reached: maximum staff for this tenant": 
-    "Plan limitine ulaşıldı. Bu otel için en fazla izin verilen personel sayısına ulaştınız.",
+    "Plan limitine ulaşıldı. Bu otel için en fazla izin verilen personel sayısına ulaştınız. Planınızı yükselterek daha fazla personel ekleyebilirsiniz.",
   "Plan limit reached: maximum users for this tenant": 
-    "Plan limitine ulaşıldı. Bu otel için en fazla izin verilen kullanıcı sayısına ulaştınız.",
+    "Plan limitine ulaşıldı. Bu otel için en fazla izin verilen kullanıcı sayısına ulaştınız. Planınızı yükselterek daha fazla kullanıcı ekleyebilirsiniz.",
+  "Plan limit reached: maximum active users": 
+    "Plan limitine ulaşıldı. Bu otel için en fazla izin verilen aktif kullanıcı sayısına ulaştınız. Bir kullanıcıyı pasifleştirin veya planınızı yükseltin.",
   "Plan limit reached": 
     "Plan limitine ulaşıldı. Daha fazla kayıt eklemek için planınızı yükseltin.",
+  "User limit exceeded for tenant": 
+    "Bu otel için kullanıcı limitine ulaşıldı. Daha fazla kullanıcı eklemek için planınızı yükseltin.",
+  "Location limit exceeded for tenant": 
+    "Bu otel için lokasyon limitine ulaşıldı. Daha fazla lokasyon eklemek için planınızı yükseltin.",
+  "Storage limit exceeded for tenant": 
+    "Bu otel için depo limitine ulaşıldı. Daha fazla depo eklemek için planınızı yükseltin.",
+  "Staff limit exceeded for tenant": 
+    "Bu otel için personel limitine ulaşıldı. Daha fazla personel eklemek için planınızı yükseltin.",
   
   // Auth errors
   "Invalid credentials": "Geçersiz kullanıcı bilgileri. E-posta veya şifre hatalı.",
   "User not found": "Kullanıcı bulunamadı.",
   "Email already exists": "Bu e-posta adresi zaten kayıtlı.",
+  "Email already registered": "Bu e-posta adresi zaten kayıtlı. Farklı bir e-posta adresi kullanın.",
   "Incorrect password": "Hatalı şifre.",
   "Token expired": "Oturum süresi doldu. Lütfen tekrar giriş yapın.",
   "Invalid token": "Geçersiz oturum. Lütfen tekrar giriş yapın.",
@@ -32,24 +43,32 @@ const errorTranslations: Record<string, string> = {
   "Permission denied": "İzin reddedildi.",
   "Bu domain için yetki bulunmuyor": 
     "Bu domain için yetki bulunmuyor. Lütfen widget ayarlarını kontrol edin.",
+  "Invalid role for tenant user": 
+    "Bu rol tenant kullanıcısı için geçersiz.",
   
   // Validation errors
   "Invalid email format": "Geçersiz e-posta formatı.",
   "Password too short": "Şifre çok kısa. En az 8 karakter olmalı.",
   "Required field missing": "Zorunlu alan eksik.",
   "Validation error": "Doğrulama hatası. Lütfen formu kontrol edin.",
+  "String should have at least 8 characters": "Şifre en az 8 karakter olmalı.",
+  "value is not a valid email address": "Geçerli bir e-posta adresi girin.",
+  "Field required": "Bu alan zorunludur.",
   
   // Network errors
   "Network Error": "Bağlantı hatası. İnternet bağlantınızı kontrol edin.",
   "Request failed": "İstek başarısız oldu. Lütfen tekrar deneyin.",
   "Server error": "Sunucu hatası. Lütfen daha sonra tekrar deneyin.",
   "timeout of": "İstek zaman aşımına uğradı. Lütfen tekrar deneyin.",
+  "ECONNREFUSED": "Sunucuya bağlanılamıyor. Lütfen daha sonra tekrar deneyin.",
   
   // Resource errors
   "Not found": "Kaynak bulunamadı.",
   "Resource not found": "Kaynak bulunamadı.",
   "Already exists": "Bu kayıt zaten mevcut.",
   "Duplicate entry": "Bu kayıt zaten mevcut.",
+  "UNIQUE constraint failed": "Bu kayıt zaten mevcut.",
+  "duplicate key value violates unique constraint": "Bu kayıt zaten mevcut.",
   
   // Widget errors
   "Widget yapılandırması bulunamadı": "Widget yapılandırması bulunamadı. Lütfen widget ayarlarını kontrol edin.",
@@ -60,9 +79,24 @@ const errorTranslations: Record<string, string> = {
   "Payment already exists": "Bu rezervasyon için zaten bir ödeme mevcut.",
   "Invalid payment mode": "Geçersiz ödeme modu.",
   
+  // Staff errors
+  "Staff not found": "Personel bulunamadı.",
+  "Staff assignment already exists": "Bu personel için zaten bir atama mevcut.",
+  "No assignable users found": "Atanabilir kullanıcı bulunamadı. Önce kullanıcı ekleyin.",
+  
+  // Location/Storage errors
+  "Location not found": "Lokasyon bulunamadı.",
+  "Storage not found": "Depo bulunamadı.",
+  "Storage code already exists": "Bu depo kodu zaten kullanılıyor.",
+  
+  // Reservation errors
+  "Reservation not found": "Rezervasyon bulunamadı.",
+  "Reservation already cancelled": "Bu rezervasyon zaten iptal edilmiş.",
+  
   // Generic
   "Something went wrong": "Bir şeyler yanlış gitti. Lütfen tekrar deneyin.",
   "Internal server error": "Sunucu hatası. Lütfen daha sonra tekrar deneyin.",
+  "An error occurred": "Bir hata oluştu. Lütfen tekrar deneyin.",
 };
 
 /**
