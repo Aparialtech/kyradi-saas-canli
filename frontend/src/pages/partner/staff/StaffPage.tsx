@@ -36,10 +36,20 @@ export function StaffPage() {
     queryFn: () => staffService.list(),
   });
 
+  // Tüm kullanıcıları al (staff listesi için eşleştirme)
   const usersQuery = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
       const response = await http.get<User[]>("/users");
+      return response.data;
+    },
+  });
+
+  // Atanabilir kullanıcıları al (henüz staff ataması yapılmamış)
+  const assignableUsersQuery = useQuery({
+    queryKey: ["users", "assignable"],
+    queryFn: async () => {
+      const response = await http.get<User[]>("/users/assignable");
       return response.data;
     },
   });
@@ -163,24 +173,62 @@ export function StaffPage() {
       >
         <div>
           <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
-            Kullanıcı
+            Kullanıcı <span style={{ color: "#dc2626" }}>*</span>
           </label>
-          <select
-            {...register("user_id", { required: "Kullanıcı zorunlu" })}
-            style={{
-              width: "100%",
-              padding: "0.65rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5f5",
-            }}
-          >
-            <option value="">Seçiniz</option>
-            {usersQuery.data?.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.email} ({user.role})
-              </option>
-            ))}
-          </select>
+          {assignableUsersQuery.isLoading ? (
+            <div style={{ padding: "0.65rem", color: "#64748b", fontSize: "0.875rem" }}>
+              Kullanıcılar yükleniyor...
+            </div>
+          ) : assignableUsersQuery.data && assignableUsersQuery.data.length > 0 ? (
+            <select
+              {...register("user_id", { required: "Kullanıcı zorunlu" })}
+              style={{
+                width: "100%",
+                padding: "0.65rem",
+                borderRadius: "8px",
+                border: "1px solid #cbd5f5",
+              }}
+            >
+              <option value="">Seçiniz</option>
+              {assignableUsersQuery.data.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.email} ({user.role})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div
+              style={{
+                padding: "1rem",
+                background: "#fef3c7",
+                borderRadius: "8px",
+                border: "1px solid #fcd34d",
+                fontSize: "0.875rem",
+              }}
+            >
+              <p style={{ fontWeight: 600, color: "#92400e", marginBottom: "0.5rem" }}>
+                Atanabilir personel bulunamadı
+              </p>
+              <p style={{ color: "#a16207", marginBottom: "0.75rem" }}>
+                Bu otel için henüz atanabilir personel yok. Önce kullanıcılar bölümünden personel ekleyin.
+              </p>
+              <a
+                href="/partner/users"
+                style={{
+                  display: "inline-block",
+                  padding: "0.4rem 0.8rem",
+                  background: "#1d4ed8",
+                  color: "#fff",
+                  borderRadius: "6px",
+                  textDecoration: "none",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                }}
+              >
+                Personel Ekle →
+              </a>
+            </div>
+          )}
           {errors.user_id && <span style={{ color: "#dc2626", fontSize: "0.75rem" }}>{errors.user_id.message}</span>}
         </div>
 

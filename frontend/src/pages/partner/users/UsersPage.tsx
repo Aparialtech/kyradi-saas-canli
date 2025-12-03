@@ -255,7 +255,7 @@ export function UsersPage() {
         <div>
           <h1 className="page-title">{t("nav.users")}</h1>
           <p className="page-subtitle">
-            Bu {t("common.hotel")}nizdeki personel yönetimi. Yeni personel ekleyebilir, mevcut personelin rollerini değiştirebilirsiniz.
+            Bu oteldeki personel yönetimi. Yeni personel ekleyebilir, mevcut personelin rollerini değiştirebilirsiniz.
           </p>
         </div>
         <div className="page-actions">

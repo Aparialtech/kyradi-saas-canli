@@ -51,6 +51,11 @@ const chatCopy: Record<
     retry: string;
     errorTitle: string;
     brandName: string;
+    welcomeTitle: string;
+    welcomeMessage: string;
+    suggestionReservation: string;
+    suggestionPayment: string;
+    suggestionWidget: string;
   }
 > = {
   "tr-TR": {
@@ -62,6 +67,11 @@ const chatCopy: Record<
     retry: "Tekrar Dene",
     errorTitle: "Hata",
     brandName: "Kyradi AI",
+    welcomeTitle: "Merhaba! 👋",
+    welcomeMessage: "Ben Kyradi AI, rezervasyon, ödeme veya panel kullanımıyla ilgili sorularınızı yanıtlamak için buradayım.",
+    suggestionReservation: "Rezervasyon nasıl onaylanır?",
+    suggestionPayment: "Ödeme sistemi nasıl çalışır?",
+    suggestionWidget: "Widget nasıl kurulur?",
   },
   "en-US": {
     placeholder: "Type your question...",
@@ -72,6 +82,11 @@ const chatCopy: Record<
     retry: "Retry",
     errorTitle: "Error",
     brandName: "Kyradi AI",
+    welcomeTitle: "Hello! 👋",
+    welcomeMessage: "I'm Kyradi AI, here to help with reservations, payments, and panel usage questions.",
+    suggestionReservation: "How do I confirm a reservation?",
+    suggestionPayment: "How does the payment system work?",
+    suggestionWidget: "How do I set up the widget?",
   },
 };
 
@@ -289,6 +304,56 @@ const baseStyles = `
 .kyradi-chat--dark .kyradi-chat__meta {
   color: rgba(255,255,255,0.6);
 }
+.kyradi-chat__welcome {
+  text-align: center;
+  padding: 16px 8px;
+}
+.kyradi-chat__welcome-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #0f172a;
+}
+.kyradi-chat--dark .kyradi-chat__welcome-title {
+  color: #fff;
+}
+.kyradi-chat__welcome-text {
+  font-size: 0.9rem;
+  color: rgba(15, 23, 42, 0.7);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.kyradi-chat--dark .kyradi-chat__welcome-text {
+  color: rgba(255, 255, 255, 0.7);
+}
+.kyradi-chat__suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kyradi-chat__suggestion {
+  background: rgba(0, 163, 137, 0.08);
+  border: 1px solid rgba(0, 163, 137, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #0f172a;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s, border-color 0.2s;
+}
+.kyradi-chat__suggestion:hover {
+  background: rgba(0, 163, 137, 0.15);
+  border-color: rgba(0, 163, 137, 0.4);
+}
+.kyradi-chat--dark .kyradi-chat__suggestion {
+  background: rgba(0, 163, 137, 0.1);
+  border-color: rgba(0, 163, 137, 0.3);
+  color: #fff;
+}
+.kyradi-chat--dark .kyradi-chat__suggestion:hover {
+  background: rgba(0, 163, 137, 0.2);
+}
 `;
 
 export function KyradiChat({
@@ -437,6 +502,45 @@ export function KyradiChat({
 
       {/* Messages */}
       <div ref={listRef} className="kyradi-chat__messages" aria-live="polite">
+        {/* Welcome message when no messages */}
+        {messages.length === 0 && !isLoading && (
+          <div className="kyradi-chat__welcome">
+            <div className="kyradi-chat__welcome-title">{copy.welcomeTitle}</div>
+            <div className="kyradi-chat__welcome-text">{copy.welcomeMessage}</div>
+            <div className="kyradi-chat__suggestions">
+              <button
+                type="button"
+                className="kyradi-chat__suggestion"
+                onClick={() => {
+                  setInput(copy.suggestionReservation);
+                  inputRef.current?.focus();
+                }}
+              >
+                📋 {copy.suggestionReservation}
+              </button>
+              <button
+                type="button"
+                className="kyradi-chat__suggestion"
+                onClick={() => {
+                  setInput(copy.suggestionPayment);
+                  inputRef.current?.focus();
+                }}
+              >
+                💳 {copy.suggestionPayment}
+              </button>
+              <button
+                type="button"
+                className="kyradi-chat__suggestion"
+                onClick={() => {
+                  setInput(copy.suggestionWidget);
+                  inputRef.current?.focus();
+                }}
+              >
+                🔧 {copy.suggestionWidget}
+              </button>
+            </div>
+          </div>
+        )}
         {messages.map((message) => (
           <div
             key={message.id}
