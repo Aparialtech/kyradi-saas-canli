@@ -186,3 +186,51 @@ async def deactivate_user(
     )
 
     await session.commit()
+
+
+@router.get("/assignable", response_model=List[UserRead])
+async def list_assignable_users(
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> List[UserRead]:
+    """List users that can be assigned as staff.
+    
+    Returns active users with roles that can be assigned to staff positions:
+    - STAFF
+    - STORAGE_OPERATOR
+    - HOTEL_MANAGER
+    
+    Excludes users who already have a staff assignment.
+    """
+    from ...models import Staff
+    
+    # Get users with assignable roles (STAFF, STORAGE_OPERATOR, HOTEL_MANAGER)
+    assignable_roles = [UserRole.STAFF.value, UserRole.STORAGE_OPERATOR.value, UserRole.HOTEL_MANAGER.value]
+    
+    # Get all active users with assignable roles
+    stmt = (
+        select(User)
+        .where(
+            User.tenant_id == current_user.tenant_id,
+            User.is_active == True,
+            User.role.in_(assignable_roles),
+        )
+        .order_by(User.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    all_users = result.scalars().all()
+    
+    # Get users who already have staff assignments
+    staff_stmt = select(Staff.user_id).where(Staff.tenant_id == current_user.tenant_id)
+    staff_result = await session.execute(staff_stmt)
+    assigned_user_ids = set(row[0] for row in staff_result.fetchall())
+    
+    # Filter out already assigned users
+    assignable_users = [u for u in all_users if u.id not in assigned_user_ids]
+    
+    logger.info(
+        f"Listing assignable staff for tenant {current_user.tenant_id}, "
+        f"found {len(assignable_users)} assignable users out of {len(all_users)} total"
+    )
+    
+    return [UserRead.model_validate(user) for user in assignable_users]

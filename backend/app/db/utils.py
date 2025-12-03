@@ -29,6 +29,7 @@ async def init_db(db_engine: AsyncEngine | None = None) -> None:
     engine_to_use = db_engine or engine
     async with engine_to_use.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await _apply_critical_ddl(conn)  # Always run critical schema changes
         await _apply_local_ddl(conn)
         await _ensure_ai_documents_table(conn)
         await _ensure_widget_tables(conn)
@@ -87,6 +88,28 @@ async def _apply_local_ddl(conn) -> None:
         except Exception:  # noqa: BLE001
             # best effort; ignore errors (e.g. SQLite incompatibilities)
             pass
+
+
+async def _apply_critical_ddl(conn) -> None:
+    """Apply critical schema migrations that should run in all environments.
+    
+    These are schema changes needed for the application to function correctly.
+    Uses IF NOT EXISTS to be idempotent and safe to run multiple times.
+    """
+    statements = [
+        # Storage capacity column (required by Storage model)
+        "ALTER TABLE storages ADD COLUMN IF NOT EXISTS capacity INTEGER DEFAULT 1",
+        # Ensure tenant metadata column exists
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
+    ]
+
+    for statement in statements:
+        try:
+            await conn.execute(text(statement))
+            logger.debug(f"Applied DDL: {statement[:50]}...")
+        except Exception as exc:  # noqa: BLE001
+            # Log but don't fail - column might already exist or table might not exist yet
+            logger.debug(f"DDL statement skipped (may already exist): {statement[:50]}... - {exc}")
 
 
 async def _ensure_ai_documents_table(conn) -> None:
@@ -299,8 +322,8 @@ async def _seed_demo_widget_config(session: AsyncSession, demo_tenant_id: str) -
 async def _seed_demo_location_and_storage(session: AsyncSession, demo_tenant_id: str) -> None:
     """Seed demo location and storage if missing (required for availability).
     
-    Uses scalars().first() instead of scalar_one_or_none() to handle cases
-    where multiple rows exist (e.g., from previous seeding runs).
+    Uses raw SQL for checking existing records to avoid column mismatch issues
+    when the database schema is out of sync with the model.
     """
     from ..models import Location, Storage, StorageStatus
     
@@ -308,12 +331,14 @@ async def _seed_demo_location_and_storage(session: AsyncSession, demo_tenant_id:
     DEMO_STORAGE_ID = "str-demo-0001-0001-000000000001"
     
     try:
-        # Check if demo location exists - use first() to avoid MultipleResultsFound
-        loc_stmt = select(Location).where(Location.tenant_id == demo_tenant_id).order_by(Location.created_at)
-        loc_result = await session.execute(loc_stmt)
-        loc = loc_result.scalars().first()
+        # Check if demo location exists using raw SQL to avoid column issues
+        loc_check = await session.execute(
+            text("SELECT id FROM locations WHERE tenant_id = :tenant_id LIMIT 1"),
+            {"tenant_id": demo_tenant_id}
+        )
+        existing_loc = loc_check.fetchone()
         
-        if loc is None:
+        if existing_loc is None:
             loc = Location(
                 id=DEMO_LOCATION_ID,
                 tenant_id=demo_tenant_id,
@@ -328,25 +353,34 @@ async def _seed_demo_location_and_storage(session: AsyncSession, demo_tenant_id:
             session.add(loc)
             await session.flush()
             logger.info("Created demo location for tenant %s", demo_tenant_id)
+            location_id = DEMO_LOCATION_ID
         else:
-            logger.info("Demo location already exists for tenant %s, using existing ID %s", demo_tenant_id, loc.id)
+            location_id = existing_loc[0]
+            logger.info("Demo location already exists for tenant %s, using existing ID %s", demo_tenant_id, location_id)
         
-        # Check if demo storage exists - use first() to avoid MultipleResultsFound
-        storage_stmt = select(Storage).where(Storage.tenant_id == demo_tenant_id).order_by(Storage.created_at)
-        storage_result = await session.execute(storage_stmt)
-        storage = storage_result.scalars().first()
+        # Check if demo storage exists using raw SQL to avoid column issues
+        storage_check = await session.execute(
+            text("SELECT id FROM storages WHERE tenant_id = :tenant_id LIMIT 1"),
+            {"tenant_id": demo_tenant_id}
+        )
+        existing_storage = storage_check.fetchone()
         
-        if storage is None:
-            location_id_to_use = loc.id if loc else DEMO_LOCATION_ID
-            storage = Storage(
-                id=DEMO_STORAGE_ID,
-                tenant_id=demo_tenant_id,
-                location_id=location_id_to_use,
-                code="DEMO-001",
-                status=StorageStatus.IDLE.value,
-                capacity=10,
+        if existing_storage is None:
+            # Use raw SQL INSERT to avoid ORM column validation issues
+            await session.execute(
+                text("""
+                    INSERT INTO storages (id, tenant_id, location_id, code, status, created_at)
+                    VALUES (:id, :tenant_id, :location_id, :code, :status, NOW())
+                    ON CONFLICT (id) DO NOTHING
+                """),
+                {
+                    "id": DEMO_STORAGE_ID,
+                    "tenant_id": demo_tenant_id,
+                    "location_id": location_id,
+                    "code": "DEMO-001",
+                    "status": StorageStatus.IDLE.value,
+                }
             )
-            session.add(storage)
             await session.flush()
             logger.info("Created demo storage for tenant %s", demo_tenant_id)
         else:
