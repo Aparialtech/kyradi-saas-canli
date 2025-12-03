@@ -143,6 +143,10 @@ async def startup_event() -> None:
     logger.info("Starting Kyradi backend...")
     logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
     
+    # Always run critical schema migrations in all environments
+    await ensure_critical_schema()
+    
+    # Full init_db (create tables + seeding) only in local/dev
     if settings.environment.lower() in {"local", "dev"}:
         await init_db()
     
@@ -153,6 +157,33 @@ async def startup_event() -> None:
         logger.info(f"AI service configured: model={settings.ai_model}")
     else:
         logger.warning("AI service NOT configured: OPENAI_API_KEY missing")
+
+
+async def ensure_critical_schema() -> None:
+    """Ensure critical schema columns exist in all environments.
+    
+    This runs DDL statements that are necessary for the application to function.
+    Uses IF NOT EXISTS clauses so it's safe to run multiple times.
+    """
+    from sqlalchemy import text
+    from .db.session import engine
+    
+    critical_ddl = [
+        "ALTER TABLE storages ADD COLUMN IF NOT EXISTS capacity INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
+    ]
+    
+    try:
+        async with engine.begin() as conn:
+            for statement in critical_ddl:
+                try:
+                    await conn.execute(text(statement))
+                    logger.info(f"Critical schema check OK: {statement[:50]}...")
+                except Exception as exc:
+                    # Log but don't fail - table might not exist yet or column already exists
+                    logger.debug(f"Schema DDL skipped: {statement[:50]}... - {exc}")
+    except Exception as exc:
+        logger.warning(f"Could not apply critical schema migrations: {exc}")
 
 
 @app.get("/health", tags=["system"])

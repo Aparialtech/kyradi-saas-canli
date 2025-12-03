@@ -98,7 +98,7 @@ async def _apply_critical_ddl(conn) -> None:
     """
     statements = [
         # Storage capacity column (required by Storage model)
-        "ALTER TABLE storages ADD COLUMN IF NOT EXISTS capacity INTEGER DEFAULT 1",
+        "ALTER TABLE storages ADD COLUMN IF NOT EXISTS capacity INTEGER NOT NULL DEFAULT 1",
         # Ensure tenant metadata column exists
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
     ]
@@ -106,10 +106,10 @@ async def _apply_critical_ddl(conn) -> None:
     for statement in statements:
         try:
             await conn.execute(text(statement))
-            logger.debug(f"Applied DDL: {statement[:50]}...")
+            logger.info(f"Applied critical DDL: {statement}")
         except Exception as exc:  # noqa: BLE001
             # Log but don't fail - column might already exist or table might not exist yet
-            logger.debug(f"DDL statement skipped (may already exist): {statement[:50]}... - {exc}")
+            logger.warning(f"DDL statement skipped: {statement[:60]}... - {exc}")
 
 
 async def _ensure_ai_documents_table(conn) -> None:
