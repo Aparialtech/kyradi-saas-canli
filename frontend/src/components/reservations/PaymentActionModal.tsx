@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { reservationService, type Reservation } from "../../services/partner/reservations";
+import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../services/partner/reservations";
 import { paymentService } from "../../services/partner/payments";
 import { useToast } from "../../hooks/useToast";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -17,12 +17,14 @@ interface PaymentActionModalProps {
   reservation: Reservation | null;
   isOpen: boolean;
   onClose: () => void;
+  paymentInfo: ReservationPaymentInfo | null;
 }
 
 export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
   reservation,
   isOpen,
   onClose,
+  paymentInfo,
 }) => {
   const { t, locale } = useTranslation();
   const { push } = useToast();
@@ -31,7 +33,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
 
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: reservation?.currency || "TRY",
+    currency: paymentInfo?.currency || reservation?.currency || "TRY",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -39,8 +41,9 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
   // Create Checkout Session & Redirect to Payment Page
   const createCheckoutMutation = useMutation({
     mutationFn: async () => {
+      const reservationIdForPayment = paymentInfo?.reservation_id ?? reservation!.id;
       const response = await paymentService.createCheckoutSession({
-        reservation_id: String(reservation!.id),
+        reservation_id: String(reservationIdForPayment),
       });
       return response;
     },
@@ -98,10 +101,23 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
   const guestEmail = reservation.guest_email || reservation.customer_email || "—";
   const guestPhone = reservation.guest_phone || reservation.customer_phone || reservation.phone_number || "—";
   const amount = reservation.estimated_total_price || reservation.amount_minor || 0;
+  const paymentAmount = paymentInfo?.amount_minor ?? amount;
   const baggageCount = reservation.baggage_count || reservation.luggage_count || 0;
   const storageCode = reservation.storage_code || "—";
 
   const isLoading = createCheckoutMutation.isPending || markPaidMutation.isPending || isRedirecting;
+  const checkoutUrl = paymentInfo?.checkout_url;
+
+  const handlePayClick = () => {
+    if (checkoutUrl) {
+      setIsRedirecting(true);
+      const url = checkoutUrl.startsWith("http") ? checkoutUrl : `${window.location.origin}${checkoutUrl}`;
+      window.open(url, "_blank");
+      setTimeout(() => setIsRedirecting(false), 1200);
+      return;
+    }
+    createCheckoutMutation.mutate();
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
@@ -166,7 +182,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
             {t("payment.modal.totalAmount")}
           </div>
           <div style={{ fontSize: "2.5rem", fontWeight: 700, color: "var(--color-text)", letterSpacing: "-0.02em" }}>
-            {currencyFormatter.format(amount / 100)}
+            {currencyFormatter.format(paymentAmount / 100)}
           </div>
           <div style={{ marginTop: "var(--space-2)" }}>
             <Badge variant="warning" size="sm">
@@ -183,7 +199,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
             fullWidth
             isLoading={createCheckoutMutation.isPending || isRedirecting}
             disabled={isLoading}
-            onClick={() => createCheckoutMutation.mutate()}
+            onClick={handlePayClick}
           >
             {isRedirecting ? "🔄" : "💳"} {isRedirecting ? t("payment.modal.redirecting") : t("payment.modal.processPayment")}
           </Button>
@@ -226,4 +242,3 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
     </Modal>
   );
 };
-

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
-import { reservationService, type Reservation } from "../../../services/partner/reservations";
+import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../../services/partner/reservations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
@@ -68,6 +68,7 @@ export function ReservationsPage() {
   
   // Payment modal states
   const [paymentReservation, setPaymentReservation] = useState<Reservation | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<ReservationPaymentInfo | null>(null);
   const [showPaymentActionModal, setShowPaymentActionModal] = useState(false);
   const [showPaymentDetailModal, setShowPaymentDetailModal] = useState(false);
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
@@ -113,18 +114,18 @@ export function ReservationsPage() {
   const handlePaymentCheck = useCallback(async (reservation: Reservation) => {
     setIsCheckingPayment(true);
     try {
-      // Fetch fresh reservation data from backend
-      const freshReservation = await reservationService.getById(reservation.id);
+      const [freshReservation, payment] = await Promise.all([
+        reservationService.getById(reservation.id),
+        reservationService.getPayment(reservation.id),
+      ]);
+
       setPaymentReservation(freshReservation);
-      
-      // Check payment status and open appropriate modal
-      const paymentStatus = freshReservation.payment?.status;
-      
+      setPaymentInfo(payment);
+
+      const paymentStatus = payment?.status;
       if (paymentStatus === "paid" || paymentStatus === "captured") {
-        // Payment exists - show detail modal
         setShowPaymentDetailModal(true);
       } else {
-        // No payment or unpaid - show action modal
         setShowPaymentActionModal(true);
       }
     } catch (error) {
@@ -329,16 +330,20 @@ export function ReservationsPage() {
         onClose={() => {
           setShowPaymentActionModal(false);
           setPaymentReservation(null);
+          setPaymentInfo(null);
         }}
+        paymentInfo={paymentInfo}
       />
 
       {/* Payment Detail Modal (for paid reservations) */}
       <PaymentDetailModal
         reservation={paymentReservation}
+        paymentInfo={paymentInfo}
         isOpen={showPaymentDetailModal}
         onClose={() => {
           setShowPaymentDetailModal(false);
           setPaymentReservation(null);
+          setPaymentInfo(null);
         }}
       />
     </section>

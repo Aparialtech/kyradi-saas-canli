@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { reservationService, type Reservation } from "../../services/partner/reservations";
+import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../services/partner/reservations";
 import { useToast } from "../../hooks/useToast";
 import { useTranslation } from "../../hooks/useTranslation";
 import { getErrorMessage } from "../../lib/httpError";
@@ -14,12 +14,14 @@ import { Card } from "../ui/Card";
 
 interface PaymentDetailModalProps {
   reservation: Reservation | null;
+  paymentInfo: ReservationPaymentInfo | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
 export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
   reservation,
+  paymentInfo,
   isOpen,
   onClose,
 }) => {
@@ -29,7 +31,7 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
 
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: reservation?.payment?.currency || reservation?.currency || "TRY",
+    currency: paymentInfo?.currency || reservation?.payment?.currency || reservation?.currency || "TRY",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -45,7 +47,7 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
   // Refund Payment Mutation
   const refundMutation = useMutation({
     mutationFn: () =>
-      reservationService.refundPayment(reservation!.id, reservation?.payment?.id),
+      reservationService.refundPayment(reservation!.id, paymentInfo?.payment_id || reservation?.payment?.id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
       push({ title: t("payment.modal.refundSuccess"), type: "success" });
@@ -62,11 +64,10 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
 
   if (!reservation) return null;
 
-  const payment = reservation.payment;
-  const amount = payment?.amount_minor || reservation.estimated_total_price || reservation.amount_minor || 0;
-  const paidAt = payment?.paid_at || payment?.created_at;
-  const transactionId = payment?.transaction_id || "—";
-  const paymentMethod = payment?.provider || payment?.mode || t("payment.modal.methodUnknown");
+  const amount = paymentInfo?.amount_minor || reservation.estimated_total_price || reservation.amount_minor || 0;
+  const paidAt = paymentInfo?.paid_at || paymentInfo?.meta?.captured_at || paymentInfo?.meta?.paid_at || paymentInfo?.meta?.processed_at;
+  const transactionId = paymentInfo?.transaction_id || "—";
+  const paymentMethod = paymentInfo?.provider || paymentInfo?.mode || t("payment.modal.methodUnknown");
   const storageCode = reservation.storage_code || "—";
   const guestName = reservation.full_name || reservation.customer_name || reservation.guest_name || t("reservations.guestUnknown");
 
@@ -240,4 +241,3 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
     </Modal>
   );
 };
-

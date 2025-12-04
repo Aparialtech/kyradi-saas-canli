@@ -61,6 +61,21 @@ export interface Payment {
   created_at: string;
 }
 
+export interface ReservationPaymentInfo {
+  payment_id?: string;
+  reservation_id?: string;
+  status: string;
+  amount_minor: number;
+  currency: string;
+  provider?: string | null;
+  mode?: string | null;
+  provider_intent_id?: string | null;
+  transaction_id?: string | null;
+  paid_at?: string | null;
+  checkout_url?: string | null;
+  meta?: Record<string, unknown> | null;
+}
+
 export interface ReservationListResponse {
   items: Reservation[];
 }
@@ -183,6 +198,17 @@ export const reservationService = {
       return response.data;
     } else {
       const response = await http.get<Reservation>(`/reservations/${idStr}`);
+      return response.data;
+    }
+  },
+
+  async getPayment(id: string | number): Promise<ReservationPaymentInfo> {
+    const idStr = String(id);
+    if (this._isWidgetReservation(id)) {
+      const response = await http.get<ReservationPaymentInfo>(`/partners/widget-reservations/${idStr}/payment`);
+      return response.data;
+    } else {
+      const response = await http.get<ReservationPaymentInfo>(`/reservations/${idStr}/payment`);
       return response.data;
     }
   },
