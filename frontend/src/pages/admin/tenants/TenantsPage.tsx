@@ -246,7 +246,7 @@ export function TenantsPage() {
           <div>
             <h2 className="panel__title">{t("admin.tenants.title")} - Liste</h2>
             <p className="panel__subtitle">
-              Sisteme kayıtlı {t("common.hotel")}lar, plan durumları ve limitler.
+              Sisteme kayıtlı {t("common.hotels" as any)}, plan durumları ve limitler.
             </p>
           </div>
         </div>

@@ -23,6 +23,15 @@ export interface Settlement {
   created_at: string;
 }
 
+export interface SettlementListResponse {
+  items: Settlement[];
+  total_count: number;
+  total_income: number;
+  total_commission: number;
+  total_payout: number;
+  currency: string;
+}
+
 export const revenueService = {
   async getSummary(dateFrom?: string, dateTo?: string): Promise<RevenueSummary> {
     const params: Record<string, string> = {};
@@ -39,12 +48,32 @@ export const revenueService = {
     return response.data;
   },
 
-  async listSettlements(status?: string, dateFrom?: string, dateTo?: string): Promise<Settlement[]> {
+  async listSettlements(
+    status?: string,
+    dateFrom?: string,
+    dateTo?: string,
+    search?: string
+  ): Promise<SettlementListResponse> {
     const params: Record<string, string> = {};
     if (status) params.status = status;
     if (dateFrom) params.from = dateFrom;
     if (dateTo) params.to = dateTo;
-    const response = await http.get<Settlement[]>("/revenue/settlements", { params });
+    if (search) params.search = search;
+    const response = await http.get<SettlementListResponse>("/revenue/settlements", { params });
+    return response.data;
+  },
+
+  // Legacy method for backward compatibility
+  async listSettlementsLegacy(
+    status?: string,
+    dateFrom?: string,
+    dateTo?: string
+  ): Promise<Settlement[]> {
+    const params: Record<string, string> = {};
+    if (status) params.status = status;
+    if (dateFrom) params.from = dateFrom;
+    if (dateTo) params.to = dateTo;
+    const response = await http.get<Settlement[]>("/revenue/settlements/legacy", { params });
     return response.data;
   },
 };

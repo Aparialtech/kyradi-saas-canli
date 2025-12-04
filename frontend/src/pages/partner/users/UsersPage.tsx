@@ -1,4 +1,4 @@
-import { useState, useCallback, type FormEvent } from "react";
+import { useState, useCallback, useMemo, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import {
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
+import { SearchInput } from "../../../components/common/SearchInput";
 import { getErrorMessage } from "../../../lib/httpError";
 import type { UserRole } from "../../../types/auth";
 import { useAuth } from "../../../context/AuthContext";
@@ -51,11 +52,31 @@ export function UsersPage() {
   const [resetUser, setResetUser] = useState<TenantUser | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [resetShouldSendInvite, setResetShouldSendInvite] = useState(true);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const usersQuery = useQuery({
     queryKey: ["tenant", "users"],
     queryFn: tenantUserService.list,
   });
+
+  // Filter users by search term
+  const filteredUsers = useMemo(() => {
+    const users = usersQuery.data ?? [];
+    if (!searchTerm.trim()) return users;
+    
+    const term = searchTerm.toLowerCase();
+    return users.filter((user) => {
+      const email = (user.email ?? "").toLowerCase();
+      const phone = (user.phone_number ?? "").toLowerCase();
+      const role = (roleLabels[user.role] ?? user.role).toLowerCase();
+      
+      return email.includes(term) || phone.includes(term) || role.includes(term);
+    });
+  }, [usersQuery.data, searchTerm]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
 
   const createMutation = useMutation({
     mutationFn: (payload: TenantUserCreatePayload) => tenantUserService.create(payload),
@@ -380,8 +401,15 @@ export function UsersPage() {
           <div>
             <h2 className="panel__title">Personel Listesi</h2>
             <p className="panel__subtitle">
-              {usersQuery.data?.length ?? 0} personel kayıtlı
+              {filteredUsers.length} / {usersQuery.data?.length ?? 0} personel gösteriliyor
             </p>
+          </div>
+          <div style={{ minWidth: "250px" }}>
+            <SearchInput
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="E-posta, telefon veya rol ile ara..."
+            />
           </div>
         </div>
 
@@ -397,12 +425,13 @@ export function UsersPage() {
             <h3 className="empty-state__title">Personel listesi alınamadı</h3>
             <p>Sayfayı yenileyerek tekrar deneyin.</p>
           </div>
-        ) : usersQuery.data && usersQuery.data.length > 0 ? (
+        ) : filteredUsers.length > 0 ? (
           <div className="data-table-wrapper">
             <table className="data-table">
               <thead>
                 <tr>
                   <th>E-posta</th>
+                  <th>Telefon</th>
                   <th>Rol</th>
                   <th>Durum</th>
                   <th>{t("common.lastLogin")}</th>
@@ -410,7 +439,7 @@ export function UsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {usersQuery.data.map((user) => {
+                {filteredUsers.map((user) => {
       const isActive = user.is_active;
       const isCurrentUser = currentUser?.id === user.id;
       return (

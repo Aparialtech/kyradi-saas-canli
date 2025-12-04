@@ -43,7 +43,7 @@ export function AdminRevenuePage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t("nav.globalRevenue")}</h1>
-          <p className="page-subtitle">Tüm {t("common.hotel")}ların gelir özeti ve detaylı hakediş kayıtları</p>
+          <p className="page-subtitle">{t("common.allHotels" as any)} gelir özeti ve detaylı hakediş kayıtları</p>
         </div>
       </div>
 
@@ -61,7 +61,7 @@ export function AdminRevenuePage() {
               onChange={(e) => setSelectedTenantId(e.target.value)}
               style={{ width: "100%" }}
             >
-              <option value="">Tüm {t("common.hotel")}lar</option>
+              <option value="">{t("common.allHotels" as any)}</option>
               {tenantsQuery.data?.map((tenant) => (
                 <option key={tenant.id} value={tenant.id}>
                   {tenant.name}

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
+import { SearchInput } from "../../../components/common/SearchInput";
 
 interface Settlement {
   id: string;
@@ -28,6 +29,7 @@ export function AdminSettlementsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const tenantsQuery = useQuery({
     queryKey: ["admin", "tenants"],
@@ -51,13 +53,33 @@ export function AdminSettlementsPage() {
     tenantsQuery.data?.map((tenant) => [tenant.id, tenant]) ?? []
   );
 
+  // Filter settlements by search term
+  const filteredSettlements = useMemo(() => {
+    const settlements = settlementsQuery.data ?? [];
+    if (!searchTerm.trim()) return settlements;
+    
+    const term = searchTerm.toLowerCase();
+    return settlements.filter((settlement) => {
+      const tenant = tenantsById.get(settlement.tenant_id);
+      const tenantName = (tenant?.name ?? "").toLowerCase();
+      const paymentId = settlement.payment_id.toLowerCase();
+      const amount = (settlement.total_amount_minor / 100).toString();
+      
+      return tenantName.includes(term) || paymentId.includes(term) || amount.includes(term);
+    });
+  }, [settlementsQuery.data, searchTerm, tenantsById]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
+
   return (
     <section className="page">
       <ToastContainer messages={messages} />
       <div className="page-header">
         <div>
           <h1 className="page-title">{t("nav.globalSettlements")}</h1>
-          <p className="page-subtitle">Tüm {t("common.hotel")}ların hakediş kayıtları ve detayları</p>
+          <p className="page-subtitle">{t("common.allHotels" as any)} hakediş kayıtları ve detayları</p>
         </div>
       </div>
 
@@ -75,7 +97,7 @@ export function AdminSettlementsPage() {
               onChange={(e) => setSelectedTenantId(e.target.value)}
               style={{ width: "100%" }}
             >
-              <option value="">Tüm {t("common.hotel")}lar</option>
+              <option value="">{t("common.allHotels" as any)}</option>
               {tenantsQuery.data?.map((tenant) => (
                 <option key={tenant.id} value={tenant.id}>
                   {tenant.name}
@@ -122,8 +144,15 @@ export function AdminSettlementsPage() {
           <div>
             <h3 className="panel__title">Hakediş Kayıtları</h3>
             <p className="panel__subtitle">
-              {settlementsQuery.data?.length ?? 0} kayıt bulundu
+              {filteredSettlements.length} / {settlementsQuery.data?.length ?? 0} kayıt gösteriliyor
             </p>
+          </div>
+          <div style={{ minWidth: "250px" }}>
+            <SearchInput
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="Otel adı, payment ID veya tutar ile ara..."
+            />
           </div>
         </div>
         <div className="data-table-wrapper">
@@ -144,8 +173,8 @@ export function AdminSettlementsPage() {
                 <tr>
                   <td colSpan={7}>Veriler yükleniyor...</td>
                 </tr>
-              ) : settlementsQuery.data && settlementsQuery.data.length > 0 ? (
-                settlementsQuery.data.map((settlement) => {
+              ) : filteredSettlements.length > 0 ? (
+                filteredSettlements.map((settlement) => {
                   const tenant = tenantsById.get(settlement.tenant_id);
                   return (
                     <tr key={settlement.id}>

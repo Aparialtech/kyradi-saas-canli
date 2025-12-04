@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { staffService, type Staff, type StaffPayload } from "../../../services/partner/staff";
 import { ToastContainer } from "../../../components/common/ToastContainer";
+import { SearchInput } from "../../../components/common/SearchInput";
 import { useToast } from "../../../hooks/useToast";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
 import { http } from "../../../lib/http";
 
@@ -25,11 +27,20 @@ interface Location {
   name: string;
 }
 
+const roleLabels: Record<string, string> = {
+  storage_operator: "Depo Görevlisi",
+  hotel_manager: "Otel Yöneticisi",
+  accounting: "Muhasebe",
+  staff: "Personel",
+  tenant_admin: "Tenant Admin",
+};
 
 export function StaffPage() {
+  const { t } = useTranslation();
   const { messages, push } = useToast();
   const queryClient = useQueryClient();
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const staffQuery = useQuery({
     queryKey: ["staff"],
@@ -70,11 +81,54 @@ export function StaffPage() {
     },
   });
 
+  // Maps for quick lookup
+  const usersById = useMemo(
+    () => new Map(usersQuery.data?.map((u) => [u.id, u]) ?? []),
+    [usersQuery.data]
+  );
+  const storagesById = useMemo(
+    () => new Map(storagesQuery.data?.map((s) => [s.id, s]) ?? []),
+    [storagesQuery.data]
+  );
+  const locationsById = useMemo(
+    () => new Map(locationsQuery.data?.map((l) => [l.id, l]) ?? []),
+    [locationsQuery.data]
+  );
+
+  // Filter staff by search term
+  const filteredStaff = useMemo(() => {
+    const staffList = staffQuery.data ?? [];
+    if (!searchTerm.trim()) return staffList;
+
+    const term = searchTerm.toLowerCase();
+    return staffList.filter((staff) => {
+      const user = usersById.get(staff.user_id);
+      const email = (user?.email ?? "").toLowerCase();
+      const storageNames = staff.assigned_storage_ids
+        .map((id) => storagesById.get(id)?.code ?? "")
+        .join(" ")
+        .toLowerCase();
+      const locationNames = staff.assigned_location_ids
+        .map((id) => locationsById.get(id)?.name ?? "")
+        .join(" ")
+        .toLowerCase();
+
+      return email.includes(term) || storageNames.includes(term) || locationNames.includes(term);
+    });
+  }, [staffQuery.data, searchTerm, usersById, storagesById, locationsById]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
+
   const createMutation = useMutation({
     mutationFn: (payload: StaffPayload) => staffService.create(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
+      void queryClient.invalidateQueries({ queryKey: ["users", "assignable"] });
       push({ title: "Eleman ataması eklendi", type: "success" });
+      reset({ user_id: "", storage_ids: [], location_ids: [] });
+      setEditingStaff(null);
     },
     onError: (error: unknown) => {
       push({ title: "Kayıt başarısız", description: getErrorMessage(error), type: "error" });
@@ -87,6 +141,8 @@ export function StaffPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
       push({ title: "Eleman ataması güncellendi", type: "success" });
+      reset({ user_id: "", storage_ids: [], location_ids: [] });
+      setEditingStaff(null);
     },
     onError: (error: unknown) => {
       push({ title: "Güncelleme başarısız", description: getErrorMessage(error), type: "error" });
@@ -97,6 +153,7 @@ export function StaffPage() {
     mutationFn: (id: string) => staffService.remove(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
+      void queryClient.invalidateQueries({ queryKey: ["users", "assignable"] });
       push({ title: "Eleman ataması silindi", type: "info" });
     },
     onError: (error: unknown) => {
@@ -124,279 +181,280 @@ export function StaffPage() {
     }
     if (editingStaff) {
       await updateMutation.mutateAsync({ id: editingStaff.id, payload: values });
-      setEditingStaff(null);
     } else {
       await createMutation.mutateAsync(values);
     }
-    reset({ user_id: "", storage_ids: [], location_ids: [] });
   });
 
+  const handleNew = () => {
+    setEditingStaff(null);
+    reset({ user_id: "", storage_ids: [], location_ids: [] });
+  };
+
   return (
-    <section>
+    <section className="page">
       <ToastContainer messages={messages} />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+      <div className="page-header">
         <div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Eleman Yönetimi</h2>
-          <p style={{ color: "#64748b" }}>Otel elemanlarını yönetin ve depo atamaları yapın</p>
+          <h1 className="page-title">{t("nav.staff")}</h1>
+          <p className="page-subtitle">
+            Bu oteldeki personel atamalarını yönetin. Personellere depo ve lokasyon erişimi tanımlayın.
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditingStaff(null);
-            reset({ user_id: "", storage_ids: [], location_ids: [] });
-          }}
-          style={{
-            border: "none",
-            background: "#1d4ed8",
-            color: "#fff",
-            padding: "0.55rem 1.1rem",
-            borderRadius: "8px",
-            cursor: "pointer",
-          }}
-        >
-          Yeni Eleman Ataması
-        </button>
+        <div className="page-actions">
+          <button type="button" className="btn btn--primary" onClick={handleNew}>
+            Yeni Eleman Ataması
+          </button>
+        </div>
       </div>
 
-      <form
-        onSubmit={submit}
-        style={{
-          marginBottom: "2rem",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-          gap: "1rem",
-          background: "#fff",
-          padding: "1.25rem",
-          borderRadius: "12px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        }}
-      >
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
-            Kullanıcı <span style={{ color: "#dc2626" }}>*</span>
+      {/* Form */}
+      <div className="panel">
+        <div className="panel__header">
+          <div>
+            <h2 className="panel__title">
+              {editingStaff ? "Eleman Atamasını Düzenle" : "Yeni Eleman Ataması"}
+            </h2>
+            <p className="panel__subtitle">
+              Personeli seçin ve erişim yetkisi vereceğiniz depo/lokasyonları belirleyin.
+            </p>
+          </div>
+        </div>
+
+        <form className="form-grid" onSubmit={submit}>
+          <label className="form-field">
+            <span className="form-field__label">
+              Personel <span style={{ color: "var(--color-danger)" }}>*</span>
+            </span>
+            {assignableUsersQuery.isLoading ? (
+              <div className="form-field__hint">Kullanıcılar yükleniyor...</div>
+            ) : assignableUsersQuery.data && assignableUsersQuery.data.length > 0 ? (
+              <select {...register("user_id", { required: "Kullanıcı zorunlu" })} disabled={Boolean(editingStaff)}>
+                <option value="">Seçiniz</option>
+                {assignableUsersQuery.data.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.email} ({roleLabels[user.role] ?? user.role})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div
+                style={{
+                  padding: "1rem",
+                  background: "#fef3c7",
+                  borderRadius: "8px",
+                  border: "1px solid #fcd34d",
+                }}
+              >
+                <p style={{ fontWeight: 600, color: "#92400e", marginBottom: "0.5rem" }}>
+                  ⚠️ Atanabilir personel bulunamadı
+                </p>
+                <p style={{ color: "#a16207", marginBottom: "0.75rem", fontSize: "0.875rem" }}>
+                  Bu otel için henüz atanabilir personel yok. Önce kullanıcılar bölümünden personel ekleyin.
+                </p>
+                <a href="/partner/users" className="btn btn--primary" style={{ fontSize: "0.875rem" }}>
+                  Personel Ekle →
+                </a>
+              </div>
+            )}
+            {errors.user_id && <span className="field-error">{errors.user_id.message}</span>}
           </label>
-          {assignableUsersQuery.isLoading ? (
-            <div style={{ padding: "0.65rem", color: "#64748b", fontSize: "0.875rem" }}>
-              Kullanıcılar yükleniyor...
-            </div>
-          ) : assignableUsersQuery.data && assignableUsersQuery.data.length > 0 ? (
-            <select
-              {...register("user_id", { required: "Kullanıcı zorunlu" })}
-              style={{
-                width: "100%",
-                padding: "0.65rem",
-                borderRadius: "8px",
-                border: "1px solid #cbd5f5",
-              }}
-            >
-              <option value="">Seçiniz</option>
-              {assignableUsersQuery.data.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.email} ({user.role})
+
+          <label className="form-field">
+            <span className="form-field__label">Depolar</span>
+            <select multiple {...register("storage_ids")} style={{ minHeight: "100px" }}>
+              {storagesQuery.data?.map((storage) => (
+                <option key={storage.id} value={storage.id}>
+                  {storage.code}
                 </option>
               ))}
             </select>
-          ) : (
-            <div
-              style={{
-                padding: "1rem",
-                background: "#fef3c7",
-                borderRadius: "8px",
-                border: "1px solid #fcd34d",
-                fontSize: "0.875rem",
-              }}
-            >
-              <p style={{ fontWeight: 600, color: "#92400e", marginBottom: "0.5rem" }}>
-                Atanabilir personel bulunamadı
-              </p>
-              <p style={{ color: "#a16207", marginBottom: "0.75rem" }}>
-                Bu otel için henüz atanabilir personel yok. Önce kullanıcılar bölümünden personel ekleyin.
-              </p>
-              <a
-                href="/partner/users"
-                style={{
-                  display: "inline-block",
-                  padding: "0.4rem 0.8rem",
-                  background: "#1d4ed8",
-                  color: "#fff",
-                  borderRadius: "6px",
-                  textDecoration: "none",
-                  fontSize: "0.8rem",
-                  fontWeight: 500,
-                }}
+            <small className="form-field__hint">Ctrl/Cmd tuşu ile birden fazla seçim yapabilirsiniz</small>
+          </label>
+
+          <label className="form-field">
+            <span className="form-field__label">Lokasyonlar</span>
+            <select multiple {...register("location_ids")} style={{ minHeight: "100px" }}>
+              {locationsQuery.data?.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
+            <small className="form-field__hint">Ctrl/Cmd tuşu ile birden fazla seçim yapabilirsiniz</small>
+          </label>
+
+          <div className="form-actions form-grid__field--full">
+            {editingStaff && (
+              <button
+                type="button"
+                className="btn btn--ghost-dark"
+                onClick={handleNew}
+                disabled={createMutation.isPending || updateMutation.isPending}
               >
-                Personel Ekle →
-              </a>
-            </div>
-          )}
-          {errors.user_id && <span style={{ color: "#dc2626", fontSize: "0.75rem" }}>{errors.user_id.message}</span>}
-        </div>
-
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
-            Depolar (Opsiyonel)
-          </label>
-          <select
-            multiple
-            {...register("storage_ids")}
-            style={{
-              width: "100%",
-              padding: "0.65rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5f5",
-              minHeight: "100px",
-            }}
-          >
-            {storagesQuery.data?.map((storage) => (
-              <option key={storage.id} value={storage.id}>
-                {storage.code}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
-            Lokasyonlar (Opsiyonel)
-          </label>
-          <select
-            multiple
-            {...register("location_ids")}
-            style={{
-              width: "100%",
-              padding: "0.65rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5f5",
-              minHeight: "100px",
-            }}
-          >
-            {locationsQuery.data?.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ alignSelf: "end" }}>
-          <button
-            type="submit"
-            style={{
-              border: "none",
-              background: "#16a34a",
-              color: "#fff",
-              padding: "0.6rem 1.2rem",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
-          >
-            {editingStaff ? "Güncelle" : "Kaydet"}
-          </button>
-        </div>
-      </form>
+                {t("common.cancel")}
+              </button>
+            )}
+            <button
+              type="submit"
+              className="btn btn--primary"
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {editingStaff
+                ? updateMutation.isPending
+                  ? "Güncelleniyor..."
+                  : "Güncelle"
+                : createMutation.isPending
+                  ? "Kaydediliyor..."
+                  : t("common.save")}
+            </button>
+          </div>
+        </form>
+      </div>
 
       {/* Staff list */}
-      {staffQuery.isLoading ? (
-        <div>Yükleniyor...</div>
-      ) : staffQuery.isError ? (
-        <div style={{ color: "#dc2626" }}>Elemanlar yüklenemedi</div>
-      ) : staffQuery.data && staffQuery.data.length > 0 ? (
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: "12px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            overflow: "hidden",
-          }}
-        >
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#f1f5f9" }}>
-                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.85rem", color: "#475569" }}>
-                  Kullanıcı
-                </th>
-                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.85rem", color: "#475569" }}>
-                  Atanan Depolar
-                </th>
-                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.85rem", color: "#475569" }}>
-                  Atanan Lokasyonlar
-                </th>
-                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.85rem", color: "#475569" }}>
-                  İşlemler
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {staffQuery.data.map((staff) => {
-                const user = usersQuery.data?.find((u) => u.id === staff.user_id);
-                return (
-                  <tr key={staff.id} style={{ borderTop: "1px solid #e2e8f0" }}>
-                    <td style={{ padding: "1rem", fontSize: "0.9rem" }}>{user?.email || staff.user_id}</td>
-                    <td style={{ padding: "1rem", fontSize: "0.9rem" }}>
-                      {staff.assigned_storage_ids.length > 0
-                        ? staff.assigned_storage_ids
-                            .map(
-                              (id) =>
-                                storagesQuery.data?.find((s) => s.id === id)?.code || id.substring(0, 8) + "..."
-                            )
-                            .join(", ")
-                        : "-"}
-                    </td>
-                    <td style={{ padding: "1rem", fontSize: "0.9rem" }}>
-                      {staff.assigned_location_ids.length > 0
-                        ? staff.assigned_location_ids
-                            .map(
-                              (id) =>
-                                locationsQuery.data?.find((l) => l.id === id)?.name || id.substring(0, 8) + "..."
-                            )
-                            .join(", ")
-                        : "-"}
-                    </td>
-                    <td style={{ padding: "1rem" }}>
-                      <div style={{ display: "flex", gap: "0.75rem" }}>
-                        <button
-                          type="button"
-                          style={{ border: "none", background: "none", color: "#1d4ed8", cursor: "pointer" }}
-                          onClick={() => {
-                            setEditingStaff(staff);
-                            reset({
-                              user_id: staff.user_id,
-                              storage_ids: staff.assigned_storage_ids,
-                              location_ids: staff.assigned_location_ids,
-                            });
-                          }}
-                        >
-                          Düzenle
-                        </button>
-                        <button
-                          type="button"
-                          style={{ border: "none", background: "none", color: "#dc2626", cursor: "pointer" }}
-                          onClick={() => deleteMutation.mutate(staff.id)}
-                        >
-                          Sil
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <div className="panel">
+        <div className="panel__header">
+          <div>
+            <h2 className="panel__title">Eleman Atamaları</h2>
+            <p className="panel__subtitle">
+              {filteredStaff.length} / {staffQuery.data?.length ?? 0} eleman gösteriliyor
+            </p>
+          </div>
+          <div style={{ minWidth: "250px" }}>
+            <SearchInput
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="E-posta, depo veya lokasyon ile ara..."
+            />
+          </div>
         </div>
-      ) : (
-        <div
-          style={{
-            background: "#fff",
-            padding: "3rem",
-            borderRadius: "12px",
-            textAlign: "center",
-            color: "#64748b",
-          }}
-        >
-          <p>Henüz eleman ataması bulunmuyor</p>
-        </div>
-      )}
+
+        {staffQuery.isLoading ? (
+          <div className="empty-state">
+            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
+            <h3 className="empty-state__title">{t("common.loading")}</h3>
+            <p>Eleman atamaları yükleniyor...</p>
+          </div>
+        ) : staffQuery.isError ? (
+          <div className="empty-state">
+            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
+            <h3 className="empty-state__title">{t("common.error")}</h3>
+            <p style={{ color: "#dc2626" }}>Elemanlar yüklenemedi. Lütfen sayfayı yenileyin.</p>
+          </div>
+        ) : filteredStaff.length > 0 ? (
+          <div className="data-table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Personel</th>
+                  <th>Rol</th>
+                  <th>Atanan Depolar</th>
+                  <th>Atanan Lokasyonlar</th>
+                  <th>{t("common.actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStaff.map((staff) => {
+                  const user = usersById.get(staff.user_id);
+                  return (
+                    <tr key={staff.id}>
+                      <td>
+                        <strong>{user?.email ?? staff.user_id}</strong>
+                        {user?.is_active === false && (
+                          <span className="badge badge--danger" style={{ marginLeft: "0.5rem" }}>
+                            Pasif
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="badge">{roleLabels[user?.role ?? ""] ?? user?.role ?? "—"}</span>
+                      </td>
+                      <td>
+                        {staff.assigned_storage_ids.length > 0 ? (
+                          <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                            {staff.assigned_storage_ids.map((id) => {
+                              const storage = storagesById.get(id);
+                              return (
+                                <span
+                                  key={id}
+                                  className="badge badge--info"
+                                  style={{ fontSize: "0.75rem" }}
+                                  title={`Depo ID: ${id}`}
+                                >
+                                  📦 {storage?.code ?? id.slice(0, 8)}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="table-cell-muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        {staff.assigned_location_ids.length > 0 ? (
+                          <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                            {staff.assigned_location_ids.map((id) => {
+                              const location = locationsById.get(id);
+                              return (
+                                <span
+                                  key={id}
+                                  className="badge badge--success"
+                                  style={{ fontSize: "0.75rem" }}
+                                  title={`Lokasyon ID: ${id}`}
+                                >
+                                  📍 {location?.name ?? id.slice(0, 8)}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="table-cell-muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="table-actions">
+                          <button
+                            type="button"
+                            className="action-link"
+                            onClick={() => {
+                              setEditingStaff(staff);
+                              reset({
+                                user_id: staff.user_id,
+                                storage_ids: staff.assigned_storage_ids,
+                                location_ids: staff.assigned_location_ids,
+                              });
+                            }}
+                          >
+                            {t("common.edit")}
+                          </button>
+                          <button
+                            type="button"
+                            className="action-link action-link--danger"
+                            onClick={() => {
+                              if (confirm("Bu eleman atamasını silmek istediğinize emin misiniz?")) {
+                                deleteMutation.mutate(staff.id);
+                              }
+                            }}
+                          >
+                            {t("common.delete")}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>👥</div>
+            <h3 className="empty-state__title">{t("common.noData")}</h3>
+            <p>Henüz eleman ataması bulunmuyor veya arama sonucu yok.</p>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
-

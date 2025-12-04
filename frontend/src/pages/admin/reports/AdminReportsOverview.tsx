@@ -102,7 +102,7 @@ export function AdminReportsOverview() {
           <p className="stat-card__value">
             {summaryQuery.isLoading ? "..." : summaryQuery.data?.total_storages ?? "-"}
           </p>
-          <p className="stat-card__hint">{t("common.storages")} - Tüm {t("common.hotel")}lar</p>
+          <p className="stat-card__hint">{t("common.storages")} - {t("common.allHotels" as any)}</p>
         </div>
       </div>
 

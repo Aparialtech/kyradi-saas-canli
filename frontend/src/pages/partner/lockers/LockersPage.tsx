@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -6,6 +6,7 @@ import { storageService, type Storage, type StoragePayload, type StorageStatus }
 import { locationService } from "../../../services/partner/locations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
+import { SearchInput } from "../../../components/common/SearchInput";
 import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
 
@@ -27,6 +28,7 @@ export function LockersPage() {
   const { messages, push } = useToast();
   const [editingStorage, setEditingStorage] = useState<Storage | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const locationsQuery = useQuery({ queryKey: ["locations"], queryFn: locationService.list });
   const storagesQuery = useQuery({
@@ -90,6 +92,25 @@ export function LockersPage() {
   const locationOptions = useMemo(() => {
     return (locationsQuery.data ?? []).map((location) => ({ value: location.id, label: location.name }));
   }, [locationsQuery.data]);
+
+  // Filter storages by search term
+  const filteredStorages = useMemo(() => {
+    const storages = storagesQuery.data ?? [];
+    if (!searchTerm.trim()) return storages;
+    
+    const term = searchTerm.toLowerCase();
+    return storages.filter((storage) => {
+      const locationName = locationOptions.find((opt) => opt.value === storage.location_id)?.label ?? "";
+      return (
+        storage.code.toLowerCase().includes(term) ||
+        locationName.toLowerCase().includes(term)
+      );
+    });
+  }, [storagesQuery.data, searchTerm, locationOptions]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
 
   const submit = handleSubmit(async (values) => {
     if (!values.location_id) {
@@ -216,12 +237,19 @@ export function LockersPage() {
           <div>
             <h2 className="panel__title">{t("common.storages")} Listesi</h2>
             <p className="panel__subtitle">
-              {storagesQuery.data?.length ?? 0} {t("common.storage")} kayıtlı
+              {filteredStorages.length} / {storagesQuery.data?.length ?? 0} {t("common.storage")} gösteriliyor
             </p>
           </div>
-          <div className="panel__filters">
-            <label className="form-field">
-              <span className="form-field__label">Durum Filtresi</span>
+          <div className="panel__filters" style={{ display: "flex", gap: "1rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+            <div style={{ minWidth: "200px" }}>
+              <SearchInput
+                value={searchTerm}
+                onChange={handleSearchChange}
+                placeholder={`${t("common.storage")} kodu veya lokasyon ile ara...`}
+              />
+            </div>
+            <label className="form-field" style={{ marginBottom: 0 }}>
+              <span className="form-field__label">Durum</span>
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
@@ -247,7 +275,7 @@ export function LockersPage() {
             <h3 className="empty-state__title">{t("common.storages")} alınamadı</h3>
             <p>Sayfayı yenileyerek tekrar deneyin.</p>
           </div>
-        ) : storagesQuery.data && storagesQuery.data.length > 0 ? (
+        ) : filteredStorages.length > 0 ? (
           <div className="data-table-wrapper">
             <table className="data-table">
               <thead>
@@ -260,7 +288,7 @@ export function LockersPage() {
                 </tr>
               </thead>
               <tbody>
-                {storagesQuery.data.map((storage) => (
+                {filteredStorages.map((storage) => (
                   <tr key={storage.id}>
                     <td>
                       <strong>{storage.code}</strong>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
@@ -6,6 +6,7 @@ import { http } from "../../../lib/http";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
+import { SearchInput } from "../../../components/common/SearchInput";
 import { getErrorMessage } from "../../../lib/httpError";
 import type { UserRole } from "../../../types/auth";
 
@@ -39,6 +40,7 @@ export function AdminUsersPage() {
   const [isActiveFilter, setIsActiveFilter] = useState<string>("");
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const tenantsQuery = useQuery({
     queryKey: ["admin", "tenants"],
@@ -57,6 +59,31 @@ export function AdminUsersPage() {
     },
   });
 
+  const tenantsById = useMemo(() => 
+    new Map(tenantsQuery.data?.map((tenant) => [tenant.id, tenant]) ?? []),
+    [tenantsQuery.data]
+  );
+
+  // Filter users by search term
+  const filteredUsers = useMemo(() => {
+    const users = usersQuery.data ?? [];
+    if (!searchTerm.trim()) return users;
+    
+    const term = searchTerm.toLowerCase();
+    return users.filter((user) => {
+      const tenant = user.tenant_id ? tenantsById.get(user.tenant_id) : null;
+      const tenantName = (tenant?.name ?? "").toLowerCase();
+      const email = user.email.toLowerCase();
+      const role = (userRoleLabels[user.role] ?? user.role).toLowerCase();
+      
+      return email.includes(term) || tenantName.includes(term) || role.includes(term);
+    });
+  }, [usersQuery.data, searchTerm, tenantsById]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
+
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, payload }: { userId: string; payload: Partial<User> }) => {
       const response = await http.patch<User>(`/admin/users/${userId}`, payload);
@@ -72,8 +99,6 @@ export function AdminUsersPage() {
       push({ title: "Güncelleme başarısız", description: getErrorMessage(error), type: "error" });
     },
   });
-
-  const tenantsById = new Map(tenantsQuery.data?.map((tenant) => [tenant.id, tenant]) ?? []);
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
@@ -115,7 +140,7 @@ export function AdminUsersPage() {
               onChange={(e) => setSelectedTenantId(e.target.value)}
               style={{ width: "100%" }}
             >
-              <option value="">Tüm {t("common.hotel")}lar</option>
+              <option value="">{t("common.allHotels" as any)}</option>
               {tenantsQuery.data?.map((tenant) => (
                 <option key={tenant.id} value={tenant.id}>
                   {tenant.name}
@@ -158,8 +183,15 @@ export function AdminUsersPage() {
           <div>
             <h3 className="panel__title">Kullanıcılar</h3>
             <p className="panel__subtitle">
-              {usersQuery.data?.length ?? 0} kullanıcı bulundu
+              {filteredUsers.length} / {usersQuery.data?.length ?? 0} kullanıcı gösteriliyor
             </p>
+          </div>
+          <div style={{ minWidth: "250px" }}>
+            <SearchInput
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="E-posta, otel veya rol ile ara..."
+            />
           </div>
         </div>
         <div className="data-table-wrapper">
@@ -185,8 +217,8 @@ export function AdminUsersPage() {
                     </div>
                   </td>
                 </tr>
-              ) : usersQuery.data && usersQuery.data.length > 0 ? (
-                usersQuery.data.map((user) => {
+              ) : filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => {
                   const tenant = user.tenant_id ? tenantsById.get(user.tenant_id) : null;
                   return (
                     <tr key={user.id}>

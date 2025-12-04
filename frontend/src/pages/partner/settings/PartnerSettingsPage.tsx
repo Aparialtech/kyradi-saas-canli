@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -37,18 +37,25 @@ export function PartnerSettingsPage() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isDirty },
   } = useForm<FormValues>({
     defaultValues: {
       tenant_name: "",
       contact_email: "",
       contact_phone: "",
-      brand_color: "",
+      brand_color: "#0F172A",
       logo_url: "",
       notification_email: "",
       notification_sms: false,
     },
   });
+
+  // Watch for live previews
+  const watchedBrandColor = useWatch({ control, name: "brand_color" });
+  const watchedLogoUrl = useWatch({ control, name: "logo_url" });
+  const watchedTenantName = useWatch({ control, name: "tenant_name" });
+  const [logoError, setLogoError] = useState(false);
 
   // Sync form values when settings are loaded
   useEffect(() => {
@@ -280,11 +287,115 @@ export function PartnerSettingsPage() {
                   {...register("logo_url")}
                   disabled={!isEditing}
                   placeholder="https://example.com/logo.png"
+                  onChange={(e) => {
+                    setLogoError(false);
+                    register("logo_url").onChange(e);
+                  }}
                 />
                 <small className="form-field__hint">
                   Widget ve e-postalarda görüntülenecek logo
                 </small>
               </label>
+            </div>
+          </div>
+
+          {/* Marka Önizleme */}
+          <div className="panel">
+            <div className="panel__header">
+              <div>
+                <h2 className="panel__title">Marka Önizleme</h2>
+                <p className="panel__subtitle">
+                  Logo ve renk ayarlarınızın canlı önizlemesi
+                </p>
+              </div>
+            </div>
+            <div className="panel__body">
+              <div
+                style={{
+                  display: "flex",
+                  gap: "2rem",
+                  alignItems: "center",
+                  padding: "1.5rem",
+                  background: "var(--color-surface)",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                {/* Logo Preview */}
+                <div style={{ flexShrink: 0 }}>
+                  {watchedLogoUrl && !logoError ? (
+                    <img
+                      src={watchedLogoUrl}
+                      alt="Logo Preview"
+                      style={{
+                        maxWidth: "120px",
+                        maxHeight: "60px",
+                        objectFit: "contain",
+                        borderRadius: "var(--radius-sm)",
+                      }}
+                      onError={() => setLogoError(true)}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "120px",
+                        height: "60px",
+                        background: "var(--color-border)",
+                        borderRadius: "var(--radius-sm)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.75rem",
+                        color: "var(--color-text-muted)",
+                      }}
+                    >
+                      {logoError ? "Logo yüklenemedi" : "Logo yok"}
+                    </div>
+                  )}
+                </div>
+
+                {/* Brand Color Sample */}
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "1rem",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "40px",
+                        height: "40px",
+                        backgroundColor: watchedBrandColor || "#0F172A",
+                        borderRadius: "var(--radius-sm)",
+                        border: "2px solid var(--color-border)",
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: "1.125rem" }}>
+                        {watchedTenantName || "Otel Adı"}
+                      </div>
+                      <div style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
+                        Marka rengi: {watchedBrandColor || "#0F172A"}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{
+                      backgroundColor: watchedBrandColor || "#0F172A",
+                      color: "#fff",
+                      border: "none",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    Örnek Buton
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
