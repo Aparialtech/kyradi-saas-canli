@@ -1,6 +1,6 @@
 """Storage endpoints."""
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -14,7 +14,11 @@ from ...models import Location, Reservation, ReservationStatus, Storage, Storage
 from ...services.limits import get_plan_limits_for_tenant
 from ...schemas import StorageCreate, StorageRead, StorageUpdate
 from ...services.storage_utils import generate_storage_code
-from ...services.storage_availability import is_storage_available
+from ...services.storage_availability import (
+    is_storage_available,
+    get_storage_calendar,
+    StorageCalendarResponse,
+)
 
 router = APIRouter(prefix="/storages", tags=["storages"])
 
@@ -247,3 +251,68 @@ async def delete_locker(
 ) -> None:
     """Delete a storage unit without active reservations (legacy endpoint)."""
     return await delete_storage(locker_id, current_user, session)
+
+
+@router.get("/{storage_id}/calendar", response_model=StorageCalendarResponse)
+async def get_storage_calendar_endpoint(
+    storage_id: str,
+    start_date: Optional[date] = Query(None, description="Start date (default: today)"),
+    end_date: Optional[date] = Query(None, description="End date (default: today + 30 days)"),
+    current_user: User = Depends(require_storage_operator),
+    session: AsyncSession = Depends(get_session),
+) -> StorageCalendarResponse:
+    """Get storage availability calendar for a date range.
+    
+    Returns daily availability status for the specified storage:
+    - status: "free" | "occupied"
+    - reservation_ids: List of reservation IDs overlapping that day
+    
+    Default date range is today to today + 30 days.
+    """
+    # Default date range
+    today = date.today()
+    if start_date is None:
+        start_date = today
+    if end_date is None:
+        end_date = today + timedelta(days=30)
+    
+    # Validate date range
+    if end_date < start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End date must be after start date",
+        )
+    
+    # Limit range to 365 days to prevent abuse
+    if (end_date - start_date).days > 365:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Date range cannot exceed 365 days",
+        )
+    
+    try:
+        calendar = await get_storage_calendar(
+            session,
+            storage_id=storage_id,
+            start_date=start_date,
+            end_date=end_date,
+            tenant_id=current_user.tenant_id,
+        )
+        return calendar
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+@legacy_router.get("/{locker_id}/calendar", response_model=StorageCalendarResponse)
+async def get_locker_calendar_endpoint(
+    locker_id: str,
+    start_date: Optional[date] = Query(None, description="Start date (default: today)"),
+    end_date: Optional[date] = Query(None, description="End date (default: today + 30 days)"),
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> StorageCalendarResponse:
+    """Get storage availability calendar for a date range (legacy endpoint)."""
+    return await get_storage_calendar_endpoint(storage_id=locker_id, start_date=start_date, end_date=end_date, current_user=current_user, session=session)

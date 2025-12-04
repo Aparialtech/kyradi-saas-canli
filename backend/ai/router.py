@@ -49,9 +49,16 @@ except ImportError as e:
 
 class ChatRequest(BaseModel):
     """Chat request model."""
-    prompt: str = Field(..., min_length=1, max_length=4000)
-    message: Optional[str] = Field(default=None)  # Alias for prompt
-    question: Optional[str] = Field(default=None)  # Another alias
+    prompt: Optional[str] = Field(default=None, max_length=4000)
+    message: Optional[str] = Field(default=None, max_length=4000)  # Alias for prompt
+    question: Optional[str] = Field(default=None, max_length=4000)  # Another alias
+    tenant_id: Optional[str] = Field(default=None)  # For context
+    locale: Optional[str] = Field(default="tr-TR")
+    
+    @property
+    def text(self) -> str:
+        """Get the actual text from any of the fields."""
+        return self.prompt or self.message or self.question or ""
 
 
 class ChatResponse(BaseModel):
@@ -121,7 +128,7 @@ async def ai_chat(payload: ChatRequest) -> ChatResponse:
     request_id = f"req_{int(time.time() * 1000)}"
     
     # Get prompt from any of the fields
-    prompt = payload.prompt or payload.message or payload.question or ""
+    prompt = payload.text
     
     if not prompt.strip():
         raise HTTPException(
@@ -134,7 +141,7 @@ async def ai_chat(payload: ChatRequest) -> ChatResponse:
         logger.warning("AI chat request received but AI is unavailable")
         raise HTTPException(
             status_code=503,
-            detail="AI service unavailable: missing or invalid OPENAI_API_KEY"
+            detail="AI service unavailable: AI provider not configured"
         )
     
     try:
@@ -183,28 +190,20 @@ async def ai_assistant(payload: ChatRequest) -> ChatResponse:
     
     Unlike /chat, this endpoint returns error in JSON body instead of HTTP 503.
     This is useful for frontends that prefer to handle errors in response body.
+    
+    When AI is not available, uses Dummy provider that returns helpful messages.
     """
     start_time = time.perf_counter()
     request_id = f"req_{int(time.time() * 1000)}"
     
     # Get prompt from any of the fields
-    prompt = payload.prompt or payload.message or payload.question or ""
+    prompt = payload.text
     
     if not prompt.strip():
         return ChatResponse(
             answer="",
             success=False,
-            error="Prompt is required",
-            request_id=request_id,
-        )
-    
-    # Check AI availability
-    if not check_ai_available():
-        logger.warning("AI assistant request received but AI is unavailable")
-        return ChatResponse(
-            answer="",
-            success=False,
-            error="AI service unavailable: missing or invalid OPENAI_API_KEY",
+            error="Mesaj boş olamaz",
             request_id=request_id,
         )
     
@@ -214,7 +213,7 @@ async def ai_assistant(payload: ChatRequest) -> ChatResponse:
             return ChatResponse(
                 answer="",
                 success=False,
-                error="AI service unavailable: provider not initialized",
+                error="AI servisi şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.",
                 request_id=request_id,
             )
         
@@ -236,7 +235,7 @@ async def ai_assistant(payload: ChatRequest) -> ChatResponse:
         return ChatResponse(
             answer="",
             success=False,
-            error=f"AI service error: {str(e)}",
+            error=f"Bir hata oluştu: {str(e)}",
             request_id=request_id,
             latency_ms=round(latency_ms, 2),
         )
