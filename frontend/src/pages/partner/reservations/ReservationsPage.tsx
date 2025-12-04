@@ -413,7 +413,7 @@ function renderReservationRow({
             isIcon
             aria-label="View details"
           >
-            <Eye size={16} />
+            <Eye className="h-4 w-4" />
           </Button>
 
           <Button
@@ -430,7 +430,7 @@ function renderReservationRow({
               }
             }}
           >
-            <CheckCircle2 size={16} />
+            <CheckCircle2 className="h-4 w-4" />
             <span style={{ marginLeft: "0.35rem" }}>{t("reservations.buttons.complete")}</span>
           </Button>
 
@@ -448,7 +448,7 @@ function renderReservationRow({
               }
             }}
           >
-            <XOctagon size={16} />
+            <XOctagon className="h-4 w-4" />
             <span style={{ marginLeft: "0.35rem" }}>{t("reservations.buttons.cancelConfirmed")}</span>
           </Button>
 
@@ -458,7 +458,7 @@ function renderReservationRow({
             disabled={isCheckingPayment}
             onClick={() => onPaymentCheck(reservation)}
           >
-            <CreditCard size={16} />
+            <CreditCard className="h-4 w-4" />
             <span style={{ marginLeft: "0.35rem" }}>{t("payment.button.check")}</span>
           </Button>
         </div>

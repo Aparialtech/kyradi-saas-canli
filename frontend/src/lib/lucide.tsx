@@ -43,4 +43,9 @@ export const PauseCircle = createIcon(<><circle cx="12" cy="12" r="10" /><line x
 export const CircleSlash = createIcon(<><circle cx="12" cy="12" r="10" /><line x1="9" y1="9" x2="15" y2="15" /></>);
 export const UserCheck = createIcon(<><path d="M8 20a4 4 0 0 1 8 0" /><circle cx="12" cy="10" r="4" /><polyline points="16 11 18 13 22 9" /></>);
 export const UserX = createIcon(<><path d="M8 20a4 4 0 0 1 8 0" /><circle cx="12" cy="10" r="4" /><line x1="18" y1="8" x2="22" y2="12" /><line x1="22" y1="8" x2="18" y2="12" /></>);
+export const Search = createIcon(<><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></>);
+export const Clock = createIcon(<><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>);
+export const Ban = createIcon(<><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></>);
+export const AlertTriangle = createIcon(<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>);
+export const Package = createIcon(<><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></>);
 export const WalletMinimal = Wallet;

@@ -23,7 +23,7 @@ export const DataToolbar: React.FC<DataToolbarProps> = ({
   return (
     <div className={clsx(styles.toolbar, className)}>
       <div className={styles.toolbar__search}>
-        <Search size={16} />
+        <Search className="h-4 w-4" />
         <input
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}

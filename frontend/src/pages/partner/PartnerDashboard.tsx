@@ -134,7 +134,7 @@ export function PartnerOverview() {
         label: t("partner.stats.activeLabel"),
         value: summaryQuery.isPending ? "..." : activeReservations.toLocaleString(locale),
         hint: t("partner.stats.activeHint"),
-        icon: <Briefcase size={22} />,
+        icon: <Briefcase className="h-[22px] w-[22px]" />,
       },
       {
         label: t("partner.stats.occupancyLabel"),
@@ -142,13 +142,13 @@ export function PartnerOverview() {
           ? "..."
           : `${occupancyPct.toLocaleString(locale, { maximumFractionDigits: 1 })}%`,
         hint: t("partner.stats.occupancyHint"),
-        icon: <MapPin size={22} />,
+        icon: <MapPin className="h-[22px] w-[22px]" />,
       },
       {
         label: t("partner.stats.revenueLabel"),
         value: summaryQuery.isPending ? "..." : currencyFormatter.format(revenueMinor / 100),
         hint: t("partner.stats.revenueHint"),
-        icon: <PiggyBank size={22} />,
+        icon: <PiggyBank className="h-[22px] w-[22px]" />,
       },
       {
         label: t("partner.stats.totalLabel"),
@@ -156,7 +156,7 @@ export function PartnerOverview() {
           ? "..."
           : (summaryQuery.data?.total_reservations ?? 0).toLocaleString(locale),
         hint: totalLimit,
-        icon: <FileText size={22} />,
+        icon: <FileText className="h-[22px] w-[22px]" />,
       },
       {
         label: t("partner.stats.storageLabel"),
@@ -164,7 +164,7 @@ export function PartnerOverview() {
           ? "..."
           : `${summaryQuery.data?.storage_used_mb ?? 0} MB`,
         hint: storageLimit,
-        icon: <HardDrive size={22} />,
+        icon: <HardDrive className="h-[22px] w-[22px]" />,
       },
     ];
   }, [
@@ -484,30 +484,30 @@ export function PartnerDashboard() {
 
   const navigation = useMemo((): SidebarNavItem[] => {
     const items: SidebarNavItem[] = [
-      { to: ".", label: t("nav.overview"), end: true, icon: <Briefcase size={18} /> },
-      { to: "locations", label: t("nav.locations"), icon: <MapPin size={18} /> },
-      { to: "lockers", label: t("nav.storages"), icon: <HardDrive size={18} /> },
-      { to: "reservations", label: t("nav.reservations"), icon: <FileText size={18} /> },
-      { to: "qr", label: t("nav.qr"), icon: <ScanLine size={18} /> },
+      { to: ".", label: t("nav.overview"), end: true, icon: <Briefcase className="h-[18px] w-[18px]" /> },
+      { to: "locations", label: t("nav.locations"), icon: <MapPin className="h-[18px] w-[18px]" /> },
+      { to: "lockers", label: t("nav.storages"), icon: <HardDrive className="h-[18px] w-[18px]" /> },
+      { to: "reservations", label: t("nav.reservations"), icon: <FileText className="h-[18px] w-[18px]" /> },
+      { to: "qr", label: t("nav.qr"), icon: <ScanLine className="h-[18px] w-[18px]" /> },
     ];
     
     // Accounting and hotel manager can see revenue
     if (hasRole("accounting") || hasRole("hotel_manager") || hasRole("tenant_admin")) {
-      items.push({ to: "reports", label: t("nav.reports"), icon: <LineChart size={18} /> });
-      items.push({ to: "revenue", label: t("nav.revenue"), icon: <Wallet size={18} /> });
-      items.push({ to: "settlements", label: t("nav.settlements"), icon: <PiggyBank size={18} /> });
+      items.push({ to: "reports", label: t("nav.reports"), icon: <LineChart className="h-[18px] w-[18px]" /> });
+      items.push({ to: "revenue", label: t("nav.revenue"), icon: <Wallet className="h-[18px] w-[18px]" /> });
+      items.push({ to: "settlements", label: t("nav.settlements"), icon: <PiggyBank className="h-[18px] w-[18px]" /> });
     }
     
     // Hotel manager and tenant admin can manage users and staff
     if (hasRole("hotel_manager") || hasRole("tenant_admin")) {
-      items.push({ to: "users", label: t("nav.users"), icon: <UsersIcon size={18} /> });
-      items.push({ to: "staff", label: t("nav.staff"), icon: <UserCog size={18} /> });
-      items.push({ to: "pricing", label: t("nav.pricing"), icon: <BadgePercent size={18} /> });
-      items.push({ to: "demo-flow", label: t("nav.demoFlow"), icon: <LineChart size={18} /> });
+      items.push({ to: "users", label: t("nav.users"), icon: <UsersIcon className="h-[18px] w-[18px]" /> });
+      items.push({ to: "staff", label: t("nav.staff"), icon: <UserCog className="h-[18px] w-[18px]" /> });
+      items.push({ to: "pricing", label: t("nav.pricing"), icon: <BadgePercent className="h-[18px] w-[18px]" /> });
+      items.push({ to: "demo-flow", label: t("nav.demoFlow"), icon: <LineChart className="h-[18px] w-[18px]" /> });
     }
     
     // All authenticated users can access settings
-    items.push({ to: "settings", label: t("nav.settings"), icon: <Settings2 size={18} /> });
+    items.push({ to: "settings", label: t("nav.settings"), icon: <Settings2 className="h-[18px] w-[18px]" /> });
     
     return items;
   }, [hasRole, t]);

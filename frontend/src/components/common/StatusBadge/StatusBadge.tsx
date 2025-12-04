@@ -25,20 +25,20 @@ type StatusVariant =
   | "primary";
 
 const iconMap: Record<string, React.ReactNode> = {
-  paid: <CheckCircle size={14} />,
-  captured: <CheckCircle size={14} />,
-  pending: <Clock size={14} />,
-  authorized: <Shield size={14} />,
-  cancelled: <CircleSlash size={14} />,
-  failed: <XCircle size={14} />,
-  refunded: <Wallet size={14} />,
-  reserved: <PauseCircle size={14} />,
-  active: <Package size={14} />,
-  completed: <CheckCircle size={14} />,
-  no_show: <Ban size={14} />,
-  idle: <PauseCircle size={14} />,
-  occupied: <UserCheck size={14} />,
-  out_of_service: <UserX size={14} />,
+  paid: <CheckCircle className="h-3.5 w-3.5" />,
+  captured: <CheckCircle className="h-3.5 w-3.5" />,
+  pending: <Clock className="h-3.5 w-3.5" />,
+  authorized: <Shield className="h-3.5 w-3.5" />,
+  cancelled: <CircleSlash className="h-3.5 w-3.5" />,
+  failed: <XCircle className="h-3.5 w-3.5" />,
+  refunded: <Wallet className="h-3.5 w-3.5" />,
+  reserved: <PauseCircle className="h-3.5 w-3.5" />,
+  active: <Package className="h-3.5 w-3.5" />,
+  completed: <CheckCircle className="h-3.5 w-3.5" />,
+  no_show: <Ban className="h-3.5 w-3.5" />,
+  idle: <PauseCircle className="h-3.5 w-3.5" />,
+  occupied: <UserCheck className="h-3.5 w-3.5" />,
+  out_of_service: <UserX className="h-3.5 w-3.5" />,
 };
 
 const variantMap: Record<string, StatusVariant> = {
@@ -67,7 +67,7 @@ export interface StatusBadgeProps {
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, className }) => {
   const normalized = status?.toLowerCase?.() ?? "default";
   const variant = variantMap[normalized] ?? "info";
-  const icon = iconMap[normalized] ?? <AlertTriangle size={14} />;
+  const icon = iconMap[normalized] ?? <AlertTriangle className="h-3.5 w-3.5" />;
 
   return (
     <span className={clsx(styles.badge, styles[`badge--${variant}`], className)}>
