@@ -292,8 +292,8 @@ export function DemoFlowPage() {
       <ToastContainer messages={messages} />
       <header className="page-header">
         <div>
-          <h1 className="page-title">{t("demo.flow.title")}</h1>
-          <p className="page-subtitle">{t("demo.flow.subtitle")}</p>
+          <h1 className="page-title">{t("onlineReservationForm.title")}</h1>
+          <p className="page-subtitle">{t("onlineReservationForm.subtitle")}</p>
         </div>
       </header>
 
@@ -375,7 +375,7 @@ export function DemoFlowPage() {
       {/* Step 1: Widget Form */}
       <div className="panel" style={{ marginBottom: "2rem" }}>
         <div className="panel__header">
-          <h2 className="panel__title">{t("demo.flow.step1Title")}</h2>
+          <h2 className="panel__title">{t("onlineReservationForm.previewLabel")}</h2>
           <p className="panel__subtitle">{t("demo.flow.step1Desc")}</p>
         </div>
         {tenantQuery.isLoading ? (

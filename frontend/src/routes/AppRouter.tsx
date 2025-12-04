@@ -22,6 +22,7 @@ import {
   PartnerReservationsPage,
   PartnerQRPage,
   PartnerUsersPage,
+  PartnerReportsAnalyticsPage,
   PartnerRevenueDashboard,
   PartnerSettlementsPage,
   PartnerStaffPage,
@@ -74,6 +75,7 @@ export function AppRouter() {
           <Route
             element={<RequireAuth allowedRoles={["accounting", "hotel_manager", "tenant_admin"]} redirectTo="/app" />}
           >
+            <Route path="reports" element={<PartnerReportsAnalyticsPage />} />
             <Route path="revenue" element={<PartnerRevenueDashboard />} />
             <Route path="settlements" element={<PartnerSettlementsPage />} />
           </Route>

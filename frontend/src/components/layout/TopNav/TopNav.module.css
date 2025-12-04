@@ -1,0 +1,116 @@
+.topnav {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: var(--z-sticky);
+}
+
+/* Partner variant */
+.topnav--partner {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border-bottom: none;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.topnav--partner .topnav__brand-text,
+.topnav--partner .topnav__user-email {
+  color: #FFFFFF;
+}
+
+/* Admin variant */
+.topnav--admin {
+  background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+  border-bottom: none;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+.topnav--admin .topnav__brand-text,
+.topnav--admin .topnav__user-email {
+  color: #FFFFFF;
+}
+
+/* ====================== BRAND ====================== */
+
+.topnav__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.topnav__brand-mark {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.topnav__brand-text {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+/* ====================== USER SECTION ====================== */
+
+.topnav__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.topnav__user-email {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.topnav__logout-btn {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.topnav__logout-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .topnav {
+    padding: 0 var(--space-4);
+  }
+  
+  .topnav__user-email {
+    display: none;
+  }
+  
+  .topnav__brand-text {
+    font-size: 1rem;
+  }
+}
+

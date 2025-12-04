@@ -120,25 +120,70 @@ export const reservationService = {
     return response.data;
   },
   
-  // New operational endpoints for partner panel
-  async completeReservation(id: string): Promise<{ id: string; status: string }> {
-    const response = await http.post<{ id: string; status: string }>(`/reservations/${id}/complete`);
-    return response.data;
+  // ===========================================
+  // UNIFIED ENDPOINTS (auto-detect widget vs normal)
+  // Widget reservations: numeric IDs → /partners/widget-reservations/{id}/*
+  // Normal reservations: UUID IDs → /reservations/{id}/*
+  // ===========================================
+  
+  /**
+   * Check if ID is a widget reservation (numeric) or normal reservation (UUID)
+   */
+  _isWidgetReservation(id: string | number): boolean {
+    const idStr = String(id);
+    // UUID is 36 chars with dashes or 32 chars without
+    // Widget reservation IDs are numeric (shorter)
+    return idStr.length < 20 && /^\d+$/.test(idStr);
+  },
+
+  async completeReservation(id: string | number): Promise<{ id: string | number; status: string }> {
+    const idStr = String(id);
+    if (this._isWidgetReservation(id)) {
+      // Widget reservation - use widget endpoint
+      const response = await http.post<Reservation>(`/partners/widget-reservations/${idStr}/complete`);
+      return { id: response.data.id, status: response.data.status };
+    } else {
+      // Normal reservation - use standard endpoint
+      const response = await http.post<{ id: string; status: string }>(`/reservations/${idStr}/complete`);
+      return response.data;
+    }
   },
   
-  async cancelReservation(id: string): Promise<{ id: string; status: string }> {
-    const response = await http.post<{ id: string; status: string }>(`/reservations/${id}/cancel`);
-    return response.data;
+  async cancelReservation(id: string | number): Promise<{ id: string | number; status: string }> {
+    const idStr = String(id);
+    if (this._isWidgetReservation(id)) {
+      // Widget reservation - use widget endpoint
+      const response = await http.post<Reservation>(`/partners/widget-reservations/${idStr}/cancel`);
+      return { id: response.data.id, status: response.data.status };
+    } else {
+      // Normal reservation - use standard endpoint
+      const response = await http.post<{ id: string; status: string }>(`/reservations/${idStr}/cancel`);
+      return response.data;
+    }
   },
   
-  async ensurePayment(id: string): Promise<Payment> {
-    const response = await http.post<Payment>(`/reservations/${id}/ensure-payment`);
-    return response.data;
+  async ensurePayment(id: string | number): Promise<Payment | { id: number; status: string; message: string }> {
+    const idStr = String(id);
+    if (this._isWidgetReservation(id)) {
+      // Widget reservation - use widget endpoint
+      const response = await http.post<{ id: number; status: string; payment_status: string; amount_minor: number; currency: string; message: string }>(`/partners/widget-reservations/${idStr}/ensure-payment`);
+      return response.data as unknown as Payment;
+    } else {
+      // Normal reservation - use standard endpoint
+      const response = await http.post<Payment>(`/reservations/${idStr}/ensure-payment`);
+      return response.data;
+    }
   },
   
   // Get single reservation details
   async getById(id: string): Promise<Reservation> {
-    const response = await http.get<Reservation>(`/reservations/${id}`);
-    return response.data;
+    const idStr = String(id);
+    if (this._isWidgetReservation(id)) {
+      const response = await http.get<Reservation>(`/partners/widget-reservations/${idStr}`);
+      return response.data;
+    } else {
+      const response = await http.get<Reservation>(`/reservations/${idStr}`);
+      return response.data;
+    }
   },
 };

@@ -29,6 +29,37 @@ export interface PartnerSummary {
   self_service_remaining?: number | null;
 }
 
+export interface PartnerOverviewSummary {
+  total_revenue_minor: number;
+  total_reservations: number;
+  active_reservations: number;
+  occupancy_rate: number;
+}
+
+export interface PartnerOverviewDailyItem {
+  date: string; // YYYY-MM-DD
+  revenue_minor: number;
+}
+
+export interface PartnerOverviewByLocationItem {
+  location_name: string;
+  revenue_minor: number;
+  reservations: number;
+}
+
+export interface PartnerOverviewByStorageItem {
+  storage_code: string;
+  location_name: string;
+  reservations: number;
+}
+
+export interface PartnerOverviewResponse {
+  summary: PartnerOverviewSummary;
+  daily: PartnerOverviewDailyItem[];
+  by_location: PartnerOverviewByLocationItem[];
+  by_storage: PartnerOverviewByStorageItem[];
+}
+
 export const partnerReportService = {
   async summary(): Promise<PartnerSummary> {
     const response = await http.get<PartnerSummary>("/reports/summary");
@@ -36,6 +67,10 @@ export const partnerReportService = {
   },
   async registerExport(): Promise<{ remaining: number | null }> {
     const response = await http.post<{ remaining: number | null }>("/reports/reservations/export-log");
+    return response.data;
+  },
+  async getPartnerOverview(): Promise<PartnerOverviewResponse> {
+    const response = await http.get<PartnerOverviewResponse>("/reports/partner-overview");
     return response.data;
   },
 };

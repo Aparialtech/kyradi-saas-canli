@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { pricingService, type PricingRule, type PricingRuleCreate } from "../../../services/partner/pricing";
+import { pricingService, type PricingRule, type PricingRuleCreate, type PricingScope } from "../../../services/partner/pricing";
+import { locationService, type Location } from "../../../services/partner/locations";
+import { storageService, type Storage } from "../../../services/partner/storages";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
+import { SearchInput } from "../../../components/common/SearchInput";
 
 export function PricingPage() {
   const { t } = useTranslation();
@@ -13,10 +16,25 @@ export function PricingPage() {
   const queryClient = useQueryClient();
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [scopeFilter, setScopeFilter] = useState<PricingScope | "">("");
 
+  // Fetch pricing rules
   const pricingQuery = useQuery({
     queryKey: ["pricing"],
     queryFn: () => pricingService.list(),
+  });
+
+  // Fetch locations for dropdown
+  const locationsQuery = useQuery<Location[]>({
+    queryKey: ["locations"],
+    queryFn: () => locationService.list(),
+  });
+
+  // Fetch storages for dropdown
+  const storagesQuery = useQuery<Storage[]>({
+    queryKey: ["storages"],
+    queryFn: () => storageService.list(),
   });
 
   const createMutation = useMutation({
@@ -64,9 +82,14 @@ export function PricingPage() {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<PricingRuleCreate>({
     defaultValues: {
+      scope: "TENANT",
+      location_id: null,
+      storage_id: null,
+      name: null,
       pricing_type: "daily",
       price_per_hour_minor: 1500,
       price_per_day_minor: 15000,
@@ -81,12 +104,52 @@ export function PricingPage() {
   });
 
   const watchedValues = watch();
+  const selectedScope = watchedValues.scope;
+  const selectedLocationId = watchedValues.location_id;
+
+  // Filter storages by selected location
+  const filteredStorages = useMemo(() => {
+    if (!storagesQuery.data || !selectedLocationId) return [];
+    return storagesQuery.data.filter((s) => s.location_id === selectedLocationId);
+  }, [storagesQuery.data, selectedLocationId]);
+
+  // Filter rules based on search and scope filter
+  const filteredRules = useMemo(() => {
+    if (!pricingQuery.data) return [];
+    
+    return pricingQuery.data.filter((rule) => {
+      // Apply scope filter
+      if (scopeFilter && rule.scope !== scopeFilter) return false;
+      
+      // Apply search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = rule.name?.toLowerCase().includes(query);
+        const matchesLocation = rule.location_name?.toLowerCase().includes(query);
+        const matchesStorage = rule.storage_code?.toLowerCase().includes(query);
+        const matchesNotes = rule.notes?.toLowerCase().includes(query);
+        
+        if (!matchesName && !matchesLocation && !matchesStorage && !matchesNotes) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [pricingQuery.data, scopeFilter, searchQuery]);
 
   const submit = handleSubmit(async (values) => {
+    // Clean up payload based on scope
+    const payload: PricingRuleCreate = {
+      ...values,
+      location_id: values.scope === "LOCATION" ? values.location_id : null,
+      storage_id: values.scope === "STORAGE" ? values.storage_id : null,
+    };
+
     if (editingRule) {
-      await updateMutation.mutateAsync({ id: editingRule.id, payload: values });
+      await updateMutation.mutateAsync({ id: editingRule.id, payload });
     } else {
-      await createMutation.mutateAsync(values);
+      await createMutation.mutateAsync(payload);
     }
   });
 
@@ -94,10 +157,44 @@ export function PricingPage() {
     return (minor / 100).toFixed(2) + " ₺";
   };
 
+  const getScopeLabel = (scope: PricingScope) => {
+    const labels: Record<PricingScope, string> = {
+      GLOBAL: t("pricing.scope.global"),
+      TENANT: t("pricing.scope.tenant"),
+      LOCATION: t("pricing.scope.location"),
+      STORAGE: t("pricing.scope.storage"),
+    };
+    return labels[scope] || scope;
+  };
+
+  const getScopeBadgeClass = (scope: PricingScope) => {
+    const classes: Record<PricingScope, string> = {
+      GLOBAL: "badge badge--info",
+      TENANT: "badge badge--primary",
+      LOCATION: "badge badge--success",
+      STORAGE: "badge badge--warning",
+    };
+    return classes[scope] || "badge";
+  };
+
+  const getPricingTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      hourly: t("pricing.type.hourly"),
+      daily: t("pricing.type.daily"),
+      weekly: t("pricing.type.weekly"),
+      monthly: t("pricing.type.monthly"),
+    };
+    return labels[type] || type;
+  };
+
   const handleNewRule = () => {
     setEditingRule(null);
     setShowForm(true);
     reset({
+      scope: "TENANT",
+      location_id: null,
+      storage_id: null,
+      name: null,
       pricing_type: "daily",
       price_per_hour_minor: 1500,
       price_per_day_minor: 15000,
@@ -115,6 +212,10 @@ export function PricingPage() {
     setEditingRule(rule);
     setShowForm(true);
     reset({
+      scope: rule.scope || "TENANT",
+      location_id: rule.location_id || null,
+      storage_id: rule.storage_id || null,
+      name: rule.name || null,
       pricing_type: rule.pricing_type,
       price_per_hour_minor: rule.price_per_hour_minor,
       price_per_day_minor: rule.price_per_day_minor,
@@ -132,6 +233,18 @@ export function PricingPage() {
     setShowForm(false);
     setEditingRule(null);
     reset();
+  };
+
+  // Handle scope change - clear location/storage if not needed
+  const handleScopeChange = (newScope: PricingScope) => {
+    setValue("scope", newScope);
+    if (newScope !== "LOCATION" && newScope !== "STORAGE") {
+      setValue("location_id", null);
+      setValue("storage_id", null);
+    }
+    if (newScope !== "STORAGE") {
+      setValue("storage_id", null);
+    }
   };
 
   return (
@@ -152,6 +265,33 @@ export function PricingPage() {
       {/* Pricing Rules List */}
       {!showForm && (
         <>
+          {/* Search and Filter Controls */}
+          <div className="panel" style={{ marginBottom: "1rem" }}>
+            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ flex: "1 1 300px" }}>
+                <SearchInput
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder={t("pricing.searchPlaceholder")}
+                />
+              </div>
+              <div style={{ flex: "0 0 200px" }}>
+                <select
+                  className="form-input"
+                  value={scopeFilter}
+                  onChange={(e) => setScopeFilter(e.target.value as PricingScope | "")}
+                  style={{ fontSize: "0.95rem" }}
+                >
+                  <option value="">{t("pricing.filter.allScopes")}</option>
+                  <option value="GLOBAL">{t("pricing.scope.global")}</option>
+                  <option value="TENANT">{t("pricing.scope.tenant")}</option>
+                  <option value="LOCATION">{t("pricing.scope.location")}</option>
+                  <option value="STORAGE">{t("pricing.scope.storage")}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           {pricingQuery.isLoading ? (
             <div className="panel">
               <div className="empty-state">{t("common.loading")}</div>
@@ -162,31 +302,57 @@ export function PricingPage() {
                 {t("pricing.loadError")}: {getErrorMessage(pricingQuery.error)}
               </div>
             </div>
-          ) : pricingQuery.data && pricingQuery.data.length > 0 ? (
+          ) : filteredRules.length > 0 ? (
             <div className="panel">
               <div className="panel__header">
                 <h2 className="panel__title">{t("pricing.rulesTitle")}</h2>
-                <p className="panel__subtitle">{t("pricing.rulesSubtitle", { count: pricingQuery.data.length })}</p>
+                <p className="panel__subtitle">{t("pricing.rulesSubtitle", { count: filteredRules.length })}</p>
               </div>
               <div style={{ overflowX: "auto" }}>
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Tip</th>
-                      <th>Saatlik</th>
-                      <th>Günlük</th>
-                      <th>Haftalık</th>
-                      <th>Aylık</th>
-                      <th>Minimum</th>
-                      <th>Para Birimi</th>
-                      <th>Öncelik</th>
-                      <th>Durum</th>
-                      <th style={{ textAlign: "right" }}>İşlemler</th>
+                      <th>{t("pricing.table.scope")}</th>
+                      <th>{t("pricing.table.target")}</th>
+                      <th>{t("pricing.table.type")}</th>
+                      <th>{t("pricing.table.hourly")}</th>
+                      <th>{t("pricing.table.daily")}</th>
+                      <th>{t("pricing.table.minimum")}</th>
+                      <th>{t("pricing.table.currency")}</th>
+                      <th>{t("pricing.table.priority")}</th>
+                      <th>{t("pricing.table.status")}</th>
+                      <th style={{ textAlign: "right" }}>{t("common.actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pricingQuery.data.map((rule) => (
+                    {filteredRules.map((rule) => (
                       <tr key={rule.id}>
+                        {/* Scope */}
+                        <td>
+                          <span className={getScopeBadgeClass(rule.scope)}>
+                            {getScopeLabel(rule.scope)}
+                          </span>
+                        </td>
+                        {/* Target (Location/Storage) */}
+                        <td>
+                          {rule.scope === "STORAGE" && rule.storage_code ? (
+                            <div>
+                              <span style={{ fontWeight: 500 }}>📦 {rule.storage_code}</span>
+                              {rule.location_name && (
+                                <div className="table-cell-muted" style={{ fontSize: "0.75rem" }}>
+                                  📍 {rule.location_name}
+                                </div>
+                              )}
+                            </div>
+                          ) : rule.scope === "LOCATION" && rule.location_name ? (
+                            <span style={{ fontWeight: 500 }}>📍 {rule.location_name}</span>
+                          ) : rule.name ? (
+                            <span style={{ fontWeight: 500 }}>{rule.name}</span>
+                          ) : (
+                            <span className="table-cell-muted">—</span>
+                          )}
+                        </td>
+                        {/* Pricing Type */}
                         <td>
                           <span
                             style={{
@@ -199,32 +365,28 @@ export function PricingPage() {
                               color: "#0c4a6e",
                             }}
                           >
-                            {rule.pricing_type === "hourly" && "⏱️ Saatlik"}
-                            {rule.pricing_type === "daily" && "📅 Günlük"}
-                            {rule.pricing_type === "weekly" && "📆 Haftalık"}
-                            {rule.pricing_type === "monthly" && "🗓️ Aylık"}
+                            {getPricingTypeLabel(rule.pricing_type)}
                           </span>
                         </td>
+                        {/* Hourly Rate */}
                         <td>
                           <span style={{ fontWeight: 500 }}>{formatPrice(rule.price_per_hour_minor)}</span>
                         </td>
+                        {/* Daily Rate */}
                         <td>
                           <span style={{ fontWeight: 500 }}>{formatPrice(rule.price_per_day_minor)}</span>
                         </td>
-                        <td>
-                          <span style={{ fontWeight: 500 }}>{formatPrice(rule.price_per_week_minor)}</span>
-                        </td>
-                        <td>
-                          <span style={{ fontWeight: 500 }}>{formatPrice(rule.price_per_month_minor)}</span>
-                        </td>
+                        {/* Minimum */}
                         <td>
                           <span style={{ fontWeight: 500, color: "#dc2626" }}>
                             {formatPrice(rule.minimum_charge_minor)}
                           </span>
                         </td>
+                        {/* Currency */}
                         <td>
                           <span style={{ fontWeight: 500 }}>{rule.currency}</span>
                         </td>
+                        {/* Priority */}
                         <td>
                           <span
                             style={{
@@ -239,6 +401,7 @@ export function PricingPage() {
                             {rule.priority}
                           </span>
                         </td>
+                        {/* Status */}
                         <td>
                           <span
                             style={{
@@ -250,9 +413,10 @@ export function PricingPage() {
                               color: rule.is_active ? "#166534" : "#991b1b",
                             }}
                           >
-                            {rule.is_active ? "✓ Aktif" : "✗ Pasif"}
+                            {rule.is_active ? t("common.active") : t("common.passive")}
                           </span>
                         </td>
+                        {/* Actions */}
                         <td>
                           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
                             <button
@@ -261,19 +425,19 @@ export function PricingPage() {
                               onClick={() => handleEditRule(rule)}
                               style={{ padding: "0.25rem 0.5rem" }}
                             >
-                              Düzenle
+                              {t("common.edit")}
                             </button>
                             <button
                               type="button"
                               className="btn btn--link btn--danger"
                               onClick={() => {
-                                if (confirm("Bu ücretlendirme kuralını silmek istediğinize emin misiniz?")) {
+                                if (confirm(t("pricing.confirmDelete"))) {
                                   deleteMutation.mutate(rule.id);
                                 }
                               }}
                               style={{ padding: "0.25rem 0.5rem" }}
                             >
-                              Sil
+                              {t("common.delete")}
                             </button>
                           </div>
                         </td>
@@ -288,13 +452,13 @@ export function PricingPage() {
               <div className="empty-state">
                 <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>💰</div>
                 <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-                  Henüz ücretlendirme kuralı bulunmuyor
+                  {t("pricing.emptyState.title")}
                 </p>
                 <p style={{ fontSize: "0.9rem", color: "#64748b", marginBottom: "1.5rem" }}>
-                  Depo rezervasyonları için ücretlendirme kuralları oluşturun.
+                  {t("pricing.emptyState.description")}
                 </p>
                 <button type="button" className="btn btn--primary" onClick={handleNewRule}>
-                  İlk Kuralı Oluştur
+                  {t("pricing.emptyState.button")}
                 </button>
               </div>
             </div>
@@ -308,39 +472,138 @@ export function PricingPage() {
           <div className="panel__header">
             <div>
               <h2 className="panel__title">
-                {editingRule ? "Ücretlendirme Kuralını Düzenle" : "Yeni Ücretlendirme Kuralı"}
+                {editingRule ? t("pricing.form.editTitle") : t("pricing.form.createTitle")}
               </h2>
               <p className="panel__subtitle">
-                {editingRule
-                  ? "Mevcut kuralı güncelleyin"
-                  : "Depo rezervasyonları için yeni bir ücretlendirme kuralı oluşturun"}
+                {editingRule ? t("pricing.form.editSubtitle") : t("pricing.form.createSubtitle")}
               </p>
             </div>
             <button type="button" className="btn btn--outline" onClick={handleCancel}>
-              ✕ Kapat
+              ✕ {t("common.close")}
             </button>
           </div>
 
           <form onSubmit={submit}>
-            {/* Basic Info Section */}
+            {/* Scope Selection Section */}
             <div style={{ marginBottom: "2rem" }}>
               <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem", color: "#0f172a" }}>
-                Temel Bilgiler
+                {t("pricing.form.scopeSection")}
               </h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
                 <div>
                   <label className="form-label">
-                    Ücretlendirme Tipi <span style={{ color: "#dc2626" }}>*</span>
+                    {t("pricing.form.scope")} <span style={{ color: "#dc2626" }}>*</span>
                   </label>
                   <select
-                    {...register("pricing_type", { required: "Ücretlendirme tipi zorunlu" })}
+                    className="form-input"
+                    value={selectedScope}
+                    onChange={(e) => handleScopeChange(e.target.value as PricingScope)}
+                    style={{ fontSize: "0.95rem" }}
+                  >
+                    <option value="TENANT">🏨 {t("pricing.scope.tenant")}</option>
+                    <option value="LOCATION">📍 {t("pricing.scope.location")}</option>
+                    <option value="STORAGE">📦 {t("pricing.scope.storage")}</option>
+                  </select>
+                  <small style={{ color: "#64748b", fontSize: "0.75rem", display: "block", marginTop: "0.25rem" }}>
+                    {t("pricing.form.scopeHelp")}
+                  </small>
+                </div>
+
+                {/* Location selection for LOCATION and STORAGE scopes */}
+                {(selectedScope === "LOCATION" || selectedScope === "STORAGE") && (
+                  <div>
+                    <label className="form-label">
+                      {t("pricing.form.location")} <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <select
+                      {...register("location_id", { 
+                        required: selectedScope === "LOCATION" || selectedScope === "STORAGE" 
+                          ? t("pricing.form.locationRequired") 
+                          : false 
+                      })}
+                      className="form-input"
+                      style={{ fontSize: "0.95rem" }}
+                    >
+                      <option value="">{t("pricing.form.selectLocation")}</option>
+                      {locationsQuery.data?.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.location_id && (
+                      <span style={{ color: "#dc2626", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                        {errors.location_id.message}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Storage selection for STORAGE scope */}
+                {selectedScope === "STORAGE" && selectedLocationId && (
+                  <div>
+                    <label className="form-label">
+                      {t("pricing.form.storage")} <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <select
+                      {...register("storage_id", { 
+                        required: selectedScope === "STORAGE" ? t("pricing.form.storageRequired") : false 
+                      })}
+                      className="form-input"
+                      style={{ fontSize: "0.95rem" }}
+                    >
+                      <option value="">{t("pricing.form.selectStorage")}</option>
+                      {filteredStorages.map((storage) => (
+                        <option key={storage.id} value={storage.id}>
+                          {storage.code}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.storage_id && (
+                      <span style={{ color: "#dc2626", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                        {errors.storage_id.message}
+                      </span>
+                    )}
+                    {filteredStorages.length === 0 && (
+                      <small style={{ color: "#f59e0b", fontSize: "0.75rem", display: "block", marginTop: "0.25rem" }}>
+                        {t("pricing.form.noStoragesInLocation")}
+                      </small>
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  <label className="form-label">{t("pricing.form.name")}</label>
+                  <input
+                    type="text"
+                    {...register("name")}
+                    className="form-input"
+                    placeholder={t("pricing.form.namePlaceholder")}
+                    style={{ fontSize: "0.95rem" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Basic Info Section */}
+            <div style={{ marginBottom: "2rem" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem", color: "#0f172a" }}>
+                {t("pricing.form.basicSection")}
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
+                <div>
+                  <label className="form-label">
+                    {t("pricing.form.pricingType")} <span style={{ color: "#dc2626" }}>*</span>
+                  </label>
+                  <select
+                    {...register("pricing_type", { required: t("pricing.form.pricingTypeRequired") })}
                     className="form-input"
                     style={{ fontSize: "0.95rem" }}
                   >
-                    <option value="hourly">⏱️ Saatlik</option>
-                    <option value="daily">📅 Günlük</option>
-                    <option value="weekly">📆 Haftalık</option>
-                    <option value="monthly">🗓️ Aylık</option>
+                    <option value="hourly">⏱️ {t("pricing.type.hourly")}</option>
+                    <option value="daily">📅 {t("pricing.type.daily")}</option>
+                    <option value="weekly">📆 {t("pricing.type.weekly")}</option>
+                    <option value="monthly">🗓️ {t("pricing.type.monthly")}</option>
                   </select>
                   {errors.pricing_type && (
                     <span style={{ color: "#dc2626", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
@@ -350,7 +613,7 @@ export function PricingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">Para Birimi</label>
+                  <label className="form-label">{t("pricing.form.currency")}</label>
                   <select {...register("currency")} className="form-input" style={{ fontSize: "0.95rem" }}>
                     <option value="TRY">TRY (₺)</option>
                     <option value="USD">USD ($)</option>
@@ -359,7 +622,7 @@ export function PricingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">Öncelik</label>
+                  <label className="form-label">{t("pricing.form.priority")}</label>
                   <input
                     type="number"
                     {...register("priority", { valueAsNumber: true })}
@@ -368,7 +631,7 @@ export function PricingPage() {
                     style={{ fontSize: "0.95rem" }}
                   />
                   <small style={{ color: "#64748b", fontSize: "0.75rem", display: "block", marginTop: "0.25rem" }}>
-                    Yüksek öncelikli kurallar önce uygulanır (0 = en düşük)
+                    {t("pricing.form.priorityHelp")}
                   </small>
                 </div>
               </div>
@@ -377,11 +640,11 @@ export function PricingPage() {
             {/* Pricing Section */}
             <div style={{ marginBottom: "2rem" }}>
               <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem", color: "#0f172a" }}>
-                Ücret Bilgileri (Kuruş cinsinden)
+                {t("pricing.form.pricesSection")}
               </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
                 <div>
-                  <label className="form-label">Saatlik Ücret</label>
+                  <label className="form-label">{t("pricing.form.hourlyPrice")}</label>
                   <input
                     type="number"
                     {...register("price_per_hour_minor", { valueAsNumber: true, min: 0 })}
@@ -405,7 +668,7 @@ export function PricingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">Günlük Ücret</label>
+                  <label className="form-label">{t("pricing.form.dailyPrice")}</label>
                   <input
                     type="number"
                     {...register("price_per_day_minor", { valueAsNumber: true, min: 0 })}
@@ -429,7 +692,7 @@ export function PricingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">Haftalık Ücret</label>
+                  <label className="form-label">{t("pricing.form.weeklyPrice")}</label>
                   <input
                     type="number"
                     {...register("price_per_week_minor", { valueAsNumber: true, min: 0 })}
@@ -453,7 +716,7 @@ export function PricingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">Aylık Ücret</label>
+                  <label className="form-label">{t("pricing.form.monthlyPrice")}</label>
                   <input
                     type="number"
                     {...register("price_per_month_minor", { valueAsNumber: true, min: 0 })}
@@ -478,7 +741,7 @@ export function PricingPage() {
 
                 <div>
                   <label className="form-label">
-                    Minimum Ücret <span style={{ color: "#dc2626" }}>*</span>
+                    {t("pricing.form.minimumCharge")} <span style={{ color: "#dc2626" }}>*</span>
                   </label>
                   <input
                     type="number"
@@ -507,7 +770,7 @@ export function PricingPage() {
             {/* Additional Options */}
             <div style={{ marginBottom: "2rem" }}>
               <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem", color: "#0f172a" }}>
-                Ek Seçenekler
+                {t("pricing.form.optionsSection")}
               </h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem", background: "#f8fafc", borderRadius: "8px" }}>
@@ -518,17 +781,17 @@ export function PricingPage() {
                     style={{ width: "20px", height: "20px", cursor: "pointer" }}
                   />
                   <label htmlFor="is_active" style={{ margin: 0, cursor: "pointer", fontWeight: 500 }}>
-                    Bu kuralı aktif et
+                    {t("pricing.form.isActive")}
                   </label>
                 </div>
 
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <label className="form-label">Notlar (Opsiyonel)</label>
+                  <label className="form-label">{t("pricing.form.notes")}</label>
                   <textarea
                     {...register("notes")}
                     className="form-input"
                     rows={3}
-                    placeholder="Bu kural hakkında notlar, açıklamalar..."
+                    placeholder={t("pricing.form.notesPlaceholder")}
                     style={{ fontSize: "0.95rem", resize: "vertical" }}
                   />
                 </div>
@@ -546,14 +809,14 @@ export function PricingPage() {
               }}
             >
               <button type="button" className="btn btn--outline" onClick={handleCancel} disabled={createMutation.isPending || updateMutation.isPending}>
-                İptal
+                {t("common.cancel")}
               </button>
               <button type="submit" className="btn btn--primary" disabled={createMutation.isPending || updateMutation.isPending}>
                 {createMutation.isPending || updateMutation.isPending
-                  ? "Kaydediliyor..."
+                  ? t("common.saving")
                   : editingRule
-                    ? "✓ Güncelle"
-                    : "✓ Kaydet"}
+                    ? t("common.update")
+                    : t("common.save")}
               </button>
             </div>
           </form>

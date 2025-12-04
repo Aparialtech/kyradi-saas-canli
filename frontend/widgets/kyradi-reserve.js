@@ -497,7 +497,7 @@
                   this.lastPriceEstimate = data;
                 } else {
                   // Fallback to local calculation if API fails
-                  const estimatedPrice = (hours * 15).toFixed(2);
+              const estimatedPrice = (hours * 15).toFixed(2);
                   priceInput.value = estimatedPrice + ' ₺ (tahmini)';
                 }
               } catch (err) {

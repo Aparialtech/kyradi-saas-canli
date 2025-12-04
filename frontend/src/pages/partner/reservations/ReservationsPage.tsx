@@ -2,8 +2,6 @@ import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
 import { reservationService, type Reservation, type Payment } from "../../../services/partner/reservations";
-import { demoService } from "../../../services/partner/demo";
-import { magicpayService } from "../../../services/partner/magicpay";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
@@ -77,110 +75,13 @@ export function ReservationsPage() {
       }),
   });
 
-  const confirmMutation = useMutation<Reservation, unknown, number>({
-    mutationFn: (id) => reservationService.confirm(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: t("reservations.toast.confirmSuccess"), type: "success" });
-    },
-    onError: (error: unknown) =>
-      push({ title: t("reservations.toast.confirmError"), description: getErrorMessage(error), type: "error" }),
-  });
+  // ===============================================
+  // UNIFIED MUTATIONS - work for both widget and normal reservations
+  // ===============================================
 
-  const cancelMutation = useMutation<Reservation, unknown, number>({
-    mutationFn: (id) => reservationService.cancel(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: t("reservations.toast.cancelSuccess"), type: "info" });
-    },
-    onError: (error: unknown) =>
-      push({ title: t("reservations.toast.cancelError"), description: getErrorMessage(error), type: "error" }),
-  });
-
-  const convertAndPayMutation = useMutation({
-    mutationFn: async (widgetReservationId: number) => {
-      // First convert widget reservation to normal reservation
-      const convertResult = await demoService.convertWidgetReservation(widgetReservationId);
-      
-      // Then create MagicPay checkout session
-      const checkoutResult = await magicpayService.createCheckoutSession(convertResult.reservation_id);
-      
-      return { convertResult, checkoutResult };
-    },
-    onSuccess: (data) => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({
-        title: "Ödeme sayfasına yönlendiriliyorsunuz",
-        description: "MagicPay ile ödemeye yönlendiriliyorsunuz...",
-        type: "success",
-      });
-      // Redirect to MagicPay demo page
-      setTimeout(() => {
-        window.location.href = data.checkoutResult.checkout_url;
-      }, 1000);
-    },
-    onError: (error: unknown) => {
-      push({
-        title: "Ödeme başlatılamadı",
-        description: getErrorMessage(error),
-        type: "error",
-      });
-    },
-  });
-
-  const luggageReceivedMutation = useMutation<Reservation, unknown, string>({
-    mutationFn: (id: string) => reservationService.markLuggageReceived(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: t("reservations.toast.luggageReceivedSuccess"), type: "success" });
-    },
-    onError: (error: unknown) =>
-      push({ title: t("reservations.toast.luggageReceivedError"), description: getErrorMessage(error), type: "error" }),
-  });
-
-  const noShowMutation = useMutation<Reservation, unknown, string>({
-    mutationFn: (id: string) => reservationService.markNoShow(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: t("reservations.toast.noShowSuccess"), type: "info" });
-    },
-    onError: (error: unknown) =>
-      push({ title: t("reservations.toast.noShowError"), description: getErrorMessage(error), type: "error" }),
-  });
-
-  const luggageReturnedMutation = useMutation<Reservation, unknown, string>({
-    mutationFn: (id: string) => reservationService.markLuggageReturned(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: t("reservations.toast.luggageReturnedSuccess"), type: "success" });
-    },
-    onError: (error: unknown) =>
-      push({ title: t("reservations.toast.luggageReturnedError"), description: getErrorMessage(error), type: "error" }),
-  });
-
-  const markReturnedMutation = useMutation<any, unknown, { id: string }>({
-    mutationFn: ({ id }) => reservationService.markReturned(id, {}),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: t("reservations.toast.returnedSuccess"), type: "success" });
-    },
-    onError: (error: unknown) =>
-      push({ title: t("reservations.toast.returnedError"), description: getErrorMessage(error), type: "error" }),
-  });
-
-  const cancelReservationMutation = useMutation<{ id: string; status: string }, unknown, string>({
-    mutationFn: (id: string) => reservationService.cancelReservation(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: t("reservations.toast.cancelSuccess"), type: "info" });
-    },
-    onError: (error: unknown) =>
-      push({ title: t("reservations.toast.cancelError"), description: getErrorMessage(error), type: "error" }),
-  });
-
-  // Complete reservation (deliver luggage)
-  const completeReservationMutation = useMutation<{ id: string; status: string }, unknown, string>({
-    mutationFn: (id: string) => reservationService.completeReservation(id),
+  // Complete reservation (deliver luggage) - works for both widget and normal reservations
+  const completeReservationMutation = useMutation<{ id: string | number; status: string }, unknown, string | number>({
+    mutationFn: (id: string | number) => reservationService.completeReservation(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
       push({ title: t("reservations.toast.completeSuccess"), type: "success" });
@@ -189,9 +90,20 @@ export function ReservationsPage() {
       push({ title: t("reservations.toast.completeError"), description: getErrorMessage(error), type: "error" }),
   });
 
-  // Ensure payment exists
-  const ensurePaymentMutation = useMutation<Payment, unknown, string>({
-    mutationFn: (id: string) => reservationService.ensurePayment(id),
+  // Cancel reservation - works for both widget and normal reservations
+  const cancelReservationMutation = useMutation<{ id: string | number; status: string }, unknown, string | number>({
+    mutationFn: (id: string | number) => reservationService.cancelReservation(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
+      push({ title: t("reservations.toast.cancelSuccess"), type: "info" });
+    },
+    onError: (error: unknown) =>
+      push({ title: t("reservations.toast.cancelError"), description: getErrorMessage(error), type: "error" }),
+  });
+
+  // Ensure payment exists - works for both widget and normal reservations
+  const ensurePaymentMutation = useMutation<Payment | { id: number; status: string; message: string }, unknown, string | number>({
+    mutationFn: (id: string | number) => reservationService.ensurePayment(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
       push({ title: t("reservations.toast.paymentCheckSuccess"), type: "success" });
@@ -350,13 +262,6 @@ export function ReservationsPage() {
                 {reservations.map((reservation) =>
                   renderReservationRow({
                     reservation,
-                    confirmMutation,
-                    cancelMutation,
-                    convertAndPayMutation,
-                    luggageReceivedMutation,
-                    noShowMutation,
-                    luggageReturnedMutation,
-                    markReturnedMutation,
                     cancelReservationMutation,
                     completeReservationMutation,
                     ensurePaymentMutation,
@@ -395,13 +300,6 @@ export function ReservationsPage() {
 
 function renderReservationRow({
   reservation,
-  confirmMutation,
-  cancelMutation,
-  convertAndPayMutation,
-  luggageReceivedMutation,
-  noShowMutation,
-  luggageReturnedMutation,
-  markReturnedMutation,
   cancelReservationMutation,
   completeReservationMutation,
   ensurePaymentMutation,
@@ -411,16 +309,9 @@ function renderReservationRow({
   onViewDetail,
 }: {
   reservation: Reservation;
-  confirmMutation: UseMutationResult<Reservation, unknown, number>;
-  cancelMutation: UseMutationResult<Reservation, unknown, number>;
-  convertAndPayMutation: UseMutationResult<unknown, unknown, number>;
-  luggageReceivedMutation: UseMutationResult<Reservation, unknown, string>;
-  noShowMutation: UseMutationResult<Reservation, unknown, string>;
-  luggageReturnedMutation: UseMutationResult<Reservation, unknown, string>;
-  markReturnedMutation: UseMutationResult<unknown, unknown, { id: string }>;
-  cancelReservationMutation: UseMutationResult<{ id: string; status: string }, unknown, string>;
-  completeReservationMutation: UseMutationResult<{ id: string; status: string }, unknown, string>;
-  ensurePaymentMutation: UseMutationResult<Payment, unknown, string>;
+  cancelReservationMutation: UseMutationResult<{ id: string | number; status: string }, unknown, string | number>;
+  completeReservationMutation: UseMutationResult<{ id: string | number; status: string }, unknown, string | number>;
+  ensurePaymentMutation: UseMutationResult<Payment | { id: number; status: string; message: string }, unknown, string | number>;
   formatDateTimeValue: (value?: string | null) => string;
   getStatusLabel: (status: string) => string;
   t: TranslateFn;
@@ -429,9 +320,6 @@ function renderReservationRow({
   // Get dates - prefer start_at/end_at, fallback to checkin/checkout dates
   const checkinDate = reservation.start_at || reservation.start_datetime || reservation.checkin_date;
   const checkoutDate = reservation.end_at || reservation.end_datetime || reservation.checkout_date;
-  
-  // Check if this is a UUID (normal reservation) or numeric (widget reservation)
-  const isNormalReservation = String(reservation.id).length >= 32;
   
   const guestName = reservation.full_name || reservation.customer_name || reservation.guest_name;
   const guestEmail = reservation.guest_email || reservation.customer_email;
@@ -484,106 +372,69 @@ function renderReservationRow({
           </div>
         )}
       </td>
-      {/* Actions */}
+      {/* Actions - TÜM BUTONLAR HER ZAMAN GÖRÜNSİN */}
       <td>
-        <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-          {/* Detail button - always visible */}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+          {/* 1. Detay Butonu - Her zaman görünür */}
           <button
             type="button"
-            className="btn btn--ghost"
-            style={{ fontSize: "0.75rem", padding: "0.35rem 0.5rem" }}
+            className="btn btn--outline"
+            style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
             onClick={() => onViewDetail(reservation)}
-            title={t("reservations.buttons.detail")}
           >
-            🔍 {t("reservations.buttons.detail")}
+            🔍 Detay
           </button>
 
-          {/* RESERVED status: Show luggage received or no-show buttons */}
-          {(reservation.status === "reserved" || reservation.status === "pending") && (
-            <>
-              <button
-                type="button"
-                className="btn btn--primary"
-                style={{ fontSize: "0.75rem", padding: "0.35rem 0.5rem" }}
-                disabled={confirmMutation.isPending || convertAndPayMutation.isPending || luggageReceivedMutation.isPending}
-                onClick={() => {
-                  if (!isNormalReservation) {
-                    confirmMutation.mutate(Number(reservation.id));
-                  } else {
-                    luggageReceivedMutation.mutate(String(reservation.id));
-                  }
-                }}
-              >
-                {t("reservations.buttons.luggageReceived")}
-              </button>
-              <button
-                type="button"
-                className="btn btn--ghost"
-                style={{ fontSize: "0.75rem", padding: "0.35rem 0.5rem", borderColor: "#fecaca", color: "#b91c1c" }}
-                disabled={noShowMutation.isPending || cancelMutation.isPending}
-                onClick={() => {
-                  if (!isNormalReservation) {
-                    cancelMutation.mutate(Number(reservation.id));
-                  } else {
-                    noShowMutation.mutate(String(reservation.id));
-                  }
-                }}
-              >
-                {t("reservations.buttons.noShow")}
-              </button>
-            </>
-          )}
+          {/* 2. Teslim Et Butonu - Her zaman görünür */}
+          <button
+            type="button"
+            className="btn btn--primary"
+            style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
+            disabled={
+              completeReservationMutation.isPending || 
+              reservation.status === "completed" ||
+              reservation.status === "cancelled"
+            }
+            onClick={() => {
+              if (window.confirm("Bu rezervasyonu teslim edildi olarak işaretlemek istiyor musunuz?")) {
+                completeReservationMutation.mutate(reservation.id);
+              }
+            }}
+          >
+            ✅ Teslim Et
+          </button>
 
-          {/* ACTIVE status: Complete (Teslim Et), Cancel, and Payment Check */}
-          {(reservation.status === "active" || reservation.status === "confirmed") && (
-            <>
-              <button
-                type="button"
-                className="btn btn--primary"
-                style={{ fontSize: "0.75rem", padding: "0.35rem 0.5rem" }}
-                disabled={completeReservationMutation.isPending || luggageReturnedMutation.isPending}
-                onClick={() => {
-                  if (!isNormalReservation) {
-                    markReturnedMutation.mutate({ id: String(reservation.id) });
-                  } else {
-                    completeReservationMutation.mutate(String(reservation.id));
-                  }
-                }}
-                title={t("reservations.confirmComplete")}
-              >
-                ✅ {t("reservations.buttons.complete")}
-              </button>
-              <button
-                type="button"
-                className="btn btn--ghost"
-                style={{ fontSize: "0.75rem", padding: "0.35rem 0.5rem", borderColor: "#fecaca", color: "#b91c1c" }}
-                disabled={cancelReservationMutation.isPending || cancelMutation.isPending}
-                onClick={() => {
-                  if (window.confirm(t("reservations.confirmCancel"))) {
-                    if (!isNormalReservation) {
-                      cancelMutation.mutate(Number(reservation.id));
-                    } else {
-                      cancelReservationMutation.mutate(String(reservation.id));
-                    }
-                  }
-                }}
-              >
-                ❌ {t("reservations.buttons.cancel")}
-              </button>
-              {isNormalReservation && (
-                <button
-                  type="button"
-                  className="btn btn--ghost"
-                  style={{ fontSize: "0.75rem", padding: "0.35rem 0.5rem" }}
-                  disabled={ensurePaymentMutation.isPending}
-                  onClick={() => ensurePaymentMutation.mutate(String(reservation.id))}
-                  title={t("reservations.buttons.checkPayment")}
-                >
-                  💳 {t("reservations.buttons.checkPayment")}
-                </button>
-              )}
-            </>
-          )}
+          {/* 3. İptal Et Butonu - Her zaman görünür */}
+          <button
+            type="button"
+            className="btn btn--danger"
+            style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem", backgroundColor: "#dc2626", color: "white" }}
+            disabled={
+              cancelReservationMutation.isPending || 
+              reservation.status === "completed" ||
+              reservation.status === "cancelled"
+            }
+            onClick={() => {
+              if (window.confirm("Bu rezervasyonu iptal etmek istediğinize emin misiniz?")) {
+                cancelReservationMutation.mutate(reservation.id);
+              }
+            }}
+          >
+            ❌ İptal Et
+          </button>
+
+          {/* 4. Ödeme Kontrol Butonu - Her zaman görünür */}
+          <button
+            type="button"
+            className="btn btn--outline"
+            style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
+            disabled={ensurePaymentMutation.isPending}
+            onClick={() => {
+              ensurePaymentMutation.mutate(reservation.id);
+            }}
+          >
+            💳 Ödeme Kontrol
+          </button>
         </div>
       </td>
     </tr>

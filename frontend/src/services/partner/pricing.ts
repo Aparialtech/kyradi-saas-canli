@@ -1,8 +1,26 @@
 import { http } from "../../lib/http";
 
+/**
+ * Pricing scope types:
+ * - GLOBAL: System-wide default (fallback)
+ * - TENANT: Tenant-specific default
+ * - LOCATION: Location-specific pricing
+ * - STORAGE: Storage-specific pricing (highest priority)
+ */
+export type PricingScope = "GLOBAL" | "TENANT" | "LOCATION" | "STORAGE";
+
 export interface PricingRule {
   id: string;
   tenant_id?: string | null;
+  // Hierarchical scope
+  scope: PricingScope;
+  location_id?: string | null;
+  storage_id?: string | null;
+  name?: string | null;
+  // Resolved names for UI display
+  location_name?: string | null;
+  storage_code?: string | null;
+  // Pricing configuration
   pricing_type: "hourly" | "daily" | "weekly" | "monthly";
   price_per_hour_minor: number;
   price_per_day_minor: number;
@@ -17,6 +35,12 @@ export interface PricingRule {
 }
 
 export interface PricingRulePayload {
+  // Hierarchical scope
+  scope?: PricingScope;
+  location_id?: string | null;
+  storage_id?: string | null;
+  name?: string | null;
+  // Pricing configuration
   pricing_type?: "hourly" | "daily" | "weekly" | "monthly";
   price_per_hour_minor?: number;
   price_per_day_minor?: number;
@@ -37,6 +61,7 @@ export interface PriceEstimateRequest {
   end_datetime: string;
   baggage_count?: number;
   location_id?: string | null;
+  storage_id?: string | null;
 }
 
 export interface PriceEstimateResponse {
@@ -49,6 +74,8 @@ export interface PriceEstimateResponse {
   pricing_type: string;
   currency: string;
   baggage_count: number;
+  rule_id?: string | null;
+  rule_scope?: string | null;
 }
 
 export const pricingService = {

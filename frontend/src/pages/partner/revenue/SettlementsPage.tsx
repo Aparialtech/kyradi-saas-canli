@@ -116,11 +116,11 @@ export function SettlementsPage() {
 
       {/* Filters */}
       <div className="panel">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1rem",
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "1rem",
             padding: "1rem",
           }}
         >
@@ -134,57 +134,57 @@ export function SettlementsPage() {
               placeholder="ID veya tutar ile ara..."
             />
           </div>
-          <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
               {t("common.status")}
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.65rem",
-                borderRadius: "8px",
-                border: "1px solid #cbd5f5",
-              }}
-            >
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.65rem",
+              borderRadius: "8px",
+              border: "1px solid #cbd5f5",
+            }}
+          >
               <option value="">{t("common.all")}</option>
-              <option value="pending">Beklemede</option>
-              <option value="settled">Hesaplaştı</option>
-              <option value="cancelled">İptal</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
+            <option value="pending">Beklemede</option>
+            <option value="settled">Hesaplaştı</option>
+            <option value="cancelled">İptal</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
               {t("common.from")}
-            </label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.65rem",
-                borderRadius: "8px",
-                border: "1px solid #cbd5f5",
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
+          </label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.65rem",
+              borderRadius: "8px",
+              border: "1px solid #cbd5f5",
+            }}
+          />
+        </div>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
               {t("common.to")}
-            </label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.65rem",
-                borderRadius: "8px",
-                border: "1px solid #cbd5f5",
-              }}
-            />
+          </label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.65rem",
+              borderRadius: "8px",
+              border: "1px solid #cbd5f5",
+            }}
+          />
           </div>
         </div>
       </div>
@@ -222,7 +222,7 @@ export function SettlementsPage() {
           </div>
           <div className="data-table-wrapper">
             <table className="data-table">
-              <thead>
+            <thead>
                 <tr>
                   <th>Tarih</th>
                   <th>Payment ID</th>
@@ -231,9 +231,9 @@ export function SettlementsPage() {
                   <th>Komisyon</th>
                   <th>Oran</th>
                   <th>Durum</th>
-                </tr>
-              </thead>
-              <tbody>
+              </tr>
+            </thead>
+            <tbody>
                 {settlements.map((settlement) => (
                   <tr key={settlement.id}>
                     <td>{formatDate(settlement.settled_at || settlement.created_at)}</td>
@@ -241,13 +241,13 @@ export function SettlementsPage() {
                       <code style={{ fontSize: "0.75rem", background: "var(--color-surface)", padding: "0.15rem 0.35rem", borderRadius: "3px" }}>
                         {settlement.payment_id.slice(0, 8)}...
                       </code>
-                    </td>
+                  </td>
                     <td><strong>{formatCurrency(settlement.total_amount_minor)}</strong></td>
                     <td style={{ color: "#1d4ed8" }}>{formatCurrency(settlement.tenant_settlement_minor)}</td>
                     <td style={{ color: "#dc2626" }}>{formatCurrency(settlement.kyradi_commission_minor)}</td>
                     <td>%{settlement.commission_rate}</td>
                     <td>
-                      <span
+                    <span
                         className={`badge ${
                           settlement.status === "settled" 
                             ? "badge--success" 
@@ -255,14 +255,14 @@ export function SettlementsPage() {
                               ? "badge--danger" 
                               : "badge--warning"
                         }`}
-                      >
-                        {statusLabels[settlement.status] || settlement.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    >
+                      {statusLabels[settlement.status] || settlement.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           </div>
         </div>
       ) : (
