@@ -17,6 +17,7 @@ from app.dependencies import require_tenant_operator, require_tenant_staff
 from app.models import Payment, PaymentStatus, Reservation, User
 from app.schemas.payment import ReservationPaymentInfo
 from app.services.payment_service import get_or_create_payment
+from sqlalchemy import cast, String
 
 from .models import WidgetConfig, WidgetReservation
 from .schemas import WidgetConfigCreate, WidgetReservationList, WidgetReservationRead
@@ -111,7 +112,7 @@ async def get_widget_reservation_payment(
         select(Payment)
         .where(
             Payment.tenant_id == current_user.tenant_id,
-            Payment.meta["widget_reservation_id"].astext == str(reservation_id),
+            cast(Payment.meta["widget_reservation_id"], String) == str(reservation_id),
         )
         .order_by(Payment.created_at.desc())
         .limit(1)

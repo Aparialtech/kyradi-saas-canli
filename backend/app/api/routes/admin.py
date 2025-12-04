@@ -5,7 +5,7 @@ from typing import List, Optional
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Select, case, func, select
+from sqlalchemy import Select, case, func, select, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.security import get_password_hash
@@ -444,7 +444,7 @@ async def list_audit_logs(
     if to_date:
         filters.append(AuditLog.created_at <= to_date)
     if source:
-        filters.append(AuditLog.meta_json["source"].astext == source)
+        filters.append(cast(AuditLog.meta_json["source"], String) == source)
 
     count_stmt = select(func.count()).select_from(AuditLog)
     if filters:
