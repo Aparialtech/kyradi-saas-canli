@@ -4,9 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { pricingService, type PricingRule, type PricingRuleCreate } from "../../../services/partner/pricing";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { useToast } from "../../../hooks/useToast";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
 
 export function PricingPage() {
+  const { t } = useTranslation();
   const { messages, push } = useToast();
   const queryClient = useQueryClient();
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
@@ -21,13 +23,13 @@ export function PricingPage() {
     mutationFn: (payload: PricingRuleCreate) => pricingService.create(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["pricing"] });
-      push({ title: "Ücretlendirme kuralı eklendi", type: "success" });
+      push({ title: t("pricing.toast.createSuccess"), type: "success" });
       reset();
       setShowForm(false);
       setEditingRule(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Kayıt başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("pricing.toast.createError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -36,13 +38,13 @@ export function PricingPage() {
       pricingService.update(id, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["pricing"] });
-      push({ title: "Ücretlendirme kuralı güncellendi", type: "success" });
+      push({ title: t("pricing.toast.updateSuccess"), type: "success" });
       setEditingRule(null);
       setShowForm(false);
       reset();
     },
     onError: (error: unknown) => {
-      push({ title: "Güncelleme başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("pricing.toast.updateError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -50,10 +52,10 @@ export function PricingPage() {
     mutationFn: (id: string) => pricingService.delete(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["pricing"] });
-      push({ title: "Ücretlendirme kuralı silindi", type: "info" });
+      push({ title: t("pricing.toast.deleteSuccess"), type: "info" });
     },
     onError: (error: unknown) => {
-      push({ title: "Silme işlemi başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("pricing.toast.deleteError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -137,12 +139,12 @@ export function PricingPage() {
       <ToastContainer messages={messages} />
       <header className="page-header">
         <div>
-          <h1 className="page-title">Ücretlendirme Yönetimi</h1>
-          <p className="page-subtitle">Depo rezervasyonları için ücretlendirme kurallarını yönetin</p>
+          <h1 className="page-title">{t("pricing.title")}</h1>
+          <p className="page-subtitle">{t("pricing.subtitle")}</p>
         </div>
         {!showForm && (
           <button type="button" className="btn btn--primary" onClick={handleNewRule}>
-            + Yeni Ücretlendirme Kuralı
+            + {t("pricing.newRule")}
           </button>
         )}
       </header>
@@ -152,19 +154,19 @@ export function PricingPage() {
         <>
           {pricingQuery.isLoading ? (
             <div className="panel">
-              <div className="empty-state">Yükleniyor...</div>
+              <div className="empty-state">{t("common.loading")}</div>
             </div>
           ) : pricingQuery.isError ? (
             <div className="panel">
               <div className="empty-state" style={{ color: "#dc2626" }}>
-                Ücretlendirme kuralları yüklenemedi: {getErrorMessage(pricingQuery.error)}
+                {t("pricing.loadError")}: {getErrorMessage(pricingQuery.error)}
               </div>
             </div>
           ) : pricingQuery.data && pricingQuery.data.length > 0 ? (
             <div className="panel">
               <div className="panel__header">
-                <h2 className="panel__title">Ücretlendirme Kuralları</h2>
-                <p className="panel__subtitle">{pricingQuery.data.length} aktif kural</p>
+                <h2 className="panel__title">{t("pricing.rulesTitle")}</h2>
+                <p className="panel__subtitle">{t("pricing.rulesSubtitle", { count: pricingQuery.data.length })}</p>
               </div>
               <div style={{ overflowX: "auto" }}>
                 <table className="table">

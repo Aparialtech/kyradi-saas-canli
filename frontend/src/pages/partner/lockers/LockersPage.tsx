@@ -7,15 +7,11 @@ import { locationService } from "../../../services/partner/locations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
+import { StorageCalendarModal } from "../../../components/storages/StorageCalendarModal";
 import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
 
-const statusLabels: Record<StorageStatus, string> = {
-  idle: "Boş",
-  occupied: "Dolu",
-  faulty: "Arızalı",
-};
-
+// Status badge classes - labels are fetched via i18n inside component
 const statusBadgeClass: Record<StorageStatus, string> = {
   idle: "badge badge--success",
   occupied: "badge badge--warning",
@@ -28,7 +24,11 @@ export function LockersPage() {
   const { messages, push } = useToast();
   const [editingStorage, setEditingStorage] = useState<Storage | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [locationFilter, setLocationFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  
+  // Calendar modal state
+  const [calendarStorage, setCalendarStorage] = useState<Storage | null>(null);
 
   const locationsQuery = useQuery({ queryKey: ["locations"], queryFn: locationService.list });
   const storagesQuery = useQuery({
@@ -41,12 +41,12 @@ export function LockersPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["storages"] });
       void queryClient.invalidateQueries({ queryKey: ["lockers"] });
-      push({ title: "Depo eklendi", type: "success" });
+      push({ title: t("storages.created"), type: "success" });
       reset({ location_id: "", code: "", status: "idle" });
       setEditingStorage(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Kayıt başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("storages.createError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -55,12 +55,12 @@ export function LockersPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["storages"] });
       void queryClient.invalidateQueries({ queryKey: ["lockers"] });
-      push({ title: "Depo güncellendi", type: "success" });
+      push({ title: t("storages.updated"), type: "success" });
       reset({ location_id: "", code: "", status: "idle" });
       setEditingStorage(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Güncelleme başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("common.saveError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -69,7 +69,7 @@ export function LockersPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["storages"] });
       void queryClient.invalidateQueries({ queryKey: ["lockers"] });
-      push({ title: "Depo silindi", type: "info" });
+      push({ title: t("storages.deleted"), type: "info" });
     },
     onError: (error: unknown) => {
       push({ title: "Silme işlemi başarısız", description: getErrorMessage(error), type: "error" });
@@ -93,9 +93,16 @@ export function LockersPage() {
     return (locationsQuery.data ?? []).map((location) => ({ value: location.id, label: location.name }));
   }, [locationsQuery.data]);
 
-  // Filter storages by search term
+  // Filter storages by search term and location
   const filteredStorages = useMemo(() => {
-    const storages = storagesQuery.data ?? [];
+    let storages = storagesQuery.data ?? [];
+    
+    // Filter by location first
+    if (locationFilter) {
+      storages = storages.filter((storage) => storage.location_id === locationFilter);
+    }
+    
+    // Then filter by search term
     if (!searchTerm.trim()) return storages;
     
     const term = searchTerm.toLowerCase();
@@ -106,7 +113,7 @@ export function LockersPage() {
         locationName.toLowerCase().includes(term)
       );
     });
-  }, [storagesQuery.data, searchTerm, locationOptions]);
+  }, [storagesQuery.data, searchTerm, locationFilter, locationOptions]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
@@ -114,7 +121,7 @@ export function LockersPage() {
 
   const submit = handleSubmit(async (values) => {
     if (!values.location_id) {
-      push({ title: "Lokasyon seçin", type: "error" });
+      push({ title: t("locations.title") + " " + t("common.required").toLowerCase(), type: "error" });
       return;
     }
     if (editingStorage) {
@@ -143,14 +150,12 @@ export function LockersPage() {
       <ToastContainer messages={messages} />
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t("nav.storages")}</h1>
-          <p className="page-subtitle">
-            {t("common.storages")} yönetimi: Yeni depo ekleyin, mevcut depoları düzenleyin veya silin.
-          </p>
+          <h1 className="page-title">{t("storages.title")}</h1>
+          <p className="page-subtitle">{t("storages.subtitle")}</p>
         </div>
         <div className="page-actions">
           <button type="button" className="btn btn--primary" onClick={handleNew}>
-            Yeni {t("common.storage")}
+            {t("storages.newStorage")}
           </button>
         </div>
       </div>
@@ -159,22 +164,22 @@ export function LockersPage() {
         <div className="panel__header">
           <div>
             <h2 className="panel__title">
-              {editingStorage ? `${t("common.storage")} Düzenle` : `Yeni ${t("common.storage")} Ekle`}
+              {editingStorage ? t("storages.editStorage") : t("storages.newStorage")}
             </h2>
             <p className="panel__subtitle">
-              {t("common.storage")} bilgilerini doldurun ve kaydedin.
+              {t("storages.subtitle")}
             </p>
           </div>
         </div>
 
         <form className="form-grid" onSubmit={submit}>
           <label className="form-field">
-            <span className="form-field__label">Lokasyon</span>
+            <span className="form-field__label">{t("storages.location")}</span>
             <select
-              {...register("location_id", { required: "Lokasyon zorunlu" })}
+              {...register("location_id", { required: t("common.required") })}
               disabled={locationsQuery.isLoading}
             >
-              <option value="">Seçiniz</option>
+              <option value="">{t("staff.selectPlaceholder")}</option>
               {locationOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -187,20 +192,20 @@ export function LockersPage() {
           </label>
 
           <label className="form-field">
-            <span className="form-field__label">{t("common.storage")} Kodu</span>
+            <span className="form-field__label">{t("storages.code")}</span>
             <input
-              {...register("code", { required: "Kod zorunlu" })}
+              {...register("code", { required: t("common.required") })}
               placeholder="LK-001"
             />
             {errors.code && <span className="field-error">{errors.code.message}</span>}
           </label>
 
           <label className="form-field">
-            <span className="form-field__label">Durum</span>
+            <span className="form-field__label">{t("storages.status")}</span>
             <select {...register("status")}>
-              <option value="idle">Boş</option>
-              <option value="occupied">Dolu</option>
-              <option value="faulty">Arızalı</option>
+              <option value="idle">{t("storages.status.idle")}</option>
+              <option value="occupied">{t("storages.status.occupied")}</option>
+              <option value="faulty">{t("storages.status.faulty")}</option>
             </select>
           </label>
 
@@ -212,7 +217,7 @@ export function LockersPage() {
                 onClick={handleNew}
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                İptal
+                {t("common.cancel")}
               </button>
             )}
             <button
@@ -222,11 +227,11 @@ export function LockersPage() {
             >
               {editingStorage
                 ? updateMutation.isPending
-                  ? "Güncelleniyor..."
-                  : "Güncelle"
+                  ? t("common.saving")
+                  : t("common.update")
                 : createMutation.isPending
-                  ? "Kaydediliyor..."
-                  : "Kaydet"}
+                  ? t("common.saving")
+                  : t("common.save")}
             </button>
           </div>
         </form>
@@ -235,9 +240,9 @@ export function LockersPage() {
       <div className="panel">
         <div className="panel__header">
           <div>
-            <h2 className="panel__title">{t("common.storages")} Listesi</h2>
+            <h2 className="panel__title">{t("storages.title")}</h2>
             <p className="panel__subtitle">
-              {filteredStorages.length} / {storagesQuery.data?.length ?? 0} {t("common.storage")} gösteriliyor
+              {filteredStorages.length} / {storagesQuery.data?.length ?? 0} {t("common.records")}
             </p>
           </div>
           <div className="panel__filters" style={{ display: "flex", gap: "1rem", alignItems: "flex-end", flexWrap: "wrap" }}>
@@ -245,19 +250,33 @@ export function LockersPage() {
               <SearchInput
                 value={searchTerm}
                 onChange={handleSearchChange}
-                placeholder={`${t("common.storage")} kodu veya lokasyon ile ara...`}
+                placeholder={t("common.search")}
               />
             </div>
             <label className="form-field" style={{ marginBottom: 0 }}>
-              <span className="form-field__label">Durum</span>
+              <span className="form-field__label">{t("storages.filter.location")}</span>
+              <select
+                value={locationFilter}
+                onChange={(event) => setLocationFilter(event.target.value)}
+              >
+                <option value="">{t("storages.filter.allLocations")}</option>
+                {locationOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="form-field" style={{ marginBottom: 0 }}>
+              <span className="form-field__label">{t("storages.filter.status")}</span>
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
-                <option value="">Tümü</option>
-                <option value="idle">Boş</option>
-                <option value="occupied">Dolu</option>
-                <option value="faulty">Arızalı</option>
+                <option value="">{t("storages.filter.allStatuses")}</option>
+                <option value="idle">{t("storages.status.idle")}</option>
+                <option value="occupied">{t("storages.status.occupied")}</option>
+                <option value="faulty">{t("storages.status.faulty")}</option>
               </select>
             </label>
           </div>
@@ -266,25 +285,25 @@ export function LockersPage() {
         {storagesQuery.isLoading ? (
           <div className="empty-state">
             <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-            <h3 className="empty-state__title">{t("common.storages")} yükleniyor</h3>
-            <p>Lütfen bekleyin...</p>
+            <h3 className="empty-state__title">{t("common.loading")}</h3>
+            <p>{t("common.loading")}</p>
           </div>
         ) : storagesQuery.isError ? (
           <div className="empty-state">
             <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-            <h3 className="empty-state__title">{t("common.storages")} alınamadı</h3>
-            <p>Sayfayı yenileyerek tekrar deneyin.</p>
+            <h3 className="empty-state__title">{t("common.error")}</h3>
+            <p>{t("common.loadError")}</p>
           </div>
         ) : filteredStorages.length > 0 ? (
           <div className="data-table-wrapper">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>{t("common.storage")} Kodu</th>
-                  <th>Lokasyon</th>
-                  <th>Durum</th>
-                  <th>Son Görülme</th>
-                  <th>İşlemler</th>
+                  <th>{t("storages.code")}</th>
+                  <th>{t("storages.location")}</th>
+                  <th>{t("storages.status")}</th>
+                  <th>{t("common.lastActivity")}</th>
+                  <th>{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -298,7 +317,7 @@ export function LockersPage() {
                     </td>
                     <td>
                       <span className={statusBadgeClass[storage.status]}>
-                        {statusLabels[storage.status]}
+                        {t(`storages.status.${storage.status}`)}
                       </span>
                     </td>
                     <td>
@@ -314,20 +333,28 @@ export function LockersPage() {
                         <button
                           type="button"
                           className="action-link"
+                          onClick={() => setCalendarStorage(storage)}
+                          title={t("calendar.storageCalendarTitle")}
+                        >
+                          📅 {t("common.info")}
+                        </button>
+                        <button
+                          type="button"
+                          className="action-link"
                           onClick={() => handleEdit(storage)}
                         >
-                          Düzenle
+                          {t("common.edit")}
                         </button>
                         <button
                           type="button"
                           className="action-link action-link--danger"
                           onClick={() => {
-                            if (confirm(`${storage.code} kodlu ${t("common.storage")} silinecek. Emin misiniz?`)) {
+                            if (confirm(t("common.confirmDelete"))) {
                               deleteMutation.mutate(storage.id);
                             }
                           }}
                         >
-                          Sil
+                          {t("common.delete")}
                         </button>
                       </div>
                     </td>
@@ -339,11 +366,21 @@ export function LockersPage() {
         ) : (
           <div className="empty-state">
             <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>📦</div>
-            <h3 className="empty-state__title">Henüz {t("common.storage")} kaydı yok</h3>
-            <p>Yukarıdaki formu kullanarak yeni bir {t("common.storage")} ekleyebilirsiniz.</p>
+            <h3 className="empty-state__title">{t("storages.emptyTitle")}</h3>
+            <p>{t("storages.emptyHint")}</p>
           </div>
         )}
       </div>
+      
+      {/* Storage Calendar Modal */}
+      {calendarStorage && (
+        <StorageCalendarModal
+          storageId={calendarStorage.id}
+          storageName={calendarStorage.code}
+          isOpen={!!calendarStorage}
+          onClose={() => setCalendarStorage(null)}
+        />
+      )}
     </section>
   );
 }

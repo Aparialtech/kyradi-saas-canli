@@ -274,14 +274,12 @@ export function UsersPage() {
       <ToastContainer messages={messages} />
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t("nav.users")}</h1>
-          <p className="page-subtitle">
-            Bu oteldeki personel yönetimi. Yeni personel ekleyebilir, mevcut personelin rollerini değiştirebilirsiniz.
-          </p>
+          <h1 className="page-title">{t("users.title")}</h1>
+          <p className="page-subtitle">{t("users.subtitle")}</p>
         </div>
         <div className="page-actions">
           <button type="button" className="btn btn--primary" onClick={handleNew}>
-            Yeni Personel
+            {t("users.newUser")}
           </button>
         </div>
       </div>
@@ -290,17 +288,15 @@ export function UsersPage() {
         <div className="panel__header">
           <div>
             <h2 className="panel__title">
-              {editingUser ? "Personel Düzenle" : "Yeni Personel Ekle"}
+              {editingUser ? t("users.editUser") : t("users.newUser")}
             </h2>
-            <p className="panel__subtitle">
-              Personel bilgilerini doldurun ve kaydedin.
-            </p>
+            <p className="panel__subtitle">{t("users.formSubtitle")}</p>
           </div>
         </div>
 
         <form className="form-grid" onSubmit={onSubmit}>
           <label className="form-field">
-            <span className="form-field__label">E-posta</span>
+            <span className="form-field__label">{t("users.email")}</span>
             <input
               {...register("email")}
               type="email"
@@ -312,7 +308,7 @@ export function UsersPage() {
 
           <label className="form-field">
             <span className="form-field__label">
-              Parola {editingUser ? "(opsiyonel)" : ""}
+              {t("users.password")} {editingUser ? `(${t("common.optional")})` : ""}
             </span>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <input
@@ -328,11 +324,11 @@ export function UsersPage() {
                   onClick={() => {
                     const temp = generatePassword();
                     setValue("password", temp);
-                    push({ title: "Parola oluşturuldu", description: temp, type: "info" });
+                    push({ title: t("users.passwordGenerated"), description: temp, type: "info" });
                     copyToClipboard(temp).catch(() => undefined);
                   }}
                 >
-                  Oluştur
+                  {t("users.generatePassword")}
                 </button>
               )}
             </div>
@@ -340,20 +336,17 @@ export function UsersPage() {
           </label>
 
           <label className="form-field">
-            <span className="form-field__label">Telefon Numarası</span>
+            <span className="form-field__label">{t("users.phone")}</span>
             <input
               {...register("phone_number")}
               type="tel"
-              placeholder="0 545 219 68 63 veya 905452196863"
+              placeholder="0 545 219 68 63"
             />
-            <small className="form-field__hint">
-              SMS doğrulama için telefon numarası (opsiyonel)
-            </small>
             {errors.phone_number && <span className="field-error">{errors.phone_number.message}</span>}
           </label>
 
           <label className="form-field">
-            <span className="form-field__label">Rol</span>
+            <span className="form-field__label">{t("users.role")}</span>
             <select {...register("role")}>
               {staffRoles.map((role) => (
                 <option key={role} value={role}>
@@ -364,7 +357,7 @@ export function UsersPage() {
           </label>
 
           <label className="form-field form-field--inline">
-            <span className="form-field__label">Aktif</span>
+            <span className="form-field__label">{t("users.active")}</span>
             <input type="checkbox" {...register("is_active")} />
           </label>
 
@@ -376,7 +369,7 @@ export function UsersPage() {
                 onClick={handleNew}
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                İptal
+                {t("common.cancel")}
               </button>
             )}
             <button
@@ -386,11 +379,11 @@ export function UsersPage() {
             >
               {editingUser
                 ? updateMutation.isPending
-                  ? "Güncelleniyor..."
-                  : "Güncelle"
+                  ? t("common.saving")
+                  : t("common.update")
                 : createMutation.isPending
-                  ? "Kaydediliyor..."
-                  : "Kaydet"}
+                  ? t("common.saving")
+                  : t("common.save")}
             </button>
           </div>
         </form>
@@ -399,16 +392,16 @@ export function UsersPage() {
       <div className="panel">
         <div className="panel__header">
           <div>
-            <h2 className="panel__title">Personel Listesi</h2>
+            <h2 className="panel__title">{t("users.listTitle")}</h2>
             <p className="panel__subtitle">
-              {filteredUsers.length} / {usersQuery.data?.length ?? 0} personel gösteriliyor
+              {filteredUsers.length} / {usersQuery.data?.length ?? 0} {t("common.records")}
             </p>
           </div>
           <div style={{ minWidth: "250px" }}>
             <SearchInput
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="E-posta, telefon veya rol ile ara..."
+              placeholder={t("common.search")}
             />
           </div>
         </div>

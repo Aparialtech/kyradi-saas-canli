@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { staffService, type Staff, type StaffPayload } from "../../../services/partner/staff";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
+import { StaffDetailModal } from "../../../components/staff/StaffDetailModal";
 import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
@@ -27,13 +28,7 @@ interface Location {
   name: string;
 }
 
-const roleLabels: Record<string, string> = {
-  storage_operator: "Depo Görevlisi",
-  hotel_manager: "Otel Yöneticisi",
-  accounting: "Muhasebe",
-  staff: "Personel",
-  tenant_admin: "Tenant Admin",
-};
+// Role labels will be handled via i18n in component
 
 export function StaffPage() {
   const { t } = useTranslation();
@@ -41,6 +36,7 @@ export function StaffPage() {
   const queryClient = useQueryClient();
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [viewingStaff, setViewingStaff] = useState<Staff | null>(null);
 
   const staffQuery = useQuery({
     queryKey: ["staff"],
@@ -121,17 +117,32 @@ export function StaffPage() {
     setSearchTerm(value);
   }, []);
 
+  // Role labels using i18n
+  const getRoleLabel = useCallback((role: string) => {
+    const roleMap: Record<string, string> = {
+      storage_operator: t("users.roleLabels.partner_staff"),
+      hotel_manager: t("users.roleLabels.partner_admin"),
+      accounting: t("staff.role.manager"),
+      staff: t("staff.role.staff"),
+      tenant_admin: t("users.roleLabels.partner_admin"),
+      partner_admin: t("users.roleLabels.partner_admin"),
+      partner_user: t("users.roleLabels.partner_user"),
+      partner_staff: t("users.roleLabels.partner_staff"),
+    };
+    return roleMap[role] ?? role;
+  }, [t]);
+
   const createMutation = useMutation({
     mutationFn: (payload: StaffPayload) => staffService.create(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
       void queryClient.invalidateQueries({ queryKey: ["users", "assignable"] });
-      push({ title: "Eleman ataması eklendi", type: "success" });
+      push({ title: t("staff.assignmentCreated"), type: "success" });
       reset({ user_id: "", storage_ids: [], location_ids: [] });
       setEditingStaff(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Kayıt başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("staff.assignmentError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -140,12 +151,12 @@ export function StaffPage() {
       staffService.update(id, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
-      push({ title: "Eleman ataması güncellendi", type: "success" });
+      push({ title: t("staff.assignmentUpdated"), type: "success" });
       reset({ user_id: "", storage_ids: [], location_ids: [] });
       setEditingStaff(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Güncelleme başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("staff.assignmentError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -154,10 +165,10 @@ export function StaffPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
       void queryClient.invalidateQueries({ queryKey: ["users", "assignable"] });
-      push({ title: "Eleman ataması silindi", type: "info" });
+      push({ title: t("staff.assignmentDeleted"), type: "info" });
     },
     onError: (error: unknown) => {
-      push({ title: "Silme işlemi başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("staff.assignmentError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -196,14 +207,12 @@ export function StaffPage() {
       <ToastContainer messages={messages} />
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t("nav.staff")}</h1>
-          <p className="page-subtitle">
-            Bu oteldeki personel atamalarını yönetin. Personellere depo ve lokasyon erişimi tanımlayın.
-          </p>
+          <h1 className="page-title">{t("staff.title")}</h1>
+          <p className="page-subtitle">{t("staff.subtitle")}</p>
         </div>
         <div className="page-actions">
           <button type="button" className="btn btn--primary" onClick={handleNew}>
-            Yeni Eleman Ataması
+            {t("staff.newAssignment")}
           </button>
         </div>
       </div>
@@ -213,27 +222,25 @@ export function StaffPage() {
         <div className="panel__header">
           <div>
             <h2 className="panel__title">
-              {editingStaff ? "Eleman Atamasını Düzenle" : "Yeni Eleman Ataması"}
+              {editingStaff ? t("staff.editAssignment") : t("staff.newAssignment")}
             </h2>
-            <p className="panel__subtitle">
-              Personeli seçin ve erişim yetkisi vereceğiniz depo/lokasyonları belirleyin.
-            </p>
+            <p className="panel__subtitle">{t("staff.formSubtitle")}</p>
           </div>
         </div>
 
         <form className="form-grid" onSubmit={submit}>
           <label className="form-field">
             <span className="form-field__label">
-              Personel <span style={{ color: "var(--color-danger)" }}>*</span>
+              {t("staff.personnel")} <span style={{ color: "var(--color-danger)" }}>*</span>
             </span>
             {assignableUsersQuery.isLoading ? (
-              <div className="form-field__hint">Kullanıcılar yükleniyor...</div>
+              <div className="form-field__hint">{t("staff.loadingUsers")}</div>
             ) : assignableUsersQuery.data && assignableUsersQuery.data.length > 0 ? (
-              <select {...register("user_id", { required: "Kullanıcı zorunlu" })} disabled={Boolean(editingStaff)}>
-                <option value="">Seçiniz</option>
+              <select {...register("user_id", { required: t("staff.userRequired") })} disabled={Boolean(editingStaff)}>
+                <option value="">{t("staff.selectPlaceholder")}</option>
                 {assignableUsersQuery.data.map((user) => (
                   <option key={user.id} value={user.id}>
-                    {user.email} ({roleLabels[user.role] ?? user.role})
+                    {user.email} ({getRoleLabel(user.role)})
                   </option>
                 ))}
               </select>
@@ -247,13 +254,13 @@ export function StaffPage() {
                 }}
               >
                 <p style={{ fontWeight: 600, color: "#92400e", marginBottom: "0.5rem" }}>
-                  ⚠️ Atanabilir personel bulunamadı
+                  ⚠️ {t("staff.noAssignableStaff")}
                 </p>
                 <p style={{ color: "#a16207", marginBottom: "0.75rem", fontSize: "0.875rem" }}>
-                  Bu otel için henüz atanabilir personel yok. Önce kullanıcılar bölümünden personel ekleyin.
+                  {t("staff.noAssignableStaffDesc")}
                 </p>
                 <a href="/partner/users" className="btn btn--primary" style={{ fontSize: "0.875rem" }}>
-                  Personel Ekle →
+                  {t("staff.addPersonnel")}
                 </a>
               </div>
             )}
@@ -261,7 +268,7 @@ export function StaffPage() {
           </label>
 
           <label className="form-field">
-            <span className="form-field__label">Depolar</span>
+            <span className="form-field__label">{t("staff.storages")}</span>
             <select multiple {...register("storage_ids")} style={{ minHeight: "100px" }}>
               {storagesQuery.data?.map((storage) => (
                 <option key={storage.id} value={storage.id}>
@@ -269,11 +276,11 @@ export function StaffPage() {
                 </option>
               ))}
             </select>
-            <small className="form-field__hint">Ctrl/Cmd tuşu ile birden fazla seçim yapabilirsiniz</small>
+            <small className="form-field__hint">{t("staff.multiSelectHint")}</small>
           </label>
 
           <label className="form-field">
-            <span className="form-field__label">Lokasyonlar</span>
+            <span className="form-field__label">{t("staff.locations")}</span>
             <select multiple {...register("location_ids")} style={{ minHeight: "100px" }}>
               {locationsQuery.data?.map((location) => (
                 <option key={location.id} value={location.id}>
@@ -281,7 +288,7 @@ export function StaffPage() {
                 </option>
               ))}
             </select>
-            <small className="form-field__hint">Ctrl/Cmd tuşu ile birden fazla seçim yapabilirsiniz</small>
+            <small className="form-field__hint">{t("staff.multiSelectHint")}</small>
           </label>
 
           <div className="form-actions form-grid__field--full">
@@ -316,16 +323,16 @@ export function StaffPage() {
       <div className="panel">
         <div className="panel__header">
           <div>
-            <h2 className="panel__title">Eleman Atamaları</h2>
+            <h2 className="panel__title">{t("staff.listTitle")}</h2>
             <p className="panel__subtitle">
-              {filteredStaff.length} / {staffQuery.data?.length ?? 0} eleman gösteriliyor
+              {filteredStaff.length} / {staffQuery.data?.length ?? 0} {t("common.records")}
             </p>
           </div>
           <div style={{ minWidth: "250px" }}>
             <SearchInput
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="E-posta, depo veya lokasyon ile ara..."
+              placeholder={t("common.search")}
             />
           </div>
         </div>
@@ -334,24 +341,24 @@ export function StaffPage() {
           <div className="empty-state">
             <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
             <h3 className="empty-state__title">{t("common.loading")}</h3>
-            <p>Eleman atamaları yükleniyor...</p>
+            <p>{t("staff.loadingUsers")}</p>
           </div>
         ) : staffQuery.isError ? (
           <div className="empty-state">
             <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
             <h3 className="empty-state__title">{t("common.error")}</h3>
-            <p style={{ color: "#dc2626" }}>Elemanlar yüklenemedi. Lütfen sayfayı yenileyin.</p>
+            <p style={{ color: "#dc2626" }}>{t("common.loadError")}</p>
           </div>
         ) : filteredStaff.length > 0 ? (
           <div className="data-table-wrapper">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Personel</th>
-                  <th>Rol</th>
-                  <th>Atanan Depolar</th>
-                  <th>Atanan Lokasyonlar</th>
-                  <th>{t("common.actions")}</th>
+                  <th>{t("staff.table.personnel")}</th>
+                  <th>{t("staff.table.role")}</th>
+                  <th>{t("staff.table.storages")}</th>
+                  <th>{t("staff.table.locations")}</th>
+                  <th>{t("staff.table.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -363,12 +370,12 @@ export function StaffPage() {
                         <strong>{user?.email ?? staff.user_id}</strong>
                         {user?.is_active === false && (
                           <span className="badge badge--danger" style={{ marginLeft: "0.5rem" }}>
-                            Pasif
+                            {t("common.passive")}
                           </span>
                         )}
                       </td>
                       <td>
-                        <span className="badge">{roleLabels[user?.role ?? ""] ?? user?.role ?? "—"}</span>
+                        <span className="badge">{getRoleLabel(user?.role ?? "")}</span>
                       </td>
                       <td>
                         {staff.assigned_storage_ids.length > 0 ? (
@@ -416,6 +423,13 @@ export function StaffPage() {
                         <div className="table-actions">
                           <button
                             type="button"
+                            className="action-link action-link--primary"
+                            onClick={() => setViewingStaff(staff)}
+                          >
+                            {t("common.details")}
+                          </button>
+                          <button
+                            type="button"
                             className="action-link"
                             onClick={() => {
                               setEditingStaff(staff);
@@ -432,7 +446,7 @@ export function StaffPage() {
                             type="button"
                             className="action-link action-link--danger"
                             onClick={() => {
-                              if (confirm("Bu eleman atamasını silmek istediğinize emin misiniz?")) {
+                              if (confirm(t("common.confirmDelete") || "Bu kaydı silmek istediğinize emin misiniz?")) {
                                 deleteMutation.mutate(staff.id);
                               }
                             }}
@@ -450,11 +464,21 @@ export function StaffPage() {
         ) : (
           <div className="empty-state">
             <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>👥</div>
-            <h3 className="empty-state__title">{t("common.noData")}</h3>
-            <p>Henüz eleman ataması bulunmuyor veya arama sonucu yok.</p>
+            <h3 className="empty-state__title">{t("staff.emptyTitle")}</h3>
+            <p>{t("staff.emptyHint")}</p>
           </div>
         )}
       </div>
+
+      {/* Staff Detail Modal */}
+      <StaffDetailModal
+        isOpen={viewingStaff !== null}
+        onClose={() => setViewingStaff(null)}
+        staff={viewingStaff}
+        users={usersById}
+        storages={storagesById}
+        locations={locationsById}
+      />
     </section>
   );
 }

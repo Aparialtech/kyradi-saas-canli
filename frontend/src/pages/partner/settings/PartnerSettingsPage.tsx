@@ -77,7 +77,7 @@ export function PartnerSettingsPage() {
       partnerSettingsService.updateSettings(payload),
     onSuccess: (data: PartnerSettings) => {
       void queryClient.invalidateQueries({ queryKey: ["partner", "settings"] });
-      push({ title: t("common.saveSuccess" as any) || "Ayarlar kaydedildi", type: "success" });
+      push({ title: t("settings.saveSuccess"), type: "success" });
       setIsEditing(false);
       // Update form with returned values
       reset({
@@ -92,7 +92,7 @@ export function PartnerSettingsPage() {
     },
     onError: (error: unknown) => {
       push({
-        title: t("common.saveError" as any) || "Kaydetme başarısız",
+        title: t("settings.saveError"),
         description: getErrorMessage(error),
         type: "error",
       });
@@ -149,10 +149,8 @@ export function PartnerSettingsPage() {
       <ToastContainer messages={messages} />
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t("nav.settings")}</h1>
-          <p className="page-subtitle">
-            {t("common.hotel")} bilgileri, bildirim tercihleri ve widget ayarlarını buradan yönetebilirsiniz.
-          </p>
+          <h1 className="page-title">{t("settings.title")}</h1>
+          <p className="page-subtitle">{t("settings.subtitle")}</p>
         </div>
         <div className="page-actions">
           {!isEditing && (
@@ -173,7 +171,7 @@ export function PartnerSettingsPage() {
           <div className="empty-state">
             <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
             <h3 className="empty-state__title">{t("common.loading")}</h3>
-            <p>Ayarlar yükleniyor...</p>
+            <p>{t("settings.loading")}</p>
           </div>
         </div>
       ) : settingsQuery.isError ? (
@@ -198,54 +196,47 @@ export function PartnerSettingsPage() {
           <div className="panel">
             <div className="panel__header">
               <div>
-                <h2 className="panel__title">Genel Bilgiler</h2>
-                <p className="panel__subtitle">
-                  {t("common.hotel")} adı, iletişim bilgileri ve marka ayarları
-                </p>
+                <h2 className="panel__title">{t("settings.generalInfoTitle")}</h2>
+                <p className="panel__subtitle">{t("settings.generalInfoSubtitle")}</p>
               </div>
             </div>
             <div className="form-grid">
               <label className="form-field">
                 <span className="form-field__label">
-                  {t("common.hotel")} Adı <span style={{ color: "var(--color-danger)" }}>*</span>
+                  {t("settings.hotelName")} <span style={{ color: "var(--color-danger)" }}>*</span>
                 </span>
                 <input
                   type="text"
-                  {...register("tenant_name", { required: "Otel adı zorunludur" })}
+                  {...register("tenant_name", { required: t("settings.hotelNameRequired") })}
                   disabled={!isEditing}
+                  placeholder={t("settings.hotelNamePlaceholder")}
                 />
                 {errors.tenant_name && (
                   <span className="field-error">{errors.tenant_name.message}</span>
                 )}
-                <small className="form-field__hint">
-                  {t("common.hotel")} adı müşteriler tarafından görülebilir
-                </small>
+                <small className="form-field__hint">{t("settings.hotelNameHint")}</small>
               </label>
 
               <label className="form-field">
-                <span className="form-field__label">Kısa Ad (Slug)</span>
+                <span className="form-field__label">{t("settings.shortName")}</span>
                 <input
                   type="text"
                   value={settingsQuery.data?.tenant_slug ?? ""}
                   disabled
                   style={{ opacity: 0.6, cursor: "not-allowed" }}
                 />
-                <small className="form-field__hint">
-                  URL'de kullanılan tanımlayıcı (değiştirilemez)
-                </small>
+                <small className="form-field__hint">{t("settings.shortNameHint")}</small>
               </label>
 
               <label className="form-field">
-                <span className="form-field__label">İletişim E-postası</span>
+                <span className="form-field__label">{t("settings.contactEmail")}</span>
                 <input
                   type="email"
                   {...register("contact_email")}
                   disabled={!isEditing}
                   placeholder="iletisim@otel.com"
                 />
-                <small className="form-field__hint">
-                  Sistem bildirimleri ve destek için kullanılacak e-posta
-                </small>
+                <small className="form-field__hint">{t("settings.contactEmailHint")}</small>
               </label>
 
               <label className="form-field">
