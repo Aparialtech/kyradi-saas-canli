@@ -180,6 +180,7 @@ async def create_checkout_session(
         mode=payment_mode,
         storage_id=reservation.storage_id,
         metadata={"created_via": "checkout_session_endpoint"},
+        reservation=reservation,
     )
     
     if was_created:

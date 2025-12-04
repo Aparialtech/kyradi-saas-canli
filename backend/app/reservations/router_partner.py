@@ -14,7 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
 from app.dependencies import require_tenant_operator, require_tenant_staff
-from app.models import User
+from app.models import Payment, PaymentStatus, Reservation, User
+from app.schemas.payment import ReservationPaymentInfo
+from app.services.payment_service import get_or_create_payment
 
 from .models import WidgetConfig, WidgetReservation
 from .schemas import WidgetConfigCreate, WidgetReservationList, WidgetReservationRead
@@ -35,6 +37,29 @@ DEFAULT_WIDGET_CONFIG = {
     "notification_preferences": {},
     "webhook_url": "",
 }
+
+
+def _payment_to_response(payment: Payment) -> ReservationPaymentInfo:
+    checkout_url = None
+    if payment.meta:
+        checkout_url = payment.meta.get("checkout_url")
+    if not checkout_url and payment.provider_intent_id:
+        checkout_url = f"/payments/magicpay/demo/{payment.provider_intent_id}"
+
+    return ReservationPaymentInfo(
+        payment_id=payment.id,
+        reservation_id=payment.reservation_id,
+        status=payment.status,
+        amount_minor=payment.amount_minor,
+        currency=payment.currency,
+        provider=payment.provider,
+        mode=payment.mode,
+        provider_intent_id=payment.provider_intent_id,
+        transaction_id=payment.transaction_id,
+        paid_at=payment.paid_at,
+        checkout_url=checkout_url,
+        meta=payment.meta,
+    )
 
 
 @reservations_router.get("", response_model=WidgetReservationList)
@@ -71,6 +96,70 @@ async def get_widget_reservation(
 ) -> WidgetReservationRead:
     reservation = await _get_reservation(session, reservation_id, current_user.tenant_id)
     return WidgetReservationRead.model_validate(reservation)
+
+
+@reservations_router.get("/{reservation_id}/payment", response_model=ReservationPaymentInfo)
+async def get_widget_reservation_payment(
+    reservation_id: int,
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> ReservationPaymentInfo:
+    """Return real payment info for a widget reservation."""
+    reservation = await _get_reservation(session, reservation_id, current_user.tenant_id)
+
+    payment_stmt = (
+        select(Payment)
+        .where(
+            Payment.tenant_id == current_user.tenant_id,
+            Payment.meta["widget_reservation_id"].astext == str(reservation_id),
+        )
+        .order_by(Payment.created_at.desc())
+        .limit(1)
+    )
+    payment_result = await session.execute(payment_stmt)
+    payment = payment_result.scalar_one_or_none()
+
+    # Fallback: if payment is linked to reservation_id directly
+    if not payment and reservation.external_ref:
+        fallback_stmt = (
+            select(Payment)
+            .where(
+                Payment.tenant_id == current_user.tenant_id,
+                Payment.provider_intent_id == reservation.external_ref,
+            )
+            .order_by(Payment.created_at.desc())
+            .limit(1)
+        )
+        payment = (await session.execute(fallback_stmt)).scalar_one_or_none()
+
+    if not payment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Payment not found for this widget reservation",
+        )
+
+    # Refresh amount if missing and we have a linked reservation
+    if payment.reservation_id and payment.amount_minor in (None, 0) and payment.status in [PaymentStatus.PENDING.value, PaymentStatus.AUTHORIZED.value]:
+        linked_reservation = await session.get(Reservation, payment.reservation_id)
+        if linked_reservation:
+            try:
+                payment, _ = await get_or_create_payment(
+                    session,
+                    reservation_id=linked_reservation.id,
+                    tenant_id=linked_reservation.tenant_id,
+                    amount_minor=payment.amount_minor,
+                    currency=payment.currency,
+                    provider=payment.provider,
+                    mode=payment.mode,
+                    storage_id=payment.storage_id,
+                    metadata=payment.meta,
+                    reservation=linked_reservation,
+                )
+            except Exception as exc:  # pragma: no cover
+                logger.error("Failed to refresh widget payment %s: %s", payment.id, exc, exc_info=True)
+
+    await session.commit()
+    return _payment_to_response(payment)
 
 
 @reservations_router.post("/{reservation_id}/confirm", response_model=WidgetReservationRead)
@@ -259,4 +348,3 @@ async def create_or_update_widget_config(
     except Exception:
         logger.exception("widget-config: error on create/update for tenant_id=%s", tenant_id)
         return _as_response(None, tenant_id)
-

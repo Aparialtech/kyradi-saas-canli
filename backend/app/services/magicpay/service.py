@@ -80,6 +80,7 @@ class MagicPayService:
             mode=payment_mode,
             storage_id=reservation.storage_id,
             metadata={"payment_mode": payment_mode},
+            reservation=reservation,
         )
         
         if was_created:
@@ -109,8 +110,8 @@ class MagicPayService:
         # STEP 3: Create MagicPay checkout session
         # ============================================================
         checkout_data = await self.client.create_checkout_session(
-            amount_minor=reservation.amount_minor,
-            currency=reservation.currency,
+            amount_minor=payment.amount_minor,
+            currency=payment.currency,
             reservation_id=reservation.id,
             customer_name=reservation.customer_name or "Guest",
             customer_email=reservation.customer_email,
@@ -128,8 +129,9 @@ class MagicPayService:
         payment.mode = payment_mode
         payment.provider_intent_id = checkout_data["session_id"]
         payment.status = PaymentStatus.PENDING.value
-        payment.amount_minor = reservation.amount_minor
-        payment.currency = reservation.currency
+        # Amount/currency already set via get_or_create_payment using pricing rules
+        if not payment.currency:
+            payment.currency = reservation.currency
         payment.meta = {
             **(payment.meta or {}),
             "payment_mode": payment_mode,

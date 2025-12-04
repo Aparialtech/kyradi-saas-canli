@@ -21,7 +21,7 @@ from ...schemas import (
     ReservationHandoverRequest,
     ReservationReturnRequest,
 )
-from ...schemas.payment import PaymentRead
+from ...schemas.payment import PaymentRead, ReservationPaymentInfo
 from ...services.reservations import (
     create_reservation as create_reservation_service,
     mark_reservation_returned,
@@ -34,7 +34,11 @@ from ...services.reservation_operations import (
     cancel_reservation_operation,
 )
 from ...services.audit import record_audit
-from ...services.payment_service import get_or_create_payment, get_existing_payment
+from ...services.payment_service import (
+    create_payment_for_reservation,
+    get_or_create_payment,
+    get_existing_payment,
+)
 
 router = APIRouter(prefix="/reservations", tags=["reservations"])
 logger = logging.getLogger(__name__)
@@ -53,6 +57,30 @@ async def _get_reservation_for_tenant(
     if reservation is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
     return reservation
+
+
+def _payment_to_response(payment: Payment) -> ReservationPaymentInfo:
+    """Serialize Payment into a lightweight response for the UI."""
+    checkout_url = None
+    if payment.meta:
+        checkout_url = payment.meta.get("checkout_url")
+    if not checkout_url and payment.provider_intent_id:
+        checkout_url = f"/payments/magicpay/demo/{payment.provider_intent_id}"
+
+    return ReservationPaymentInfo(
+        payment_id=payment.id,
+        reservation_id=payment.reservation_id,
+        status=payment.status,
+        amount_minor=payment.amount_minor,
+        currency=payment.currency,
+        provider=payment.provider,
+        mode=payment.mode,
+        provider_intent_id=payment.provider_intent_id,
+        transaction_id=payment.transaction_id,
+        paid_at=payment.paid_at,
+        checkout_url=checkout_url,
+        meta=payment.meta,
+    )
 
 
 @router.get("", response_model=List[ReservationRead])
@@ -134,6 +162,48 @@ async def get_reservation(
         reservation_dict["payment"] = None
     
     return ReservationRead.model_validate(reservation_dict)
+
+
+@router.get("/{reservation_id}/payment", response_model=ReservationPaymentInfo)
+async def get_reservation_payment(
+    reservation_id: str,
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> ReservationPaymentInfo:
+    """Return the real payment status/details for a reservation."""
+    reservation = await _get_reservation_for_tenant(reservation_id, current_user.tenant_id, session)
+
+    payment = await get_existing_payment(session, reservation.id)
+
+    # If no payment exists, create one using centralized pricing
+    if not payment:
+        payment = await create_payment_for_reservation(
+            session,
+            reservation=reservation,
+            storage=reservation.storage,
+            create_checkout_session=True,
+        )
+    else:
+        # Refresh amount if it was missing/zero
+        if payment.amount_minor in (None, 0) and payment.status in [PaymentStatus.PENDING.value, PaymentStatus.AUTHORIZED.value]:
+            try:
+                payment, _ = await get_or_create_payment(
+                    session,
+                    reservation_id=reservation.id,
+                    tenant_id=reservation.tenant_id,
+                    amount_minor=payment.amount_minor,
+                    currency=payment.currency,
+                    provider=payment.provider,
+                    mode=payment.mode,
+                    storage_id=payment.storage_id,
+                    metadata=payment.meta,
+                    reservation=reservation,
+                )
+            except Exception as exc:  # pragma: no cover - safety log
+                logger.error("Failed to refresh payment amount for reservation %s: %s", reservation.id, exc, exc_info=True)
+
+    await session.commit()
+    return _payment_to_response(payment)
 
 
 @router.post("", response_model=ReservationRead, status_code=status.HTTP_201_CREATED)
@@ -312,8 +382,9 @@ async def ensure_payment(
         reservation_id=reservation.id,
         tenant_id=reservation.tenant_id,
         amount_minor=reservation.amount_minor or reservation.estimated_total_price or 0,
-        currency=reservation.currency,
+        currency=reservation.currency or "TRY",
         storage_id=reservation.storage_id,
+        reservation=reservation,
     )
     
     await session.commit()

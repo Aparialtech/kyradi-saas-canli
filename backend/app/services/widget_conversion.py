@@ -490,6 +490,7 @@ async def convert_widget_reservation_to_reservation(
                 "widget_reservation_id": widget_reservation_id,
                 "created_via": "widget_conversion",
             },
+            reservation=reservation,
         )
         await session.flush()
         

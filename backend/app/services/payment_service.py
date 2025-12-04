@@ -40,17 +40,46 @@ async def get_existing_payment(
     return result.scalar_one_or_none()
 
 
+async def _calculate_amount_for_reservation(
+    session: AsyncSession,
+    reservation: Reservation,
+) -> Tuple[Optional[int], Optional[str]]:
+    """Calculate payment amount using centralized pricing rules."""
+    try:
+        from .pricing_calculator import calculate_price_for_reservation
+
+        calculation = await calculate_price_for_reservation(session, reservation)
+
+        # Backfill reservation with calculated values if missing
+        if not reservation.amount_minor:
+            reservation.amount_minor = calculation.total_minor
+        if not reservation.currency:
+            reservation.currency = calculation.currency
+
+        return calculation.total_minor, calculation.currency
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        logger.error(
+            "Pricing calculation failed for reservation %s: %s",
+            getattr(reservation, "id", None),
+            exc,
+            exc_info=True,
+        )
+        fallback_amount = reservation.amount_minor or reservation.estimated_total_price
+        return fallback_amount, reservation.currency
+
+
 async def get_or_create_payment(
     session: AsyncSession,
     *,
     reservation_id: str,
     tenant_id: str,
-    amount_minor: int,
+    amount_minor: Optional[int],
     currency: str = "TRY",
     provider: str = PaymentProvider.MAGIC_PAY.value,
     mode: str = PaymentMode.GATEWAY_DEMO.value,
     storage_id: Optional[str] = None,
     metadata: Optional[dict] = None,
+    reservation: Optional[Reservation] = None,
 ) -> Tuple[Payment, bool]:
     """Get existing payment or create new one for a reservation (idempotent).
     
@@ -79,7 +108,36 @@ async def get_or_create_payment(
     """
     # STEP 1: Check if payment already exists
     existing_payment = await get_existing_payment(session, reservation_id)
-    
+
+    # Try to calculate a consistent amount from centralized pricing
+    pricing_amount: Optional[int] = None
+    pricing_currency: Optional[str] = None
+
+    if reservation is None:
+        reservation = await session.get(Reservation, reservation_id)
+
+    if reservation:
+        pricing_amount, pricing_currency = await _calculate_amount_for_reservation(session, reservation)
+
+    target_amount = pricing_amount if pricing_amount is not None else amount_minor
+    target_currency = pricing_currency or currency or "TRY"
+
+    if not target_amount or target_amount <= 0:
+        logger.warning(
+            "Payment amount missing or zero, falling back to reservation/estimate. "
+            "reservation_id=%s tenant_id=%s",
+            reservation_id,
+            tenant_id,
+        )
+        if reservation:
+            target_amount = (
+                reservation.amount_minor
+                or reservation.estimated_total_price
+                or pricing_amount
+                or amount_minor
+                or 0
+            )
+
     if existing_payment:
         logger.info(
             f"Existing payment detected, skipping creation. "
@@ -89,15 +147,28 @@ async def get_or_create_payment(
         # Optionally update metadata if provided (but don't change core fields)
         if metadata:
             existing_payment.meta = {**(existing_payment.meta or {}), **metadata}
-            await session.flush()
+
+        # If existing payment is missing amount, fill it from pricing (but do not override paid payments)
+        if (
+            existing_payment.status not in [PaymentStatus.PAID.value, PaymentStatus.CAPTURED.value]
+            and (not existing_payment.amount_minor or existing_payment.amount_minor == 0)
+            and target_amount
+        ):
+            existing_payment.amount_minor = target_amount
+            existing_payment.currency = target_currency
+
+        await session.flush()
         return existing_payment, False
+
+    if not target_amount or target_amount <= 0:
+        raise ValueError("Payment amount could not be determined from pricing rules")
     
     # STEP 2: Create new payment (no existing payment found)
     logger.info(
         f"Creating new payment for reservation_id={reservation_id}, "
-        f"amount={amount_minor}, provider={provider}, mode={mode}"
+        f"amount={target_amount}, provider={provider}, mode={mode}"
     )
-    
+
     payment = Payment(
         tenant_id=tenant_id,
         reservation_id=reservation_id,
@@ -105,8 +176,8 @@ async def get_or_create_payment(
         provider=provider,
         mode=mode,
         status=PaymentStatus.PENDING.value,
-        amount_minor=amount_minor,
-        currency=currency,
+        amount_minor=target_amount or 0,
+        currency=target_currency,
         meta=metadata or {},
     )
     session.add(payment)
@@ -195,6 +266,7 @@ async def create_payment_for_reservation(
         mode=mode,
         storage_id=storage.id if storage else None,
         metadata={},
+        reservation=reservation,
     )
     
     # If existing payment found, log and optionally update

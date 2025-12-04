@@ -15,7 +15,7 @@ Locker = Storage
 from ..schemas import ReservationCreate
 from .audit import record_audit
 from .limits import get_plan_limits_for_tenant
-from .pricing import calculate_reservation_price
+from .pricing_calculator import calculate_reservation_price
 from .storage_availability import is_storage_available
 
 logger = logging.getLogger(__name__)
@@ -79,39 +79,44 @@ async def create_reservation(
     if hourly_rate is None:
         hourly_rate = tenant.default_hourly_rate if tenant and tenant.default_hourly_rate else 1500  # Default 15.00 TRY
 
+    luggage_count = getattr(payload, 'luggage_count', None) or payload.baggage_count or 1
+
     # Ücreti fiyatlandırma kuralına göre hesapla; hata olursa mevcut mantıkla devam et
-    price_via_pricing = None
+    pricing_result = None
     try:
-        price_via_pricing = await calculate_reservation_price(
-            session,
+        pricing_result = await calculate_reservation_price(
+            session=session,
             tenant_id=tenant_id,
-            start_at=start_dt,
-            end_at=end_dt,
+            start_datetime=start_dt,
+            end_datetime=end_dt,
+            baggage_count=luggage_count,
+            location_id=storage.location_id,
+            storage_id=storage.id,
         )
     except Exception as pricing_exc:  # pragma: no cover - log ve devam
         logger.warning(f"Pricing hesaplama hatası, varsayılanla devam: {pricing_exc}")
+
+    price_via_pricing = pricing_result.total_minor if pricing_result else None
 
     # Calculate estimated total price
     estimated_total_price = price_via_pricing if price_via_pricing is not None else int(duration_hours * hourly_rate)
 
     # Eğer fiyatlandırma kuralı günlük/haftalık ise gösterim için efektif saatlik ücret türet
-    if price_via_pricing is not None and duration_hours > 0:
-        hourly_rate = int(price_via_pricing / duration_hours)
+    if pricing_result and duration_hours > 0:
+        hourly_rate = int(pricing_result.hourly_rate_minor or price_via_pricing / duration_hours)
     
     # Use estimated_total_price as amount_minor if not provided or pricing kuralı geldiyse onu kullan
     amount_minor = price_via_pricing if price_via_pricing is not None else payload.amount_minor
     if amount_minor is None:
         amount_minor = estimated_total_price
 
-    currency = payload.currency or "TRY"
+    currency = pricing_result.currency if pricing_result else (payload.currency or "TRY")
     qr_code = f"QR-{storage.id[:6]}-{datetime.now(timezone.utc).timestamp():.0f}"
 
     # Map customer fields - support both old and new field names
     customer_name = payload.full_name or payload.customer_name
     customer_phone = payload.phone_number or payload.customer_phone
     customer_email = getattr(payload, 'customer_email', None)
-    luggage_count = getattr(payload, 'luggage_count', None) or payload.baggage_count or 1
-    
     reservation = Reservation(
         tenant_id=tenant_id,
         storage_id=storage.id,
