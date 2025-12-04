@@ -176,13 +176,59 @@ export const reservationService = {
   },
   
   // Get single reservation details
-  async getById(id: string): Promise<Reservation> {
+  async getById(id: string | number): Promise<Reservation> {
     const idStr = String(id);
     if (this._isWidgetReservation(id)) {
       const response = await http.get<Reservation>(`/partners/widget-reservations/${idStr}`);
       return response.data;
     } else {
       const response = await http.get<Reservation>(`/reservations/${idStr}`);
+      return response.data;
+    }
+  },
+
+  // ===========================================
+  // PAYMENT OPERATIONS
+  // ===========================================
+
+  /**
+   * Mark reservation as manually paid
+   */
+  async markPaid(id: string | number): Promise<Reservation> {
+    const idStr = String(id);
+    if (this._isWidgetReservation(id)) {
+      const response = await http.patch<Reservation>(`/partners/widget-reservations/${idStr}/mark-paid`);
+      return response.data;
+    } else {
+      const response = await http.patch<Reservation>(`/reservations/${idStr}/mark-paid`);
+      return response.data;
+    }
+  },
+
+  /**
+   * Create payment for reservation
+   */
+  async createPayment(id: string | number, payload?: { method?: string; notes?: string }): Promise<Payment> {
+    const idStr = String(id);
+    if (this._isWidgetReservation(id)) {
+      const response = await http.post<Payment>(`/partners/widget-reservations/${idStr}/payments`, payload || {});
+      return response.data;
+    } else {
+      const response = await http.post<Payment>(`/reservations/${idStr}/payments`, payload || {});
+      return response.data;
+    }
+  },
+
+  /**
+   * Refund payment for reservation
+   */
+  async refundPayment(id: string | number, paymentId?: string): Promise<{ success: boolean; message: string }> {
+    const idStr = String(id);
+    if (this._isWidgetReservation(id)) {
+      const response = await http.post<{ success: boolean; message: string }>(`/partners/widget-reservations/${idStr}/refund`);
+      return response.data;
+    } else {
+      const response = await http.post<{ success: boolean; message: string }>(`/payments/${paymentId || idStr}/refund`);
       return response.data;
     }
   },

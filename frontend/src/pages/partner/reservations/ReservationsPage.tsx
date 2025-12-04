@@ -1,11 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
-import { reservationService, type Reservation, type Payment } from "../../../services/partner/reservations";
+import { reservationService, type Reservation } from "../../../services/partner/reservations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
 import { ReservationDetailModal } from "../../../components/reservations/ReservationDetailModal";
+import { PaymentActionModal } from "../../../components/reservations/PaymentActionModal";
+import { PaymentDetailModal } from "../../../components/reservations/PaymentDetailModal";
 import { getErrorMessage } from "../../../lib/httpError";
 import { env } from "../../../config/env";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -63,6 +65,12 @@ export function ReservationsPage() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // Payment modal states
+  const [paymentReservation, setPaymentReservation] = useState<Reservation | null>(null);
+  const [showPaymentActionModal, setShowPaymentActionModal] = useState(false);
+  const [showPaymentDetailModal, setShowPaymentDetailModal] = useState(false);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
 
   const reservationsQuery = useQuery({
     queryKey: ["widget-reservations", filterStatus, filterFrom, filterTo, filterDomain],
@@ -101,16 +109,34 @@ export function ReservationsPage() {
       push({ title: t("reservations.toast.cancelError"), description: getErrorMessage(error), type: "error" }),
   });
 
-  // Ensure payment exists - works for both widget and normal reservations
-  const ensurePaymentMutation = useMutation<Payment | { id: number; status: string; message: string }, unknown, string | number>({
-    mutationFn: (id: string | number) => reservationService.ensurePayment(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: t("reservations.toast.paymentCheckSuccess"), type: "success" });
-    },
-    onError: (error: unknown) =>
-      push({ title: t("reservations.toast.paymentCheckError"), description: getErrorMessage(error), type: "error" }),
-  });
+  // Payment check handler - fetches reservation and opens appropriate modal
+  const handlePaymentCheck = useCallback(async (reservation: Reservation) => {
+    setIsCheckingPayment(true);
+    try {
+      // Fetch fresh reservation data from backend
+      const freshReservation = await reservationService.getById(reservation.id);
+      setPaymentReservation(freshReservation);
+      
+      // Check payment status and open appropriate modal
+      const paymentStatus = freshReservation.payment?.status;
+      
+      if (paymentStatus === "paid" || paymentStatus === "captured") {
+        // Payment exists - show detail modal
+        setShowPaymentDetailModal(true);
+      } else {
+        // No payment or unpaid - show action modal
+        setShowPaymentActionModal(true);
+      }
+    } catch (error) {
+      push({ 
+        title: t("payment.modal.createError"), 
+        description: getErrorMessage(error), 
+        type: "error" 
+      });
+    } finally {
+      setIsCheckingPayment(false);
+    }
+  }, [push, t]);
 
   const allReservations = reservationsQuery.data ?? [];
   
@@ -264,7 +290,7 @@ export function ReservationsPage() {
                     reservation,
                     cancelReservationMutation,
                     completeReservationMutation,
-                    ensurePaymentMutation,
+                    isCheckingPayment,
                     formatDateTimeValue,
                     getStatusLabel,
                     t,
@@ -272,6 +298,7 @@ export function ReservationsPage() {
                       setSelectedReservation(r);
                       setShowDetailModal(true);
                     },
+                    onPaymentCheck: handlePaymentCheck,
                   }),
                 )}
               </tbody>
@@ -294,6 +321,26 @@ export function ReservationsPage() {
           setSelectedReservation(null);
         }}
       />
+
+      {/* Payment Action Modal (for unpaid reservations) */}
+      <PaymentActionModal
+        reservation={paymentReservation}
+        isOpen={showPaymentActionModal}
+        onClose={() => {
+          setShowPaymentActionModal(false);
+          setPaymentReservation(null);
+        }}
+      />
+
+      {/* Payment Detail Modal (for paid reservations) */}
+      <PaymentDetailModal
+        reservation={paymentReservation}
+        isOpen={showPaymentDetailModal}
+        onClose={() => {
+          setShowPaymentDetailModal(false);
+          setPaymentReservation(null);
+        }}
+      />
     </section>
   );
 }
@@ -302,20 +349,22 @@ function renderReservationRow({
   reservation,
   cancelReservationMutation,
   completeReservationMutation,
-  ensurePaymentMutation,
+  isCheckingPayment,
   formatDateTimeValue,
   getStatusLabel,
   t,
   onViewDetail,
+  onPaymentCheck,
 }: {
   reservation: Reservation;
   cancelReservationMutation: UseMutationResult<{ id: string | number; status: string }, unknown, string | number>;
   completeReservationMutation: UseMutationResult<{ id: string | number; status: string }, unknown, string | number>;
-  ensurePaymentMutation: UseMutationResult<Payment | { id: number; status: string; message: string }, unknown, string | number>;
+  isCheckingPayment: boolean;
   formatDateTimeValue: (value?: string | null) => string;
   getStatusLabel: (status: string) => string;
   t: TranslateFn;
   onViewDetail: (reservation: Reservation) => void;
+  onPaymentCheck: (reservation: Reservation) => void;
 }) {
   // Get dates - prefer start_at/end_at, fallback to checkin/checkout dates
   const checkinDate = reservation.start_at || reservation.start_datetime || reservation.checkin_date;
@@ -428,12 +477,10 @@ function renderReservationRow({
             type="button"
             className="btn btn--outline"
             style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
-            disabled={ensurePaymentMutation.isPending}
-            onClick={() => {
-              ensurePaymentMutation.mutate(reservation.id);
-            }}
+            disabled={isCheckingPayment}
+            onClick={() => onPaymentCheck(reservation)}
           >
-            💳 Ödeme Kontrol
+            {isCheckingPayment ? "⏳" : "💳"} {t("payment.button.check")}
           </button>
         </div>
       </td>
