@@ -240,21 +240,30 @@ async def convert_widget_reservation_to_reservation(
     
     # Calculate amount using pricing service BEFORE any storage operations
     # This prevents transaction abort issues if pricing_rules table doesn't exist
+    # Use the centralized pricing_calculator for consistent pricing across the app
+    baggage_count = widget_reservation.luggage_count or widget_reservation.baggage_count or 1
+    
     try:
-        from .pricing import calculate_reservation_price
-        amount_minor = await calculate_reservation_price(
-            session,
+        from .pricing_calculator import calculate_reservation_price as calc_price
+        price_result = await calc_price(
+            session=session,
             tenant_id=tenant_id,
-            start_at=start_at,
-            end_at=end_at,
+            start_datetime=start_at,
+            end_datetime=end_at,
+            baggage_count=baggage_count,
+            location_id=preferred_location_id,
+        )
+        amount_minor = price_result.total_minor
+        logger.info(
+            f"Widget conversion pricing: {amount_minor} {price_result.currency} "
+            f"for {price_result.duration_hours:.1f}h, {baggage_count} items, type={price_result.pricing_type}"
         )
     except Exception as pricing_exc:
         # If pricing calculation fails, use default pricing
-        # Note: We don't rollback here because pricing check happens before any writes
-        # Default: 15 TL per hour, minimum 1 hour
+        # Default: 15 TL per hour per item, minimum 1 hour
         logger.warning(f"Pricing calculation failed, using default: {pricing_exc}")
         duration_hours = max(int((end_at - start_at).total_seconds() // 3600) or 1, 1)
-        amount_minor = duration_hours * 1500  # 15 TL per hour in kuruş
+        amount_minor = duration_hours * 1500 * baggage_count  # 15 TL per hour per item in kuruş
     
     # Find or assign storage
     if storage_id:

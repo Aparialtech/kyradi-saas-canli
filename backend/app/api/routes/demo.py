@@ -12,21 +12,182 @@ from typing import Any, Dict, List, Optional
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import select, and_, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_staff
-from ...models import Payment, PaymentStatus, Reservation, ReservationStatus, Storage, StorageStatus, User
+from ...models import Payment, PaymentStatus, Reservation, ReservationStatus, Storage, StorageStatus, Tenant, User
 from ...schemas import StorageRead
 from ...services.payment_providers import get_payment_provider, FakePaymentProvider
 from ...services.payment_service import get_existing_payment, link_payment_to_reservation
+from ...services.pricing_calculator import calculate_reservation_price
 from ...services.revenue import calculate_settlement, mark_settlement_completed
 from ...services.storage_availability import is_storage_available
 from ...services.widget_conversion import convert_widget_reservation_to_reservation
 
 router = APIRouter(prefix="/demo", tags=["demo"])
 logger = logging.getLogger(__name__)
+
+
+class PublicPriceEstimateRequest(BaseModel):
+    """Request for public price estimate (used by widget)."""
+    tenant_id: str
+    start_datetime: datetime
+    end_datetime: datetime
+    baggage_count: int = 1
+    location_id: Optional[str] = None
+
+
+class PublicPriceEstimateResponse(BaseModel):
+    """Price estimate response for widget."""
+    total_minor: int  # In minor units (kuruş)
+    total_formatted: str  # Formatted for display (e.g., "₺150.00")
+    duration_hours: float
+    duration_days: int
+    hourly_rate_minor: int
+    daily_rate_minor: int
+    pricing_type: str
+    currency: str
+    baggage_count: int
+
+
+@router.post("/public/price-estimate", response_model=PublicPriceEstimateResponse)
+async def public_price_estimate(
+    payload: PublicPriceEstimateRequest,
+    session: AsyncSession = Depends(get_session),
+) -> PublicPriceEstimateResponse:
+    """Get price estimate for widget (no auth required).
+    
+    This endpoint is used by the public widget to show price estimates
+    BEFORE the user submits the reservation. Uses the same pricing
+    calculator as the rest of the system for consistency.
+    """
+    # Validate tenant exists
+    tenant = await session.get(Tenant, payload.tenant_id)
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found",
+        )
+    
+    if payload.end_datetime <= payload.start_datetime:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End datetime must be after start datetime",
+        )
+    
+    calculation = await calculate_reservation_price(
+        session=session,
+        tenant_id=payload.tenant_id,
+        start_datetime=payload.start_datetime,
+        end_datetime=payload.end_datetime,
+        baggage_count=payload.baggage_count,
+        location_id=payload.location_id,
+    )
+    
+    # Format total for display
+    total_major = calculation.total_minor / 100
+    if calculation.currency == "TRY":
+        total_formatted = f"₺{total_major:,.2f}"
+    else:
+        total_formatted = f"{total_major:,.2f} {calculation.currency}"
+    
+    logger.debug(
+        f"Public price estimate for tenant {payload.tenant_id}: "
+        f"{calculation.total_minor} {calculation.currency} for "
+        f"{calculation.duration_hours:.1f}h, {payload.baggage_count} items"
+    )
+    
+    return PublicPriceEstimateResponse(
+        total_minor=calculation.total_minor,
+        total_formatted=total_formatted,
+        duration_hours=calculation.duration_hours,
+        duration_days=calculation.duration_days,
+        hourly_rate_minor=calculation.hourly_rate_minor,
+        daily_rate_minor=calculation.daily_rate_minor,
+        pricing_type=calculation.pricing_type,
+        currency=calculation.currency,
+        baggage_count=calculation.baggage_count,
+    )
+
+
+class PublicStorageAvailabilityRequest(BaseModel):
+    """Request for public storage availability check."""
+    tenant_id: str
+    start_datetime: datetime
+    end_datetime: datetime
+    location_id: Optional[str] = None
+
+
+class PublicStorageAvailabilityResponse(BaseModel):
+    """Response for public storage availability check."""
+    available_count: int
+    total_count: int
+    has_availability: bool
+
+
+@router.post("/public/storage-availability", response_model=PublicStorageAvailabilityResponse)
+async def check_public_storage_availability(
+    payload: PublicStorageAvailabilityRequest,
+    session: AsyncSession = Depends(get_session),
+) -> PublicStorageAvailabilityResponse:
+    """Check storage availability for widget (no auth required).
+    
+    This endpoint is used by the public widget to check if there are
+    available storages for the selected dates BEFORE the user submits
+    the reservation.
+    """
+    # Validate tenant exists
+    tenant = await session.get(Tenant, payload.tenant_id)
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found",
+        )
+    
+    if payload.end_datetime <= payload.start_datetime:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End datetime must be after start datetime",
+        )
+    
+    # Query all storages for the tenant
+    stmt = select(Storage).where(Storage.tenant_id == payload.tenant_id)
+    if payload.location_id:
+        stmt = stmt.where(Storage.location_id == payload.location_id)
+    
+    result = await session.execute(stmt)
+    storages = result.scalars().all()
+    
+    # Count available storages
+    available_count = 0
+    for storage in storages:
+        if storage.status == StorageStatus.FAULTY.value:
+            continue
+        if storage.status == StorageStatus.IDLE.value:
+            available_count += 1
+            continue
+        if await is_storage_available(
+            session,
+            storage_id=storage.id,
+            start_datetime=payload.start_datetime,
+            end_datetime=payload.end_datetime,
+        ):
+            available_count += 1
+    
+    logger.debug(
+        f"Public storage availability for tenant {payload.tenant_id}: "
+        f"{available_count}/{len(storages)} available for "
+        f"{payload.start_datetime} - {payload.end_datetime}"
+    )
+    
+    return PublicStorageAvailabilityResponse(
+        available_count=available_count,
+        total_count=len(storages),
+        has_availability=available_count > 0,
+    )
 
 
 @router.get("/available-storages", response_model=List[StorageRead])
