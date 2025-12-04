@@ -10,12 +10,12 @@ import { reservationService, type Reservation } from '../../services/partner/res
 import { useToast } from '../../hooks/useToast';
 import { useTranslation } from '../../hooks/useTranslation';
 import { getErrorMessage } from '../../lib/httpError';
-import { Eye, CheckCircle2, XOctagon, CreditCard, Search } from '../../lib/lucide';
+import { Eye, CheckCircle2, XOctagon, Search } from '../../lib/lucide';
 import styles from './ModernReservationsPage.module.css';
 
 export const ModernReservationsPage: React.FC = () => {
   const { push } = useToast();
-  const { t, locale } = useTranslation();
+  const { locale } = useTranslation();
   const queryClient = useQueryClient();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -131,7 +131,7 @@ export const ModernReservationsPage: React.FC = () => {
         <div className={styles.actions}>
           <ModernButton
             variant="ghost"
-            inputSize="sm"
+            size="sm"
             onClick={() => {
               setSelectedReservation(row);
               setShowDetailModal(true);
@@ -142,7 +142,7 @@ export const ModernReservationsPage: React.FC = () => {
           
           <ModernButton
             variant="primary"
-            inputSize="sm"
+            size="sm"
             disabled={row.status === 'completed' || row.status === 'cancelled'}
             onClick={() => {
               if (confirm('Teslim edildi olarak işaretle?')) {
@@ -155,7 +155,7 @@ export const ModernReservationsPage: React.FC = () => {
           
           <ModernButton
             variant="danger"
-            inputSize="sm"
+            size="sm"
             disabled={row.status === 'completed' || row.status === 'cancelled'}
             onClick={() => {
               if (confirm('İptal etmek istediğinize emin misiniz?')) {

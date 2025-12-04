@@ -16,15 +16,17 @@ import { env } from "../../config/env";
 import type { TranslationKey } from "../../i18n/translations";
 
 // New Premium UI Components
-import { AppLayout, AppLayoutBody, AppLayoutMain } from "../../components/layout/AppLayout";
-import { TopNav } from "../../components/layout/TopNav";
-import { Sidebar, type SidebarNavItem } from "../../components/layout/Sidebar";
-import { StatCard, Card, CardHeader, CardBody } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
+import { ModernSidebar, type ModernSidebarNavItem } from "../../components/layout/ModernSidebar";
+import { ModernNavbar } from "../../components/layout/ModernNavbar";
+import { StatCard } from "../../components/ui/ModernCard";
+import { ModernButton } from "../../components/ui/ModernButton";
+import { ModernCard } from "../../components/ui/ModernCard";
 import { Badge } from "../../components/ui/Badge";
-import { Modal, ModalHeader, ModalBody, ModalFooter } from "../../components/ui/Modal";
+import { ModernModal } from "../../components/ui/ModernModal";
 import { Input, Textarea } from "../../components/ui/Input";
 import { PageHeader } from "../../components/common/PageHeader";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
 import {
   Briefcase,
   MapPin,
@@ -209,28 +211,44 @@ export function PartnerOverview() {
         />
       </motion.div>
 
-      {/* Stats Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-        gap: 'var(--space-6)',
-        marginBottom: 'var(--space-8)'
-      }}>
+      {/* Modern Stats Grid */}
+      <motion.div 
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+          gap: 'var(--space-6)',
+          marginBottom: 'var(--space-8)'
+        }}
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: {
+              staggerChildren: 0.1,
+            },
+          },
+        }}
+      >
         {statItems.map((item, index) => (
           <motion.div
             key={item.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1, duration: 0.4 }}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0 },
+            }}
           >
             <StatCard
               label={item.label}
               value={item.value}
-              icon={<span style={{ fontSize: '1.5rem' }}>{item.icon}</span>}
+              subtitle={item.hint}
+              icon={item.icon}
+              variant={index === 0 ? 'primary' : index === 1 ? 'secondary' : index === 2 ? 'success' : 'warning'}
             />
           </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Warnings */}
       {summaryQuery.data?.warnings && summaryQuery.data.warnings.length > 0 && (
@@ -239,8 +257,8 @@ export function PartnerOverview() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.4 }}
         >
-          <Card variant="elevated" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
-            <h3 style={{ marginTop: 0, fontSize: '1.125rem', fontWeight: 600 }}>
+          <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+            <h3 style={{ marginTop: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
               {t("partner.planWarnings.title")}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -292,15 +310,15 @@ export function PartnerOverview() {
                 </div>
               ))}
             </div>
-            <Button 
+            <ModernButton 
               variant="primary" 
-              size="md" 
               onClick={() => setSupportModalOpen(true)}
               style={{ marginTop: 'var(--space-4)' }}
+              fullWidth
             >
               {t("partner.planWarnings.button")}
-            </Button>
-          </Card>
+            </ModernButton>
+          </ModernCard>
         </motion.div>
       )}
 
@@ -311,12 +329,14 @@ export function PartnerOverview() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7, duration: 0.4 }}
         >
-          <Card variant="elevated" padding="none" style={{ marginBottom: 'var(--space-6)' }}>
-            <CardHeader 
-              title={t("partner.assistant.title")} 
-              description={t("partner.assistant.subtitle")}
-            />
-            <CardBody>
+          <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+            <h3 style={{ marginTop: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
+              {t("partner.assistant.title")}
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-4)' }}>
+              {t("partner.assistant.subtitle")}
+            </p>
+            <div>
               <KyradiChat
                 apiBase={env.API_URL}
                 tenantId={user.tenant_id}
@@ -324,8 +344,8 @@ export function PartnerOverview() {
                 locale={locale}
                 theme="light"
               />
-            </CardBody>
-          </Card>
+            </div>
+          </ModernCard>
         </motion.div>
       )}
 
@@ -393,16 +413,13 @@ export function PartnerOverview() {
         </motion.div>
       )}
 
-      {/* Support Modal */}
-      <Modal
+      {/* Modern Support Modal */}
+      <ModernModal
         isOpen={supportModalOpen}
         onClose={() => setSupportModalOpen(false)}
+        title={t("partner.support.modalTitle")}
         size="lg"
       >
-        <ModalHeader
-          title={t("partner.support.modalTitle")}
-          onClose={() => setSupportModalOpen(false)}
-        />
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -416,64 +433,64 @@ export function PartnerOverview() {
             setSupportMessage("");
           }}
         >
-          <ModalBody>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: 'var(--space-2)' }}>
-                  {t("partner.support.topicLabel")}
-                </label>
-                <select 
-                  value={supportTopic} 
-                  onChange={(event) => setSupportTopic(event.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0 var(--space-3)',
-                    height: '40px',
-                    border: '1.5px solid var(--color-input-border)',
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'var(--color-input-bg)',
-                    color: 'var(--color-input-text)',
-                    fontSize: '0.9375rem'
-                  }}
-                >
-                  <option value="plan_upgrade">{t("partner.support.topic.planUpgrade")}</option>
-                  <option value="storage_cleanup">{t("partner.support.topic.storage")}</option>
-                  <option value="self_service_quota">{t("partner.support.topic.selfService")}</option>
-                  <option value="other">{t("partner.support.topic.other")}</option>
-                </select>
-              </div>
-              
-              <Input
-                label={t("partner.support.contactLabel")}
-                type="email"
-                value={supportContact}
-                onChange={(event) => setSupportContact(event.target.value)}
-                required
-              />
-              
-              <Textarea
-                label={t("partner.support.messageLabel")}
-                value={supportMessage}
-                onChange={(event) => setSupportMessage(event.target.value)}
-                rows={4}
-                placeholder={t("partner.support.messagePlaceholder")}
-              />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                {t("partner.support.topicLabel")}
+              </label>
+              <select 
+                value={supportTopic} 
+                onChange={(event) => setSupportTopic(event.target.value)}
+                style={{
+                  width: '100%',
+                  padding: 'var(--space-3) var(--space-4)',
+                  height: '44px',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  fontSize: 'var(--text-base)',
+                  transition: 'all var(--transition-base)',
+                }}
+              >
+                <option value="plan_upgrade">{t("partner.support.topic.planUpgrade")}</option>
+                <option value="storage_cleanup">{t("partner.support.topic.storage")}</option>
+                <option value="self_service_quota">{t("partner.support.topic.selfService")}</option>
+                <option value="other">{t("partner.support.topic.other")}</option>
+              </select>
             </div>
-          </ModalBody>
-          <ModalFooter justify="end">
-            <Button 
-              variant="ghost" 
-              onClick={() => setSupportModalOpen(false)}
-              type="button"
-            >
-              {t("partner.support.cancel")}
-            </Button>
-            <Button variant="primary" type="submit">
-              {t("partner.support.submit")}
-            </Button>
-          </ModalFooter>
+            
+            <Input
+              label={t("partner.support.contactLabel")}
+              type="email"
+              value={supportContact}
+              onChange={(event) => setSupportContact(event.target.value)}
+              required
+            />
+            
+            <Textarea
+              label={t("partner.support.messageLabel")}
+              value={supportMessage}
+              onChange={(event) => setSupportMessage(event.target.value)}
+              rows={4}
+              placeholder={t("partner.support.messagePlaceholder")}
+            />
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
+              <ModernButton 
+                variant="ghost" 
+                onClick={() => setSupportModalOpen(false)}
+                type="button"
+              >
+                {t("partner.support.cancel")}
+              </ModernButton>
+              <ModernButton variant="primary" type="submit">
+                {t("partner.support.submit")}
+              </ModernButton>
+            </div>
+          </div>
         </form>
-      </Modal>
+      </ModernModal>
     </div>
   );
 }
@@ -481,58 +498,86 @@ export function PartnerOverview() {
 export function PartnerDashboard() {
   const { user, logout, hasRole } = useAuth();
   const { t } = useTranslation();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const navigation = useMemo((): SidebarNavItem[] => {
-    const items: SidebarNavItem[] = [
-      { to: ".", label: t("nav.overview"), end: true, icon: <Briefcase className="h-[18px] w-[18px]" /> },
-      { to: "locations", label: t("nav.locations"), icon: <MapPin className="h-[18px] w-[18px]" /> },
-      { to: "lockers", label: t("nav.storages"), icon: <HardDrive className="h-[18px] w-[18px]" /> },
-      { to: "reservations", label: t("nav.reservations"), icon: <FileText className="h-[18px] w-[18px]" /> },
-      { to: "qr", label: t("nav.qr"), icon: <ScanLine className="h-[18px] w-[18px]" /> },
+  const modernNavigation = useMemo((): ModernSidebarNavItem[] => {
+    const items: ModernSidebarNavItem[] = [
+      { to: ".", label: t("nav.overview"), end: true, icon: <Briefcase className="h-5 w-5" /> },
+      { to: "locations", label: t("nav.locations"), icon: <MapPin className="h-5 w-5" /> },
+      { to: "lockers", label: t("nav.storages"), icon: <HardDrive className="h-5 w-5" /> },
+      { to: "reservations", label: t("nav.reservations"), icon: <FileText className="h-5 w-5" /> },
+      { to: "qr", label: t("nav.qr"), icon: <ScanLine className="h-5 w-5" /> },
     ];
     
     // Accounting and hotel manager can see revenue
     if (hasRole("accounting") || hasRole("hotel_manager") || hasRole("tenant_admin")) {
-      items.push({ to: "reports", label: t("nav.reports"), icon: <LineChart className="h-[18px] w-[18px]" /> });
-      items.push({ to: "revenue", label: t("nav.revenue"), icon: <Wallet className="h-[18px] w-[18px]" /> });
-      items.push({ to: "settlements", label: t("nav.settlements"), icon: <PiggyBank className="h-[18px] w-[18px]" /> });
+      items.push({ to: "reports", label: t("nav.reports"), icon: <LineChart className="h-5 w-5" /> });
+      items.push({ to: "revenue", label: t("nav.revenue"), icon: <Wallet className="h-5 w-5" /> });
+      items.push({ to: "settlements", label: t("nav.settlements"), icon: <PiggyBank className="h-5 w-5" /> });
     }
     
     // Hotel manager and tenant admin can manage users and staff
     if (hasRole("hotel_manager") || hasRole("tenant_admin")) {
-      items.push({ to: "users", label: t("nav.users"), icon: <UsersIcon className="h-[18px] w-[18px]" /> });
-      items.push({ to: "staff", label: t("nav.staff"), icon: <UserCog className="h-[18px] w-[18px]" /> });
-      items.push({ to: "pricing", label: t("nav.pricing"), icon: <BadgePercent className="h-[18px] w-[18px]" /> });
-      items.push({ to: "demo-flow", label: t("nav.demoFlow"), icon: <LineChart className="h-[18px] w-[18px]" /> });
+      items.push({ to: "users", label: t("nav.users"), icon: <UsersIcon className="h-5 w-5" /> });
+      items.push({ to: "staff", label: t("nav.staff"), icon: <UserCog className="h-5 w-5" /> });
+      items.push({ to: "pricing", label: t("nav.pricing"), icon: <BadgePercent className="h-5 w-5" /> });
+      items.push({ to: "demo-flow", label: t("nav.demoFlow"), icon: <LineChart className="h-5 w-5" /> });
     }
     
     // All authenticated users can access settings
-    items.push({ to: "settings", label: t("nav.settings"), icon: <Settings2 className="h-[18px] w-[18px]" /> });
+    items.push({ to: "settings", label: t("nav.settings"), icon: <Settings2 className="h-5 w-5" /> });
     
     return items;
   }, [hasRole, t]);
 
   return (
     <>
-      <AppLayout variant="partner">
-        <TopNav
-          variant="partner"
-          brandMark="KY"
-          brandText={t("nav.brandPartner")}
-          userEmail={user?.email}
-          onLogout={logout}
-        >
-          <LanguageSwitcher />
-        </TopNav>
+      <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', background: 'var(--bg-secondary)' }}>
+        {/* Modern Sidebar */}
+        <ModernSidebar
+          items={modernNavigation}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          brandName="KYRADI"
+        />
 
-        <AppLayoutBody>
-          <Sidebar items={navigation} heading={t("nav.menu")} />
-          
-          <AppLayoutMain>
+        {/* Main Content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', marginLeft: sidebarOpen ? '280px' : '80px', transition: 'margin-left 0.2s' }}>
+          {/* Modern Navbar */}
+          <ModernNavbar
+            title="Partner Panel"
+            userName={user?.email ?? 'Partner'}
+            userRole="Partner"
+            onLogout={logout}
+            sidebarToggle={
+              <button 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  borderRadius: 'var(--radius-lg)',
+                }}
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            }
+            actions={<LanguageSwitcher />}
+          />
+
+          {/* Page Content */}
+          <div style={{ flex: 1, overflow: 'auto' }}>
             <Outlet />
-          </AppLayoutMain>
-        </AppLayoutBody>
-      </AppLayout>
+          </div>
+        </div>
+      </div>
       
       <FloatingChatWidget />
     </>

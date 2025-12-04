@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 
 import { storageService, type Storage, type StoragePayload, type StorageStatus } from "../../../services/partner/storages";
 import { locationService } from "../../../services/partner/locations";
@@ -10,6 +11,9 @@ import { SearchInput } from "../../../components/common/SearchInput";
 import { StorageCalendarModal } from "../../../components/storages/StorageCalendarModal";
 import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernButton } from "../../../components/ui/ModernButton";
+import { HardDrive } from "../../../lib/lucide";
 
 // Status badge classes - labels are fetched via i18n inside component
 const statusBadgeClass: Record<StorageStatus, string> = {
@@ -146,21 +150,27 @@ export function LockersPage() {
   };
 
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
-      <div className="page-header">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)' }}
+      >
         <div>
-          <h1 className="page-title">{t("storages.title")}</h1>
-          <p className="page-subtitle">{t("storages.subtitle")}</p>
+          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
+            {t("storages.title")}
+          </h1>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("storages.subtitle")}
+          </p>
         </div>
-        <div className="page-actions">
-          <button type="button" className="btn btn--primary" onClick={handleNew}>
-            {t("storages.newStorage")}
-          </button>
-        </div>
-      </div>
+        <ModernButton variant="primary" onClick={handleNew}>
+          + {t("storages.newStorage")}
+        </ModernButton>
+      </motion.div>
 
-      <div className="panel">
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
         <div className="panel__header">
           <div>
             <h2 className="panel__title">
@@ -235,16 +245,18 @@ export function LockersPage() {
             </button>
           </div>
         </form>
-      </div>
+      </ModernCard>
 
-      <div className="panel">
-        <div className="panel__header">
-          <div>
-            <h2 className="panel__title">{t("storages.title")}</h2>
-            <p className="panel__subtitle">
-              {filteredStorages.length} / {storagesQuery.data?.length ?? 0} {t("common.records")}
-            </p>
-          </div>
+      <ModernCard variant="glass" padding="lg">
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+            {t("storages.title")}
+          </h2>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {filteredStorages.length} / {storagesQuery.data?.length ?? 0} {t("common.records")}
+          </p>
+        </div>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
           <div className="panel__filters" style={{ display: "flex", gap: "1rem", alignItems: "flex-end", flexWrap: "wrap" }}>
             <div style={{ minWidth: "200px" }}>
               <SearchInput
@@ -364,13 +376,15 @@ export function LockersPage() {
             </table>
           </div>
         ) : (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>📦</div>
-            <h3 className="empty-state__title">{t("storages.emptyTitle")}</h3>
-            <p>{t("storages.emptyHint")}</p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-16)', color: 'var(--text-tertiary)' }}>
+            <HardDrive className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--text-muted)' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+              {t("storages.emptyTitle")}
+            </h3>
+            <p style={{ margin: 0 }}>{t("storages.emptyHint")}</p>
           </div>
         )}
-      </div>
+      </ModernCard>
       
       {/* Storage Calendar Modal */}
       {calendarStorage && (
@@ -381,6 +395,6 @@ export function LockersPage() {
           onClose={() => setCalendarStorage(null)}
         />
       )}
-    </section>
+    </div>
   );
 }
