@@ -1,4 +1,11 @@
-"""Pricing management endpoints."""
+"""Pricing management endpoints.
+
+Supports hierarchical pricing:
+- GLOBAL: System-wide default
+- TENANT: Tenant-specific default
+- LOCATION: Location-specific pricing
+- STORAGE: Storage-specific pricing (highest priority)
+"""
 
 from datetime import datetime
 from typing import List, Optional
@@ -8,10 +15,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_admin, require_tenant_operator
-from ...models import PricingRule, User
+from ...models import PricingRule, User, Location, Storage
+from ...models.pricing import PricingScope
 from ...schemas.pricing import PricingRuleCreate, PricingRuleRead, PricingRuleUpdate
 from ...services.pricing_calculator import calculate_reservation_price
 
@@ -25,6 +34,7 @@ class PriceEstimateRequest(BaseModel):
     end_datetime: datetime
     baggage_count: int = 1
     location_id: Optional[str] = None
+    storage_id: Optional[str] = None
 
 
 class PriceEstimateResponse(BaseModel):
@@ -38,6 +48,8 @@ class PriceEstimateResponse(BaseModel):
     pricing_type: str
     currency: str
     baggage_count: int
+    rule_id: Optional[str] = None
+    rule_scope: Optional[str] = None
 
 
 @router.post("/estimate", response_model=PriceEstimateResponse)
@@ -48,8 +60,7 @@ async def estimate_price(
 ) -> PriceEstimateResponse:
     """Calculate price estimate for a reservation.
     
-    This endpoint uses the centralized pricing calculator to ensure
-    consistent pricing across the application.
+    Uses hierarchical pricing: STORAGE > LOCATION > TENANT > GLOBAL
     """
     if payload.end_datetime <= payload.start_datetime:
         raise HTTPException(
@@ -64,6 +75,7 @@ async def estimate_price(
         end_datetime=payload.end_datetime,
         baggage_count=payload.baggage_count,
         location_id=payload.location_id,
+        storage_id=payload.storage_id,
     )
     
     # Format total for display
@@ -83,26 +95,88 @@ async def estimate_price(
         pricing_type=calculation.pricing_type,
         currency=calculation.currency,
         baggage_count=calculation.baggage_count,
+        rule_id=calculation.rule_id,
+        rule_scope=calculation.rule_scope,
     )
+
+
+async def _enrich_rule_with_names(rule: PricingRule, session: AsyncSession) -> dict:
+    """Add location_name and storage_code to rule for UI display."""
+    data = {
+        "id": rule.id,
+        "tenant_id": rule.tenant_id,
+        "scope": getattr(rule, 'scope', 'TENANT'),
+        "location_id": getattr(rule, 'location_id', None),
+        "storage_id": getattr(rule, 'storage_id', None),
+        "name": getattr(rule, 'name', None),
+        "pricing_type": rule.pricing_type,
+        "price_per_hour_minor": rule.price_per_hour_minor,
+        "price_per_day_minor": rule.price_per_day_minor,
+        "price_per_week_minor": rule.price_per_week_minor,
+        "price_per_month_minor": rule.price_per_month_minor,
+        "minimum_charge_minor": rule.minimum_charge_minor,
+        "currency": rule.currency,
+        "is_active": rule.is_active,
+        "priority": rule.priority,
+        "notes": rule.notes,
+        "created_at": rule.created_at,
+        "location_name": None,
+        "storage_code": None,
+    }
+    
+    # Fetch location name if location_id is set
+    if data["location_id"]:
+        location = await session.get(Location, data["location_id"])
+        if location:
+            data["location_name"] = location.name
+    
+    # Fetch storage code if storage_id is set
+    if data["storage_id"]:
+        storage = await session.get(Storage, data["storage_id"])
+        if storage:
+            data["storage_code"] = storage.code
+            # Also get location name from storage if not already set
+            if not data["location_name"] and storage.location_id:
+                location = await session.get(Location, storage.location_id)
+                if location:
+                    data["location_name"] = location.name
+    
+    return data
 
 
 @router.get("", response_model=List[PricingRuleRead])
 async def list_pricing_rules(
+    scope: Optional[str] = Query(None, description="Filter by scope: GLOBAL, TENANT, LOCATION, STORAGE"),
     current_user: User = Depends(require_tenant_admin),
     session: AsyncSession = Depends(get_session),
 ) -> List[PricingRuleRead]:
-    """List all pricing rules for the current tenant."""
+    """List all pricing rules for the current tenant.
+    
+    Returns rules with resolved location/storage names for UI display.
+    """
     stmt = select(PricingRule).where(
         or_(
             PricingRule.tenant_id == current_user.tenant_id,
             PricingRule.tenant_id.is_(None),  # Global rules
         )
-    ).order_by(PricingRule.priority.desc(), PricingRule.created_at.desc())
+    )
+    
+    # Apply scope filter if provided
+    if scope:
+        stmt = stmt.where(PricingRule.scope == scope)
+    
+    stmt = stmt.order_by(PricingRule.priority.desc(), PricingRule.created_at.desc())
     
     result = await session.execute(stmt)
     rules = result.scalars().all()
     
-    return [PricingRuleRead.model_validate(rule) for rule in rules]
+    # Enrich with location/storage names
+    enriched_rules = []
+    for rule in rules:
+        enriched = await _enrich_rule_with_names(rule, session)
+        enriched_rules.append(PricingRuleRead.model_validate(enriched))
+    
+    return enriched_rules
 
 
 @router.post("", response_model=PricingRuleRead, status_code=status.HTTP_201_CREATED)
@@ -111,9 +185,38 @@ async def create_pricing_rule(
     current_user: User = Depends(require_tenant_admin),
     session: AsyncSession = Depends(get_session),
 ) -> PricingRuleRead:
-    """Create a new pricing rule for the current tenant."""
+    """Create a new pricing rule for the current tenant.
+    
+    Scope determines the specificity:
+    - GLOBAL: Applies to all tenants (admin only)
+    - TENANT: Applies to this tenant
+    - LOCATION: Applies to a specific location
+    - STORAGE: Applies to a specific storage
+    """
+    # Validate location_id for LOCATION scope
+    if payload.scope == "LOCATION" and payload.location_id:
+        location = await session.get(Location, payload.location_id)
+        if not location or location.tenant_id != current_user.tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid location_id or access denied",
+            )
+    
+    # Validate storage_id for STORAGE scope
+    if payload.scope == "STORAGE" and payload.storage_id:
+        storage = await session.get(Storage, payload.storage_id)
+        if not storage or storage.tenant_id != current_user.tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid storage_id or access denied",
+            )
+    
     rule = PricingRule(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.tenant_id if payload.scope != "GLOBAL" else None,
+        scope=payload.scope,
+        location_id=payload.location_id if payload.scope == "LOCATION" else None,
+        storage_id=payload.storage_id if payload.scope == "STORAGE" else None,
+        name=payload.name,
         pricing_type=payload.pricing_type,
         price_per_hour_minor=payload.price_per_hour_minor,
         price_per_day_minor=payload.price_per_day_minor,
@@ -130,9 +233,11 @@ async def create_pricing_rule(
     await session.commit()
     await session.refresh(rule)
     
-    logger.info(f"Created pricing rule {rule.id} for tenant {current_user.tenant_id}")
+    logger.info(f"Created pricing rule {rule.id} (scope={payload.scope}) for tenant {current_user.tenant_id}")
     
-    return PricingRuleRead.model_validate(rule)
+    # Return enriched response
+    enriched = await _enrich_rule_with_names(rule, session)
+    return PricingRuleRead.model_validate(enriched)
 
 
 @router.get("/{rule_id}", response_model=PricingRuleRead)
@@ -141,7 +246,7 @@ async def get_pricing_rule(
     current_user: User = Depends(require_tenant_admin),
     session: AsyncSession = Depends(get_session),
 ) -> PricingRuleRead:
-    """Get a specific pricing rule."""
+    """Get a specific pricing rule with resolved names."""
     rule = await session.get(PricingRule, rule_id)
     
     if rule is None:
@@ -157,7 +262,9 @@ async def get_pricing_rule(
             detail="Access denied",
         )
     
-    return PricingRuleRead.model_validate(rule)
+    # Return enriched response with location/storage names
+    enriched = await _enrich_rule_with_names(rule, session)
+    return PricingRuleRead.model_validate(enriched)
 
 
 @router.patch("/{rule_id}", response_model=PricingRuleRead)
@@ -183,6 +290,24 @@ async def update_pricing_rule(
             detail="Access denied",
         )
     
+    # Validate location_id if changing to LOCATION scope
+    if payload.scope == "LOCATION" and payload.location_id:
+        location = await session.get(Location, payload.location_id)
+        if not location or location.tenant_id != current_user.tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid location_id or access denied",
+            )
+    
+    # Validate storage_id if changing to STORAGE scope
+    if payload.scope == "STORAGE" and payload.storage_id:
+        storage = await session.get(Storage, payload.storage_id)
+        if not storage or storage.tenant_id != current_user.tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid storage_id or access denied",
+            )
+    
     # Update fields
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -193,7 +318,9 @@ async def update_pricing_rule(
     
     logger.info(f"Updated pricing rule {rule.id}")
     
-    return PricingRuleRead.model_validate(rule)
+    # Return enriched response
+    enriched = await _enrich_rule_with_names(rule, session)
+    return PricingRuleRead.model_validate(enriched)
 
 
 @router.delete("/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)

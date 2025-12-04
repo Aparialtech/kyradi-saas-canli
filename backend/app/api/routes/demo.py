@@ -32,12 +32,16 @@ logger = logging.getLogger(__name__)
 
 
 class PublicPriceEstimateRequest(BaseModel):
-    """Request for public price estimate (used by widget)."""
+    """Request for public price estimate (used by widget).
+    
+    Uses hierarchical pricing: STORAGE > LOCATION > TENANT > GLOBAL
+    """
     tenant_id: str
     start_datetime: datetime
     end_datetime: datetime
     baggage_count: int = 1
     location_id: Optional[str] = None
+    storage_id: Optional[str] = None  # For storage-specific pricing
 
 
 class PublicPriceEstimateResponse(BaseModel):
@@ -51,6 +55,7 @@ class PublicPriceEstimateResponse(BaseModel):
     pricing_type: str
     currency: str
     baggage_count: int
+    rule_scope: Optional[str] = None  # Which scope level was used
 
 
 @router.post("/public/price-estimate", response_model=PublicPriceEstimateResponse)
@@ -78,6 +83,7 @@ async def public_price_estimate(
             detail="End datetime must be after start datetime",
         )
     
+    # Use hierarchical pricing: STORAGE > LOCATION > TENANT > GLOBAL
     calculation = await calculate_reservation_price(
         session=session,
         tenant_id=payload.tenant_id,
@@ -85,6 +91,7 @@ async def public_price_estimate(
         end_datetime=payload.end_datetime,
         baggage_count=payload.baggage_count,
         location_id=payload.location_id,
+        storage_id=payload.storage_id,
     )
     
     # Format total for display
@@ -97,7 +104,8 @@ async def public_price_estimate(
     logger.debug(
         f"Public price estimate for tenant {payload.tenant_id}: "
         f"{calculation.total_minor} {calculation.currency} for "
-        f"{calculation.duration_hours:.1f}h, {payload.baggage_count} items"
+        f"{calculation.duration_hours:.1f}h, {payload.baggage_count} items, "
+        f"scope={calculation.rule_scope}"
     )
     
     return PublicPriceEstimateResponse(
@@ -110,6 +118,7 @@ async def public_price_estimate(
         pricing_type=calculation.pricing_type,
         currency=calculation.currency,
         baggage_count=calculation.baggage_count,
+        rule_scope=calculation.rule_scope,
     )
 
 

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_operator
-from ...models import Locker, Reservation, ReservationStatus, User, Tenant, Payment
+from ...models import Locker, Reservation, ReservationStatus, User, Tenant, Payment, Location, Storage
 from ...models.enums import PaymentStatus
 from ...schemas import PartnerSummary, TenantPlanLimits, LimitWarning
 from ...services.limits import (
@@ -302,3 +302,161 @@ async def register_reservation_export(
     if limits.max_report_exports_daily is not None:
         remaining = max(limits.max_report_exports_daily - (exports_today + 1), 0)
     return {"remaining": remaining}
+
+
+@router.get("/partner-overview")
+async def get_partner_overview(
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+):
+    """Get comprehensive analytics overview for partner dashboard.
+    
+    Returns:
+        - summary: Total revenue, reservations, active reservations, occupancy rate
+        - daily: Last 30 days of daily revenue
+        - by_location: Revenue and reservation counts by location
+        - by_storage: Most used storages (top 10)
+    """
+    tenant_id = current_user.tenant_id
+    if not tenant_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant context required")
+    
+    # Summary metrics
+    total_revenue_stmt = select(func.coalesce(func.sum(Payment.amount_minor), 0)).where(
+        Payment.tenant_id == tenant_id,
+        Payment.status == PaymentStatus.PAID.value,
+    )
+    total_revenue_minor = await _safe_scalar(session, total_revenue_stmt, 0, "total_revenue")
+    
+    total_reservations_stmt = select(func.count()).select_from(Reservation).where(
+        Reservation.tenant_id == tenant_id
+    )
+    total_reservations = await _safe_scalar(session, total_reservations_stmt, 0, "total_reservations")
+    
+    active_reservations_stmt = select(func.count()).select_from(Reservation).where(
+        Reservation.tenant_id == tenant_id,
+        Reservation.status.in_([ReservationStatus.RESERVED.value, ReservationStatus.ACTIVE.value]),
+    )
+    active_reservations = await _safe_scalar(session, active_reservations_stmt, 0, "active_reservations")
+    
+    # Calculate occupancy rate
+    storage_count_stmt = select(func.count()).select_from(Storage).where(Storage.tenant_id == tenant_id)
+    storage_count = await _safe_scalar(session, storage_count_stmt, 0, "storage_count")
+    
+    occupancy_rate = 0.0
+    if storage_count > 0:
+        occupancy_rate = round(min(active_reservations / storage_count * 100, 100), 2)
+    
+    # Daily revenue for last 30 days
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    daily_revenue = []
+    
+    try:
+        # Get daily revenue grouped by date
+        from sqlalchemy import cast, Date
+        daily_stmt = select(
+            cast(Payment.created_at, Date).label('date'),
+            func.sum(Payment.amount_minor).label('revenue_minor')
+        ).where(
+            Payment.tenant_id == tenant_id,
+            Payment.status == PaymentStatus.PAID.value,
+            Payment.created_at >= thirty_days_ago
+        ).group_by(
+            cast(Payment.created_at, Date)
+        ).order_by(
+            cast(Payment.created_at, Date)
+        )
+        
+        result = await session.execute(daily_stmt)
+        daily_data = result.fetchall()
+        
+        for row in daily_data:
+            daily_revenue.append({
+                "date": row.date.isoformat() if row.date else "",
+                "revenue_minor": int(row.revenue_minor or 0)
+            })
+    except Exception as exc:
+        logger.warning(f"Failed to get daily revenue: {exc}")
+    
+    # Revenue by location
+    by_location = []
+    
+    try:
+        from sqlalchemy.orm import aliased
+        
+        # Join reservations with payments and locations
+        location_stmt = select(
+            Location.id.label('location_id'),
+            Location.name.label('location_name'),
+            func.coalesce(func.sum(Payment.amount_minor), 0).label('revenue_minor'),
+            func.count(Reservation.id).label('reservations')
+        ).select_from(Location).outerjoin(
+            Storage, Storage.location_id == Location.id
+        ).outerjoin(
+            Reservation, Reservation.storage_id == Storage.id
+        ).outerjoin(
+            Payment, Payment.reservation_id == Reservation.id
+        ).where(
+            Location.tenant_id == tenant_id
+        ).group_by(
+            Location.id, Location.name
+        ).order_by(
+            func.coalesce(func.sum(Payment.amount_minor), 0).desc()
+        ).limit(5)
+        
+        result = await session.execute(location_stmt)
+        location_data = result.fetchall()
+        
+        for row in location_data:
+            by_location.append({
+                "location_name": row.location_name or "Unknown",
+                "revenue_minor": int(row.revenue_minor or 0),
+                "reservations": int(row.reservations or 0)
+            })
+    except Exception as exc:
+        logger.warning(f"Failed to get revenue by location: {exc}")
+    
+    # Most used storages
+    by_storage = []
+    
+    try:
+        storage_stmt = select(
+            Storage.id.label('storage_id'),
+            Storage.code.label('storage_code'),
+            Location.name.label('location_name'),
+            func.count(Reservation.id).label('reservations')
+        ).select_from(Storage).join(
+            Location, Location.id == Storage.location_id
+        ).outerjoin(
+            Reservation, Reservation.storage_id == Storage.id
+        ).where(
+            Storage.tenant_id == tenant_id
+        ).group_by(
+            Storage.id, Storage.code, Location.name
+        ).order_by(
+            func.count(Reservation.id).desc()
+        ).limit(10)
+        
+        result = await session.execute(storage_stmt)
+        storage_data = result.fetchall()
+        
+        for row in storage_data:
+            by_storage.append({
+                "storage_code": row.storage_code or "Unknown",
+                "location_name": row.location_name or "Unknown",
+                "reservations": int(row.reservations or 0)
+            })
+    except Exception as exc:
+        logger.warning(f"Failed to get storage usage: {exc}")
+    
+    return {
+        "summary": {
+            "total_revenue_minor": int(total_revenue_minor),
+            "total_reservations": int(total_reservations),
+            "active_reservations": int(active_reservations),
+            "occupancy_rate": occupancy_rate
+        },
+        "daily": daily_revenue,
+        "by_location": by_location,
+        "by_storage": by_storage
+    }

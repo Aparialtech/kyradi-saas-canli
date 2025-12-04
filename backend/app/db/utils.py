@@ -101,6 +101,11 @@ async def _apply_critical_ddl(conn) -> None:
         "ALTER TABLE storages ADD COLUMN IF NOT EXISTS capacity INTEGER NOT NULL DEFAULT 1",
         # Ensure tenant metadata column exists
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
+        # Pricing rules hierarchical columns
+        "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS scope VARCHAR(16) NOT NULL DEFAULT 'TENANT'",
+        "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS location_id VARCHAR(36)",
+        "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS storage_id VARCHAR(36)",
+        "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS name VARCHAR(100)",
     ]
 
     for statement in statements:

@@ -232,10 +232,10 @@ async def ai_assistant(payload: ChatRequest) -> ChatResponse:
     except Exception as e:
         logger.exception(f"AI assistant error: {e}")
         latency_ms = (time.perf_counter() - start_time) * 1000
-        return ChatResponse(
+    return ChatResponse(
             answer="",
             success=False,
             error=f"Bir hata oluştu: {str(e)}",
             request_id=request_id,
-            latency_ms=round(latency_ms, 2),
+        latency_ms=round(latency_ms, 2),
         )

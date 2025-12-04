@@ -169,8 +169,15 @@ async def ensure_critical_schema() -> None:
     from .db.session import engine
     
     critical_ddl = [
+        # Storage columns
         "ALTER TABLE storages ADD COLUMN IF NOT EXISTS capacity INTEGER NOT NULL DEFAULT 1",
+        # Tenant columns
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
+        # Pricing rules hierarchical columns
+        "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS scope VARCHAR(16) NOT NULL DEFAULT 'TENANT'",
+        "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS location_id VARCHAR(36)",
+        "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS storage_id VARCHAR(36)",
+        "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS name VARCHAR(100)",
     ]
     
     try:

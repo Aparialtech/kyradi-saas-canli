@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List, Optional
 
 import asyncpg
@@ -93,10 +93,65 @@ async def cancel_widget_reservation(
     current_user: User = Depends(require_tenant_staff),
     session: AsyncSession = Depends(get_session),
 ) -> WidgetReservationRead:
+    """Cancel a widget reservation."""
     reservation = await _get_reservation(session, reservation_id, current_user.tenant_id)
     reservation.status = "cancelled"
     await session.commit()
     return WidgetReservationRead.model_validate(reservation)
+
+
+@reservations_router.post("/{reservation_id}/complete", response_model=WidgetReservationRead)
+async def complete_widget_reservation(
+    reservation_id: int,
+    current_user: User = Depends(require_tenant_staff),
+    session: AsyncSession = Depends(get_session),
+) -> WidgetReservationRead:
+    """Mark a widget reservation as completed (luggage returned)."""
+    reservation = await _get_reservation(session, reservation_id, current_user.tenant_id)
+    if reservation.status == "cancelled":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="İptal edilmiş rezervasyon tamamlanamaz")
+    reservation.status = "completed"
+    reservation.returned_at = datetime.now()
+    reservation.returned_by = current_user.email
+    await session.commit()
+    return WidgetReservationRead.model_validate(reservation)
+
+
+@reservations_router.post("/{reservation_id}/return", response_model=WidgetReservationRead)
+async def return_widget_reservation(
+    reservation_id: int,
+    current_user: User = Depends(require_tenant_staff),
+    session: AsyncSession = Depends(get_session),
+) -> WidgetReservationRead:
+    """Mark a widget reservation luggage as returned."""
+    reservation = await _get_reservation(session, reservation_id, current_user.tenant_id)
+    if reservation.status == "cancelled":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="İptal edilmiş rezervasyon tamamlanamaz")
+    reservation.status = "completed"
+    reservation.returned_at = datetime.now()
+    reservation.returned_by = current_user.email
+    await session.commit()
+    return WidgetReservationRead.model_validate(reservation)
+
+
+@reservations_router.post("/{reservation_id}/ensure-payment")
+async def ensure_widget_reservation_payment(
+    reservation_id: int,
+    current_user: User = Depends(require_tenant_staff),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Check/ensure payment for a widget reservation."""
+    reservation = await _get_reservation(session, reservation_id, current_user.tenant_id)
+    # Widget reservations may or may not have payments
+    # Return the reservation info with payment status
+    return {
+        "id": reservation.id,
+        "status": reservation.status,
+        "payment_status": getattr(reservation, 'payment_status', 'unknown'),
+        "amount_minor": getattr(reservation, 'estimated_total_price', 0) or 0,
+        "currency": "TRY",
+        "message": "Ödeme bilgisi kontrol edildi"
+    }
 
 
 async def _get_reservation(session: AsyncSession, reservation_id: int, tenant_id: str) -> WidgetReservation:

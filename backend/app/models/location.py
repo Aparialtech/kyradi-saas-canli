@@ -36,6 +36,11 @@ class Location(IdentifiedMixin, TimestampMixin, Base):
         back_populates="location",
         cascade="all, delete-orphan",
     )
+    pricing_rules: Mapped[List["PricingRule"]] = relationship(
+        "PricingRule",
+        back_populates="location",
+        cascade="all, delete-orphan",
+    )
     
     # Backward compatibility alias (property to avoid SQLAlchemy warning)
     @property
@@ -79,6 +84,11 @@ class Storage(IdentifiedMixin, TimestampMixin, Base):
     payments: Mapped[List["Payment"]] = relationship(
         "Payment",
         back_populates="storage",
+    )
+    pricing_rules: Mapped[List["PricingRule"]] = relationship(
+        "PricingRule",
+        back_populates="storage",
+        cascade="all, delete-orphan",
     )
 
 
