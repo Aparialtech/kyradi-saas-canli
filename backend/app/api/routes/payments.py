@@ -15,9 +15,17 @@ from ...models.enums import PaymentMode, PaymentProvider
 from ...schemas import PaymentIntentCreate, PaymentRead
 from ...core.config import settings
 from ...services.payment_service import confirm_pos_payment
+from ...services.magicpay.client import get_magicpay_client
+from ...services.magicpay.service import MagicPayService
+from ...services.payment_service import get_or_create_payment
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 logger = logging.getLogger(__name__)
+
+
+class MagicPayCheckoutCreate(PaymentIntentCreate):
+    """Payload for creating MagicPay checkout session."""
+    provider: str = PaymentProvider.MAGIC_PAY.value
 
 
 @router.post("/create-intent", response_model=PaymentRead, status_code=status.HTTP_201_CREATED)
@@ -61,6 +69,83 @@ async def create_payment_intent(
     await session.commit()
     await session.refresh(payment)
     return PaymentRead.model_validate(payment)
+
+
+@router.post("/magicpay/checkout-session", response_model=Dict[str, Any])
+async def create_magicpay_checkout_session(
+    payload: MagicPayCheckoutCreate,
+    current_user: User = Depends(require_tenant_staff),
+    session: AsyncSession = Depends(get_session),
+) -> Dict[str, Any]:
+    """Create MagicPay checkout session (alias for /payments/magicpay/checkout-session).
+    
+    This ensures the path /payments/magicpay/checkout-session always exists.
+    """
+    reservation = await session.get(Reservation, payload.reservation_id)
+    if reservation is None or reservation.tenant_id != current_user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reservation not found",
+        )
+
+    try:
+        magicpay_client = get_magicpay_client(payment_mode=PaymentMode.GATEWAY_DEMO.value)
+        magicpay_service = MagicPayService(magicpay_client)
+
+        payment, _ = await get_or_create_payment(
+            session,
+            reservation_id=reservation.id,
+            tenant_id=reservation.tenant_id,
+            amount_minor=reservation.amount_minor,
+            currency=reservation.currency,
+            provider=PaymentProvider.MAGIC_PAY.value,
+            mode=PaymentMode.GATEWAY_DEMO.value,
+            storage_id=reservation.storage_id,
+            metadata={"created_via": "payments_router_alias"},
+            reservation=reservation,
+        )
+
+        if not payment.provider_intent_id or not (payment.meta or {}).get("checkout_url"):
+            checkout_data = await magicpay_service.create_checkout_session(
+                session=session,
+                reservation=reservation,
+                payment_mode=PaymentMode.GATEWAY_DEMO.value,
+            )
+            payment.provider_intent_id = checkout_data.get("session_id")
+            payment.meta = {
+                **(payment.meta or {}),
+                "checkout_url": checkout_data.get("checkout_url"),
+                "expires_at": checkout_data.get("expires_at"),
+                "session_id": checkout_data.get("session_id"),
+            }
+            await session.flush()
+
+        await session.commit()
+
+        checkout_url = (
+            payment.meta.get("checkout_url") if payment.meta else f"/payments/magicpay/demo/{payment.provider_intent_id}"
+        )
+        return {
+            "payment_id": payment.id,
+            "session_id": payment.provider_intent_id or "",
+            "checkout_url": checkout_url,
+            "amount_minor": payment.amount_minor,
+            "currency": payment.currency,
+            "expires_at": payment.meta.get("expires_at") if payment.meta else None,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error(
+            "MagicPay checkout session creation failed for reservation %s: %s",
+            payload.reservation_id,
+            exc,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="MagicPay checkout session could not be created",
+        ) from exc
 
 
 @router.post("/{payment_id}/confirm-pos", response_model=Dict[str, Any])
