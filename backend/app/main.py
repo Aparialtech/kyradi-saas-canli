@@ -193,7 +193,4 @@ async def ensure_critical_schema() -> None:
         logger.warning(f"Could not apply critical schema migrations: {exc}")
 
 
-@app.get("/health", tags=["system"])
-async def health_check() -> dict[str, str]:
-    """Simple readiness check endpoint."""
-    return {"status": "ok"}
+# Health checks are provided via api_router (/health)

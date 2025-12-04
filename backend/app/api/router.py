@@ -44,6 +44,7 @@ from .routes import (
     staff,
     users,
     webhooks,
+    health,
 )
 
 logger = logging.getLogger("kyradi.api")
@@ -79,6 +80,7 @@ api_router.include_router(qr.router)
 api_router.include_router(reports.router)
 api_router.include_router(revenue.router)
 api_router.include_router(webhooks.router)
+api_router.include_router(health.router)
 
 # =============================================================================
 # WIDGET RESERVATION ROUTES
