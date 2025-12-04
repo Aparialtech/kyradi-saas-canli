@@ -24,6 +24,7 @@ import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "../../components/ui/Modal";
 import { Input, Textarea } from "../../components/ui/Input";
+import { PageHeader } from "../../components/common/PageHeader";
 
 const warningActions: Record<
   string,
@@ -166,18 +167,31 @@ export function PartnerOverview() {
   return (
     <div className="page-container">
       <ToastContainer messages={messages} />
-      
-      {/* Page Header */}
-      <motion.div
-        className="page-header"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div>
-          <h1 className="page-title text-gradient">{t("partner.overview.title")}</h1>
-          <p className="page-description">{t("partner.overview.subtitle")}</p>
-        </div>
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <PageHeader
+          title={t("partner.overview.title")}
+          subtitle={t("partner.overview.subtitle")}
+          actions={[
+            {
+              key: "support",
+              node: (
+                <Button variant="secondary" onClick={() => setSupportModalOpen(true)}>
+                  {t("partner.support.cta")}
+                </Button>
+              ),
+            },
+            {
+              key: "docs",
+              node: (
+                <Button variant="ghost" asChild>
+                  <a href="https://docs.kyradi.com" target="_blank" rel="noreferrer">
+                    {t("partner.actions.docs")}
+                  </a>
+                </Button>
+              ),
+            },
+          ]}
+        />
       </motion.div>
 
       {/* Stats Grid */}
@@ -524,4 +538,3 @@ export { UsersPage as PartnerUsersPage } from "./users/UsersPage";
 export { DemoFlowPage } from "./DemoFlowPage";
 export { DemoPaymentFlowPage } from "./DemoPaymentFlowPage";
 export { PartnerSettingsPage } from "./settings/PartnerSettingsPage";
-
