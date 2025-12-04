@@ -366,8 +366,6 @@ export const translations = {
     "reservations.buttons.detail": "Detay",
     "reservations.toast.completeSuccess": "Rezervasyon tamamlandı, bavul teslim edildi",
     "reservations.toast.completeError": "Tamamlama işlemi başarısız",
-    "reservations.toast.paymentCheckSuccess": "Ödeme bilgisi güncellendi",
-    "reservations.toast.paymentCheckError": "Ödeme kontrolü başarısız",
     "reservations.confirmCancel": "Bu rezervasyonu iptal etmek istediğinize emin misiniz?",
     "reservations.confirmComplete": "Bavullar teslim edildi olarak işaretlensin mi?",
     "reservations.paymentStatus.pending": "Ödeme Bekliyor",
