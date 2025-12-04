@@ -225,16 +225,6 @@ export function ReservationsPage() {
     setSearchTerm(value);
   }, []);
 
-  const dateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(locale, {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }),
-    [locale],
-  );
-
   const dateTimeFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -245,18 +235,6 @@ export function ReservationsPage() {
         minute: "2-digit",
       }),
     [locale],
-  );
-
-  const formatDateValue = useCallback(
-    (value?: string | null) => {
-      if (!value) return "—";
-      try {
-        return dateFormatter.format(new Date(value));
-      } catch {
-        return value;
-      }
-    },
-    [dateFormatter],
   );
 
   const formatDateTimeValue = useCallback(
@@ -278,12 +256,6 @@ export function ReservationsPage() {
     },
     [t],
   );
-
-  const maskIdentityNumber = useCallback((value?: string | null) => {
-    if (!value) return null;
-    if (value.length <= 4) return value;
-    return `****${value.slice(-2)}`;
-  }, []);
 
   return (
     <section className="page">
@@ -388,10 +360,8 @@ export function ReservationsPage() {
                     cancelReservationMutation,
                     completeReservationMutation,
                     ensurePaymentMutation,
-                    formatDateValue,
                     formatDateTimeValue,
                     getStatusLabel,
-                    maskIdentityNumber,
                     t,
                     onViewDetail: (r) => {
                       setSelectedReservation(r);
@@ -435,10 +405,8 @@ function renderReservationRow({
   cancelReservationMutation,
   completeReservationMutation,
   ensurePaymentMutation,
-  formatDateValue,
   formatDateTimeValue,
   getStatusLabel,
-  maskIdentityNumber,
   t,
   onViewDetail,
 }: {
@@ -453,10 +421,8 @@ function renderReservationRow({
   cancelReservationMutation: UseMutationResult<{ id: string; status: string }, unknown, string>;
   completeReservationMutation: UseMutationResult<{ id: string; status: string }, unknown, string>;
   ensurePaymentMutation: UseMutationResult<Payment, unknown, string>;
-  formatDateValue: (value?: string | null) => string;
   formatDateTimeValue: (value?: string | null) => string;
   getStatusLabel: (status: string) => string;
-  maskIdentityNumber: (value?: string | null) => string | null;
   t: TranslateFn;
   onViewDetail: (reservation: Reservation) => void;
 }) {

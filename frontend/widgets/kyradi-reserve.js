@@ -457,7 +457,7 @@
       const durationInput = this.querySelector('input[name="duration_hours"]');
       const priceInput = this.querySelector('input[name="estimated_price"]');
       
-      const updateDurationAndPrice = () => {
+      const updateDurationAndPrice = async () => {
         if (startInput && endInput && startInput.value && endInput.value) {
           const start = new Date(startInput.value);
           const end = new Date(endInput.value);
@@ -466,15 +466,56 @@
             if (durationInput) {
               durationInput.value = hours.toFixed(2) + ' ' + this.t("hours");
             }
-            // Price calculation would need hourly rate from backend - for now show placeholder
-            // Default hourly rate: 15.00 TRY (1500 kuruş)
+            
+            // Get luggage count for pricing
+            const luggageInput = this.querySelector('input[name="luggage_count"]');
+            const luggageCount = luggageInput ? parseInt(luggageInput.value) || 1 : 1;
+            
+            // Call backend pricing estimate endpoint
             if (priceInput) {
-              const estimatedPrice = (hours * 15).toFixed(2);
-              priceInput.value = estimatedPrice + ' ₺';
+              priceInput.value = "...";  // Show loading indicator
+              
+              try {
+                const estimateUrl = new URL("/demo/public/price-estimate", this.options.apiBase);
+                const response = await fetch(estimateUrl.toString(), {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    tenant_id: this.options.tenantId,
+                    start_datetime: start.toISOString(),
+                    end_datetime: end.toISOString(),
+                    baggage_count: luggageCount,
+                  }),
+                });
+                
+                if (response.ok) {
+                  const data = await response.json();
+                  priceInput.value = data.total_formatted;
+                  // Store the estimate for later use
+                  this.lastPriceEstimate = data;
+                } else {
+                  // Fallback to local calculation if API fails
+                  const estimatedPrice = (hours * 15).toFixed(2);
+                  priceInput.value = estimatedPrice + ' ₺ (tahmini)';
+                }
+              } catch (err) {
+                console.warn("Price estimate API call failed:", err);
+                // Fallback to local calculation
+                const estimatedPrice = (hours * 15).toFixed(2);
+                priceInput.value = estimatedPrice + ' ₺ (tahmini)';
+              }
             }
           }
         }
       };
+      
+      // Also update price when luggage count changes
+      const luggageCountInput = this.querySelector('input[name="luggage_count"]');
+      if (luggageCountInput) {
+        luggageCountInput.addEventListener('change', updateDurationAndPrice);
+      }
       
       if (startInput && endInput) {
         startInput.addEventListener('change', () => {

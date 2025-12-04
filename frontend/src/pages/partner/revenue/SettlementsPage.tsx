@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { revenueService, type SettlementListResponse } from "../../../services/partner/revenue";
+import { revenueService } from "../../../services/partner/revenue";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
 import { useToast } from "../../../hooks/useToast";
@@ -54,12 +54,6 @@ export function SettlementsPage() {
     pending: "Beklemede",
     settled: "Hesaplaştı",
     cancelled: "İptal",
-  };
-
-  const statusColors: Record<string, string> = {
-    pending: "#f59e0b",
-    settled: "#16a34a",
-    cancelled: "#dc2626",
   };
 
   return (
