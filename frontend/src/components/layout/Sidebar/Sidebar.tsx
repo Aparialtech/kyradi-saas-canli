@@ -73,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     end={item.end}
                     className={({ isActive }) =>
                       clsx(
-                        styles.sidebar__['nav-item'],
+                        styles['sidebar__nav-item'],
                         isActive && styles['sidebar__nav-item--active']
                       )
                     }

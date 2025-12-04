@@ -16,7 +16,6 @@ import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
 import { Table, type Column } from "../../../components/ui/Table";
-import { Badge } from "../../../components/ui/Badge";
 
 const schema = z.object({
   name: z.string().min(2, "Ad en az 2 karakter olmalı"),

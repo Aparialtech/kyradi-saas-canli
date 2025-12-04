@@ -8,6 +8,7 @@ export interface CardProps {
   interactive?: boolean;
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
   onClick?: () => void;
 }
 
@@ -17,6 +18,7 @@ export const Card: React.FC<CardProps> = ({
   interactive = false,
   children,
   className,
+  style,
   onClick,
 }) => {
   return (
@@ -28,6 +30,7 @@ export const Card: React.FC<CardProps> = ({
         interactive && styles['card--interactive'],
         className
       )}
+      style={style}
       onClick={onClick}
     >
       {children}
