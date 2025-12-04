@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
+import { Eye, CheckCircle2, XOctagon, CreditCard } from "../../../lib/lucide";
 
 import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../../services/partner/reservations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
-import { SearchInput } from "../../../components/common/SearchInput";
 import { ReservationDetailModal } from "../../../components/reservations/ReservationDetailModal";
 import { PaymentActionModal } from "../../../components/reservations/PaymentActionModal";
 import { PaymentDetailModal } from "../../../components/reservations/PaymentDetailModal";
@@ -12,15 +12,10 @@ import { getErrorMessage } from "../../../lib/httpError";
 import { env } from "../../../config/env";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { TranslationKey } from "../../../i18n/translations";
-
-// Payment status mapping
-const paymentStatusClassMap: Record<string, string> = {
-  pending: "badge badge--warning",
-  paid: "badge badge--success",
-  captured: "badge badge--success",
-  cancelled: "badge badge--muted",
-  failed: "badge badge--danger",
-};
+import { DataToolbar } from "../../../components/common/DataToolbar";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { StatusBadge } from "../../../components/common/StatusBadge";
+import { Button } from "../../../components/ui/Button";
 
 const paymentStatusKeys: Record<string, TranslationKey> = {
   pending: "reservations.paymentStatus.pending",
@@ -28,17 +23,6 @@ const paymentStatusKeys: Record<string, TranslationKey> = {
   captured: "reservations.paymentStatus.captured",
   cancelled: "reservations.paymentStatus.cancelled",
   failed: "reservations.paymentStatus.failed",
-};
-
-const statusClassMap: Record<string, string> = {
-  reserved: "badge badge--warning",
-  active: "badge badge--success",
-  completed: "badge badge--info",
-  cancelled: "badge badge--danger",
-  no_show: "badge badge--muted",
-  // Legacy statuses for backward compatibility
-  pending: "badge badge--warning",
-  confirmed: "badge badge--success",
 };
 
 const statusTranslationKeys: Record<string, TranslationKey> = {
@@ -199,12 +183,7 @@ export function ReservationsPage() {
   return (
     <section className="page">
       <ToastContainer messages={messages} />
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{t("reservations.title")}</h1>
-          <p className="page-subtitle">{t("reservations.subtitle")}</p>
-        </div>
-      </header>
+      <PageHeader title={t("reservations.title")} subtitle={t("reservations.subtitle")} />
 
       {!env.ENABLE_INTERNAL_RESERVATIONS && (
         <div className="panel panel--muted" style={{ marginBottom: "1.5rem" }}>
@@ -224,46 +203,46 @@ export function ReservationsPage() {
           </div>
         </div>
 
-        <div className="panel__filters" style={{ display: "flex", gap: "1rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div style={{ minWidth: "250px" }}>
-            <SearchInput
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="İsim, e-posta veya ID ile ara..."
-            />
-          </div>
-          <label className="form-field" style={{ marginBottom: 0 }}>
-            <span className="form-field__label">{t("reservations.filter.status")}</span>
-            <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)}>
-              <option value="">{t("reservations.filter.all")}</option>
-              <option value="reserved">{t("reservations.filter.reserved")}</option>
-              <option value="active">{t("reservations.filter.active")}</option>
-              <option value="completed">{t("reservations.filter.completed")}</option>
-              <option value="cancelled">{t("reservations.filter.cancelled")}</option>
-              <option value="no_show">{t("reservations.filter.noShow")}</option>
-              {/* Legacy options for backward compatibility */}
-              <option value="pending">{t("reservations.filter.pending")}</option>
-              <option value="confirmed">{t("reservations.filter.confirmed")}</option>
-            </select>
-          </label>
-          <label className="form-field">
-            <span className="form-field__label">{t("reservations.filter.checkin")}</span>
-            <input type="date" value={filterFrom} onChange={(event) => setFilterFrom(event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span className="form-field__label">{t("reservations.filter.checkout")}</span>
-            <input type="date" value={filterTo} onChange={(event) => setFilterTo(event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span className="form-field__label">{t("reservations.filter.domain")}</span>
-            <input
-              type="text"
-              placeholder={t("reservations.filter.domainPlaceholder")}
-              value={filterDomain}
-              onChange={(event) => setFilterDomain(event.target.value)}
-            />
-          </label>
-        </div>
+        <DataToolbar
+          searchValue={searchTerm}
+          onSearchChange={handleSearchChange}
+          placeholder="İsim, e-posta veya ID ile ara..."
+          filters={
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <label className="form-field" style={{ marginBottom: 0 }}>
+                <span className="form-field__label">{t("reservations.filter.status")}</span>
+                <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)}>
+                  <option value="">{t("reservations.filter.all")}</option>
+                  <option value="reserved">{t("reservations.filter.reserved")}</option>
+                  <option value="active">{t("reservations.filter.active")}</option>
+                  <option value="completed">{t("reservations.filter.completed")}</option>
+                  <option value="cancelled">{t("reservations.filter.cancelled")}</option>
+                  <option value="no_show">{t("reservations.filter.noShow")}</option>
+                  {/* Legacy options for backward compatibility */}
+                  <option value="pending">{t("reservations.filter.pending")}</option>
+                  <option value="confirmed">{t("reservations.filter.confirmed")}</option>
+                </select>
+              </label>
+              <label className="form-field">
+                <span className="form-field__label">{t("reservations.filter.checkin")}</span>
+                <input type="date" value={filterFrom} onChange={(event) => setFilterFrom(event.target.value)} />
+              </label>
+              <label className="form-field">
+                <span className="form-field__label">{t("reservations.filter.checkout")}</span>
+                <input type="date" value={filterTo} onChange={(event) => setFilterTo(event.target.value)} />
+              </label>
+              <label className="form-field">
+                <span className="form-field__label">{t("reservations.filter.domain")}</span>
+                <input
+                  type="text"
+                  placeholder={t("reservations.filter.domainPlaceholder")}
+                  value={filterDomain}
+                  onChange={(event) => setFilterDomain(event.target.value)}
+                />
+              </label>
+            </div>
+          }
+        />
 
         {reservationsQuery.isLoading ? (
           <div className="empty-state">
@@ -382,7 +361,6 @@ function renderReservationRow({
   // Payment info
   const paymentStatus = reservation.payment?.status;
   const paymentStatusKey = paymentStatus ? paymentStatusKeys[paymentStatus] : null;
-  const paymentBadgeClass = paymentStatus ? paymentStatusClassMap[paymentStatus] : "badge badge--muted";
 
   return (
     <tr key={reservation.id}>
@@ -415,37 +393,34 @@ function renderReservationRow({
       </td>
       {/* Status */}
       <td>
-        <span className={statusClassMap[reservation.status] ?? "badge"}>
-          {getStatusLabel(reservation.status)}
-        </span>
+        <StatusBadge status={reservation.status} label={getStatusLabel(reservation.status)} />
         {paymentStatus && (
           <div style={{ marginTop: "0.25rem" }}>
-            <span className={paymentBadgeClass} style={{ fontSize: "0.7rem" }}>
-              💳 {paymentStatusKey ? t(paymentStatusKey) : paymentStatus}
-            </span>
+            <StatusBadge
+              status={paymentStatus}
+              label={paymentStatusKey ? t(paymentStatusKey) : paymentStatus}
+            />
           </div>
         )}
       </td>
       {/* Actions - TÜM BUTONLAR HER ZAMAN GÖRÜNSİN */}
       <td>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-          {/* 1. Detay Butonu - Her zaman görünür */}
-          <button
-            type="button"
-            className="btn btn--outline"
-            style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => onViewDetail(reservation)}
+            isIcon
+            aria-label="View details"
           >
-            🔍 Detay
-          </button>
+            <Eye size={16} />
+          </Button>
 
-          {/* 2. Teslim Et Butonu - Her zaman görünür */}
-          <button
-            type="button"
-            className="btn btn--primary"
-            style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
+          <Button
+            variant="primary"
+            size="sm"
             disabled={
-              completeReservationMutation.isPending || 
+              completeReservationMutation.isPending ||
               reservation.status === "completed" ||
               reservation.status === "cancelled"
             }
@@ -455,16 +430,15 @@ function renderReservationRow({
               }
             }}
           >
-            ✅ Teslim Et
-          </button>
+            <CheckCircle2 size={16} />
+            <span style={{ marginLeft: "0.35rem" }}>{t("reservations.buttons.complete")}</span>
+          </Button>
 
-          {/* 3. İptal Et Butonu - Her zaman görünür */}
-          <button
-            type="button"
-            className="btn btn--danger"
-            style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem", backgroundColor: "#dc2626", color: "white" }}
+          <Button
+            variant="danger"
+            size="sm"
             disabled={
-              cancelReservationMutation.isPending || 
+              cancelReservationMutation.isPending ||
               reservation.status === "completed" ||
               reservation.status === "cancelled"
             }
@@ -474,19 +448,19 @@ function renderReservationRow({
               }
             }}
           >
-            ❌ İptal Et
-          </button>
+            <XOctagon size={16} />
+            <span style={{ marginLeft: "0.35rem" }}>{t("reservations.buttons.cancelConfirmed")}</span>
+          </Button>
 
-          {/* 4. Ödeme Kontrol Butonu - Her zaman görünür */}
-          <button
-            type="button"
-            className="btn btn--outline"
-            style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
+          <Button
+            variant="outline"
+            size="sm"
             disabled={isCheckingPayment}
             onClick={() => onPaymentCheck(reservation)}
           >
-            {isCheckingPayment ? "⏳" : "💳"} {t("payment.button.check")}
-          </button>
+            <CreditCard size={16} />
+            <span style={{ marginLeft: "0.35rem" }}>{t("payment.button.check")}</span>
+          </Button>
         </div>
       </td>
     </tr>

@@ -25,6 +25,20 @@ import { Badge } from "../../components/ui/Badge";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "../../components/ui/Modal";
 import { Input, Textarea } from "../../components/ui/Input";
 import { PageHeader } from "../../components/common/PageHeader";
+import {
+  Briefcase,
+  MapPin,
+  PiggyBank,
+  FileText,
+  HardDrive,
+  ScanLine,
+  LineChart,
+  Wallet,
+  Users as UsersIcon,
+  UserCog,
+  BadgePercent,
+  Settings2,
+} from "../../lib/lucide";
 
 const warningActions: Record<
   string,
@@ -120,7 +134,7 @@ export function PartnerOverview() {
         label: t("partner.stats.activeLabel"),
         value: summaryQuery.isPending ? "..." : activeReservations.toLocaleString(locale),
         hint: t("partner.stats.activeHint"),
-        icon: "📦",
+        icon: <Briefcase size={22} />,
       },
       {
         label: t("partner.stats.occupancyLabel"),
@@ -128,13 +142,13 @@ export function PartnerOverview() {
           ? "..."
           : `${occupancyPct.toLocaleString(locale, { maximumFractionDigits: 1 })}%`,
         hint: t("partner.stats.occupancyHint"),
-        icon: "📊",
+        icon: <MapPin size={22} />,
       },
       {
         label: t("partner.stats.revenueLabel"),
         value: summaryQuery.isPending ? "..." : currencyFormatter.format(revenueMinor / 100),
         hint: t("partner.stats.revenueHint"),
-        icon: "💳",
+        icon: <PiggyBank size={22} />,
       },
       {
         label: t("partner.stats.totalLabel"),
@@ -142,7 +156,7 @@ export function PartnerOverview() {
           ? "..."
           : (summaryQuery.data?.total_reservations ?? 0).toLocaleString(locale),
         hint: totalLimit,
-        icon: "🧾",
+        icon: <FileText size={22} />,
       },
       {
         label: t("partner.stats.storageLabel"),
@@ -150,7 +164,7 @@ export function PartnerOverview() {
           ? "..."
           : `${summaryQuery.data?.storage_used_mb ?? 0} MB`,
         hint: storageLimit,
-        icon: "💾",
+        icon: <HardDrive size={22} />,
       },
     ];
   }, [
@@ -470,30 +484,30 @@ export function PartnerDashboard() {
 
   const navigation = useMemo((): SidebarNavItem[] => {
     const items: SidebarNavItem[] = [
-      { to: ".", label: t("nav.overview"), end: true },
-      { to: "locations", label: t("nav.locations") },
-      { to: "lockers", label: t("nav.storages") },
-      { to: "reservations", label: t("nav.reservations") },
-      { to: "qr", label: t("nav.qr") },
+      { to: ".", label: t("nav.overview"), end: true, icon: <Briefcase size={18} /> },
+      { to: "locations", label: t("nav.locations"), icon: <MapPin size={18} /> },
+      { to: "lockers", label: t("nav.storages"), icon: <HardDrive size={18} /> },
+      { to: "reservations", label: t("nav.reservations"), icon: <FileText size={18} /> },
+      { to: "qr", label: t("nav.qr"), icon: <ScanLine size={18} /> },
     ];
     
     // Accounting and hotel manager can see revenue
     if (hasRole("accounting") || hasRole("hotel_manager") || hasRole("tenant_admin")) {
-      items.push({ to: "reports", label: t("nav.reports") });
-      items.push({ to: "revenue", label: t("nav.revenue") });
-      items.push({ to: "settlements", label: t("nav.settlements") });
+      items.push({ to: "reports", label: t("nav.reports"), icon: <LineChart size={18} /> });
+      items.push({ to: "revenue", label: t("nav.revenue"), icon: <Wallet size={18} /> });
+      items.push({ to: "settlements", label: t("nav.settlements"), icon: <PiggyBank size={18} /> });
     }
     
     // Hotel manager and tenant admin can manage users and staff
     if (hasRole("hotel_manager") || hasRole("tenant_admin")) {
-      items.push({ to: "users", label: t("nav.users") });
-      items.push({ to: "staff", label: t("nav.staff") });
-      items.push({ to: "pricing", label: t("nav.pricing") });
-      items.push({ to: "demo-flow", label: t("nav.demoFlow") });
+      items.push({ to: "users", label: t("nav.users"), icon: <UsersIcon size={18} /> });
+      items.push({ to: "staff", label: t("nav.staff"), icon: <UserCog size={18} /> });
+      items.push({ to: "pricing", label: t("nav.pricing"), icon: <BadgePercent size={18} /> });
+      items.push({ to: "demo-flow", label: t("nav.demoFlow"), icon: <LineChart size={18} /> });
     }
     
     // All authenticated users can access settings
-    items.push({ to: "settings", label: t("nav.settings") });
+    items.push({ to: "settings", label: t("nav.settings"), icon: <Settings2 size={18} /> });
     
     return items;
   }, [hasRole, t]);
