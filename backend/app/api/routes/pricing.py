@@ -1,19 +1,89 @@
 """Pricing management endpoints."""
 
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.session import get_session
-from ...dependencies import require_tenant_admin
+from ...dependencies import require_tenant_admin, require_tenant_operator
 from ...models import PricingRule, User
 from ...schemas.pricing import PricingRuleCreate, PricingRuleRead, PricingRuleUpdate
+from ...services.pricing_calculator import calculate_reservation_price
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
 logger = logging.getLogger(__name__)
+
+
+class PriceEstimateRequest(BaseModel):
+    """Request for price estimate."""
+    start_datetime: datetime
+    end_datetime: datetime
+    baggage_count: int = 1
+    location_id: Optional[str] = None
+
+
+class PriceEstimateResponse(BaseModel):
+    """Price estimate response."""
+    total_minor: int
+    total_formatted: str
+    duration_hours: float
+    duration_days: int
+    hourly_rate_minor: int
+    daily_rate_minor: int
+    pricing_type: str
+    currency: str
+    baggage_count: int
+
+
+@router.post("/estimate", response_model=PriceEstimateResponse)
+async def estimate_price(
+    payload: PriceEstimateRequest,
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> PriceEstimateResponse:
+    """Calculate price estimate for a reservation.
+    
+    This endpoint uses the centralized pricing calculator to ensure
+    consistent pricing across the application.
+    """
+    if payload.end_datetime <= payload.start_datetime:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End datetime must be after start datetime",
+        )
+    
+    calculation = await calculate_reservation_price(
+        session=session,
+        tenant_id=current_user.tenant_id,
+        start_datetime=payload.start_datetime,
+        end_datetime=payload.end_datetime,
+        baggage_count=payload.baggage_count,
+        location_id=payload.location_id,
+    )
+    
+    # Format total for display
+    total_major = calculation.total_minor / 100
+    if calculation.currency == "TRY":
+        total_formatted = f"₺{total_major:,.2f}"
+    else:
+        total_formatted = f"{total_major:,.2f} {calculation.currency}"
+    
+    return PriceEstimateResponse(
+        total_minor=calculation.total_minor,
+        total_formatted=total_formatted,
+        duration_hours=calculation.duration_hours,
+        duration_days=calculation.duration_days,
+        hourly_rate_minor=calculation.hourly_rate_minor,
+        daily_rate_minor=calculation.daily_rate_minor,
+        pricing_type=calculation.pricing_type,
+        currency=calculation.currency,
+        baggage_count=calculation.baggage_count,
+    )
 
 
 @router.get("", response_model=List[PricingRuleRead])

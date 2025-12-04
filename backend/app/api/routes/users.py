@@ -159,6 +159,23 @@ async def update_user(
     return UserRead.model_validate(user)
 
 
+@router.get("/{user_id}", response_model=UserRead)
+async def get_user(
+    user_id: str,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> UserRead:
+    """Get a single user by ID."""
+    user = (
+        await session.execute(
+            select(User).where(User.id == user_id, User.tenant_id == current_user.tenant_id)
+        )
+    ).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return UserRead.model_validate(user)
+
+
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def deactivate_user(
     user_id: str,
@@ -186,6 +203,96 @@ async def deactivate_user(
     )
 
     await session.commit()
+
+
+@router.post("/{user_id}/reset-password", response_model=UserRead)
+async def reset_user_password(
+    user_id: str,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> UserRead:
+    """Reset user password to a random secure password.
+    
+    Returns the user with the new password in a special field for one-time display.
+    """
+    import secrets
+    import string
+    
+    user = (
+        await session.execute(
+            select(User).where(User.id == user_id, User.tenant_id == current_user.tenant_id)
+        )
+    ).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    # Generate a secure random password
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    new_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+    
+    user.password_hash = get_password_hash(new_password)
+    
+    # Log password in development mode
+    is_development = settings.environment.lower() in {"local", "dev", "development"}
+    if is_development:
+        logger.info(f"[USER PASSWORD RESET] Email: {user.email}")
+        logger.info(f"[USER PASSWORD RESET] New Password: {new_password}")
+    
+    await record_audit(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        action="tenant.user.reset_password",
+        entity="users",
+        entity_id=user.id,
+    )
+    
+    await session.commit()
+    await session.refresh(user)
+    
+    # Return user with temporary password field
+    user_data = UserRead.model_validate(user).model_dump()
+    user_data["temp_password"] = new_password
+    
+    return user_data
+
+
+@router.post("/{user_id}/toggle-active", response_model=UserRead)
+async def toggle_user_active(
+    user_id: str,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> UserRead:
+    """Toggle user active status."""
+    user = (
+        await session.execute(
+            select(User).where(User.id == user_id, User.tenant_id == current_user.tenant_id)
+        )
+    ).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    # If activating, check user limit
+    if not user.is_active:
+        try:
+            await ensure_user_limit(session, current_user.tenant_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    
+    user.is_active = not user.is_active
+    
+    await record_audit(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        action=f"tenant.user.{'activate' if user.is_active else 'deactivate'}",
+        entity="users",
+        entity_id=user.id,
+    )
+    
+    await session.commit()
+    await session.refresh(user)
+    return UserRead.model_validate(user)
 
 
 @router.get("/assignable", response_model=List[UserRead])

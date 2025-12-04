@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import List, Optional
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -9,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_operator, require_tenant_staff
-from ...models import Reservation, ReservationStatus, Storage, User
+from ...models import Reservation, ReservationStatus, Storage, StorageStatus, User, Payment, PaymentStatus
 
 # Backward compatibility
 Locker = Storage
@@ -33,8 +34,10 @@ from ...services.reservation_operations import (
     cancel_reservation_operation,
 )
 from ...services.audit import record_audit
+from ...services.payment_service import get_or_create_payment, get_existing_payment
 
 router = APIRouter(prefix="/reservations", tags=["reservations"])
+logger = logging.getLogger(__name__)
 
 
 async def _get_reservation_for_tenant(
@@ -175,12 +178,50 @@ async def cancel_reservation(
     current_user: User = Depends(require_tenant_staff),
     session: AsyncSession = Depends(get_session),
 ) -> ReservationStatusResponse:
-    """Cancel an active reservation."""
+    """Cancel an active or reserved reservation.
+    
+    This endpoint:
+    1. Marks the reservation as CANCELLED
+    2. Releases the associated storage (sets to IDLE)
+    3. Marks pending payments as CANCELLED
+    
+    Idempotent: calling on already cancelled reservation returns success.
+    """
     reservation = await _get_reservation_for_tenant(reservation_id, current_user.tenant_id, session)
-    if reservation.status != ReservationStatus.ACTIVE.value:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only active reservations can be cancelled")
+    
+    # Idempotent: if already cancelled, just return success
+    if reservation.status == ReservationStatus.CANCELLED.value:
+        logger.info(f"Reservation {reservation_id} already cancelled, returning success")
+        return ReservationStatusResponse(id=reservation.id, status=ReservationStatus.CANCELLED)
+    
+    # Only active or reserved reservations can be cancelled
+    allowed_statuses = [ReservationStatus.ACTIVE.value, ReservationStatus.RESERVED.value]
+    if reservation.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot cancel reservation with status '{reservation.status}'. Only active or reserved reservations can be cancelled."
+        )
 
     reservation.status = ReservationStatus.CANCELLED.value
+    
+    # Release the associated storage
+    if reservation.storage_id:
+        storage = await session.get(Storage, reservation.storage_id)
+        if storage and storage.status == StorageStatus.OCCUPIED.value:
+            storage.status = StorageStatus.IDLE.value
+            logger.info(f"Released storage {storage.id} (code: {storage.code}) for cancelled reservation {reservation_id}")
+    
+    # Mark pending payment as cancelled
+    payment_stmt = select(Payment).where(
+        Payment.reservation_id == reservation_id,
+        Payment.status == PaymentStatus.PENDING.value,
+    )
+    payment_result = await session.execute(payment_stmt)
+    pending_payment = payment_result.scalar_one_or_none()
+    if pending_payment:
+        pending_payment.status = PaymentStatus.CANCELLED.value
+        logger.info(f"Cancelled pending payment {pending_payment.id} for reservation {reservation_id}")
+    
     await record_audit(
         session,
         tenant_id=current_user.tenant_id,
@@ -190,6 +231,8 @@ async def cancel_reservation(
         entity_id=reservation.id,
     )
     await session.commit()
+    
+    logger.info(f"Reservation {reservation_id} cancelled by user {current_user.email}")
     return ReservationStatusResponse(id=reservation.id, status=ReservationStatus.CANCELLED)
 
 
@@ -199,14 +242,39 @@ async def complete_reservation(
     current_user: User = Depends(require_tenant_staff),
     session: AsyncSession = Depends(get_session),
 ) -> ReservationStatusResponse:
-    """Mark a reservation as completed."""
+    """Mark a reservation as completed (delivered).
+    
+    This endpoint:
+    1. Marks the reservation as COMPLETED
+    2. Releases the associated storage (sets to IDLE)
+    3. Records the returned_by and returned_at fields
+    
+    Idempotent: calling on already completed reservation returns success.
+    """
     reservation = await _get_reservation_for_tenant(reservation_id, current_user.tenant_id, session)
+    
+    # Idempotent: if already completed, just return success
+    if reservation.status == ReservationStatus.COMPLETED.value:
+        logger.info(f"Reservation {reservation_id} already completed, returning success")
+        return ReservationStatusResponse(id=reservation.id, status=ReservationStatus.COMPLETED)
+    
     if reservation.status != ReservationStatus.ACTIVE.value:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reservation not active")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot complete reservation with status '{reservation.status}'. Only active reservations can be completed."
+        )
 
     reservation.status = ReservationStatus.COMPLETED.value
     reservation.returned_by = current_user.email
     reservation.returned_at = datetime.now(timezone.utc)
+    
+    # Release the associated storage
+    if reservation.storage_id:
+        storage = await session.get(Storage, reservation.storage_id)
+        if storage and storage.status == StorageStatus.OCCUPIED.value:
+            storage.status = StorageStatus.IDLE.value
+            logger.info(f"Released storage {storage.id} (code: {storage.code}) for completed reservation {reservation_id}")
+    
     await record_audit(
         session,
         tenant_id=current_user.tenant_id,
@@ -216,7 +284,55 @@ async def complete_reservation(
         entity_id=reservation.id,
     )
     await session.commit()
+    
+    logger.info(f"Reservation {reservation_id} completed by user {current_user.email}")
     return ReservationStatusResponse(id=reservation.id, status=ReservationStatus.COMPLETED)
+
+
+@router.post("/{reservation_id}/ensure-payment", response_model=PaymentRead)
+async def ensure_payment(
+    reservation_id: str,
+    current_user: User = Depends(require_tenant_staff),
+    session: AsyncSession = Depends(get_session),
+) -> PaymentRead:
+    """Get or create a payment for the reservation (idempotent).
+    
+    This endpoint:
+    1. Checks if a payment already exists for the reservation
+    2. If exists, returns the existing payment
+    3. If not, creates a new payment using the reservation amount
+    
+    This is idempotent - calling multiple times will not create duplicate payments.
+    """
+    reservation = await _get_reservation_for_tenant(reservation_id, current_user.tenant_id, session)
+    
+    # Get or create payment
+    payment, created = await get_or_create_payment(
+        session,
+        reservation_id=reservation.id,
+        tenant_id=reservation.tenant_id,
+        amount_minor=reservation.amount_minor or reservation.estimated_total_price or 0,
+        currency=reservation.currency,
+        storage_id=reservation.storage_id,
+    )
+    
+    await session.commit()
+    
+    if created:
+        logger.info(f"Created new payment {payment.id} for reservation {reservation_id}")
+    else:
+        logger.info(f"Found existing payment {payment.id} for reservation {reservation_id}")
+    
+    await record_audit(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        action="reservation.ensure_payment",
+        entity="payments",
+        entity_id=payment.id,
+    )
+    
+    return PaymentRead.model_validate(payment)
 
 
 @router.post("/{reservation_id}/handover", response_model=ReservationRead)

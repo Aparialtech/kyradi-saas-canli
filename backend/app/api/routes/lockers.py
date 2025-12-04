@@ -1,22 +1,99 @@
 """Storage endpoints."""
 
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.session import get_session
 from ...dependencies import require_storage_operator, require_tenant_admin, require_tenant_operator
-from ...models import Location, Reservation, ReservationStatus, Storage, User
+from ...models import Location, Reservation, ReservationStatus, Storage, StorageStatus, User
 from ...services.limits import get_plan_limits_for_tenant
 from ...schemas import StorageCreate, StorageRead, StorageUpdate
 from ...services.storage_utils import generate_storage_code
+from ...services.storage_availability import is_storage_available
 
 router = APIRouter(prefix="/storages", tags=["storages"])
 
 # Backward compatibility: also register /lockers endpoint
 legacy_router = APIRouter(prefix="/lockers", tags=["lockers"])
+
+
+class AvailableStorageRead(BaseModel):
+    """Storage with availability info."""
+    id: str
+    code: str
+    location_id: str
+    location_name: Optional[str] = None
+    status: str
+    capacity: int
+    is_available: bool = True
+
+
+@router.get("/available", response_model=List[AvailableStorageRead])
+async def list_available_storages(
+    start_datetime: datetime = Query(..., description="Reservation start datetime"),
+    end_datetime: datetime = Query(..., description="Reservation end datetime"),
+    location_id: Optional[str] = Query(None, description="Filter by location"),
+    min_capacity: int = Query(1, description="Minimum capacity required"),
+    current_user: User = Depends(require_storage_operator),
+    session: AsyncSession = Depends(get_session),
+) -> List[AvailableStorageRead]:
+    """List storage units with availability info for the given time window.
+    
+    Returns storages sorted by availability (available first), then by location match.
+    Occupied storages are included but marked as unavailable.
+    """
+    stmt = (
+        select(Storage, Location.name.label("location_name"))
+        .join(Location, Storage.location_id == Location.id)
+        .where(
+            Storage.tenant_id == current_user.tenant_id,
+            Storage.capacity >= min_capacity,
+        )
+    )
+    
+    if location_id:
+        stmt = stmt.where(Storage.location_id == location_id)
+    
+    stmt = stmt.order_by(Storage.created_at.desc())
+    result = await session.execute(stmt)
+    rows = result.all()
+    
+    available_storages: List[AvailableStorageRead] = []
+    unavailable_storages: List[AvailableStorageRead] = []
+    
+    for storage, location_name in rows:
+        # Check if storage is available for the time window
+        is_avail = False
+        if storage.status == StorageStatus.IDLE.value:
+            is_avail = await is_storage_available(
+                session,
+                storage_id=storage.id,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+            )
+        
+        storage_read = AvailableStorageRead(
+            id=storage.id,
+            code=storage.code,
+            location_id=storage.location_id,
+            location_name=location_name,
+            status=storage.status,
+            capacity=storage.capacity,
+            is_available=is_avail,
+        )
+        
+        if is_avail:
+            available_storages.append(storage_read)
+        else:
+            unavailable_storages.append(storage_read)
+    
+    # Return available storages first
+    return available_storages + unavailable_storages
 
 
 @router.get("", response_model=List[StorageRead])
