@@ -176,17 +176,18 @@ export function PartnerOverview() {
               key: "support",
               node: (
                 <Button variant="secondary" onClick={() => setSupportModalOpen(true)}>
-                  {t("partner.support.cta")}
+                  {t("partner.support.submit")}
                 </Button>
               ),
             },
             {
               key: "docs",
               node: (
-                <Button variant="ghost" asChild>
-                  <a href="https://docs.kyradi.com" target="_blank" rel="noreferrer">
-                    {t("partner.actions.docs")}
-                  </a>
+                <Button
+                  variant="ghost"
+                  onClick={() => window.open("https://docs.kyradi.com", "_blank", "noopener")}
+                >
+                  {t("partner.warning.export.label")}
                 </Button>
               ),
             },
