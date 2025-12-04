@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { reservationService, type Reservation } from "../../services/partner/reservations";
+import { paymentService } from "../../services/partner/payments";
 import { useToast } from "../../hooks/useToast";
 import { useTranslation } from "../../hooks/useTranslation";
 import { getErrorMessage } from "../../lib/httpError";
@@ -26,6 +27,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
   const { t, locale } = useTranslation();
   const { push } = useToast();
   const queryClient = useQueryClient();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
@@ -34,15 +36,37 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
     maximumFractionDigits: 2,
   });
 
-  // Create Payment Mutation
-  const createPaymentMutation = useMutation({
-    mutationFn: () => reservationService.createPayment(reservation!.id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: t("payment.modal.createSuccess"), type: "success" });
-      onClose();
+  // Create Checkout Session & Redirect to Payment Page
+  const createCheckoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await paymentService.createCheckoutSession({
+        reservation_id: String(reservation!.id),
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      // Redirect to checkout URL
+      if (data.checkout_url) {
+        setIsRedirecting(true);
+        
+        // Full URL or relative path
+        const checkoutUrl = data.checkout_url.startsWith('http') 
+          ? data.checkout_url 
+          : `${window.location.origin}${data.checkout_url}`;
+        
+        // Open in new tab
+        window.open(checkoutUrl, '_blank');
+        
+        // Refresh reservations after a delay
+        setTimeout(() => {
+          void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
+          setIsRedirecting(false);
+          onClose();
+        }, 1500);
+      }
     },
     onError: (error: unknown) => {
+      setIsRedirecting(false);
       push({
         title: t("payment.modal.createError"),
         description: getErrorMessage(error),
@@ -77,7 +101,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
   const baggageCount = reservation.baggage_count || reservation.luggage_count || 0;
   const storageCode = reservation.storage_code || "—";
 
-  const isLoading = createPaymentMutation.isPending || markPaidMutation.isPending;
+  const isLoading = createCheckoutMutation.isPending || markPaidMutation.isPending || isRedirecting;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
@@ -155,12 +179,21 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
             variant="primary"
             size="lg"
             fullWidth
-            isLoading={createPaymentMutation.isPending}
+            isLoading={createCheckoutMutation.isPending || isRedirecting}
             disabled={isLoading}
-            onClick={() => createPaymentMutation.mutate()}
+            onClick={() => createCheckoutMutation.mutate()}
           >
-            💳 {t("payment.modal.processPayment")}
+            {isRedirecting ? "🔄" : "💳"} {isRedirecting ? t("payment.modal.redirecting") : t("payment.modal.processPayment")}
           </Button>
+
+          <p style={{ 
+            fontSize: "0.8125rem", 
+            color: "var(--color-text-muted)", 
+            textAlign: "center",
+            margin: "var(--space-2) 0"
+          }}>
+            veya
+          </p>
 
           <Button
             variant="outline"
@@ -172,6 +205,15 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
           >
             ✅ {t("payment.modal.markAsPaid")}
           </Button>
+          
+          <p style={{ 
+            fontSize: "0.75rem", 
+            color: "var(--color-text-subtle)", 
+            textAlign: "center",
+            marginTop: "var(--space-1)"
+          }}>
+            {t("payment.modal.manualPaidHint")}
+          </p>
         </div>
       </ModalBody>
       <ModalFooter justify="end">

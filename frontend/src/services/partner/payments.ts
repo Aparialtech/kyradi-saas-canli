@@ -30,6 +30,19 @@ export interface ConfirmPosResponse {
   kyradi_commission?: number | null;
 }
 
+export interface CheckoutSessionCreate {
+  reservation_id: string;
+}
+
+export interface CheckoutSessionResponse {
+  payment_id: string;
+  session_id: string;
+  checkout_url: string;
+  amount_minor: number;
+  currency: string;
+  expires_at?: string | null;
+}
+
 export const paymentService = {
   async createIntent(payload: PaymentIntentPayload): Promise<Payment> {
     const response = await http.post<Payment>("/payments/create-intent", payload);
@@ -38,6 +51,15 @@ export const paymentService = {
 
   async confirmPos(paymentId: string): Promise<ConfirmPosResponse> {
     const response = await http.post<ConfirmPosResponse>(`/payments/${paymentId}/confirm-pos`);
+    return response.data;
+  },
+
+  /**
+   * Create MagicPay checkout session for a reservation
+   * Returns checkout URL to redirect user to payment page
+   */
+  async createCheckoutSession(payload: CheckoutSessionCreate): Promise<CheckoutSessionResponse> {
+    const response = await http.post<CheckoutSessionResponse>("/payments/magicpay/checkout-session", payload);
     return response.data;
   },
 };
