@@ -65,7 +65,19 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
   if (!reservation) return null;
 
   const amount = paymentInfo?.amount_minor || reservation.estimated_total_price || reservation.amount_minor || 0;
-  const paidAt = paymentInfo?.paid_at || paymentInfo?.meta?.captured_at || paymentInfo?.meta?.paid_at || paymentInfo?.meta?.processed_at;
+  const paidAtRaw =
+    paymentInfo?.paid_at ??
+    paymentInfo?.meta?.captured_at ??
+    paymentInfo?.meta?.paid_at ??
+    paymentInfo?.meta?.processed_at;
+
+  const paidAt =
+    paidAtRaw instanceof Date
+      ? paidAtRaw
+      : typeof paidAtRaw === "string" || typeof paidAtRaw === "number"
+        ? new Date(paidAtRaw)
+        : undefined;
+
   const transactionId = paymentInfo?.transaction_id || "—";
   const paymentMethod = paymentInfo?.provider || paymentInfo?.mode || t("payment.modal.methodUnknown");
   const storageCode = reservation.storage_code || "—";
