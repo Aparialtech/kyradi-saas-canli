@@ -168,9 +168,11 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
           <div style={{ fontSize: "2.5rem", fontWeight: 700, color: "var(--color-text)", letterSpacing: "-0.02em" }}>
             {currencyFormatter.format(amount / 100)}
           </div>
-          <Badge variant="warning" size="sm" style={{ marginTop: "var(--space-2)" }}>
-            {t("payment.modal.unpaid")}
-          </Badge>
+          <div style={{ marginTop: "var(--space-2)" }}>
+            <Badge variant="warning" size="sm">
+              {t("payment.modal.unpaid")}
+            </Badge>
+          </div>
         </motion.div>
 
         {/* Action Buttons */}

@@ -97,9 +97,11 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
             border: "1px solid rgba(16, 185, 129, 0.2)",
           }}
         >
-          <Badge variant="success" solid size="lg" style={{ marginBottom: "var(--space-3)" }}>
-            ✅ {t("payment.modal.paid")}
-          </Badge>
+          <div style={{ marginBottom: "var(--space-3)" }}>
+            <Badge variant="success" solid size="lg">
+              ✅ {t("payment.modal.paid")}
+            </Badge>
+          </div>
           <div style={{ fontSize: "2.5rem", fontWeight: 700, color: "var(--color-text)", letterSpacing: "-0.02em" }}>
             {currencyFormatter.format(amount / 100)}
           </div>
