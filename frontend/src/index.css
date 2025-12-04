@@ -1,6 +1,9 @@
 /* Import Satoshi Font */
 @import './assets/fonts/satoshi.css';
 
+/* Import Premium Design System */
+@import './styles/design-system.css';
+
 /* ====================== ROOT DESIGN SYSTEM ====================== */
 :root {
   font-family: 'Satoshi', "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
