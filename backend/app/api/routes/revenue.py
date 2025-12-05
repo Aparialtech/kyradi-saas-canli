@@ -67,11 +67,14 @@ async def list_settlements(
     date_from: Optional[datetime] = Query(default=None, alias="from"),
     date_to: Optional[datetime] = Query(default=None, alias="to"),
     location_id: Optional[str] = Query(default=None),
+    storage_id: Optional[str] = Query(default=None),
     search: Optional[str] = Query(default=None),
     current_user: User = Depends(require_accounting),
     session: AsyncSession = Depends(get_session),
 ) -> SettlementListResponse:
     """List settlements for the tenant with totals."""
+    from ...models import Storage
+    
     stmt = select(Settlement).where(Settlement.tenant_id == current_user.tenant_id)
     
     if status_filter:
@@ -81,7 +84,28 @@ async def list_settlements(
     if date_to:
         stmt = stmt.where(Settlement.created_at <= date_to)
     
-    # Search by payment_id or reservation reference
+    # Filter by location or storage via payment -> reservation
+    if location_id or storage_id:
+        payment_subquery = select(Payment.id).where(Payment.tenant_id == current_user.tenant_id)
+        
+        if location_id or storage_id:
+            from sqlalchemy import and_
+            reservation_filters = [Reservation.tenant_id == current_user.tenant_id]
+            if location_id:
+                reservation_filters.append(Reservation.location_id == location_id)
+            if storage_id:
+                reservation_filters.append(Reservation.storage_id == storage_id)
+            
+            payment_subquery = payment_subquery.join(
+                Reservation, and_(
+                    Payment.reservation_id == Reservation.id,
+                    *reservation_filters
+                )
+            )
+        
+        stmt = stmt.where(Settlement.payment_id.in_(payment_subquery))
+    
+    # Search by payment_id or settlement id
     if search:
         stmt = stmt.where(
             Settlement.payment_id.ilike(f"%{search}%") |

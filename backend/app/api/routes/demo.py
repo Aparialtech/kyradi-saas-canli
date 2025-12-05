@@ -69,13 +69,35 @@ async def public_price_estimate(
     BEFORE the user submits the reservation. Uses the same pricing
     calculator as the rest of the system for consistency.
     """
-    # Validate tenant exists
-    tenant = await session.get(Tenant, payload.tenant_id)
-    if tenant is None:
+    # Resolve tenant_id from tenant_id or tenant_slug
+    tenant_id: str
+    if payload.tenant_id:
+        tenant_id = payload.tenant_id
+    elif payload.tenant_slug:
+        from sqlalchemy import select
+        tenant_stmt = select(Tenant).where(Tenant.slug == payload.tenant_slug)
+        tenant_result = await session.execute(tenant_stmt)
+        tenant = tenant_result.scalar_one_or_none()
+        if tenant is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Tenant not found: slug={payload.tenant_slug}",
+            )
+        tenant_id = tenant.id
+    else:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tenant not found",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either tenant_id or tenant_slug is required",
         )
+    
+    # Validate tenant exists (double-check if tenant_id was provided directly)
+    if payload.tenant_id:
+        tenant = await session.get(Tenant, tenant_id)
+        if tenant is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Tenant not found",
+            )
     
     if payload.end_datetime <= payload.start_datetime:
         raise HTTPException(
@@ -86,7 +108,7 @@ async def public_price_estimate(
     # Use hierarchical pricing: STORAGE > LOCATION > TENANT > GLOBAL
     calculation = await calculate_reservation_price(
         session=session,
-        tenant_id=payload.tenant_id,
+        tenant_id=tenant_id,
         start_datetime=payload.start_datetime,
         end_datetime=payload.end_datetime,
         baggage_count=payload.baggage_count,
@@ -102,7 +124,7 @@ async def public_price_estimate(
         total_formatted = f"{total_major:,.2f} {calculation.currency}"
     
     logger.debug(
-        f"Public price estimate for tenant {payload.tenant_id}: "
+        f"Public price estimate for tenant {tenant_id}: "
         f"{calculation.total_minor} {calculation.currency} for "
         f"{calculation.duration_hours:.1f}h, {payload.baggage_count} items, "
         f"scope={calculation.rule_scope}"

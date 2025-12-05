@@ -104,10 +104,16 @@ async def list_reservations(
     result = await session.execute(stmt)
     reservations = result.scalars().all()
     
-    # Include payment information
-    from ...models import Payment
+    # Include payment information and storage/location details
+    from ...models import Payment, Storage, Location
+    from sqlalchemy.orm import selectinload
     reservation_reads = []
     for res in reservations:
+        # Load storage and location relationships
+        await session.refresh(res, ["storage", "storage.location"])
+        storage = res.storage
+        location = storage.location if storage else None
+        
         # Get payment for this reservation
         payment_stmt = select(Payment).where(
             Payment.reservation_id == res.id,
@@ -121,6 +127,9 @@ async def list_reservations(
         res_dict = {
             **res.__dict__,
             "tc_identity_number": mask_tckn(res.tc_identity_number) if res.tc_identity_number else None,
+            "storage_code": storage.code if storage else None,
+            "location_id": location.id if location else None,
+            "location_name": location.name if location else None,
         }
         reservation_dict = ReservationRead.model_validate(res_dict).model_dump()
         if payment:
@@ -139,6 +148,11 @@ async def get_reservation(
     """Get a single reservation by ID."""
     reservation = await _get_reservation_for_tenant(reservation_id, current_user.tenant_id, session)
     
+    # Load storage and location relationships
+    await session.refresh(reservation, ["storage", "storage.location"])
+    storage = reservation.storage
+    location = storage.location if storage else None
+    
     # Get payment for this reservation
     from ...models import Payment
     payment_stmt = select(Payment).where(
@@ -153,6 +167,9 @@ async def get_reservation(
     reservation_dict_data = {
         **reservation.__dict__,
         "tc_identity_number": mask_tckn(reservation.tc_identity_number) if reservation.tc_identity_number else None,
+        "storage_code": storage.code if storage else None,
+        "location_id": location.id if location else None,
+        "location_name": location.name if location else None,
     }
     reservation_dict = ReservationRead.model_validate(reservation_dict_data).model_dump()
     # Add payment info as a dict (not part of schema to avoid forward reference)

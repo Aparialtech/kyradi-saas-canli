@@ -24,6 +24,9 @@ class PartnerSettingsResponse(BaseModel):
     tenant_id: str
     tenant_name: str
     tenant_slug: str
+    legal_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    tax_office: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     brand_color: Optional[str] = None
@@ -40,6 +43,9 @@ class PartnerSettingsUpdatePayload(BaseModel):
     """Partner settings update payload."""
 
     tenant_name: Optional[str] = None
+    legal_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    tax_office: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     brand_color: Optional[str] = None
@@ -62,6 +68,9 @@ def _tenant_to_settings_response(tenant: Tenant) -> PartnerSettingsResponse:
         tenant_id=str(tenant.id),
         tenant_name=tenant.name,
         tenant_slug=tenant.slug,
+        legal_name=metadata.get("legal_name"),
+        tax_id=metadata.get("tax_id"),
+        tax_office=metadata.get("tax_office"),
         contact_email=metadata.get("contact_email"),
         contact_phone=metadata.get("contact_phone"),
         brand_color=tenant.brand_color,
@@ -143,6 +152,21 @@ async def update_partner_settings(
     # Metadata fields
     metadata = dict(tenant.metadata_ or {})
     metadata_changed = False
+
+    if "legal_name" in update_data:
+        metadata["legal_name"] = update_data["legal_name"] or None
+        changed_fields["legal_name"] = update_data["legal_name"]
+        metadata_changed = True
+
+    if "tax_id" in update_data:
+        metadata["tax_id"] = update_data["tax_id"] or None
+        changed_fields["tax_id"] = update_data["tax_id"]
+        metadata_changed = True
+
+    if "tax_office" in update_data:
+        metadata["tax_office"] = update_data["tax_office"] or None
+        changed_fields["tax_office"] = update_data["tax_office"]
+        metadata_changed = True
 
     if "contact_email" in update_data:
         metadata["contact_email"] = update_data["contact_email"] or None

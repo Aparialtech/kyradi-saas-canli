@@ -59,6 +59,12 @@ class ReservationRead(IdentifiedModel):
     @property
     def locker_id(self) -> str:
         return self.storage_id
+    
+    # Storage and location info (added in endpoints)
+    storage_code: Optional[str] = None
+    location_id: Optional[str] = None
+    location_name: Optional[str] = None
+    
     customer_name: Optional[str]
     full_name: Optional[str]
     customer_phone: Optional[str]

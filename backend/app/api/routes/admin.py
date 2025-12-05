@@ -128,6 +128,7 @@ async def _build_tenant_detail(
 async def list_tenants(
     plan: Optional[str] = Query(default=None),
     is_active: Optional[bool] = Query(default=None),
+    search: Optional[str] = Query(default=None),
     session: AsyncSession = Depends(get_session),
     _: None = Depends(require_admin_user),
 ) -> List[TenantRead]:
@@ -137,6 +138,12 @@ async def list_tenants(
         stmt = stmt.where(Tenant.plan == plan)
     if is_active is not None:
         stmt = stmt.where(Tenant.is_active == is_active)
+    if search:
+        search_term = f"%{search.lower()}%"
+        stmt = stmt.where(
+            Tenant.name.ilike(search_term) |
+            Tenant.slug.ilike(search_term)
+        )
     stmt = stmt.order_by(Tenant.created_at.desc())
 
     result = await session.execute(stmt)

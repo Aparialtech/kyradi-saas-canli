@@ -1,10 +1,11 @@
 """Reporting endpoints."""
 
 from datetime import datetime, time, timedelta, timezone
+from typing import Optional
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select, and_
 from sqlalchemy.exc import DBAPIError, ProgrammingError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -306,14 +307,24 @@ async def register_reservation_export(
 
 @router.get("/partner-overview")
 async def get_partner_overview(
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    location_id: Optional[str] = None,
+    status: Optional[str] = None,
     current_user: User = Depends(require_tenant_operator),
     session: AsyncSession = Depends(get_session),
 ):
     """Get comprehensive analytics overview for partner dashboard.
     
+    Args:
+        date_from: Filter reservations/payments from this date
+        date_to: Filter reservations/payments until this date
+        location_id: Filter by location
+        status: Filter reservations by status (reserved, active, completed, cancelled)
+    
     Returns:
         - summary: Total revenue, reservations, active reservations, occupancy rate
-        - daily: Last 30 days of daily revenue
+        - daily: Daily revenue (filtered by date range or last 30 days)
         - by_location: Revenue and reservation counts by location
         - by_storage: Most used storages (top 10)
     """
@@ -321,20 +332,51 @@ async def get_partner_overview(
     if not tenant_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant context required")
     
-    # Summary metrics
-    total_revenue_stmt = select(func.coalesce(func.sum(Payment.amount_minor), 0)).where(
+    # Build base filters
+    payment_filters = [
         Payment.tenant_id == tenant_id,
         Payment.status == PaymentStatus.PAID.value,
+    ]
+    reservation_filters = [
+        Reservation.tenant_id == tenant_id,
+    ]
+    
+    # Apply date filters
+    if date_from:
+        payment_filters.append(Payment.created_at >= date_from)
+        reservation_filters.append(Reservation.created_at >= date_from)
+    if date_to:
+        payment_filters.append(Payment.created_at <= date_to)
+        reservation_filters.append(Reservation.created_at <= date_to)
+    
+    # Apply location filter
+    if location_id:
+        reservation_filters.append(Reservation.location_id == location_id)
+        # For payments, we need to join with reservation
+        from sqlalchemy import and_
+        payment_filters.append(
+            Payment.reservation_id.in_(
+                select(Reservation.id).where(Reservation.location_id == location_id)
+            )
+        )
+    
+    # Apply status filter
+    if status:
+        reservation_filters.append(Reservation.status == status)
+    
+    # Summary metrics with filters
+    total_revenue_stmt = select(func.coalesce(func.sum(Payment.amount_minor), 0)).where(
+        *payment_filters
     )
     total_revenue_minor = await _safe_scalar(session, total_revenue_stmt, 0, "total_revenue")
     
     total_reservations_stmt = select(func.count()).select_from(Reservation).where(
-        Reservation.tenant_id == tenant_id
+        *reservation_filters
     )
     total_reservations = await _safe_scalar(session, total_reservations_stmt, 0, "total_reservations")
     
     active_reservations_stmt = select(func.count()).select_from(Reservation).where(
-        Reservation.tenant_id == tenant_id,
+        *reservation_filters,
         Reservation.status.in_([ReservationStatus.RESERVED.value, ReservationStatus.ACTIVE.value]),
     )
     active_reservations = await _safe_scalar(session, active_reservations_stmt, 0, "active_reservations")
@@ -347,20 +389,28 @@ async def get_partner_overview(
     if storage_count > 0:
         occupancy_rate = round(min(active_reservations / storage_count * 100, 100), 2)
     
-    # Daily revenue for last 30 days
-    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    # Daily revenue - use date range or default to last 30 days
+    if not date_from:
+        date_from = datetime.now(timezone.utc) - timedelta(days=30)
+    if not date_to:
+        date_to = datetime.now(timezone.utc)
+    
     daily_revenue = []
     
     try:
         # Get daily revenue grouped by date
         from sqlalchemy import cast, Date
+        daily_payment_filters = payment_filters.copy()
+        if date_from:
+            daily_payment_filters.append(Payment.created_at >= date_from)
+        if date_to:
+            daily_payment_filters.append(Payment.created_at <= date_to)
+        
         daily_stmt = select(
             cast(Payment.created_at, Date).label('date'),
             func.sum(Payment.amount_minor).label('revenue_minor')
         ).where(
-            Payment.tenant_id == tenant_id,
-            Payment.status == PaymentStatus.PAID.value,
-            Payment.created_at >= thirty_days_ago
+            *daily_payment_filters
         ).group_by(
             cast(Payment.created_at, Date)
         ).order_by(
@@ -384,6 +434,11 @@ async def get_partner_overview(
     try:
         from sqlalchemy.orm import aliased
         
+        # Build location filters
+        location_filters = [Location.tenant_id == tenant_id]
+        if location_id:
+            location_filters.append(Location.id == location_id)
+        
         # Join reservations with payments and locations
         location_stmt = select(
             Location.id.label('location_id'),
@@ -393,12 +448,27 @@ async def get_partner_overview(
         ).select_from(Location).outerjoin(
             Storage, Storage.location_id == Location.id
         ).outerjoin(
-            Reservation, Reservation.storage_id == Storage.id
+            Reservation, and_(
+                Reservation.storage_id == Storage.id,
+                *([Reservation.status == status] if status else [])
+            )
         ).outerjoin(
-            Payment, Payment.reservation_id == Reservation.id
+            Payment, and_(
+                Payment.reservation_id == Reservation.id,
+                Payment.status == PaymentStatus.PAID.value
+            )
         ).where(
-            Location.tenant_id == tenant_id
-        ).group_by(
+            *location_filters
+        )
+        
+        # Apply date filters to payments
+        if date_from or date_to:
+            location_stmt = location_stmt.where(
+                *([Payment.created_at >= date_from] if date_from else []),
+                *([Payment.created_at <= date_to] if date_to else [])
+            )
+        
+        location_stmt = location_stmt.group_by(
             Location.id, Location.name
         ).order_by(
             func.coalesce(func.sum(Payment.amount_minor), 0).desc()
@@ -420,6 +490,18 @@ async def get_partner_overview(
     by_storage = []
     
     try:
+        storage_filters = [Storage.tenant_id == tenant_id]
+        if location_id:
+            storage_filters.append(Storage.location_id == location_id)
+        
+        reservation_join_filters = []
+        if status:
+            reservation_join_filters.append(Reservation.status == status)
+        if date_from:
+            reservation_join_filters.append(Reservation.created_at >= date_from)
+        if date_to:
+            reservation_join_filters.append(Reservation.created_at <= date_to)
+        
         storage_stmt = select(
             Storage.id.label('storage_id'),
             Storage.code.label('storage_code'),
@@ -428,9 +510,12 @@ async def get_partner_overview(
         ).select_from(Storage).join(
             Location, Location.id == Storage.location_id
         ).outerjoin(
-            Reservation, Reservation.storage_id == Storage.id
+            Reservation, and_(
+                Reservation.storage_id == Storage.id,
+                *reservation_join_filters
+            )
         ).where(
-            Storage.tenant_id == tenant_id
+            *storage_filters
         ).group_by(
             Storage.id, Storage.code, Location.name
         ).order_by(
@@ -460,3 +545,261 @@ async def get_partner_overview(
         "by_location": by_location,
         "by_storage": by_storage
     }
+
+
+@router.get("/export")
+async def export_reports(
+    format: str = Query(default="csv", description="Export format: csv, xlsx, template"),
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    location_id: Optional[str] = None,
+    status: Optional[str] = None,
+    anonymous: bool = Query(default=False, description="Mask guest information"),
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+):
+    """Export reservation and revenue data in various formats.
+    
+    Formats:
+        - csv: CSV file with detailed data
+        - xlsx: Excel file with detailed data
+        - template: Kyradi-branded HTML/PDF report
+    """
+    from fastapi.responses import StreamingResponse, Response
+    import csv
+    import io
+    from datetime import date
+    
+    tenant_id = current_user.tenant_id
+    if not tenant_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant context required")
+    
+    # Build filters (same as partner-overview)
+    reservation_filters = [Reservation.tenant_id == tenant_id]
+    if date_from:
+        reservation_filters.append(Reservation.created_at >= date_from)
+    if date_to:
+        reservation_filters.append(Reservation.created_at <= date_to)
+    if location_id:
+        reservation_filters.append(Reservation.location_id == location_id)
+    if status:
+        reservation_filters.append(Reservation.status == status)
+    
+    # Fetch reservations with related data
+    stmt = select(Reservation).where(*reservation_filters).order_by(Reservation.created_at.desc())
+    result = await session.execute(stmt)
+    reservations = result.scalars().all()
+    
+    # Load related data
+    for res in reservations:
+        await session.refresh(res, ["storage", "storage.location"])
+    
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        if anonymous:
+            writer.writerow([
+                "ID", "Tarih", "Durum", "Depo", "Lokasyon", 
+                "Bavul Sayısı", "Tutar", "Para Birimi"
+            ])
+        else:
+            writer.writerow([
+                "ID", "Tarih", "Durum", "Depo", "Lokasyon",
+                "Misafir Adı", "E-posta", "Telefon", "Bavul Sayısı", "Tutar", "Para Birimi"
+            ])
+        
+        # Write rows
+        for res in reservations:
+            storage = res.storage
+            location = storage.location if storage else None
+            
+            if anonymous:
+                writer.writerow([
+                    res.id,
+                    res.created_at.isoformat() if res.created_at else "",
+                    res.status,
+                    storage.code if storage else "",
+                    location.name if location else "",
+                    res.baggage_count or 0,
+                    res.amount_minor or 0,
+                    res.currency or "TRY",
+                ])
+            else:
+                writer.writerow([
+                    res.id,
+                    res.created_at.isoformat() if res.created_at else "",
+                    res.status,
+                    storage.code if storage else "",
+                    location.name if location else "",
+                    res.full_name or res.customer_name or "—",
+                    res.customer_email or "—",
+                    res.customer_phone or res.phone_number or "—",
+                    res.baggage_count or 0,
+                    res.amount_minor or 0,
+                    res.currency or "TRY",
+                ])
+        
+        output.seek(0)
+        filename = f"kyradi-report-{date.today().isoformat()}.csv"
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    
+    elif format == "xlsx":
+        try:
+            import openpyxl
+            from openpyxl import Workbook
+        except ImportError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="XLSX export requires openpyxl package"
+            )
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Rezervasyonlar"
+        
+        # Write header
+        if anonymous:
+            headers = ["ID", "Tarih", "Durum", "Depo", "Lokasyon", "Bavul Sayısı", "Tutar", "Para Birimi"]
+        else:
+            headers = ["ID", "Tarih", "Durum", "Depo", "Lokasyon", "Misafir Adı", "E-posta", "Telefon", "Bavul Sayısı", "Tutar", "Para Birimi"]
+        
+        ws.append(headers)
+        
+        # Write rows
+        for res in reservations:
+            storage = res.storage
+            location = storage.location if storage else None
+            
+            if anonymous:
+                ws.append([
+                    res.id,
+                    res.created_at.isoformat() if res.created_at else "",
+                    res.status,
+                    storage.code if storage else "",
+                    location.name if location else "",
+                    res.baggage_count or 0,
+                    res.amount_minor or 0,
+                    res.currency or "TRY",
+                ])
+            else:
+                ws.append([
+                    res.id,
+                    res.created_at.isoformat() if res.created_at else "",
+                    res.status,
+                    storage.code if storage else "",
+                    location.name if location else "",
+                    res.full_name or res.customer_name or "—",
+                    res.customer_email or "—",
+                    res.customer_phone or res.phone_number or "—",
+                    res.baggage_count or 0,
+                    res.amount_minor or 0,
+                    res.currency or "TRY",
+                ])
+        
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        filename = f"kyradi-report-{date.today().isoformat()}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    
+    elif format == "template":
+        # Generate Kyradi-branded HTML report
+        tenant = await session.get(Tenant, tenant_id)
+        tenant_name = tenant.name if tenant else "Partner"
+        
+        html_content = f"""
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kyradi Rapor - {date.today().isoformat()}</title>
+    <style>
+        body {{ font-family: 'Inter', system-ui, sans-serif; margin: 40px; color: #1a1a1a; }}
+        .header {{ border-bottom: 3px solid #00a389; padding-bottom: 20px; margin-bottom: 30px; }}
+        .header h1 {{ color: #00a389; margin: 0; }}
+        .header p {{ color: #666; margin: 5px 0 0; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+        th {{ background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; }}
+        td {{ padding: 10px; border-bottom: 1px solid #e9ecef; }}
+        .summary {{ background: #f0fdf4; padding: 20px; border-radius: 8px; margin-bottom: 30px; }}
+        .summary h2 {{ margin-top: 0; color: #16a34a; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Kyradi Rezervasyon Raporu</h1>
+        <p>{tenant_name} • {date.today().strftime('%d %B %Y')}</p>
+    </div>
+    
+    <div class="summary">
+        <h2>Özet</h2>
+        <p><strong>Toplam Rezervasyon:</strong> {len(reservations)}</p>
+        <p><strong>Tarih Aralığı:</strong> {date_from.strftime('%d.%m.%Y') if date_from else 'Başlangıç'} - {date_to.strftime('%d.%m.%Y') if date_to else 'Bugün'}</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tarih</th>
+                <th>Durum</th>
+                <th>Depo</th>
+                <th>Lokasyon</th>
+                {"<th>Misafir</th><th>E-posta</th><th>Telefon</th>" if not anonymous else ""}
+                <th>Bavul</th>
+                <th>Tutar</th>
+            </tr>
+        </thead>
+        <tbody>
+"""
+        
+        for res in reservations:
+            storage = res.storage
+            location = storage.location if storage else None
+            guest_name = "***" if anonymous else (res.full_name or res.customer_name or "—")
+            guest_email = "***" if anonymous else (res.customer_email or "—")
+            guest_phone = "***" if anonymous else (res.customer_phone or res.phone_number or "—")
+            
+            html_content += f"""
+            <tr>
+                <td>{res.id}</td>
+                <td>{res.created_at.strftime('%d.%m.%Y %H:%M') if res.created_at else '—'}</td>
+                <td>{res.status}</td>
+                <td>{storage.code if storage else '—'}</td>
+                <td>{location.name if location else '—'}</td>
+                {f'<td>{guest_name}</td><td>{guest_email}</td><td>{guest_phone}</td>' if not anonymous else ''}
+                <td>{res.baggage_count or 0}</td>
+                <td>{(res.amount_minor or 0) / 100:.2f} {res.currency or 'TRY'}</td>
+            </tr>
+"""
+        
+        html_content += """
+        </tbody>
+    </table>
+</body>
+</html>
+"""
+        
+        filename = f"kyradi-report-{date.today().isoformat()}.html"
+        return Response(
+            content=html_content,
+            media_type="text/html",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported format: {format}. Use csv, xlsx, or template"
+        )
