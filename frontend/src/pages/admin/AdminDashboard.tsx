@@ -16,7 +16,6 @@ import {
   Receipt,
   Users,
   Settings,
-  Database,
   FileText,
   CreditCard,
 } from "../../lib/lucide";
