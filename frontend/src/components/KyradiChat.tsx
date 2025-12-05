@@ -128,6 +128,8 @@ const baseStyles = `
   align-items: center;
   justify-content: center;
   font-size: 16px;
+  font-weight: 700;
+  color: white;
 }
 .kyradi-chat__brand {
   font-weight: 600;
@@ -376,6 +378,7 @@ export function KyradiChat({
   const historyKey = useMemo(() => `kyradi.chat.history.${tenantId}.${userId}`, [tenantId, userId]);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ConversationMessage[]>(() => readHistory(historyKey));
+  const [cooldown, setCooldown] = useState<number>(0);
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -391,6 +394,15 @@ export function KyradiChat({
     if (typeof window === "undefined") return;
     window.localStorage.setItem(historyKey, JSON.stringify(messages.slice(-MAX_HISTORY)));
   }, [messages, historyKey]);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (!cooldown) return;
+    const id = setInterval(() => {
+      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -411,7 +423,7 @@ export function KyradiChat({
   const handleSubmit = async (event?: FormEvent) => {
     event?.preventDefault();
     const value = input.trim();
-    if (!value || isLoading) return;
+    if (!value || isLoading || cooldown > 0) return;
 
     appendMessage({
       id: createMessageId(),
@@ -431,16 +443,31 @@ export function KyradiChat({
         requestId: response.requestId,
       });
     } catch (chatError) {
-      console.error("KyradiChat ask failed", chatError);
-      // Handle rate limit and other errors gracefully
+      // Only log in development mode
+      if (process.env.NODE_ENV === "development") {
+        console.error("KyradiChat ask failed", chatError);
+      }
+      
+      // Handle typed errors from backend
       let errorMessage = "Bir hata oluştu";
+      let retryAfter = 0;
+      
       if (chatError instanceof Error) {
-        if (chatError.message.includes("Rate limit") || chatError.message.includes("rate limit")) {
+        const aiError = chatError as Error & { code?: string; retryAfterSeconds?: number };
+        
+        if (aiError.code === "RATE_LIMIT") {
           errorMessage = "Asistan şu anda yoğun, lütfen daha sonra tekrar deneyin.";
+          retryAfter = aiError.retryAfterSeconds || 10;
+          setCooldown(retryAfter);
+        } else if (aiError.code === "AI_DISABLED") {
+          errorMessage = "AI servisi şu anda yapılandırılmamış. Lütfen sistem yöneticinize haber verin.";
+        } else if (aiError.code === "AUTH_ERROR") {
+          errorMessage = "OpenAI yapılandırmasında sorun var. Lütfen teknik ekiple iletişime geçin.";
         } else {
-          errorMessage = chatError.message;
+          errorMessage = aiError.message || "AI asistanı şu anda yanıt veremiyor.";
         }
       }
+      
       // Add error message to chat (non-blocking)
       appendMessage({
         id: createMessageId(),
@@ -525,7 +552,7 @@ export function KyradiChat({
                   inputRef.current?.focus();
                 }}
               >
-                📋 {copy.suggestionReservation}
+                {copy.suggestionReservation}
               </button>
               <button
                 type="button"
@@ -535,7 +562,7 @@ export function KyradiChat({
                   inputRef.current?.focus();
                 }}
               >
-                💳 {copy.suggestionPayment}
+                {copy.suggestionPayment}
               </button>
               <button
                 type="button"
@@ -545,7 +572,7 @@ export function KyradiChat({
                   inputRef.current?.focus();
                 }}
               >
-                🔧 {copy.suggestionWidget}
+                {copy.suggestionWidget}
               </button>
             </div>
           </div>

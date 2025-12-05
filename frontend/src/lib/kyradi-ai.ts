@@ -65,6 +65,12 @@ const ERROR_MESSAGES = {
   API_KEY_MISSING: "AI servisi yapılandırılmamış: OPENAI_API_KEY eksik.",
 };
 
+export interface AIError {
+  code: string;
+  message: string;
+  retryAfterSeconds?: number;
+}
+
 // Retry delays in ms
 const RETRY_DELAYS = [1000, 2000, 4000];
 
@@ -162,38 +168,72 @@ export function useKyradiAI({
             data = null;
           }
 
-          // Handle HTTP errors
+          // Handle HTTP errors with typed error responses
           if (!response.ok) {
             const statusCode = response.status;
-            let errorMessage: string;
+            let aiError: AIError;
 
-            switch (statusCode) {
-              case 401:
-                errorMessage = ERROR_MESSAGES.API_KEY_MISSING;
-                break;
-              case 403:
-                errorMessage = ERROR_MESSAGES.AUTH_ERROR;
-                break;
-              case 429:
-                errorMessage = ERROR_MESSAGES.RATE_LIMIT_ERROR;
-                break;
-              case 500:
-              case 502:
-              case 503:
-              case 504:
-                errorMessage = data?.detail || data?.error || ERROR_MESSAGES.SERVER_ERROR;
-                // Retry on server errors
-                if (attempt < maxRetries) {
-                  lastError = new Error(errorMessage);
-                  continue;
-                }
-                break;
-              default:
-                errorMessage = data?.detail || data?.error || ERROR_MESSAGES.UNKNOWN_ERROR;
+            // Try to parse structured error response
+            if (data?.detail && typeof data.detail === 'object' && data.detail.code) {
+              aiError = {
+                code: data.detail.code,
+                message: data.detail.message || ERROR_MESSAGES.UNKNOWN_ERROR,
+                retryAfterSeconds: data.detail.retry_after_seconds,
+              };
+            } else {
+              // Fallback to status code based errors
+              switch (statusCode) {
+                case 401:
+                  aiError = {
+                    code: "AUTH_ERROR",
+                    message: ERROR_MESSAGES.API_KEY_MISSING,
+                  };
+                  break;
+                case 403:
+                  aiError = {
+                    code: "AUTH_ERROR",
+                    message: ERROR_MESSAGES.AUTH_ERROR,
+                  };
+                  break;
+                case 429:
+                  aiError = {
+                    code: "RATE_LIMIT",
+                    message: ERROR_MESSAGES.RATE_LIMIT_ERROR,
+                    retryAfterSeconds: 10,
+                  };
+                  break;
+                case 503:
+                  aiError = {
+                    code: data?.detail?.code || "AI_DISABLED",
+                    message: data?.detail?.message || data?.detail || ERROR_MESSAGES.SERVER_ERROR,
+                  };
+                  break;
+                case 500:
+                case 502:
+                case 504:
+                  aiError = {
+                    code: "SERVER_ERROR",
+                    message: data?.detail?.message || data?.detail || ERROR_MESSAGES.SERVER_ERROR,
+                  };
+                  // Retry on server errors
+                  if (attempt < maxRetries) {
+                    lastError = new Error(aiError.message);
+                    continue;
+                  }
+                  break;
+                default:
+                  aiError = {
+                    code: "UNKNOWN",
+                    message: data?.detail?.message || data?.detail || ERROR_MESSAGES.UNKNOWN_ERROR,
+                  };
+              }
             }
 
-            setError(errorMessage);
-            throw new Error(errorMessage);
+            setError(aiError.message);
+            const error = new Error(aiError.message) as Error & AIError;
+            error.code = aiError.code;
+            error.retryAfterSeconds = aiError.retryAfterSeconds;
+            throw error;
           }
 
           // Check for success flag in response
