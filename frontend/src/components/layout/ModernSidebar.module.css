@@ -23,6 +23,7 @@
   top: 0;
   bottom: 0;
   height: 100vh;
+  width: 280px;
   z-index: var(--z-fixed);
   
   /* Glassmorphism Effect */
@@ -42,18 +43,29 @@
   padding: var(--space-6) var(--space-4);
   gap: var(--space-6);
   
-  /* Mobile: hidden by default */
-  transform: translateX(-100%);
+  /* Smooth animation */
   transition: transform var(--transition-base);
 }
 
-.sidebarOpen {
-  transform: translateX(0);
+/* Mobile: hidden by default */
+@media (max-width: 1023px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebarOpen {
+    transform: translateX(0);
+  }
 }
 
 @media (min-width: 1024px) {
   .sidebar {
     transform: translateX(0);
+  }
+  
+  /* Add margin to main content */
+  .sidebar ~ * {
+    margin-left: 280px;
   }
 }
 

@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { SearchInput } from "../../../components/common/SearchInput";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernButton } from "../../../components/ui/ModernButton";
+import { ModernTable } from "../../../components/ui/ModernTable";
+import { Eye, Edit } from "../../../lib/lucide";
 
 import {
   adminTenantService,
@@ -62,6 +67,9 @@ export function TenantsPage() {
   const { messages, push } = useToast();
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [planFilter, setPlanFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const tenantsQuery = useQuery({ queryKey: ["admin", "tenants"], queryFn: adminTenantService.list });
   const tenantDetailQuery = useQuery({
@@ -69,6 +77,30 @@ export function TenantsPage() {
     queryFn: () => adminTenantService.detail(selectedTenantId!),
     enabled: Boolean(selectedTenantId),
   });
+  
+  // Filter tenants
+  const filteredTenants = useMemo(() => {
+    let tenants = tenantsQuery.data || [];
+    
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      tenants = tenants.filter(t => 
+        t.name.toLowerCase().includes(term) ||
+        t.slug.toLowerCase().includes(term)
+      );
+    }
+    
+    if (planFilter) {
+      tenants = tenants.filter(t => t.plan === planFilter);
+    }
+    
+    if (statusFilter) {
+      const isActive = statusFilter === "active";
+      tenants = tenants.filter(t => t.is_active === isActive);
+    }
+    
+    return tenants;
+  }, [tenantsQuery.data, searchTerm, planFilter, statusFilter]);
 
   const createMutation = useMutation({
     mutationFn: (payload: TenantCreatePayload) => adminTenantService.create(payload),
@@ -124,7 +156,7 @@ export function TenantsPage() {
 
   const submit = handleSubmit(async (values) => {
     if (editingTenant) {
-      const { slug: _slug, ...payload } = values;
+      const { slug, ...payload } = values;
       await updateMutation.mutateAsync({ id: editingTenant.id, payload });
       setEditingTenant(null);
     } else {
@@ -241,13 +273,69 @@ export function TenantsPage() {
         </form>
       </div>
 
-      <div className="panel">
-        <div className="panel__header">
-          <div>
-            <h2 className="panel__title">{t("admin.tenants.title")} - Liste</h2>
-            <p className="panel__subtitle">
-              Sisteme kayıtlı {t("common.hotels" as any)}, plan durumları ve limitler.
+      <ModernCard variant="glass" padding="lg">
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+            {t("admin.tenants.title")} - Liste
+          </h2>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              Sisteme kayıtlı {t("common.hotels")}, plan durumları ve limitler.
             </p>
+        </div>
+        
+        {/* Filters */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+          <div style={{ minWidth: '250px' }}>
+            <SearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="İsim, slug veya email ile ara..."
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
+              Plan
+            </label>
+            <select
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value)}
+              style={{
+                width: '100%',
+                padding: 'var(--space-2) var(--space-3)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+              }}
+            >
+              <option value="">Tümü</option>
+              <option value="standard">Standard</option>
+              <option value="pro">Pro</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
+              Durum
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                width: '100%',
+                padding: 'var(--space-2) var(--space-3)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+              }}
+            >
+              <option value="">Tümü</option>
+              <option value="active">Aktif</option>
+              <option value="inactive">Pasif</option>
+            </select>
           </div>
         </div>
 
@@ -263,82 +351,86 @@ export function TenantsPage() {
             <h3 className="empty-state__title">{t("admin.tenants.title")} listesi alınamadı</h3>
             <p>Lütfen sayfayı yenileyerek tekrar deneyin.</p>
           </div>
-        ) : tenantsQuery.data && tenantsQuery.data.length > 0 ? (
-          <div className="data-table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>{t("common.hotel")}</th>
-                  <th>{t("common.shortName")}</th>
-                  <th>{t("admin.tenants.plan")}</th>
-                  <th>{t("admin.tenants.status")}</th>
-                  <th>{t("common.createdAt")}</th>
-                  <th>İşlemler</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tenantsQuery.data.map((tenant) => {
-                  const statusClass = tenant.is_active ? "badge badge--success" : "badge badge--danger";
-                  const statusLabel = tenant.is_active ? "Aktif" : "Pasif";
-                  return (
-                    <tr key={tenant.id}>
-                      <td>
-                        <strong>{tenant.name}</strong>
-                      </td>
-                      <td>
-                        <code style={{ fontSize: "0.875rem", color: "var(--color-muted)" }}>
-                          {tenant.slug}
-                        </code>
-                      </td>
-                      <td>{tenant.plan}</td>
-                      <td>
-                        <span className={statusClass}>{statusLabel}</span>
-                      </td>
-                      <td>{new Date(tenant.created_at).toLocaleString("tr-TR")}</td>
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            type="button"
-                            className="action-link"
-                            onClick={() => {
-                              setEditingTenant(tenant);
-                              reset({
-                                slug: tenant.slug,
-                                name: tenant.name,
-                                plan: tenant.plan,
-                                is_active: tenant.is_active,
-                                brand_color: tenant.brand_color ?? "",
-                                logo_url: tenant.logo_url ?? "",
-                              });
-                            }}
-                          >
-                            Düzenle
-                          </button>
-                          <button
-                            type="button"
-                            className="action-link"
-                            onClick={() => {
-                              setSelectedTenantId(tenant.id);
-                            }}
-                          >
-                            Detay
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        ) : filteredTenants.length > 0 ? (
+          <ModernTable
+            columns={[
+              {
+                key: 'name',
+                label: t("common.hotel"),
+                render: (value) => <strong>{value}</strong>,
+              },
+              {
+                key: 'slug',
+                label: t("common.shortName"),
+                render: (value) => <code style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>{value}</code>,
+              },
+              {
+                key: 'plan',
+                label: t("admin.tenants.plan"),
+                align: 'center',
+              },
+              {
+                key: 'is_active',
+                label: t("admin.tenants.status"),
+                render: (value) => (
+                  <span className={value ? "badge badge--success" : "badge badge--danger"}>
+                    {value ? "Aktif" : "Pasif"}
+                  </span>
+                ),
+                align: 'center',
+              },
+              {
+                key: 'created_at',
+                label: t("common.createdAt"),
+                render: (value) => new Date(value).toLocaleString("tr-TR"),
+              },
+              {
+                key: 'id',
+                label: 'İşlemler',
+                render: (_, tenant) => (
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <ModernButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedTenantId(tenant.id)}
+                      leftIcon={<Eye className="h-4 w-4" />}
+                    >
+                      Detay
+                    </ModernButton>
+                    <ModernButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingTenant(tenant);
+                        reset({
+                          slug: tenant.slug,
+                          name: tenant.name,
+                          plan: tenant.plan,
+                          is_active: tenant.is_active,
+                          brand_color: tenant.brand_color ?? "",
+                          logo_url: tenant.logo_url ?? "",
+                        });
+                      }}
+                      leftIcon={<Edit className="h-4 w-4" />}
+                    >
+                      Düzenle
+                    </ModernButton>
+                  </div>
+                ),
+                align: 'right',
+              },
+            ]}
+            data={filteredTenants}
+          />
         ) : (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>🏢</div>
-            <h3 className="empty-state__title">Henüz {t("common.hotel")} kaydı yok</h3>
-            <p>Henüz hiç {t("common.hotel")} kaydı yok. Yukarıdaki formu kullanarak yeni bir {t("common.hotel")} oluşturabilirsiniz.</p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-16)', color: 'var(--text-tertiary)' }}>
+            <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+              {searchTerm || planFilter || statusFilter ? "Filtrelere uygun sonuç bulunamadı" : "Henüz tenant kaydı yok"}
+            </p>
+            <p style={{ margin: 0 }}>Yukarıdaki formu kullanarak yeni bir tenant oluşturabilirsiniz.</p>
           </div>
         )}
-      </div>
+      </ModernCard>
 
       {selectedTenantId && (
         <TenantDetailCard

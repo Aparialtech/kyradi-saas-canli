@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 import {
   selfServiceReservationService,
@@ -8,6 +8,7 @@ import {
   type SelfServiceHandoverPayload,
   type SelfServiceReturnPayload,
 } from "../../services/public/reservations";
+import { pricingService, type PriceEstimateResponse } from "../../services/public/pricing";
 import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { Modal } from "../../components/common/Modal";
@@ -57,7 +58,62 @@ export function SelfServiceReservationPage() {
   });
   const [handoverModalOpen, setHandoverModalOpen] = useState(false);
   const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [priceEstimate, setPriceEstimate] = useState<PriceEstimateResponse | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
   const { messages, push } = useToast();
+
+  // Calculate price when dates or baggage count changes
+  const calculatePrice = useCallback(async () => {
+    if (!createForm.tenant_slug || !createForm.start_at || !createForm.end_at) {
+      setPriceEstimate(null);
+      setPriceError(null);
+      return;
+    }
+
+    const startDate = new Date(createForm.start_at);
+    const endDate = new Date(createForm.end_at);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate <= startDate) {
+      setPriceEstimate(null);
+      setPriceError(null);
+      return;
+    }
+
+    setPriceLoading(true);
+    setPriceError(null);
+
+    try {
+      const estimate = await pricingService.estimatePrice({
+        tenant_slug: createForm.tenant_slug,
+        start_datetime: startDate.toISOString(),
+        end_datetime: endDate.toISOString(),
+        baggage_count: createForm.baggage_count ?? 1,
+      });
+      setPriceEstimate(estimate);
+    } catch (error) {
+      const errorMsg = getErrorMessage(error);
+      setPriceError(errorMsg);
+      setPriceEstimate(null);
+      // Show non-blocking toast
+      push({
+        title: "Ücret hesaplanırken hata oluştu",
+        description: errorMsg,
+        type: "error",
+      });
+    } finally {
+      setPriceLoading(false);
+    }
+  }, [createForm.tenant_slug, createForm.start_at, createForm.end_at, createForm.baggage_count, push]);
+
+  useEffect(() => {
+    // Debounce price calculation
+    const timeoutId = setTimeout(() => {
+      calculatePrice();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [calculatePrice]);
 
   const handleLookup = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -250,6 +306,30 @@ export function SelfServiceReservationPage() {
                   required
                 />
               </label>
+              
+              {/* Price Display */}
+              {(priceLoading || priceEstimate || priceError) && (
+                <div className="form-field form-grid__field--full" style={{ padding: "1rem", background: "#f8f9fa", borderRadius: "8px", border: "1px solid #e9ecef" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 600, color: "#495057" }}>Toplam Tutar:</span>
+                    {priceLoading ? (
+                      <span style={{ color: "#6c757d" }}>Hesaplanıyor...</span>
+                    ) : priceError ? (
+                      <span style={{ color: "#dc3545", fontSize: "0.875rem" }}>Hesaplanamadı</span>
+                    ) : priceEstimate ? (
+                      <span style={{ fontWeight: 700, fontSize: "1.25rem", color: "#28a745" }}>
+                        {priceEstimate.total_formatted}
+                      </span>
+                    ) : null}
+                  </div>
+                  {priceEstimate && (
+                    <div style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: "#6c757d" }}>
+                      {priceEstimate.duration_hours.toFixed(1)} saat ({priceEstimate.duration_days} gün) • {priceEstimate.baggage_count} bavul
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <label className="form-field">
                 <span className="form-field__label">Müşteri Adı</span>
                 <input
@@ -313,9 +393,18 @@ export function SelfServiceReservationPage() {
                 />
               </label>
               <div className="form-actions form-grid__field--full">
-                <button type="submit" className="btn btn--secondary" disabled={createLoading}>
+                <button 
+                  type="submit" 
+                  className="btn btn--secondary" 
+                  disabled={createLoading || priceLoading || !!(priceError && !priceEstimate)}
+                >
                   {createLoading ? "Oluşturuluyor..." : "Rezervasyon Oluştur"}
                 </button>
+                {priceError && !priceEstimate && (
+                  <p style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: "#dc3545" }}>
+                    Ücret hesaplanamadığı için rezervasyon oluşturulamaz. Lütfen tarihleri kontrol edin.
+                  </p>
+                )}
               </div>
             </form>
 

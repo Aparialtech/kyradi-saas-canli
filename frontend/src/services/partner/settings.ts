@@ -4,6 +4,9 @@ export interface PartnerSettings {
   tenant_id: string;
   tenant_name: string;
   tenant_slug: string;
+  legal_name?: string | null;
+  tax_id?: string | null;
+  tax_office?: string | null;
   contact_email?: string | null;
   contact_phone?: string | null;
   brand_color?: string | null;
@@ -18,6 +21,9 @@ export interface PartnerSettings {
 
 export interface PartnerSettingsUpdatePayload {
   tenant_name?: string;
+  legal_name?: string;
+  tax_id?: string;
+  tax_office?: string;
   contact_email?: string;
   contact_phone?: string;
   brand_color?: string;

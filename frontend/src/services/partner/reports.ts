@@ -60,6 +60,13 @@ export interface PartnerOverviewResponse {
   by_storage: PartnerOverviewByStorageItem[];
 }
 
+export interface PartnerOverviewFilters {
+  date_from?: string;
+  date_to?: string;
+  location_id?: string;
+  status?: string;
+}
+
 export const partnerReportService = {
   async summary(): Promise<PartnerSummary> {
     const response = await http.get<PartnerSummary>("/reports/summary");
@@ -69,8 +76,31 @@ export const partnerReportService = {
     const response = await http.post<{ remaining: number | null }>("/reports/reservations/export-log");
     return response.data;
   },
-  async getPartnerOverview(): Promise<PartnerOverviewResponse> {
-    const response = await http.get<PartnerOverviewResponse>("/reports/partner-overview");
+  async getPartnerOverview(filters?: PartnerOverviewFilters): Promise<PartnerOverviewResponse> {
+    const params: Record<string, string> = {};
+    if (filters?.date_from) params.date_from = filters.date_from;
+    if (filters?.date_to) params.date_to = filters.date_to;
+    if (filters?.location_id) params.location_id = filters.location_id;
+    if (filters?.status) params.status = filters.status;
+    
+    const response = await http.get<PartnerOverviewResponse>("/reports/partner-overview", { params });
+    return response.data;
+  },
+  async exportReport(
+    format: "csv" | "xlsx" | "template",
+    filters?: PartnerOverviewFilters & { anonymous?: boolean }
+  ): Promise<Blob> {
+    const params: Record<string, string> = { format };
+    if (filters?.date_from) params.date_from = filters.date_from;
+    if (filters?.date_to) params.date_to = filters.date_to;
+    if (filters?.location_id) params.location_id = filters.location_id;
+    if (filters?.status) params.status = filters.status;
+    if (filters?.anonymous) params.anonymous = "true";
+    
+    const response = await http.get<Blob>("/reports/export", {
+      params,
+      responseType: "blob",
+    });
     return response.data;
   },
 };

@@ -52,12 +52,16 @@ export const revenueService = {
     status?: string,
     dateFrom?: string,
     dateTo?: string,
+    locationId?: string,
+    storageId?: string,
     search?: string
   ): Promise<SettlementListResponse> {
     const params: Record<string, string> = {};
     if (status) params.status = status;
     if (dateFrom) params.from = dateFrom;
     if (dateTo) params.to = dateTo;
+    if (locationId) params.location_id = locationId;
+    if (storageId) params.storage_id = storageId;
     if (search) params.search = search;
     const response = await http.get<SettlementListResponse>("/revenue/settlements", { params });
     return response.data;

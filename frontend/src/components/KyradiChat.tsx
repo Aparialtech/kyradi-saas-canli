@@ -432,11 +432,20 @@ export function KyradiChat({
       });
     } catch (chatError) {
       console.error("KyradiChat ask failed", chatError);
-      // Add error message to chat
+      // Handle rate limit and other errors gracefully
+      let errorMessage = "Bir hata oluştu";
+      if (chatError instanceof Error) {
+        if (chatError.message.includes("Rate limit") || chatError.message.includes("rate limit")) {
+          errorMessage = "Asistan şu anda yoğun, lütfen daha sonra tekrar deneyin.";
+        } else {
+          errorMessage = chatError.message;
+        }
+      }
+      // Add error message to chat (non-blocking)
       appendMessage({
         id: createMessageId(),
         role: "assistant",
-        text: chatError instanceof Error ? chatError.message : "Bir hata oluştu",
+        text: errorMessage,
         isError: true,
       });
     }

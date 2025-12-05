@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { revenueService } from "../../../services/partner/revenue";
+import { locationService } from "../../../services/partner/locations";
+import { storageService } from "../../../services/partner/storages";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
 import { useToast } from "../../../hooks/useToast";
@@ -12,11 +14,29 @@ export function SettlementsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  const [locationId, setLocationId] = useState<string>("");
+  const [storageId, setStorageId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
+  const locationsQuery = useQuery({
+    queryKey: ["locations"],
+    queryFn: () => locationService.list(),
+  });
+
+  const storagesQuery = useQuery({
+    queryKey: ["storages"],
+    queryFn: () => storageService.list(),
+  });
+  
+  // Filter storages by location
+  const filteredStorages = useMemo(() => {
+    if (!locationId) return storagesQuery.data || [];
+    return (storagesQuery.data || []).filter(s => s.location_id === locationId);
+  }, [storagesQuery.data, locationId]);
+
   const settlementsQuery = useQuery({
-    queryKey: ["settlements", statusFilter, dateFrom, dateTo, searchTerm],
-    queryFn: () => revenueService.listSettlements(statusFilter, dateFrom, dateTo, searchTerm),
+    queryKey: ["settlements", statusFilter, dateFrom, dateTo, locationId, storageId, searchTerm],
+    queryFn: () => revenueService.listSettlements(statusFilter, dateFrom, dateTo, locationId, storageId, searchTerm),
   });
 
   // Get data from the new response format
@@ -156,6 +176,55 @@ export function SettlementsPage() {
         </div>
         <div>
           <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
+              Lokasyon
+          </label>
+          <select
+            value={locationId}
+            onChange={(e) => {
+              setLocationId(e.target.value);
+              setStorageId(""); // Reset storage when location changes
+            }}
+            style={{
+              width: "100%",
+              padding: "0.65rem",
+              borderRadius: "8px",
+              border: "1px solid #cbd5f5",
+            }}
+          >
+            <option value="">Tümü</option>
+            {locationsQuery.data?.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
+              Depo
+          </label>
+          <select
+            value={storageId}
+            onChange={(e) => setStorageId(e.target.value)}
+            disabled={!locationId}
+            style={{
+              width: "100%",
+              padding: "0.65rem",
+              borderRadius: "8px",
+              border: "1px solid #cbd5f5",
+              opacity: locationId ? 1 : 0.6,
+            }}
+          >
+            <option value="">Tümü</option>
+            {filteredStorages.map((storage) => (
+              <option key={storage.id} value={storage.id}>
+                {storage.code}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
               {t("common.from")}
           </label>
           <input
@@ -268,7 +337,7 @@ export function SettlementsPage() {
       ) : (
         <div className="panel">
           <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>💰</div>
+            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>💼</div>
             <h3 className="empty-state__title">{t("common.noData")}</h3>
             <p>Henüz hakediş kaydı bulunmuyor veya seçili filtrelerde sonuç yok.</p>
           </div>

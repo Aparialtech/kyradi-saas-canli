@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Modal } from "../common/Modal";
 import { useTranslation } from "../../hooks/useTranslation";
+import { QrCode, Copy, Check } from "../../lib/lucide";
+import { useToast } from "../../hooks/useToast";
 import type { Reservation } from "../../services/partner/reservations";
 
 interface ReservationDetailModalProps {
@@ -31,6 +33,8 @@ const statusColors: Record<string, string> = {
 
 export function ReservationDetailModal({ reservation, isOpen, onClose }: ReservationDetailModalProps) {
   const { t } = useTranslation();
+  const { push } = useToast();
+  const [copied, setCopied] = useState(false);
 
   const formatDate = useMemo(() => {
     return (dateStr?: string | null) => {
@@ -168,24 +172,31 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Giriş Tarihi</span>
               <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                {formatDate(reservation.start_datetime ?? reservation.checkin_date)}
+                {formatDate(reservation.start_datetime || reservation.start_at || reservation.checkin_date)}
               </p>
             </div>
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Çıkış Tarihi</span>
               <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                {formatDate(reservation.end_datetime ?? reservation.checkout_date)}
+                {formatDate(reservation.end_datetime || reservation.end_at || reservation.checkout_date)}
               </p>
             </div>
             {reservation.duration_hours && (
               <div>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Süre</span>
-                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{reservation.duration_hours} saat</p>
+                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{reservation.duration_hours.toFixed(1)} saat</p>
               </div>
             )}
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Depo</span>
-              <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{reservation.storage_id ?? "Atanmadı"}</p>
+              <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
+                {reservation.storage_code || reservation.storage_id || "Atanmadı"}
+              </p>
+              {reservation.location_name && (
+                <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#64748b" }}>
+                  Lokasyon: {reservation.location_name}
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -265,6 +276,79 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
                   </p>
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* QR Code */}
+        {(reservation.qr_code || reservation.qr_token) && (
+          <section>
+            <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <QrCode className="h-4 w-4" /> QR Kod
+            </h5>
+            <div
+              style={{
+                background: "#f8fafc",
+                padding: "1.5rem",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  display: "inline-block",
+                  padding: "1rem",
+                  background: "white",
+                  borderRadius: "8px",
+                  border: "2px solid #e2e8f0",
+                  marginBottom: "1rem",
+                }}
+              >
+                <QrCode className="h-32 w-32" style={{ color: "#0f172a" }} />
+              </div>
+              <div style={{ marginBottom: "0.75rem" }}>
+                <code
+                  style={{
+                    fontSize: "0.875rem",
+                    fontFamily: "monospace",
+                    background: "#f1f5f9",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "6px",
+                    display: "inline-block",
+                    color: "#0f172a",
+                  }}
+                >
+                  {reservation.qr_code || reservation.qr_token}
+                </code>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const qrText = reservation.qr_code || reservation.qr_token || "";
+                  navigator.clipboard.writeText(qrText).then(() => {
+                    setCopied(true);
+                    push({ title: "QR kodu kopyalandı", type: "success" });
+                    setTimeout(() => setCopied(false), 2000);
+                  });
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.5rem 1rem",
+                  background: "#0f172a",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                }}
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copied ? "Kopyalandı" : "Kopyala"}
+              </button>
             </div>
           </section>
         )}

@@ -4,6 +4,9 @@
 /* Import Premium Design System */
 @import './styles/design-system.css';
 
+/* Import Layout Fixes */
+@import './styles/layout-fix.css';
+
 /* ====================== ROOT DESIGN SYSTEM ====================== */
 :root {
   font-family: 'Satoshi', "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;

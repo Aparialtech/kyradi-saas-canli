@@ -27,6 +27,9 @@ import { Input, Textarea } from "../../components/ui/Input";
 import { PageHeader } from "../../components/common/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { ReservationTrendChart } from "../../components/charts/ReservationTrendChart";
+import { RevenueDonutChart } from "../../components/charts/RevenueDonutChart";
+import { OccupancyBarChart } from "../../components/charts/OccupancyBarChart";
 import {
   Briefcase,
   MapPin,
@@ -349,6 +352,46 @@ export function PartnerOverview() {
         </motion.div>
       )}
 
+      {/* Charts Section */}
+      <motion.div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))',
+          gap: 'var(--space-6)',
+          marginBottom: 'var(--space-6)',
+        }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.4 }}
+      >
+        <ModernCard variant="glass" padding="lg">
+          <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+            Rezervasyon Trendi
+          </h3>
+          <div style={{ height: '300px' }}>
+            <ReservationTrendChart />
+          </div>
+        </ModernCard>
+
+        <ModernCard variant="glass" padding="lg">
+          <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+            Gelir Dağılımı
+          </h3>
+          <div style={{ height: '300px' }}>
+            <RevenueDonutChart />
+          </div>
+        </ModernCard>
+
+        <ModernCard variant="glass" padding="lg">
+          <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+            Depo Doluluk Oranları
+          </h3>
+          <div style={{ height: '300px' }}>
+            <OccupancyBarChart />
+          </div>
+        </ModernCard>
+      </motion.div>
+
       {/* Plan Info Cards */}
       {summaryQuery.data && (
         <motion.div
@@ -542,38 +585,28 @@ export function PartnerDashboard() {
         />
 
         {/* Main Content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', marginLeft: sidebarOpen ? '280px' : '80px', transition: 'margin-left 0.2s' }}>
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column',
+          width: '100%',
+          minWidth: 0,
+          marginLeft: '280px',
+          transition: 'margin-left 0.2s',
+        }}
+        className="main-content"
+        >
           {/* Modern Navbar */}
           <ModernNavbar
             title="Partner Panel"
             userName={user?.email ?? 'Partner'}
             userRole="Partner"
             onLogout={logout}
-            sidebarToggle={
-              <button 
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '40px',
-                  height: '40px',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  borderRadius: 'var(--radius-lg)',
-                }}
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-              >
-                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            }
             actions={<LanguageSwitcher />}
           />
 
           {/* Page Content */}
-          <div style={{ flex: 1, overflow: 'auto' }}>
+          <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
             <Outlet />
           </div>
         </div>

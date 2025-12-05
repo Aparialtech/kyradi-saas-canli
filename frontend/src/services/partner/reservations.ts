@@ -35,6 +35,8 @@ export interface Reservation {
   storage_code?: string | null;
   location_id?: string | null;
   location_name?: string | null;
+  qr_code?: string | null;
+  qr_token?: string | null;  // Alias for qr_code
   notes?: string | null;
   origin?: string | null;
   kvkk_approved?: boolean | null;

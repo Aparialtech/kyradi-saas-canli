@@ -276,14 +276,44 @@ export function ReservationsPage() {
                 ),
               },
               {
-                key: 'start_at',
-                label: t("reservations.table.checkinDate"),
-                render: (value) => formatDateTimeValue(value),
+                key: 'dates',
+                label: 'Tarihler',
+                render: (_, row: Reservation) => {
+                  const startDate = row.start_datetime || row.start_at;
+                  const endDate = row.end_datetime || row.end_at;
+                  return (
+                    <div>
+                      <div style={{ fontSize: 'var(--text-sm)' }}>
+                        {formatDateTimeValue(startDate)}
+                      </div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                        {formatDateTimeValue(endDate)}
+                      </div>
+                    </div>
+                  );
+                },
               },
               {
-                key: 'end_at',
-                label: t("reservations.table.checkoutDate"),
-                render: (value) => formatDateTimeValue(value),
+                key: 'storage',
+                label: 'Depo',
+                render: (_, row: Reservation) => (
+                  <div>
+                    {row.storage_code ? (
+                      <>
+                        <div style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
+                          {row.storage_code}
+                        </div>
+                        {row.location_name && (
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                            {row.location_name}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>Atanmadı</span>
+                    )}
+                  </div>
+                ),
               },
               {
                 key: 'baggage_count',

@@ -13,7 +13,7 @@ import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
-import { HardDrive } from "../../../lib/lucide";
+import { HardDrive, Calendar, Edit, Trash2 } from "../../../lib/lucide";
 
 // Status badge classes - labels are fetched via i18n inside component
 const statusBadgeClass: Record<StorageStatus, string> = {
@@ -295,16 +295,15 @@ export function LockersPage() {
         </div>
 
         {storagesQuery.isLoading ? (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-            <h3 className="empty-state__title">{t("common.loading")}</h3>
-            <p>{t("common.loading")}</p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-16)', color: 'var(--text-tertiary)' }}>
+            <div className="shimmer" style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-full)', margin: '0 auto var(--space-4) auto' }} />
+            <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>{t("common.loading")}</p>
           </div>
         ) : storagesQuery.isError ? (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-            <h3 className="empty-state__title">{t("common.error")}</h3>
-            <p>{t("common.loadError")}</p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-16)', color: 'var(--danger-500)' }}>
+            <HardDrive className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', opacity: 0.5 }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>{t("common.error")}</h3>
+            <p style={{ margin: 0 }}>{t("common.loadError")}</p>
           </div>
         ) : filteredStorages.length > 0 ? (
           <div className="data-table-wrapper">
@@ -341,33 +340,37 @@ export function LockersPage() {
                         : "-"}
                     </td>
                     <td>
-                      <div className="table-actions">
-                        <button
-                          type="button"
-                          className="action-link"
+                      <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                        <ModernButton
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setCalendarStorage(storage)}
                           title={t("calendar.storageCalendarTitle")}
+                          leftIcon={<Calendar className="h-4 w-4" />}
                         >
-                          📅 {t("common.info")}
-                        </button>
-                        <button
-                          type="button"
-                          className="action-link"
+                          {t("common.info")}
+                        </ModernButton>
+                        <ModernButton
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEdit(storage)}
+                          leftIcon={<Edit className="h-4 w-4" />}
                         >
                           {t("common.edit")}
-                        </button>
-                        <button
-                          type="button"
-                          className="action-link action-link--danger"
+                        </ModernButton>
+                        <ModernButton
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             if (confirm(t("common.confirmDelete"))) {
                               deleteMutation.mutate(storage.id);
                             }
                           }}
+                          leftIcon={<Trash2 className="h-4 w-4" />}
+                          style={{ color: 'var(--danger-500)' }}
                         >
                           {t("common.delete")}
-                        </button>
+                        </ModernButton>
                       </div>
                     </td>
                   </tr>

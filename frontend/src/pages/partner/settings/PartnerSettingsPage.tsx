@@ -14,6 +14,9 @@ import {
 
 type FormValues = {
   tenant_name: string;
+  legal_name: string;
+  tax_id: string;
+  tax_office: string;
   contact_email: string;
   contact_phone: string;
   brand_color: string;
@@ -42,6 +45,9 @@ export function PartnerSettingsPage() {
   } = useForm<FormValues>({
     defaultValues: {
       tenant_name: "",
+      legal_name: "",
+      tax_id: "",
+      tax_office: "",
       contact_email: "",
       contact_phone: "",
       brand_color: "#0F172A",
@@ -82,6 +88,9 @@ export function PartnerSettingsPage() {
       // Update form with returned values
       reset({
         tenant_name: data.tenant_name || "",
+        legal_name: data.legal_name || "",
+        tax_id: data.tax_id || "",
+        tax_office: data.tax_office || "",
         contact_email: data.contact_email || "",
         contact_phone: data.contact_phone || "",
         brand_color: data.brand_color || "",
@@ -105,6 +114,15 @@ export function PartnerSettingsPage() {
     // Only include changed fields
     if (values.tenant_name !== settingsQuery.data?.tenant_name) {
       payload.tenant_name = values.tenant_name;
+    }
+    if (values.legal_name !== settingsQuery.data?.legal_name) {
+      payload.legal_name = values.legal_name;
+    }
+    if (values.tax_id !== settingsQuery.data?.tax_id) {
+      payload.tax_id = values.tax_id;
+    }
+    if (values.tax_office !== settingsQuery.data?.tax_office) {
+      payload.tax_office = values.tax_office;
     }
     if (values.contact_email !== settingsQuery.data?.contact_email) {
       payload.contact_email = values.contact_email;
@@ -226,6 +244,39 @@ export function PartnerSettingsPage() {
                   style={{ opacity: 0.6, cursor: "not-allowed" }}
                 />
                 <small className="form-field__hint">{t("settings.shortNameHint")}</small>
+              </label>
+
+              <label className="form-field">
+                <span className="form-field__label">Yasal Ünvan</span>
+                <input
+                  type="text"
+                  {...register("legal_name")}
+                  disabled={!isEditing}
+                  placeholder="Şirket Yasal Ünvanı"
+                />
+                <small className="form-field__hint">Fatura ve resmi belgelerde kullanılacak yasal ünvan</small>
+              </label>
+
+              <label className="form-field">
+                <span className="form-field__label">Vergi Numarası</span>
+                <input
+                  type="text"
+                  {...register("tax_id")}
+                  disabled={!isEditing}
+                  placeholder="1234567890"
+                />
+                <small className="form-field__hint">10 haneli vergi numarası</small>
+              </label>
+
+              <label className="form-field">
+                <span className="form-field__label">Vergi Dairesi</span>
+                <input
+                  type="text"
+                  {...register("tax_office")}
+                  disabled={!isEditing}
+                  placeholder="Kadıköy Vergi Dairesi"
+                />
+                <small className="form-field__hint">Bağlı bulunulan vergi dairesi</small>
               </label>
 
               <label className="form-field">

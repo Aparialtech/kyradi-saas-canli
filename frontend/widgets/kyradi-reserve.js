@@ -369,18 +369,36 @@
             <fieldset class="kyradi-reserve__fieldset">
               <legend class="kyradi-reserve__legend">${this.t("consents")}</legend>
               <label class="kyradi-reserve__consent">
-                <input type="checkbox" name="kvkk_consent" required />
-                <span>${this.kvkkText || this.t("kvkkConsent")} <span class="kyradi-reserve__required">*</span></span>
+                <input type="checkbox" name="kvkk_consent" required data-contract-type="kvkk" />
+                <span>${this.kvkkText || this.t("kvkkConsent")} <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk" style="text-decoration: underline; color: #0066ff; cursor: pointer;">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
               </label>
               <label class="kyradi-reserve__consent">
-                <input type="checkbox" name="terms_consent" required />
-                <span>${this.t("termsConsent")} <span class="kyradi-reserve__required">*</span></span>
+                <input type="checkbox" name="terms_consent" required data-contract-type="terms" />
+                <span>${this.t("termsConsent")} <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms" style="text-decoration: underline; color: #0066ff; cursor: pointer;">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
               </label>
               <label class="kyradi-reserve__consent">
-                <input type="checkbox" name="disclosure_consent" required />
-                <span>${this.t("disclosureConsent")} <span class="kyradi-reserve__required">*</span></span>
+                <input type="checkbox" name="disclosure_consent" required data-contract-type="disclosure" />
+                <span>${this.t("disclosureConsent")} <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure" style="text-decoration: underline; color: #0066ff; cursor: pointer;">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
               </label>
             </fieldset>
+            
+            <!-- Contract Modal -->
+            <div class="kyradi-reserve__modal" id="contract-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; overflow-y: auto; padding: 20px;">
+              <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+                <h3 style="margin: 0 0 16px 0; font-size: 1.25rem; font-weight: 600;" id="contract-modal-title">Sözleşme</h3>
+                <div style="max-height: 400px; overflow-y: auto; padding: 16px; background: #f8f9fa; border-radius: 8px; margin-bottom: 16px; line-height: 1.6; font-size: 0.9rem; white-space: pre-wrap;" id="contract-modal-content"></div>
+                <div style="margin-bottom: 16px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="contract-modal-accept" />
+                    <span>Okudum, kabul ediyorum</span>
+                  </label>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                  <button type="button" class="kyradi-reserve__button" id="contract-modal-close" style="background: #6b7280; padding: 10px 20px; border: none; border-radius: 8px; color: white; cursor: pointer;">Kapat</button>
+                  <button type="button" class="kyradi-reserve__button" id="contract-modal-confirm" style="background: #00a389; padding: 10px 20px; border: none; border-radius: 8px; color: white; cursor: pointer; opacity: 0.5;" disabled>Kabul Ediyorum</button>
+                </div>
+              </div>
+            </div>
             
             ${
               this.options.hcaptchaSitekey
@@ -526,6 +544,84 @@
         });
         endInput.addEventListener('change', updateDurationAndPrice);
       }
+      
+      // Contract modal handlers
+      this.setupContractModals();
+    }
+    
+    async setupContractModals() {
+      // Fetch legal texts from backend
+      let legalTexts = { kvkk_text: '', aydinlatma_text: '' };
+      try {
+        const response = await fetch('/api/public/legal-texts');
+        if (response.ok) {
+          legalTexts = await response.json();
+        }
+      } catch (err) {
+        console.warn('Failed to fetch legal texts:', err);
+      }
+      
+      const contractLinks = this.querySelectorAll('.kyradi-reserve__contract-link');
+      const modal = this.querySelector('#contract-modal');
+      const modalTitle = this.querySelector('#contract-modal-title');
+      const modalContent = this.querySelector('#contract-modal-content');
+      const modalAccept = this.querySelector('#contract-modal-accept');
+      const modalClose = this.querySelector('#contract-modal-close');
+      const modalConfirm = this.querySelector('#contract-modal-confirm');
+      
+      if (!modal || !modalTitle || !modalContent || !modalAccept || !modalClose || !modalConfirm) return;
+      
+      const contractTexts = {
+        kvkk: legalTexts.kvkk_text || this.kvkkText || 'KVKK metni yüklenemedi.',
+        terms: 'Depo kullanım şartları ve koşulları burada yer almaktadır. Lütfen dikkatle okuyunuz.',
+        disclosure: legalTexts.aydinlatma_text || 'Aydınlatma metni burada yer almaktadır. Lütfen dikkatle okuyunuz.'
+      };
+      
+      const contractTitles = {
+        kvkk: 'KVKK Aydınlatma Metni',
+        terms: 'Depo Kullanım Şartları',
+        disclosure: 'Aydınlatma Metni'
+      };
+      
+      contractLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const contractType = link.getAttribute('data-contract-type');
+          modalTitle.textContent = contractTitles[contractType] || 'Sözleşme';
+          modalContent.textContent = contractTexts[contractType] || 'Metin yüklenemedi.';
+          modalAccept.checked = false;
+          modalConfirm.disabled = true;
+          modalConfirm.style.opacity = '0.5';
+          modal.style.display = 'flex';
+        });
+      });
+      
+      modalAccept.addEventListener('change', () => {
+        modalConfirm.disabled = !modalAccept.checked;
+        modalConfirm.style.opacity = modalAccept.checked ? '1' : '0.5';
+      });
+      
+      modalClose.addEventListener('click', () => {
+        modal.style.display = 'none';
+      });
+      
+      modalConfirm.addEventListener('click', () => {
+        if (!modalAccept.checked) return;
+        const contractType = modalTitle.textContent.includes('KVKK') ? 'kvkk' : 
+                           modalTitle.textContent.includes('Şartlar') ? 'terms' : 'disclosure';
+        const checkbox = this.querySelector(`input[name="${contractType}_consent"]`);
+        if (checkbox) {
+          checkbox.checked = true;
+        }
+        modal.style.display = 'none';
+      });
+      
+      // Close on backdrop click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
     }
 
     validateForm(form) {
