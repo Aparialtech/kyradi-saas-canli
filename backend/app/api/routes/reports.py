@@ -353,7 +353,6 @@ async def get_partner_overview(
     if location_id:
         reservation_filters.append(Reservation.location_id == location_id)
         # For payments, we need to join with reservation
-        from sqlalchemy import and_
         payment_filters.append(
             Payment.reservation_id.in_(
                 select(Reservation.id).where(Reservation.location_id == location_id)
@@ -365,20 +364,23 @@ async def get_partner_overview(
         reservation_filters.append(Reservation.status == status)
     
     # Summary metrics with filters
-    total_revenue_stmt = select(func.coalesce(func.sum(Payment.amount_minor), 0)).where(
-        *payment_filters
-    )
+    total_revenue_stmt = select(func.coalesce(func.sum(Payment.amount_minor), 0))
+    if payment_filters:
+        total_revenue_stmt = total_revenue_stmt.where(and_(*payment_filters))
     total_revenue_minor = await _safe_scalar(session, total_revenue_stmt, 0, "total_revenue")
     
-    total_reservations_stmt = select(func.count()).select_from(Reservation).where(
-        *reservation_filters
-    )
+    total_reservations_stmt = select(func.count()).select_from(Reservation)
+    if reservation_filters:
+        total_reservations_stmt = total_reservations_stmt.where(and_(*reservation_filters))
     total_reservations = await _safe_scalar(session, total_reservations_stmt, 0, "total_reservations")
     
-    active_reservations_stmt = select(func.count()).select_from(Reservation).where(
-        *reservation_filters,
-        Reservation.status.in_([ReservationStatus.RESERVED.value, ReservationStatus.ACTIVE.value]),
+    active_reservation_filters = reservation_filters.copy()
+    active_reservation_filters.append(
+        Reservation.status.in_([ReservationStatus.RESERVED.value, ReservationStatus.ACTIVE.value])
     )
+    active_reservations_stmt = select(func.count()).select_from(Reservation)
+    if active_reservation_filters:
+        active_reservations_stmt = active_reservations_stmt.where(and_(*active_reservation_filters))
     active_reservations = await _safe_scalar(session, active_reservations_stmt, 0, "active_reservations")
     
     # Calculate occupancy rate
@@ -439,6 +441,24 @@ async def get_partner_overview(
         if location_id:
             location_filters.append(Location.id == location_id)
         
+        # Build reservation join filters
+        reservation_join_filters = [Reservation.storage_id == Storage.id]
+        if status:
+            reservation_join_filters.append(Reservation.status == status)
+        
+        # Build payment join filters
+        payment_join_filters = [
+            Payment.reservation_id == Reservation.id,
+            Payment.status == PaymentStatus.PAID.value
+        ]
+        
+        # Build date filters for payments
+        payment_date_filters = []
+        if date_from:
+            payment_date_filters.append(Payment.created_at >= date_from)
+        if date_to:
+            payment_date_filters.append(Payment.created_at <= date_to)
+        
         # Join reservations with payments and locations
         location_stmt = select(
             Location.id.label('location_id'),
@@ -448,25 +468,18 @@ async def get_partner_overview(
         ).select_from(Location).outerjoin(
             Storage, Storage.location_id == Location.id
         ).outerjoin(
-            Reservation, and_(
-                Reservation.storage_id == Storage.id,
-                *([Reservation.status == status] if status else [])
-            )
+            Reservation, and_(*reservation_join_filters)
         ).outerjoin(
-            Payment, and_(
-                Payment.reservation_id == Reservation.id,
-                Payment.status == PaymentStatus.PAID.value
-            )
-        ).where(
-            *location_filters
+            Payment, and_(*payment_join_filters)
         )
         
+        # Apply location filters
+        if location_filters:
+            location_stmt = location_stmt.where(and_(*location_filters))
+        
         # Apply date filters to payments
-        if date_from or date_to:
-            location_stmt = location_stmt.where(
-                *([Payment.created_at >= date_from] if date_from else []),
-                *([Payment.created_at <= date_to] if date_to else [])
-            )
+        if payment_date_filters:
+            location_stmt = location_stmt.where(and_(*payment_date_filters))
         
         location_stmt = location_stmt.group_by(
             Location.id, Location.name
@@ -484,7 +497,7 @@ async def get_partner_overview(
                 "reservations": int(row.reservations or 0)
             })
     except Exception as exc:
-        logger.warning(f"Failed to get revenue by location: {exc}")
+        logger.warning("Failed to get revenue by location: %s", exc, exc_info=True)
     
     # Most used storages
     by_storage = []
@@ -494,7 +507,7 @@ async def get_partner_overview(
         if location_id:
             storage_filters.append(Storage.location_id == location_id)
         
-        reservation_join_filters = []
+        reservation_join_filters = [Reservation.storage_id == Storage.id]
         if status:
             reservation_join_filters.append(Reservation.status == status)
         if date_from:
@@ -510,13 +523,14 @@ async def get_partner_overview(
         ).select_from(Storage).join(
             Location, Location.id == Storage.location_id
         ).outerjoin(
-            Reservation, and_(
-                Reservation.storage_id == Storage.id,
-                *reservation_join_filters
-            )
-        ).where(
-            *storage_filters
-        ).group_by(
+            Reservation, and_(*reservation_join_filters)
+        )
+        
+        # Apply storage filters
+        if storage_filters:
+            storage_stmt = storage_stmt.where(and_(*storage_filters))
+        
+        storage_stmt = storage_stmt.group_by(
             Storage.id, Storage.code, Location.name
         ).order_by(
             func.count(Reservation.id).desc()
@@ -532,7 +546,7 @@ async def get_partner_overview(
                 "reservations": int(row.reservations or 0)
             })
     except Exception as exc:
-        logger.warning(f"Failed to get storage usage: {exc}")
+        logger.warning("Failed to get storage usage: %s", exc, exc_info=True)
     
     return {
         "summary": {
@@ -566,6 +580,7 @@ async def export_reports(
         - template: Kyradi-branded HTML/PDF report
     """
     from fastapi.responses import StreamingResponse, Response
+    from sqlalchemy.orm import selectinload
     import csv
     import io
     from datetime import date
@@ -574,150 +589,166 @@ async def export_reports(
     if not tenant_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant context required")
     
-    # Build filters (same as partner-overview)
-    reservation_filters = [Reservation.tenant_id == tenant_id]
-    if date_from:
-        reservation_filters.append(Reservation.created_at >= date_from)
-    if date_to:
-        reservation_filters.append(Reservation.created_at <= date_to)
-    if location_id:
-        reservation_filters.append(Reservation.location_id == location_id)
-    if status:
-        reservation_filters.append(Reservation.status == status)
-    
-    # Fetch reservations with related data
-    stmt = select(Reservation).where(*reservation_filters).order_by(Reservation.created_at.desc())
-    result = await session.execute(stmt)
-    reservations = result.scalars().all()
-    
-    # Load related data
-    for res in reservations:
-        await session.refresh(res, ["storage", "storage.location"])
-    
-    if format == "csv":
-        output = io.StringIO()
-        writer = csv.writer(output)
+    try:
+        # Build filters (same as partner-overview)
+        reservation_filters = [Reservation.tenant_id == tenant_id]
+        if date_from:
+            reservation_filters.append(Reservation.created_at >= date_from)
+        if date_to:
+            reservation_filters.append(Reservation.created_at <= date_to)
+        if location_id:
+            reservation_filters.append(Reservation.location_id == location_id)
+        if status:
+            reservation_filters.append(Reservation.status == status)
         
-        # Write header
-        if anonymous:
-            writer.writerow([
-                "ID", "Tarih", "Durum", "Depo", "Lokasyon", 
-                "Bavul Sayısı", "Tutar", "Para Birimi"
-            ])
-        else:
-            writer.writerow([
-                "ID", "Tarih", "Durum", "Depo", "Lokasyon",
-                "Misafir Adı", "E-posta", "Telefon", "Bavul Sayısı", "Tutar", "Para Birimi"
-            ])
+        # Fetch reservations with eager loading of related data
+        stmt = (
+            select(Reservation)
+            .options(
+                selectinload(Reservation.storage).selectinload(Storage.location)
+            )
+            .where(and_(*reservation_filters))
+            .order_by(Reservation.created_at.desc())
+        )
+        result = await session.execute(stmt)
+        reservations = result.scalars().all()
         
-        # Write rows
-        for res in reservations:
-            storage = res.storage
-            location = storage.location if storage else None
+        if format == "csv":
+            output = io.StringIO()
+            writer = csv.writer(output)
             
+            # Write header
             if anonymous:
                 writer.writerow([
-                    res.id,
-                    res.created_at.isoformat() if res.created_at else "",
-                    res.status,
-                    storage.code if storage else "",
-                    location.name if location else "",
-                    res.baggage_count or 0,
-                    res.amount_minor or 0,
-                    res.currency or "TRY",
+                    "ID", "Tarih", "Durum", "Depo", "Lokasyon", 
+                    "Bavul Sayısı", "Tutar", "Para Birimi"
                 ])
             else:
                 writer.writerow([
-                    res.id,
-                    res.created_at.isoformat() if res.created_at else "",
-                    res.status,
-                    storage.code if storage else "",
-                    location.name if location else "",
-                    res.full_name or res.customer_name or "—",
-                    res.customer_email or "—",
-                    res.customer_phone or res.phone_number or "—",
-                    res.baggage_count or 0,
-                    res.amount_minor or 0,
-                    res.currency or "TRY",
+                    "ID", "Tarih", "Durum", "Depo", "Lokasyon",
+                    "Misafir Adı", "E-posta", "Telefon", "Bavul Sayısı", "Tutar", "Para Birimi"
                 ])
-        
-        output.seek(0)
-        filename = f"kyradi-report-{date.today().isoformat()}.csv"
-        return StreamingResponse(
-            iter([output.getvalue()]),
-            media_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-        )
-    
-    elif format == "xlsx":
-        try:
-            import openpyxl
-            from openpyxl import Workbook
-        except ImportError:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="XLSX export requires openpyxl package"
+            
+            # Write rows
+            for res in reservations:
+                # Safe attribute access for nested relationships
+                storage = getattr(res, "storage", None)
+                location = None
+                if storage:
+                    location = getattr(storage, "location", None)
+                
+                storage_code = getattr(storage, "code", "") if storage else ""
+                location_name = getattr(location, "name", "") if location else ""
+                
+                if anonymous:
+                    writer.writerow([
+                        res.id,
+                        res.created_at.isoformat() if res.created_at else "",
+                        res.status,
+                        storage_code,
+                        location_name,
+                        res.baggage_count or 0,
+                        res.amount_minor or 0,
+                        res.currency or "TRY",
+                    ])
+                else:
+                    writer.writerow([
+                        res.id,
+                        res.created_at.isoformat() if res.created_at else "",
+                        res.status,
+                        storage_code,
+                        location_name,
+                        res.full_name or res.customer_name or "—",
+                        res.customer_email or "—",
+                        res.customer_phone or res.phone_number or "—",
+                        res.baggage_count or 0,
+                        res.amount_minor or 0,
+                        res.currency or "TRY",
+                    ])
+            
+            output.seek(0)
+            filename = f"kyradi-report-{date.today().isoformat()}.csv"
+            return StreamingResponse(
+                iter([output.getvalue()]),
+                media_type="text/csv",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'}
             )
         
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Rezervasyonlar"
-        
-        # Write header
-        if anonymous:
-            headers = ["ID", "Tarih", "Durum", "Depo", "Lokasyon", "Bavul Sayısı", "Tutar", "Para Birimi"]
-        else:
-            headers = ["ID", "Tarih", "Durum", "Depo", "Lokasyon", "Misafir Adı", "E-posta", "Telefon", "Bavul Sayısı", "Tutar", "Para Birimi"]
-        
-        ws.append(headers)
-        
-        # Write rows
-        for res in reservations:
-            storage = res.storage
-            location = storage.location if storage else None
+        elif format == "xlsx":
+            try:
+                import openpyxl
+                from openpyxl import Workbook
+            except ImportError:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="XLSX export requires openpyxl package"
+                )
             
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Rezervasyonlar"
+            
+            # Write header
             if anonymous:
-                ws.append([
-                    res.id,
-                    res.created_at.isoformat() if res.created_at else "",
-                    res.status,
-                    storage.code if storage else "",
-                    location.name if location else "",
-                    res.baggage_count or 0,
-                    res.amount_minor or 0,
-                    res.currency or "TRY",
-                ])
+                headers = ["ID", "Tarih", "Durum", "Depo", "Lokasyon", "Bavul Sayısı", "Tutar", "Para Birimi"]
             else:
-                ws.append([
-                    res.id,
-                    res.created_at.isoformat() if res.created_at else "",
-                    res.status,
-                    storage.code if storage else "",
-                    location.name if location else "",
-                    res.full_name or res.customer_name or "—",
-                    res.customer_email or "—",
-                    res.customer_phone or res.phone_number or "—",
-                    res.baggage_count or 0,
-                    res.amount_minor or 0,
-                    res.currency or "TRY",
+                headers = ["ID", "Tarih", "Durum", "Depo", "Lokasyon", "Misafir Adı", "E-posta", "Telefon", "Bavul Sayısı", "Tutar", "Para Birimi"]
+            
+            ws.append(headers)
+            
+            # Write rows
+            for res in reservations:
+                # Safe attribute access for nested relationships
+                storage = getattr(res, "storage", None)
+                location = None
+                if storage:
+                    location = getattr(storage, "location", None)
+                
+                storage_code = getattr(storage, "code", "") if storage else ""
+                location_name = getattr(location, "name", "") if location else ""
+                
+                if anonymous:
+                    ws.append([
+                        res.id,
+                        res.created_at.isoformat() if res.created_at else "",
+                        res.status,
+                        storage_code,
+                        location_name,
+                        res.baggage_count or 0,
+                        res.amount_minor or 0,
+                        res.currency or "TRY",
+                    ])
+                else:
+                    ws.append([
+                        res.id,
+                        res.created_at.isoformat() if res.created_at else "",
+                        res.status,
+                        storage_code,
+                        location_name,
+                        res.full_name or res.customer_name or "—",
+                        res.customer_email or "—",
+                        res.customer_phone or res.phone_number or "—",
+                        res.baggage_count or 0,
+                        res.amount_minor or 0,
+                        res.currency or "TRY",
                 ])
+            
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
+            filename = f"kyradi-report-{date.today().isoformat()}.xlsx"
+            return StreamingResponse(
+                output,
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            )
         
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
-        filename = f"kyradi-report-{date.today().isoformat()}.xlsx"
-        return StreamingResponse(
-            output,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-        )
-    
-    elif format == "template":
-        # Generate Kyradi-branded HTML report
-        tenant = await session.get(Tenant, tenant_id)
-        tenant_name = tenant.name if tenant else "Partner"
-        
-        html_content = f"""
+        elif format == "template":
+            # Generate Kyradi-branded HTML report
+            tenant = await session.get(Tenant, tenant_id)
+            tenant_name = tenant.name if tenant else "Partner"
+            
+            html_content = f"""
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -763,43 +794,56 @@ async def export_reports(
         </thead>
         <tbody>
 """
-        
-        for res in reservations:
-            storage = res.storage
-            location = storage.location if storage else None
-            guest_name = "***" if anonymous else (res.full_name or res.customer_name or "—")
-            guest_email = "***" if anonymous else (res.customer_email or "—")
-            guest_phone = "***" if anonymous else (res.customer_phone or res.phone_number or "—")
             
-            html_content += f"""
+            for res in reservations:
+                # Safe attribute access for nested relationships
+                storage = getattr(res, "storage", None)
+                location = None
+                if storage:
+                    location = getattr(storage, "location", None)
+                
+                storage_code = getattr(storage, "code", "—") if storage else "—"
+                location_name = getattr(location, "name", "—") if location else "—"
+                guest_name = "***" if anonymous else (res.full_name or res.customer_name or "—")
+                guest_email = "***" if anonymous else (res.customer_email or "—")
+                guest_phone = "***" if anonymous else (res.customer_phone or res.phone_number or "—")
+                
+                html_content += f"""
             <tr>
                 <td>{res.id}</td>
                 <td>{res.created_at.strftime('%d.%m.%Y %H:%M') if res.created_at else '—'}</td>
                 <td>{res.status}</td>
-                <td>{storage.code if storage else '—'}</td>
-                <td>{location.name if location else '—'}</td>
+                <td>{storage_code}</td>
+                <td>{location_name}</td>
                 {f'<td>{guest_name}</td><td>{guest_email}</td><td>{guest_phone}</td>' if not anonymous else ''}
                 <td>{res.baggage_count or 0}</td>
                 <td>{(res.amount_minor or 0) / 100:.2f} {res.currency or 'TRY'}</td>
             </tr>
 """
-        
-        html_content += """
+            
+            html_content += """
         </tbody>
     </table>
 </body>
 </html>
 """
+            
+            filename = f"kyradi-report-{date.today().isoformat()}.html"
+            return Response(
+                content=html_content,
+                media_type="text/html",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            )
         
-        filename = f"kyradi-report-{date.today().isoformat()}.html"
-        return Response(
-            content=html_content,
-            media_type="text/html",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-        )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported format: {format}. Use csv, xlsx, or template"
+            )
     
-    else:
+    except Exception as exc:
+        logger.error("Failed to export reports: %s", exc, exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported format: {format}. Use csv, xlsx, or template"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Export failed. Please try again or contact support."
+        ) from exc
