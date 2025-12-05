@@ -151,12 +151,12 @@ async def startup_event() -> None:
         await init_db()
     
     # Log AI configuration status
-    import os
-    openai_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
-    if openai_key:
-        logger.info(f"AI service configured: model={settings.ai_model}")
+    # OpenAI API key'i değiştirmek için Railway'de OPENAI_API_KEY env değişkenini güncellemeniz yeterlidir.
+    # Kod içinde hiçbir yerde key hard-coded değildir.
+    if settings.openai_api_key:
+        logger.info(f"AI service configured: model={settings.ai_model}, org_id={settings.openai_org_id or 'none'}")
     else:
-        logger.warning("AI service NOT configured: OPENAI_API_KEY missing")
+        logger.warning("AI service NOT configured: OPENAI_API_KEY missing. AI chat will use fallback provider.")
 
 
 async def ensure_critical_schema() -> None:

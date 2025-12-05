@@ -14,8 +14,10 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
+
+from ..schemas import AIErrorResponse, AIProviderError
 
 logger = logging.getLogger("kyradi.ai")
 
@@ -122,7 +124,7 @@ async def ai_health() -> HealthResponse:
 async def ai_chat(payload: ChatRequest) -> ChatResponse:
     """AI Chat endpoint.
     
-    Returns 503 if AI is not available.
+    Returns structured error responses with error codes for proper frontend handling.
     """
     start_time = time.perf_counter()
     request_id = f"req_{int(time.time() * 1000)}"
@@ -132,24 +134,19 @@ async def ai_chat(payload: ChatRequest) -> ChatResponse:
     
     if not prompt.strip():
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Prompt is required"
-        )
-    
-    # Check AI availability
-    if not check_ai_available():
-        logger.warning("AI chat request received but AI is unavailable")
-        raise HTTPException(
-            status_code=503,
-            detail="AI service unavailable: AI provider not configured"
         )
     
     try:
         provider = get_chat_provider()
         if provider is None:
             raise HTTPException(
-                status_code=503,
-                detail="AI service unavailable: provider not initialized"
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=AIErrorResponse(
+                    code="AI_DISABLED",
+                    message="AI servisi şu anda yapılandırılmamış. Lütfen yöneticinizle iletişime geçin.",
+                ).model_dump(),
             )
         
         result = await provider.chat(prompt)
@@ -158,8 +155,11 @@ async def ai_chat(payload: ChatRequest) -> ChatResponse:
         if not result.get("success", False):
             logger.warning(f"AI chat failed: {result.get('error')}")
             raise HTTPException(
-                status_code=503,
-                detail=result.get("error", "AI request failed")
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=AIErrorResponse(
+                    code="AI_ERROR",
+                    message=result.get("error", "AI request failed"),
+                ).model_dump(),
             )
         
         return ChatResponse(
@@ -170,13 +170,40 @@ async def ai_chat(payload: ChatRequest) -> ChatResponse:
             latency_ms=round(latency_ms, 2),
         )
         
+    except AIProviderError as e:
+        # Handle structured AI errors
+        error_response = e.to_response()
+        
+        if e.code == "RATE_LIMIT":
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=error_response.model_dump(),
+            )
+        elif e.code == "AUTH_ERROR":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=error_response.model_dump(),
+            )
+        elif e.code == "AI_DISABLED":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=error_response.model_dump(),
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=error_response.model_dump(),
+            )
     except HTTPException:
         raise
     except Exception as e:
         logger.exception(f"AI chat error: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"AI service error: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=AIErrorResponse(
+                code="UNKNOWN",
+                message=f"AI service error: {str(e)}",
+            ).model_dump(),
         )
 
 
@@ -229,13 +256,25 @@ async def ai_assistant(payload: ChatRequest) -> ChatResponse:
             latency_ms=round(latency_ms, 2),
         )
         
+    except AIProviderError as e:
+        # Return error in response body (not HTTP exception)
+        error_response = e.to_response()
+        latency_ms = (time.perf_counter() - start_time) * 1000
+        logger.warning(f"AI assistant error: {e.code} - {e.message}")
+        return ChatResponse(
+            answer="",
+            success=False,
+            error=error_response.message,
+            request_id=request_id,
+            latency_ms=round(latency_ms, 2),
+        )
     except Exception as e:
         logger.exception(f"AI assistant error: {e}")
         latency_ms = (time.perf_counter() - start_time) * 1000
-    return ChatResponse(
+        return ChatResponse(
             answer="",
             success=False,
             error=f"Bir hata oluştu: {str(e)}",
             request_id=request_id,
-        latency_ms=round(latency_ms, 2),
+            latency_ms=round(latency_ms, 2),
         )

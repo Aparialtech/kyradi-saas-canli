@@ -53,18 +53,29 @@ _provider_chain: list = []
 
 def _build_provider_chain() -> list:
     """Build the provider fallback chain."""
+    from app.core.config import settings
+    
     chain = []
     
     # 1. OpenAI (primary)
-    api_key = os.getenv("OPENAI_API_KEY")
+    # Use settings instead of direct env access
+    api_key = settings.openai_api_key
     if OpenAIChatProvider is not None and api_key:
         try:
-            provider = OpenAIChatProvider(api_key=api_key)
+            provider = OpenAIChatProvider(
+                api_key=api_key,
+                model=settings.ai_model,
+                org_id=settings.openai_org_id,
+            )
             if provider.enabled:
                 chain.append(("openai", provider))
-                logger.info("OpenAI provider added to chain")
+                logger.info(f"OpenAI provider added to chain (model: {settings.ai_model})")
+            else:
+                logger.warning(f"OpenAI provider disabled: {getattr(provider, '_error', 'unknown error')}")
         except Exception as e:
             logger.warning(f"Failed to create OpenAI provider: {e}")
+    elif OpenAIChatProvider is not None:
+        logger.warning("OpenAI provider available but OPENAI_API_KEY not configured. Set OPENAI_API_KEY env variable to enable AI chat.")
     
     # 2. Ollama (secondary/local fallback)
     if OllamaAIProvider is not None:

@@ -45,20 +45,24 @@ class OpenAIChatProvider:
     This provider:
     - Never crashes on initialization
     - Works in disabled mode if OpenAI is not available
-    - Returns safe error responses instead of raising exceptions
+    - Raises structured AIProviderError exceptions for proper error handling
+    - Uses settings from app.core.config for API key and model
     """
     
     provider_name = "openai"
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None, org_id: Optional[str] = None):
         """Initialize OpenAI provider.
         
         Args:
-            api_key: OpenAI API key (can be None)
-            model: Model to use (default: gpt-4o-mini)
+            api_key: OpenAI API key (defaults to settings.openai_api_key if None)
+            model: Model to use (defaults to settings.ai_model if None)
+            org_id: OpenAI organization ID (defaults to settings.openai_org_id if None)
         """
-        self.model = model
-        self.api_key = api_key
+        # Use settings if not provided
+        self.api_key = api_key or settings.openai_api_key
+        self.model = model or settings.ai_model
+        self.org_id = org_id or settings.openai_org_id
         self.client = None
         self.enabled = False
         self._error: Optional[str] = None
@@ -67,14 +71,18 @@ class OpenAIChatProvider:
         if not OPENAI_AVAILABLE:
             self._error = "OpenAI library not installed"
             logger.warning("OpenAI provider disabled: library not installed")
-        elif not api_key:
+        elif not self.api_key:
             self._error = "OPENAI_API_KEY not configured"
-            logger.warning("OpenAI provider disabled: API key not configured")
+            logger.warning("OpenAI provider disabled: API key not configured. Set OPENAI_API_KEY env variable.")
         else:
             try:
-                self.client = AsyncOpenAI(api_key=api_key, timeout=60.0)
+                self.client = AsyncOpenAI(
+                    api_key=self.api_key,
+                    organization=self.org_id,
+                    timeout=60.0,
+                )
                 self.enabled = True
-                logger.info(f"OpenAI provider enabled: model={model}")
+                logger.info(f"OpenAI provider enabled: model={self.model}, org_id={self.org_id or 'none'}")
             except Exception as e:
                 self._error = f"Failed to initialize OpenAI client: {e}"
                 logger.error(self._error)
@@ -101,24 +109,31 @@ class OpenAIChatProvider:
             prompt: User's prompt
             
         Returns:
-            Dict with answer or error
+            Dict with answer or error (backward compatible format)
+            
+        Raises:
+            AIProviderError: For all AI-related errors with structured error codes
         """
         if not self.enabled:
-            return {
-                "answer": "",
-                "success": False,
-                "error": self._error or "AI service disabled",
-            }
+            raise AIProviderError(
+                code="AI_DISABLED",
+                message="AI servisi şu anda yapılandırılmamış. Lütfen yöneticinizle iletişime geçin.",
+            )
         
         try:
             completion = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=1000,
-                temperature=0.7,
+                temperature=0.2,
             )
             
             answer = completion.choices[0].message.content if completion.choices else ""
+            if not answer:
+                raise AIProviderError(
+                    code="EMPTY_RESPONSE",
+                    message="AI servisi boş yanıt döndü. Lütfen tekrar deneyin.",
+                )
             
             return {
                 "answer": answer,
@@ -130,38 +145,37 @@ class OpenAIChatProvider:
                 }
             }
             
-        except AuthenticationError as e:
-            logger.error(f"OpenAI authentication error: {e}")
-            return {
-                "answer": "",
-                "success": False,
-                "error": "Invalid API key",
-            }
         except RateLimitError as e:
             logger.warning(f"OpenAI rate limit: {e}")
-            return {
-                "answer": "",
-                "success": False,
-                "error": "Rate limit exceeded, please try again later",
-            }
+            raise AIProviderError(
+                code="RATE_LIMIT",
+                message="OpenAI API rate limit aşıldı. Lütfen birkaç saniye sonra tekrar deneyin.",
+                retry_after_seconds=10,
+            ) from e
+        except AuthenticationError as e:
+            logger.error(f"OpenAI authentication error: {e}")
+            raise AIProviderError(
+                code="AUTH_ERROR",
+                message="OpenAI API anahtarı geçersiz veya yetkisiz görünüyor. Lütfen API anahtarını kontrol edin.",
+            ) from e
         except APITimeoutError as e:
             logger.error(f"OpenAI timeout: {e}")
-            return {
-                "answer": "",
-                "success": False,
-                "error": "Request timed out",
-            }
+            raise AIProviderError(
+                code="TIMEOUT",
+                message="AI servisine bağlanırken zaman aşımı oluştu. Lütfen tekrar deneyin.",
+            ) from e
         except APIError as e:
             logger.error(f"OpenAI API error: {e}")
-            return {
-                "answer": "",
-                "success": False,
-                "error": f"API error: {str(e)}",
-            }
+            raise AIProviderError(
+                code="API_ERROR",
+                message="AI servisi şu anda bir hata veriyor. Bir süre sonra tekrar deneyin.",
+            ) from e
+        except AIProviderError:
+            # Re-raise our custom errors
+            raise
         except Exception as e:
             logger.exception(f"Unexpected OpenAI error: {e}")
-            return {
-                "answer": "",
-                "success": False,
-                "error": f"Unexpected error: {str(e)}",
-            }
+            raise AIProviderError(
+                code="UNKNOWN",
+                message="AI asistanı şu anda beklenmeyen bir hata aldı.",
+            ) from e

@@ -110,12 +110,18 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("PROVIDER", "AI_PROVIDER"),
     )
     ai_model: str = Field(
-        default="gpt-4.1-mini",
-        validation_alias=AliasChoices("MODEL", "AI_MODEL"),
+        default="gpt-4o-mini",
+        validation_alias=AliasChoices("MODEL", "AI_MODEL", "OPENAI_MODEL_NAME"),
     )
     openai_api_key: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("OPENAI_API_KEY", "KYRADI_OPENAI_API_KEY"),
+        description="OpenAI API key. Required for AI chat functionality. Can be rotated via Railway/Vercel env panel.",
+    )
+    openai_org_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_ORG_ID", "KYRADI_OPENAI_ORG_ID"),
+        description="OpenAI organization ID (optional). Used for multi-org accounts.",
     )
     anthropic_api_key: Optional[str] = Field(
         default=None,
