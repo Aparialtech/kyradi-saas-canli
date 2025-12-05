@@ -6,10 +6,21 @@ import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TranslationKey } from "../../i18n/translations";
 
-// New Premium UI Components
-import { AppLayout, AppLayoutBody, AppLayoutMain } from "../../components/layout/AppLayout";
-import { TopNav } from "../../components/layout/TopNav";
-import { Sidebar, type SidebarNavItem } from "../../components/layout/Sidebar";
+// Shared Layout Components
+import { DashboardShell } from "../../components/layout/DashboardShell";
+import { SidebarNav, type SidebarNavItem } from "../../components/layout/SidebarNav";
+import { TopBar } from "../../components/layout/TopBar";
+import {
+  Building2,
+  BarChart3,
+  Receipt,
+  Users,
+  Settings,
+  Database,
+  FileText,
+  CreditCard,
+} from "../../lib/lucide";
+import styles from "./AdminDashboard.module.css";
 
 export { AdminReportsOverview } from "./reports/AdminReportsOverview";
 export { TenantsPage as AdminTenantsPage } from "./tenants/TenantsPage";
@@ -24,38 +35,42 @@ export function AdminDashboard() {
   const { t } = useTranslation();
   
   const navigation = useMemo((): SidebarNavItem[] => {
-    const items: Array<{ to: string; labelKey: TranslationKey; end?: boolean }> = [
-      { to: "overview", labelKey: "nav.overview", end: true },
-      { to: "tenants", labelKey: "nav.tenants" },
-      { to: "revenue", labelKey: "nav.globalRevenue" },
-      { to: "settlements", labelKey: "nav.globalSettlements" },
-      { to: "users", labelKey: "nav.globalUsers" },
-      { to: "settings", labelKey: "nav.systemSettings" },
-      { to: "audit", labelKey: "nav.audit" },
+    const items: Array<{ to: string; labelKey: TranslationKey; icon: React.ReactNode; end?: boolean }> = [
+      { to: "overview", labelKey: "nav.overview", icon: <BarChart3 className="h-5 w-5" />, end: true },
+      { to: "tenants", labelKey: "nav.tenants", icon: <Building2 className="h-5 w-5" /> },
+      { to: "revenue", labelKey: "nav.globalRevenue", icon: <Receipt className="h-5 w-5" /> },
+      { to: "settlements", labelKey: "nav.globalSettlements", icon: <CreditCard className="h-5 w-5" /> },
+      { to: "users", labelKey: "nav.globalUsers", icon: <Users className="h-5 w-5" /> },
+      { to: "settings", labelKey: "nav.systemSettings", icon: <Settings className="h-5 w-5" /> },
+      { to: "audit", labelKey: "nav.audit", icon: <FileText className="h-5 w-5" /> },
     ];
-    return items.map((item) => ({ to: item.to, label: t(item.labelKey), end: item.end }));
+    return items.map((item) => ({ to: item.to, label: t(item.labelKey), icon: item.icon, end: item.end }));
   }, [t]);
 
   return (
-    <AppLayout variant="admin">
-      <TopNav
+    <DashboardShell variant="admin">
+      <TopBar
         variant="admin"
-        brandMark="KA"
-        brandText={t("nav.brandAdmin")}
+        title={t("nav.brandAdmin")}
         userEmail={user?.email}
+        userName={user?.email?.split("@")[0]}
         onLogout={logout}
-      >
-        <LanguageSwitcher />
-      </TopNav>
-
-      <AppLayoutBody>
-        <Sidebar items={navigation} heading={t("nav.adminHeading")} />
+        actions={<LanguageSwitcher />}
+      />
+      
+      <div className={styles.layoutBody}>
+        <SidebarNav
+          variant="admin"
+          items={navigation}
+          heading={t("nav.adminHeading")}
+          brandName="KYRADI"
+        />
         
-        <AppLayoutMain>
+        <main className={styles.mainContent}>
           <Outlet />
-        </AppLayoutMain>
-      </AppLayoutBody>
-    </AppLayout>
+        </main>
+      </div>
+    </DashboardShell>
   );
 }
 

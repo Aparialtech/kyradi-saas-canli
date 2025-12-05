@@ -2,6 +2,8 @@ import axios from "axios";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import clsx from "clsx";
 
 import { useAuth } from "../../context/AuthContext";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
@@ -9,15 +11,21 @@ import type { AuthUser } from "../../types/auth";
 import { authService } from "../../services/auth";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tokenStorage } from "../../lib/tokenStorage";
+import { Lock, Mail, Building2, BarChart3, CreditCard, Eye, EyeOff } from "../../lib/lucide";
+import styles from "./LoginPage.module.css";
+
+type LoginMode = "partner" | "admin";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const { t } = useTranslation();
 
+  const [mode, setMode] = useState<LoginMode>("partner");
   const [tenantSlug, setTenantSlug] = useState<string>("demo-hotel");
   const [email, setEmail] = useState<string>("admin@demo.com");
   const [password, setPassword] = useState<string>("Kyradi!2025");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [showResetPanel, setShowResetPanel] = useState<boolean>(false);
@@ -53,12 +61,10 @@ export function LoginPage() {
       const response = await authService.login({
         email,
         password,
-        tenant_slug: tenantSlug?.trim() ? tenantSlug.trim() : undefined,
+        tenant_slug: mode === "partner" && tenantSlug?.trim() ? tenantSlug.trim() : undefined,
       });
       
-      // Check if SMS verification is required
       if (response.status === "phone_verification_required" && response.verification_id) {
-        // Redirect to SMS verification page
         navigate("/verify-sms", {
           state: { verification_id: response.verification_id },
           replace: true,
@@ -66,14 +72,9 @@ export function LoginPage() {
         return;
       }
       
-      // Normal login flow - token already received, just get user
       if (response.access_token) {
         tokenStorage.set(response.access_token);
-        
-        // Get user and update context
         const currentUser = await authService.getCurrentUser();
-        
-        // Manually update auth context by reloading
         window.location.href = currentUser.role === "super_admin" || currentUser.role === "support" 
           ? "/admin" 
           : "/app";
@@ -114,17 +115,15 @@ export function LoginPage() {
     try {
       const response = await authService.requestPasswordReset({
         email: resetEmail,
-        tenant_slug: resetTenantSlug?.trim() || undefined,
+        tenant_slug: mode === "partner" && resetTenantSlug?.trim() ? resetTenantSlug.trim() : undefined,
       });
       
       let message = response.message;
       
-      // Development modunda token varsa göster ve link oluştur
       if (response.reset_token) {
         const resetUrl = `${window.location.origin}/reset-password?token=${response.reset_token}`;
         message = `✅ Şifre sıfırlama linki oluşturuldu!\n\n🔗 Development Modu - Link:\n${resetUrl}\n\n💡 Not: Development modunda email gönderilmiyor. Linki kopyalayıp tarayıcıda açabilirsiniz.`;
         
-        // Linki otomatik kopyala
         try {
           await navigator.clipboard.writeText(resetUrl);
           message += "\n\n✅ Link panoya kopyalandı!";
@@ -135,7 +134,6 @@ export function LoginPage() {
       
       setResetMessage(message);
       
-      // Close reset panel after showing message (daha uzun süre göster)
       setTimeout(() => {
         setShowResetPanel(false);
       }, 10000);
@@ -152,115 +150,280 @@ export function LoginPage() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-page__locale">
+    <div className={styles.loginPage}>
+      {/* Language Switcher */}
+      <div className={styles.languageSwitcher}>
         <LanguageSwitcher />
       </div>
-      <div className="auth-card">
-        <header className="auth-card__header">
-          <div className="auth-card__brand">KYRADİ</div>
-          <h1 className="auth-card__title">{t("login.title")}</h1>
-          <p className="auth-card__subtitle">{t("login.subtitle")}</p>
-        </header>
 
-        {error && <div className="auth-card__error">{error}</div>}
+      {/* Main Container */}
+      <div className={styles.loginContainer}>
+        {/* Branding Panel */}
+        <motion.div
+          className={styles.brandingPanel}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className={styles.brandingContent}>
+            <motion.div
+              className={styles.logo}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+            >
+              <div className={styles.logoIcon}>K</div>
+              <h1 className={styles.brandName}>KYRADI</h1>
+            </motion.div>
 
-        <form className="auth-card__form" onSubmit={handleSubmit}>
-          <label className="form-field">
-            <span className="form-field__label">{t("login.tenantLabel")}</span>
-            <input
-              id="tenant"
-              placeholder={t("login.tenantPlaceholder")}
-              value={tenantSlug}
-              onChange={(event) => setTenantSlug(event.target.value)}
-            />
-          </label>
+            <p className={styles.tagline}>
+              Akıllı Depolama ve Rezervasyon Yönetimi
+            </p>
 
-          <label className="form-field">
-            <span className="form-field__label">{t("login.emailLabel")}</span>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </label>
+            <div className={styles.features}>
+              <motion.div
+                className={styles.feature}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.3 }}
+              >
+                <BarChart3 className={styles.featureIcon} />
+                <span>Gerçek zamanlı doluluk takibi</span>
+              </motion.div>
+              <motion.div
+                className={styles.feature}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.3 }}
+              >
+                <CreditCard className={styles.featureIcon} />
+                <span>Otomatik hakediş & gelir raporları</span>
+              </motion.div>
+              <motion.div
+                className={styles.feature}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 0.3 }}
+              >
+                <Building2 className={styles.featureIcon} />
+                <span>Entegre QR & ödeme akışları</span>
+              </motion.div>
+            </div>
 
-          <label className="form-field">
-            <span className="form-field__label">{t("login.passwordLabel")}</span>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </label>
-
-          <div className="form-actions">
-            <button className="btn btn--primary" type="submit" disabled={submitting}>
-              {submitting ? t("login.submitting") : t("login.submit")}
-            </button>
+            {/* Decorative Gradient Blob */}
+            <div className={styles.gradientBlob} />
           </div>
-        </form>
-        <div className="auth-card__helper">
-          <button
-            type="button"
-            className="auth-link-button"
-            onClick={() => {
-              setShowResetPanel((prev) => !prev);
-              setResetEmail(email);
-              setResetTenantSlug(tenantSlug);
-              setResetError("");
-              setResetMessage("");
-            }}
-          >
-            {t("login.forgot")}
-          </button>
-        </div>
+        </motion.div>
 
-        {showResetPanel && (
-          <form className="auth-card__form auth-card__form--secondary" onSubmit={handleForgotPassword}>
-            <h2 className="auth-card__subtitle" style={{ marginBottom: "0.5rem" }}>
-              {t("login.resetTitle")}
-            </h2>
-            <label className="form-field">
-              <span className="form-field__label">{t("login.resetTenantLabel")}</span>
-              <input
-                value={resetTenantSlug}
-                onChange={(event) => setResetTenantSlug(event.target.value)}
-                placeholder={t("login.resetTenantPlaceholder")}
-              />
-            </label>
-            <label className="form-field">
-              <span className="form-field__label">{t("login.resetEmailLabel")}</span>
-              <input
-                type="email"
-                value={resetEmail}
-                onChange={(event) => setResetEmail(event.target.value)}
-                required
-              />
-            </label>
-            {resetError && <div className="auth-card__error">{resetError}</div>}
-            {resetMessage && (
-              <div className="auth-card__success" style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-                {resetMessage}
-              </div>
-            )}
-            <div className="form-actions">
-              <button className="btn btn--ghost" type="submit" disabled={resetSubmitting}>
-                {resetSubmitting ? t("login.resetSubmitting") : t("login.resetButton")}
+        {/* Form Panel */}
+        <motion.div
+          className={styles.formPanel}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className={styles.formContent}>
+            {/* Mode Toggle */}
+            <div className={styles.modeToggle}>
+              <button
+                type="button"
+                className={clsx(styles.toggleButton, mode === "partner" && styles.toggleButtonActive)}
+                onClick={() => setMode("partner")}
+              >
+                Partner Girişi
+              </button>
+              <button
+                type="button"
+                className={clsx(styles.toggleButton, mode === "admin" && styles.toggleButtonActive)}
+                onClick={() => setMode("admin")}
+              >
+                Admin Girişi
               </button>
             </div>
-          </form>
-        )}
 
-        <footer className="auth-card__footer">
-          <p>{t("login.footerNote")}</p>
-        </footer>
+            {/* Form */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0, x: mode === "partner" ? -10 : 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: mode === "partner" ? 10 : -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className={styles.formHeader}>
+                  <h2 className={styles.formTitle}>
+                    {mode === "partner" ? "Partner Panel Girişi" : "Admin Panel Girişi"}
+                  </h2>
+                  <p className={styles.formSubtitle}>
+                    {mode === "partner"
+                      ? "Otel yönetim paneline giriş yapın"
+                      : "Sistem yönetim paneline giriş yapın"}
+                  </p>
+                </div>
+
+                {error && (
+                  <motion.div
+                    className={styles.errorMessage}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    {error}
+                  </motion.div>
+                )}
+
+                <form className={styles.form} onSubmit={handleSubmit}>
+                  {mode === "partner" && (
+                    <div className={styles.formField}>
+                      <label className={styles.label}>
+                        <Building2 className={styles.labelIcon} />
+                        {t("login.tenantLabel")}
+                      </label>
+                      <input
+                        id="tenant"
+                        type="text"
+                        className={styles.input}
+                        placeholder={t("login.tenantPlaceholder")}
+                        value={tenantSlug}
+                        onChange={(event) => setTenantSlug(event.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  <div className={styles.formField}>
+                    <label className={styles.label}>
+                      <Mail className={styles.labelIcon} />
+                      {t("login.emailLabel")}
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      className={styles.input}
+                      autoComplete="email"
+                      placeholder={mode === "partner" ? "admin@demo.com" : "admin@kyradi.com"}
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className={styles.formField}>
+                    <label className={styles.label}>
+                      <Lock className={styles.labelIcon} />
+                      {t("login.passwordLabel")}
+                    </label>
+                    <div className={styles.passwordInput}>
+                      <input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        className={styles.input}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className={styles.passwordToggle}
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className={styles.submitButton}
+                    disabled={submitting}
+                  >
+                    {submitting ? t("login.submitting") : t("login.submit")}
+                  </button>
+                </form>
+
+                <div className={styles.formFooter}>
+                  <button
+                    type="button"
+                    className={styles.forgotButton}
+                    onClick={() => {
+                      setShowResetPanel((prev) => !prev);
+                      setResetEmail(email);
+                      setResetTenantSlug(tenantSlug);
+                      setResetError("");
+                      setResetMessage("");
+                    }}
+                  >
+                    {t("login.forgot")}
+                  </button>
+                </div>
+
+                {/* Reset Password Panel */}
+                <AnimatePresence>
+                  {showResetPanel && (
+                    <motion.form
+                      className={styles.resetForm}
+                      onSubmit={handleForgotPassword}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <h3 className={styles.resetTitle}>{t("login.resetTitle")}</h3>
+                      
+                      {mode === "partner" && (
+                        <div className={styles.formField}>
+                          <label className={styles.label}>
+                            <Building2 className={styles.labelIcon} />
+                            {t("login.resetTenantLabel")}
+                          </label>
+                          <input
+                            type="text"
+                            className={styles.input}
+                            value={resetTenantSlug}
+                            onChange={(event) => setResetTenantSlug(event.target.value)}
+                            placeholder={t("login.resetTenantPlaceholder")}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className={styles.formField}>
+                        <label className={styles.label}>
+                          <Mail className={styles.labelIcon} />
+                          {t("login.resetEmailLabel")}
+                        </label>
+                        <input
+                          type="email"
+                          className={styles.input}
+                          value={resetEmail}
+                          onChange={(event) => setResetEmail(event.target.value)}
+                          required
+                        />
+                      </div>
+                      
+                      {resetError && (
+                        <div className={styles.errorMessage}>{resetError}</div>
+                      )}
+                      
+                      {resetMessage && (
+                        <div className={styles.successMessage} style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                          {resetMessage}
+                        </div>
+                      )}
+                      
+                      <button
+                        type="submit"
+                        className={styles.resetButton}
+                        disabled={resetSubmitting}
+                      >
+                        {resetSubmitting ? t("login.resetSubmitting") : t("login.resetButton")}
+                      </button>
+                    </motion.form>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

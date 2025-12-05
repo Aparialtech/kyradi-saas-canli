@@ -1,0 +1,25 @@
+.layoutBody {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.mainContent {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-6, 1.5rem);
+}
+
+@media (min-width: 769px) {
+  .mainContent {
+    margin-left: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    margin-left: 0;
+  }
+}
+
