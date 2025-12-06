@@ -14,6 +14,10 @@ class QRVerifyResponse(BaseModel):
     valid: bool
     reservation_id: Optional[str] = None
     locker_id: Optional[str] = None
+    storage_id: Optional[str] = None
+    storage_code: Optional[str] = None
+    location_id: Optional[str] = None
+    location_name: Optional[str] = None
     status: Optional[str] = None
     status_override: Optional[str] = None
     customer_name: Optional[str] = None

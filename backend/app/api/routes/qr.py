@@ -5,10 +5,11 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_staff
-from ...models import Reservation, ReservationStatus, User
+from ...models import Reservation, ReservationStatus, Storage, User
 from ...schemas import QRVerifyRequest, QRVerifyResponse
 
 router = APIRouter(prefix="/qr", tags=["qr"])
@@ -20,10 +21,16 @@ def _serialize_reservation(
     valid: bool,
     status_override: str | None = None,
 ) -> QRVerifyResponse:
+    storage = getattr(reservation, "storage", None)
+    location = getattr(storage, "location", None) if storage else None
     return QRVerifyResponse(
         valid=valid,
         reservation_id=reservation.id,
         locker_id=reservation.locker_id,
+        storage_id=storage.id if storage else None,
+        storage_code=getattr(storage, "code", None) if storage else None,
+        location_id=getattr(location, "id", None) if location else None,
+        location_name=getattr(location, "name", None) if location else None,
         status=status_override or reservation.status,
         status_override=status_override,
         customer_name=reservation.customer_name,
@@ -64,9 +71,15 @@ async def verify_qr_code(
     - valid=False, status="expired" - Reservation expired
     - valid=True - Active reservation
     """
-    stmt = select(Reservation).where(
-        Reservation.qr_code == payload.code,
-        Reservation.tenant_id == current_user.tenant_id,
+    stmt = (
+        select(Reservation)
+        .options(
+            selectinload(Reservation.storage).selectinload(Storage.location)
+        )
+        .where(
+            Reservation.qr_code == payload.code,
+            Reservation.tenant_id == current_user.tenant_id,
+        )
     )
     reservation = (await session.execute(stmt)).scalar_one_or_none()
     if reservation is None:
