@@ -32,8 +32,8 @@
   top: 0;
   height: 100vh;
   width: 280px;
-  background: var(--color-background, #fff);
-  border-right: 1px solid var(--color-border, #e2e8f0);
+  background: linear-gradient(180deg, #0f172a 0%, #111827 18%, #0b1220 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   z-index: 1000;
@@ -71,7 +71,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1.5rem 1.25rem;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .brandIcon {
@@ -103,7 +103,7 @@
 .brandName {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--color-text, #1a1a1a);
+  color: #e2e8f0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -124,13 +124,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-muted, #64748b);
+  color: #94a3b8;
 }
 
 .nav {
   flex: 1;
   overflow-y: auto;
-  padding: 0.5rem;
+  padding: 0.75rem;
 }
 
 .navItem {
@@ -139,34 +139,37 @@
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-radius: var(--radius-md, 0.5rem);
-  color: var(--color-text, #475569);
+  color: #cbd5e1;
   text-decoration: none;
   transition: all 0.2s ease;
   position: relative;
   margin-bottom: 0.25rem;
+  border: 1px solid transparent;
 }
 
 .navItem:hover {
-  background: var(--color-muted, #f1f5f9);
-  color: var(--color-text, #1a1a1a);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.04);
 }
 
 .navItemActive {
-  background: rgba(var(--sidebar-accent-rgb, 0, 163, 137), 0.1);
-  color: var(--sidebar-accent);
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.15));
+  color: #f8fafc;
   font-weight: 600;
 }
 
 .navItemActive::before {
   content: '';
   position: absolute;
-  left: 0;
+  left: 8px;
   top: 50%;
   transform: translateY(-50%);
-  width: 3px;
+  width: 6px;
   height: 60%;
-  background: var(--sidebar-accent);
-  border-radius: 0 2px 2px 0;
+  background: linear-gradient(180deg, var(--sidebar-accent), #06b6d4);
+  border-radius: 4px;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
 }
 
 .navIcon {
@@ -182,13 +185,14 @@
 .navLabel {
   flex: 1;
   font-size: 0.9375rem;
+  letter-spacing: -0.01em;
 }
 
 .navBadge {
   font-size: 0.75rem;
   padding: 0.125rem 0.5rem;
-  background: var(--color-muted, #f1f5f9);
-  color: var(--color-text, #475569);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
   border-radius: var(--radius-sm, 0.25rem);
   font-weight: 600;
 }
@@ -197,4 +201,3 @@
   background: var(--sidebar-accent);
   color: white;
 }
-

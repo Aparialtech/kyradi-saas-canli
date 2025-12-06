@@ -2,10 +2,9 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--color-background, #fff);
+  background: rgba(255, 255, 255, 0.82);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px) saturate(140%);
 }
 
 .topBar--partner {
@@ -20,8 +19,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.75rem;
   max-width: 100%;
+  gap: 1rem;
 }
 
 .topBarLeft {
@@ -43,6 +43,7 @@
   color: var(--color-text, #1a1a1a);
   margin: 0;
   line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .subtitle {
@@ -56,12 +57,14 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .iconButton {
@@ -222,4 +225,3 @@
     display: none;
   }
 }
-

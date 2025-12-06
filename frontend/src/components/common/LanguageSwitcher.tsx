@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocale, type SupportedLocale } from "../../context/LocaleContext";
 import { useTranslation } from "../../hooks/useTranslation";
-
-const languageFlags: Record<SupportedLocale, string> = {
-  "tr-TR": "🇹🇷",
-  "en-US": "🇺🇸",
-  "de-DE": "🇩🇪",
-  "zh-CN": "🇨🇳",
-  "es-ES": "🇪🇸",
-};
+import { Globe } from "../../lib/lucide";
 
 export function LanguageSwitcher() {
   const { locale, setLocale, availableLocales } = useLocale();
@@ -47,8 +40,8 @@ export function LanguageSwitcher() {
         aria-label={t("common.language")}
         aria-expanded={isOpen}
       >
-        <span className="language-switcher__icon" role="img" aria-hidden="true">
-          {languageFlags[locale] || "🌐"}
+        <span className="language-switcher__icon" aria-hidden="true">
+          <Globe width={16} height={16} />
         </span>
         <span className="language-switcher__current">
           {currentLocale?.nativeLabel || currentLocale?.label || locale}
@@ -65,8 +58,8 @@ export function LanguageSwitcher() {
               className={`language-switcher__option ${item.code === locale ? "is-active" : ""}`}
               onClick={() => handleSelect(item.code)}
             >
-              <span className="language-switcher__option-flag" role="img" aria-hidden="true">
-                {languageFlags[item.code] || "🌐"}
+              <span className="language-switcher__option-flag" aria-hidden="true">
+                <Globe width={14} height={14} />
               </span>
               <span className="language-switcher__option-label">{item.nativeLabel || item.label}</span>
               {item.code === locale && (

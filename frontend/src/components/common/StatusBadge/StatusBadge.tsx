@@ -39,6 +39,7 @@ const iconMap: Record<string, React.ReactNode> = {
   idle: <PauseCircle className="h-3.5 w-3.5" />,
   occupied: <UserCheck className="h-3.5 w-3.5" />,
   out_of_service: <UserX className="h-3.5 w-3.5" />,
+  inactive: <PauseCircle className="h-3.5 w-3.5" />,
 };
 
 const variantMap: Record<string, StatusVariant> = {
@@ -56,6 +57,7 @@ const variantMap: Record<string, StatusVariant> = {
   idle: "muted",
   occupied: "primary",
   out_of_service: "danger",
+  inactive: "muted",
 };
 
 export interface StatusBadgeProps {

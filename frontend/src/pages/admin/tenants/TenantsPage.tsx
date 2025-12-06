@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
-import { Eye, Edit, Search, Building2, CheckCircle2, XCircle, Loader2, AlertCircle, Users, UserPlus } from "../../../lib/lucide";
+import { Eye, Edit, Building2, Loader2, AlertCircle, Users, UserPlus } from "../../../lib/lucide";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
@@ -28,6 +28,9 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
 import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { DataToolbar } from "../../../components/common/DataToolbar";
+import { StatusBadge } from "../../../components/common/StatusBadge";
 
 interface UserModalFormValues {
   email: string;
@@ -170,38 +173,37 @@ export function TenantsPage() {
     <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
 
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
-      >
-        <div>
-          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
-            Tenant Yönetimi
-          </h1>
-          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
-            Tenant bilgilerini, lisans planlarını ve markalama ayarlarını buradan yönetebilirsiniz.
-          </p>
-        </div>
-        <ModernButton
-          variant="primary"
-          onClick={() => {
-            setEditingTenant(null);
-            reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
-          }}
-          leftIcon={<UserPlus className="h-4 w-4" />}
-        >
-          Yeni Tenant
-        </ModernButton>
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <PageHeader
+          title={t("admin.tenants.title")}
+          subtitle={t("admin.tenants.subtitle")}
+          actions={[
+            {
+              key: "add",
+              node: (
+                <ModernButton
+                  variant="primary"
+                  onClick={() => {
+                    setEditingTenant(null);
+                    reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
+                  }}
+                  leftIcon={<UserPlus className="h-4 w-4" />}
+                >
+                  {t("common.create")}
+                </ModernButton>
+              ),
+            },
+          ]}
+        />
       </motion.div>
 
       <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
         <div style={{ marginBottom: 'var(--space-4)' }}>
           <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
-            {editingTenant ? `${editingTenant.name} Tenantını Güncelle` : "Yeni Tenant Oluştur"}
+            {editingTenant ? t("common.update") : t("common.create")}
           </h2>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-            Slug ve ad gibi temel bilgileri doldurun. Dilerseniz marka rengi ve logo URL’i ekleyebilirsiniz.
+            {t("admin.tenants.subtitle")}
           </p>
         </div>
 
@@ -210,7 +212,7 @@ export function TenantsPage() {
             <ModernInput
               label={t("common.shortName")}
               placeholder="demo-hotel"
-              {...register("slug", { required: `${t("common.shortName")} zorunlu` })}
+              {...register("slug", { required: `${t("common.shortName")}` })}
               error={errors.slug?.message}
               helperText={t("common.shortNameHint")}
               fullWidth
@@ -220,8 +222,8 @@ export function TenantsPage() {
 
           <ModernInput
             label={t("admin.tenants.hotelName")}
-            placeholder="Otel Adı"
-            {...register("name", { required: "Ad zorunlu" })}
+            placeholder={t("admin.tenants.hotelName")}
+            {...register("name", { required: t("admin.tenants.hotelName") })}
             error={errors.name?.message}
             fullWidth
             required
@@ -229,7 +231,7 @@ export function TenantsPage() {
 
           <div>
             <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
-              Plan
+              {t("admin.tenants.plan")}
             </label>
             <input
               {...register("plan")}
@@ -248,18 +250,18 @@ export function TenantsPage() {
 
           <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
             <input type="checkbox" {...register("is_active")} style={{ width: '18px', height: '18px' }} />
-            <span style={{ fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>Aktif</span>
+            <span style={{ fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>{t("common.active")}</span>
           </label>
 
           <ModernInput
-            label="Marka Rengi"
+            label={t("settings.brandColor") || "Marka Rengi"}
             placeholder="#00A389"
             {...register("brand_color")}
             fullWidth
           />
 
           <ModernInput
-            label="Logo URL"
+            label={t("settings.logoUrl") || "Logo URL"}
             placeholder="https://..."
             {...register("logo_url")}
             fullWidth
@@ -275,7 +277,7 @@ export function TenantsPage() {
                   reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
                 }}
               >
-                İptal
+                {t("common.cancel")}
               </ModernButton>
             )}
             <ModernButton
@@ -283,97 +285,61 @@ export function TenantsPage() {
               variant="primary"
               disabled={createMutation.isPending || updateMutation.isPending}
               isLoading={createMutation.isPending || updateMutation.isPending}
-              loadingText={editingTenant ? "Güncelleniyor..." : "Kaydediliyor..."}
+              loadingText={t("common.loading")}
             >
-              {editingTenant ? "Tenantı Güncelle" : "Tenant Oluştur"}
+              {editingTenant ? t("common.save") : t("common.create")}
             </ModernButton>
           </div>
         </form>
       </ModernCard>
 
       <ModernCard variant="glass" padding="lg">
-        <div style={{ marginBottom: 'var(--space-6)' }}>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
-            {t("admin.tenants.title")} - Liste
-          </h2>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-              Sisteme kayıtlı {t("common.hotels")}, plan durumları ve limitler.
-            </p>
-        </div>
-        
-        {/* Filters */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
-          <div style={{ minWidth: '250px' }}>
-            <ModernInput
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="İsim, slug veya email ile ara..."
-              leftIcon={<Search className="h-4 w-4" />}
-              fullWidth
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
-              Plan
-            </label>
-            <select
-              value={planFilter}
-              onChange={(e) => setPlanFilter(e.target.value)}
-              style={{
-                width: '100%',
-                padding: 'var(--space-2) var(--space-3)',
-                border: '1px solid var(--border-primary)',
-                borderRadius: 'var(--radius-lg)',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)',
-                fontSize: 'var(--text-sm)',
-              }}
-            >
-              <option value="">Tümü</option>
-              <option value="standard">Standard</option>
-              <option value="pro">Pro</option>
-              <option value="enterprise">Enterprise</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
-              Durum
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                width: '100%',
-                padding: 'var(--space-2) var(--space-3)',
-                border: '1px solid var(--border-primary)',
-                borderRadius: 'var(--radius-lg)',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)',
-                fontSize: 'var(--text-sm)',
-              }}
-            >
-              <option value="">Tümü</option>
-              <option value="active">Aktif</option>
-              <option value="inactive">Pasif</option>
-            </select>
-          </div>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <DataToolbar
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            placeholder={t("common.search") || "Search"}
+            filters={
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                <select
+                  value={planFilter}
+                  onChange={(e) => setPlanFilter(e.target.value)}
+                  style={{ padding: "0.5rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}
+                >
+                  <option value="">{t("reservations.filter.all")}</option>
+                  <option value="standard">standard</option>
+                  <option value="pro">pro</option>
+                  <option value="enterprise">enterprise</option>
+                </select>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{ padding: "0.5rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}
+                >
+                  <option value="">{t("reservations.filter.all")}</option>
+                  <option value="active">{t("common.active")}</option>
+                  <option value="inactive">{t("common.inactive")}</option>
+                </select>
+              </div>
+            }
+          />
         </div>
 
         {tenantsQuery.isLoading ? (
           <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
             <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
-              {t("admin.tenants.title")} listesi yükleniyor
+              {t("common.loading")}
             </h3>
-            <p style={{ margin: 0 }}>Liste birkaç saniye içinde görüntülenecektir.</p>
+            <p style={{ margin: 0 }}>{t("admin.tenants.subtitle")}</p>
           </div>
         ) : tenantsQuery.isError ? (
           <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
             <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: '#dc2626' }}>
-              {t("admin.tenants.title")} listesi alınamadı
+              {t("common.error")}
             </h3>
-            <p style={{ margin: 0 }}>Lütfen sayfayı yenileyerek tekrar deneyin.</p>
+            <p style={{ margin: 0 }}>{t("common.retry") || t("common.error")}</p>
           </div>
         ) : filteredTenants.length > 0 ? (
           <ModernTable
@@ -397,20 +363,7 @@ export function TenantsPage() {
                 key: 'is_active',
                 label: t("admin.tenants.status"),
                 render: (value) => (
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-1)',
-                    padding: 'var(--space-1) var(--space-2)',
-                    borderRadius: 'var(--radius-sm)',
-                    background: value ? 'rgba(34, 197, 94, 0.1)' : 'rgba(220, 38, 38, 0.1)',
-                    color: value ? '#16a34a' : '#dc2626',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 'var(--font-medium)',
-                  }}>
-                    {value ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                    {value ? "Aktif" : "Pasif"}
-                  </span>
+                  <StatusBadge status={value ? "active" : "inactive"} label={value ? t("common.active") : t("common.inactive")} />
                 ),
                 align: 'center',
               },
