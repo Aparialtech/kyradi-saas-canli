@@ -415,12 +415,22 @@ async def get_partner_overview(
         reservation_filters.append(Reservation.created_at <= date_to)
     
     # Apply location filter
+    # Reservation doesn't have location_id directly - it's through Storage -> Location
     if location_id:
-        reservation_filters.append(Reservation.location_id == location_id)
-        # For payments, we need to join with reservation
+        from ...models import Storage
+        reservation_filters.append(
+            Reservation.storage_id.in_(
+                select(Storage.id).where(Storage.location_id == location_id)
+            )
+        )
+        # For payments, we need to join with reservation through storage
         payment_filters.append(
             Payment.reservation_id.in_(
-                select(Reservation.id).where(Reservation.location_id == location_id)
+                select(Reservation.id).where(
+                    Reservation.storage_id.in_(
+                        select(Storage.id).where(Storage.location_id == location_id)
+                    )
+                )
             )
         )
     

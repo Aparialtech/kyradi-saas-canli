@@ -55,9 +55,16 @@ class ValidationError(KyradiException):
 
 
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Global exception handler for FastAPI."""
+    """Global exception handler for FastAPI.
+    
+    IMPORTANT: Always returns JSONResponse with CORS headers to ensure
+    frontend can read error messages even when backend errors occur.
+    """
     # Extract tenant_id from headers if available
     tenant_id = request.headers.get("X-Tenant-ID", "unknown")
+    
+    # Get origin from request headers for CORS
+    origin = request.headers.get("origin")
     
     # Handle custom exceptions
     if isinstance(exc, KyradiException):

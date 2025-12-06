@@ -344,7 +344,16 @@ async def complete_reservation(
     
     Idempotent: calling on already completed reservation returns success.
     """
-    reservation = await _get_reservation_for_tenant(reservation_id, current_user.tenant_id, session)
+    try:
+        reservation = await _get_reservation_for_tenant(reservation_id, current_user.tenant_id, session)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Error fetching reservation {reservation_id}: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Cannot fetch reservation: {str(exc)}"
+        )
     
     # Idempotent: if already completed, just return success
     if reservation.status == ReservationStatus.COMPLETED.value:

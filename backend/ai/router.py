@@ -17,7 +17,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ..schemas import AIErrorResponse, AIProviderError
+from ai.schemas import AIErrorResponse, AIProviderError
 
 logger = logging.getLogger("kyradi.ai")
 
