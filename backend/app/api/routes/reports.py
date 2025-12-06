@@ -14,6 +14,7 @@ from ...dependencies import require_tenant_operator
 from ...models import Locker, Reservation, ReservationStatus, User, Tenant, Payment, Location, Storage
 from ...models.enums import PaymentStatus
 from ...schemas import PartnerSummary, TenantPlanLimits, LimitWarning
+from ...schemas.quota import PartnerQuotaInfo, PartnerQuotaLimits, PartnerQuotaUsage
 from ...services.limits import (
     get_plan_limits_for_tenant,
     report_exports_last24h,
@@ -284,57 +285,55 @@ async def get_partner_quota(
     session: AsyncSession = Depends(get_session),
 ) -> PartnerQuotaInfo:
     """Get quota usage information for the current tenant."""
-    from ...schemas.report import QuotaUsage, PartnerQuotaInfo
-    from sqlalchemy import func, select
-    from ...models import Location, Storage, Reservation
-    
     tenant_id = getattr(current_user, "tenant_id", None)
     if not tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant not found")
     
-    # Get current counts
-    location_count = await session.scalar(
+    tenant = await session.get(Tenant, tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    
+    # Load limits from tenant metadata
+    metadata = tenant.metadata_ or {}
+    quotas = metadata.get("quotas", {})
+    financial = metadata.get("financial", {})
+    
+    limits = PartnerQuotaLimits(
+        max_locations=quotas.get("max_location_count"),
+        max_storages=quotas.get("max_storage_count"),
+        max_users=quotas.get("max_user_count"),
+        max_reservations=quotas.get("max_reservation_count"),
+        commission_rate=financial.get("commission_rate"),
+    )
+    
+    # Load usage counts
+    locations_count = await session.scalar(
         select(func.count()).select_from(Location).where(Location.tenant_id == tenant_id)
     ) or 0
     
-    storage_count = await session.scalar(
+    storages_count = await session.scalar(
         select(func.count()).select_from(Storage).where(Storage.tenant_id == tenant_id)
     ) or 0
     
-    user_count = await session.scalar(
+    users_count = await session.scalar(
         select(func.count()).select_from(User).where(
             User.tenant_id == tenant_id,
-            User.is_active == True,
+            User.is_active.is_(True),
         )
     ) or 0
     
-    reservation_count = await session.scalar(
+    reservations_count = await session.scalar(
         select(func.count()).select_from(Reservation).where(Reservation.tenant_id == tenant_id)
     ) or 0
     
-    # Get quota limits from metadata
-    location_quota = await get_tenant_quota_from_metadata(session, tenant_id, "max_location_count")
-    storage_quota = await get_tenant_quota_from_metadata(session, tenant_id, "max_storage_count")
-    user_quota = await get_tenant_quota_from_metadata(session, tenant_id, "max_user_count")
-    reservation_quota = await get_tenant_quota_from_metadata(session, tenant_id, "max_reservation_count")
-    
-    def calculate_quota_usage(current: int, limit: Optional[int]) -> QuotaUsage:
-        if limit is None:
-            return QuotaUsage(current=current, limit=None, percentage=0.0, can_create=True)
-        percentage = min((current / limit) * 100, 100.0) if limit > 0 else 0.0
-        return QuotaUsage(
-            current=current,
-            limit=limit,
-            percentage=round(percentage, 2),
-            can_create=current < limit,
-        )
-    
-    return PartnerQuotaInfo(
-        locations=calculate_quota_usage(location_count, location_quota),
-        storages=calculate_quota_usage(storage_count, storage_quota),
-        users=calculate_quota_usage(user_count, user_quota),
-        reservations=calculate_quota_usage(reservation_count, reservation_quota),
+    usage = PartnerQuotaUsage(
+        locations_count=int(locations_count),
+        storages_count=int(storages_count),
+        users_count=int(users_count),
+        reservations_count=int(reservations_count),
     )
+    
+    return PartnerQuotaInfo(limits=limits, usage=usage)
 
 
 @router.post("/reservations/export-log")
