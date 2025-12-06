@@ -100,6 +100,9 @@ async def ensure_critical_schema() -> None:
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
         # User columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
+        # Location columns
+        "ALTER TABLE locations ADD COLUMN IF NOT EXISTS phone_number VARCHAR(32)",
+        "ALTER TABLE locations ADD COLUMN IF NOT EXISTS working_hours JSONB",
         # Pricing rules hierarchical columns
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS scope VARCHAR(16) NOT NULL DEFAULT 'TENANT'",
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS location_id VARCHAR(36)",

@@ -4,7 +4,7 @@ from typing import List, Optional, TYPE_CHECKING
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base, IdentifiedMixin, TimestampMixin
@@ -27,6 +27,8 @@ class Location(IdentifiedMixin, TimestampMixin, Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     address: Mapped[Optional[str]] = mapped_column(String(512), default=None)
+    phone_number: Mapped[Optional[str]] = mapped_column(String(32), default=None)
+    working_hours: Mapped[Optional[dict]] = mapped_column("working_hours", JSON, default=None)
     lat: Mapped[Optional[float]] = mapped_column(Float, default=None)
     lon: Mapped[Optional[float]] = mapped_column(Float, default=None)
 

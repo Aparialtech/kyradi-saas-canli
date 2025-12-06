@@ -59,6 +59,8 @@ async def create_location(
         tenant_id=current_user.tenant_id,
         name=payload.name,
         address=payload.address,
+        phone_number=payload.phone_number,
+        working_hours=payload.working_hours,
         lat=payload.lat,
         lon=payload.lon,
     )
