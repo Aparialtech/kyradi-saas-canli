@@ -416,8 +416,8 @@ async def get_partner_overview(
     
     # Apply location filter
     # Reservation doesn't have location_id directly - it's through Storage -> Location
+    # Storage is already imported at the top of the file, so we use it directly here
     if location_id:
-        from ...models import Storage
         reservation_filters.append(
             Reservation.storage_id.in_(
                 select(Storage.id).where(Storage.location_id == location_id)
@@ -672,7 +672,12 @@ async def export_reports(
         if date_to:
             reservation_filters.append(Reservation.created_at <= date_to)
         if location_id:
-            reservation_filters.append(Reservation.location_id == location_id)
+            # Reservation doesn't have location_id directly - it's through Storage -> Location
+            reservation_filters.append(
+                Reservation.storage_id.in_(
+                    select(Storage.id).where(Storage.location_id == location_id)
+                )
+            )
         if status:
             reservation_filters.append(Reservation.status == status)
         
