@@ -14,7 +14,6 @@ import {
   type TenantCreatePayload,
   type TenantUpdatePayload,
   type TenantDetail,
-  type TenantPlanLimitsUpdatePayload,
   type TenantMetadataUpdate,
 } from "../../../services/admin/tenants";
 import {
