@@ -822,20 +822,7 @@ function TenantDetailCard({
   });
 
   return (
-    <div className="panel">
-      <div className="panel__header">
-        <div>
-          <h2 className="panel__title">{t("admin.tenants.title")} - Detay</h2>
-          <p className="panel__subtitle">
-            Plan limitlerini güncelleyebilir, komisyon oranını ayarlayabilir ve branding bilgilerini görüntüleyebilirsiniz.
-          </p>
-        </div>
-        <div className="page-actions">
-          <button type="button" className="btn btn--ghost-dark" onClick={onClose}>
-            Kapat
-          </button>
-        </div>
-      </div>
+    <div className="panel" style={{ position: 'relative', minHeight: '100vh', paddingBottom: '100px', maxHeight: '100vh', overflowY: 'auto' }}>
 
       {isLoading && (
         <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
@@ -848,196 +835,105 @@ function TenantDetailCard({
       )}
 
       {!isLoading && tenantDetail && (
-        <>
-          <div className="stat-grid">
-            <div className="stat-card">
-              <span className="stat-card__label">{t("common.hotel")}</span>
-              <p className="stat-card__value" style={{ fontSize: "1.3rem" }}>
-                {tenantDetail.tenant.name}
-              </p>
-              <p className="stat-card__hint">{t("common.shortName")}: {tenantDetail.tenant.slug}</p>
-            </div>
-            <div className="stat-card stat-card--secondary">
-              <span className="stat-card__label">{t("admin.tenants.plan")}</span>
-              <p className="stat-card__value">{tenantDetail.tenant.plan}</p>
-              <p className="stat-card__hint">
-                {t("admin.tenants.status")}: {tenantDetail.tenant.is_active ? "Aktif" : "Pasif"}
-              </p>
-            </div>
-            <div className="stat-card stat-card--accent">
-              <span className="stat-card__label">{t("common.createdAt")}</span>
-              <p className="stat-card__value" style={{ fontSize: "1.1rem" }}>
-                {new Date(tenantDetail.tenant.created_at).toLocaleDateString("tr-TR")}
-              </p>
-              <p className="stat-card__hint">{t("common.lastActivity")}</p>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card__label">{t("common.storageCount")}</span>
-              <p className="stat-card__value">{tenantDetail.metrics.lockers}</p>
-              <p className="stat-card__hint">
-                Limit: {tenantDetail.plan_limits.max_lockers ?? "Sınırsız"}
-              </p>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card__label">{t("admin.tenants.commissionRate")}</span>
-              <p className="stat-card__value">{financialCommissionRate || metadataQuery.data?.financial.commission_rate || "5.0"}%</p>
-              <p className="stat-card__hint">Varsayılan: 5.0%</p>
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-20)' }}>
+          {/* Header */}
+          <div style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: 'var(--space-4)', marginBottom: 'var(--space-2)' }}>
+            <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-1) 0' }}>
+              Tenant Ayarları – {tenantDetail.tenant.name}
+            </h2>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              Otel bilgilerini, kota ve finans ayarlarını yönetin
+            </p>
           </div>
-          {limitUsage.length > 0 && (
-            <div className="panel panel--muted">
-              <h3 style={{ marginTop: 0 }}>Limit Kullanımı</h3>
-              <div className="data-table-wrapper">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Kaynak</th>
-                      <th>Kullanım</th>
-                      <th>Limit</th>
-                      <th>Kalan</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {limitUsage.map((item) => (
-                      <tr key={item.label}>
-                        <td>{item.label}</td>
-                        <td>{item.used.toLocaleString("tr-TR")}</td>
-                        <td>{item.limit != null ? item.limit.toLocaleString("tr-TR") : "Limitsiz"}</td>
-                        <td>
-                          {item.limit != null
-                            ? Math.max(item.limit - item.used, 0).toLocaleString("tr-TR")
-                            : "Limitsiz"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="table-cell-muted" style={{ marginTop: "0.35rem" }}>
-                * Self-service ve rapor export limitleri kaydırmalı 24 saatlik pencerede takip edilir.
+
+          {/* Card 1: Genel Otel Ayarları */}
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                Genel Bilgiler
+              </h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Otel adı, kısa ad, plan, durum ve diğer genel bilgiler
               </p>
-            </div>
-          )}
-
-          <form className="form-grid" onSubmit={handlePlanUpdate} style={{ marginTop: "1.5rem" }}>
-            <label className="form-field">
-              <span className="form-field__label">Plan</span>
-              <input value={planValue} onChange={(event) => setPlanValue(event.target.value)} />
-            </label>
-
-            <label className="form-field">
-              <span className="form-field__label">Maks. Lokasyon</span>
-              <input
-                value={maxLocations}
-                onChange={(event) => setMaxLocations(event.target.value)}
-                type="number"
-                min={0}
-              />
-            </label>
-
-            <label className="form-field">
-              <span className="form-field__label">{t("admin.tenants.maxStorages")}</span>
-              <input
-                value={maxLockers}
-                onChange={(event) => setMaxLockers(event.target.value)}
-                type="number"
-                min={0}
-                placeholder="Sınırsız için boş bırakın"
-              />
-              <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
-                {t("common.storages")} limiti (max_lockers)
-              </small>
-            </label>
-            
-
-            <label className="form-field">
-              <span className="form-field__label">Maks. Aktif Rezervasyon</span>
-              <input
-                value={maxActiveReservations}
-                onChange={(event) => setMaxActiveReservations(event.target.value)}
-                type="number"
-                min={0}
-              />
-            </label>
-            <label className="form-field">
-              <span className="form-field__label">Maks. Aktif Kullanıcı</span>
-              <input
-                value={maxUsers}
-                onChange={(event) => setMaxUsers(event.target.value)}
-                type="number"
-                min={0}
-              />
-            </label>
-
-            <label className="form-field">
-              <span className="form-field__label">24 Saatlik Self-Service Limiti</span>
-              <input
-                value={maxSelfServiceDaily}
-                onChange={(event) => setMaxSelfServiceDaily(event.target.value)}
-                type="number"
-                min={0}
-              />
-            </label>
-            <label className="form-field">
-              <span className="form-field__label">Toplam Rezervasyon</span>
-              <input
-                value={maxTotalReservations}
-                onChange={(event) => setMaxTotalReservations(event.target.value)}
-                type="number"
-                min={0}
-              />
-            </label>
-
-            <label className="form-field">
-              <span className="form-field__label">Rapor Export / 24s</span>
-              <input
-                value={maxReportExports}
-                onChange={(event) => setMaxReportExports(event.target.value)}
-                type="number"
-                min={0}
-              />
-            </label>
-
-            <label className="form-field">
-              <span className="form-field__label">Depolama Limiti (MB)</span>
-              <input
-                value={maxStorageMb}
-                onChange={(event) => setMaxStorageMb(event.target.value)}
-                type="number"
-                min={0}
-              />
-            </label>
-
-          <div className="form-actions form-grid__field--full">
-            <button type="submit" className="btn btn--primary" disabled={isUpdating}>
-              {isUpdating ? "Güncelleniyor..." : "Plan Limitlerini Kaydet"}
-            </button>
-          </div>
-        </form>
-
-          {/* Quota & Financial Settings Section */}
-          <div className="panel" style={{ marginTop: 'var(--space-6)', border: '2px solid var(--border-primary)', background: 'var(--bg-primary)' }}>
-            <div className="panel__header" style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-              <div>
-                <h3 className="panel__title" style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-                  Kota ve Finans Ayarları
-                </h3>
-                <p className="panel__subtitle" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-2)' }}>
-                  Lokasyon, depo, kullanıcı ve rezervasyon kotası ile komisyon oranını yönetin
-                </p>
-              </div>
             </div>
             
-            <form className="form-grid" onSubmit={handleMetadataUpdate} style={{ marginTop: 'var(--space-4)' }}>
-              <div className="form-grid__field--full" style={{ marginBottom: 'var(--space-4)' }}>
-                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
-                  Kota Ayarları
-                </h4>
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-                  Tenant'ın oluşturabileceği maksimum kaynak sayılarını belirleyin
-                </p>
-              </div>
+            <div className="form-grid">
+              <label className="form-field">
+                <span className="form-field__label">Otel Adı</span>
+                <input type="text" value={tenantDetail.tenant.name} readOnly style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed' }} />
+                <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                  Otel adı değiştirmek için tenant düzenleme sayfasını kullanın
+                </small>
+              </label>
               
+              <label className="form-field">
+                <span className="form-field__label">Kısa Ad (Slug)</span>
+                <input type="text" value={tenantDetail.tenant.slug} readOnly style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed' }} />
+                <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                  URL'de kullanılan benzersiz tanımlayıcı
+                </small>
+              </label>
+              
+              <label className="form-field">
+                <span className="form-field__label">Plan</span>
+                <input type="text" value={tenantDetail.tenant.plan} readOnly style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed' }} />
+                <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                  Mevcut abonelik planı
+                </small>
+              </label>
+              
+              <label className="form-field">
+                <span className="form-field__label">Durum</span>
+                <input type="text" value={tenantDetail.tenant.is_active ? "Aktif" : "Pasif"} readOnly style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed' }} />
+                <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                  Tenant'ın aktif/pasif durumu
+                </small>
+              </label>
+              
+              <label className="form-field">
+                <span className="form-field__label">Oluşturulma Tarihi</span>
+                <input type="text" value={new Date(tenantDetail.tenant.created_at).toLocaleDateString("tr-TR")} readOnly style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed' }} />
+                <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                  Tenant kaydının oluşturulma tarihi
+                </small>
+              </label>
+              
+              {tenantDetail.tenant.logo_url && (
+                <label className="form-field">
+                  <span className="form-field__label">Logo URL</span>
+                  <input type="text" value={tenantDetail.tenant.logo_url} readOnly style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed' }} />
+                  <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                    Otel logosu URL'i
+                  </small>
+                </label>
+              )}
+              
+              {tenantDetail.tenant.brand_color && (
+                <label className="form-field">
+                  <span className="form-field__label">Marka Rengi</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <input type="text" value={tenantDetail.tenant.brand_color} readOnly style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed', flex: 1 }} />
+                    <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', background: tenantDetail.tenant.brand_color, border: '1px solid var(--border-primary)' }} />
+                  </div>
+                  <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                    Otel marka rengi (hex)
+                  </small>
+                </label>
+              )}
+            </div>
+          </ModernCard>
+          {/* Card 2: Kota Ayarları */}
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                Kota Ayarları
+              </h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Tenant'ın oluşturabileceği maksimum kaynak sayılarını belirleyin
+              </p>
+            </div>
+            
+            <div className="form-grid">
               <label className="form-field">
                 <span className="form-field__label">Maks. Lokasyon Sayısı</span>
                 <input
@@ -1093,21 +989,26 @@ function TenantDetailCard({
                   Tenant'ın oluşturabileceği maksimum toplam rezervasyon sayısı
                 </small>
               </label>
-              
-              <div className="form-grid__field--full" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
-                  Finans Ayarları
-                </h4>
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-                  Platform komisyon oranını ayarlayın
-                </p>
-              </div>
-              
+            </div>
+          </ModernCard>
+
+          {/* Card 3: Finans Ayarları */}
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                Finans Ayarları
+              </h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Platform komisyon oranını ve finansal ayarları yapılandırın
+              </p>
+            </div>
+            
+            <div className="form-grid">
               <div className="form-grid__field--full">
-                <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
+                <label style={{ display: 'block', marginBottom: 'var(--space-3)', fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
                   Komisyon Oranı (%)
                 </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
                   <input
                     type="range"
                     min={0}
@@ -1115,7 +1016,7 @@ function TenantDetailCard({
                     step={0.1}
                     value={financialCommissionRate || metadataQuery.data?.financial.commission_rate || 5.0}
                     onChange={(e) => setFinancialCommissionRate(e.target.value)}
-                    style={{ flex: 1, height: '8px', borderRadius: 'var(--radius-lg)', background: 'var(--bg-tertiary)', outline: 'none' }}
+                    style={{ flex: 1, height: '8px', borderRadius: 'var(--radius-lg)', background: 'var(--bg-tertiary)', outline: 'none', cursor: 'pointer' }}
                   />
                   <input
                     type="number"
@@ -1125,91 +1026,94 @@ function TenantDetailCard({
                     value={financialCommissionRate}
                     onChange={(e) => setFinancialCommissionRate(e.target.value)}
                     placeholder="5.0"
-                    style={{ width: '120px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)' }}
+                    style={{ width: '120px', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', fontSize: 'var(--text-base)' }}
                   />
-                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>%</span>
+                  <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', fontWeight: 600, minWidth: '24px' }}>%</span>
                 </div>
-                <small style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', display: 'block', marginTop: 'var(--space-1)' }}>
+                <small style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', display: 'block', lineHeight: 1.5 }}>
                   Kyradi platform komisyon oranı (0-100%). Raporlar ve hakedişler bu orana göre hesaplanır.
                 </small>
               </div>
-              
-              <div className="form-grid__field--full" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
-                  Özellik Bayrakları
-                </h4>
+            </div>
+          </ModernCard>
+
+          {/* Limit Kullanımı Tablosu (Bilgilendirme) */}
+          {limitUsage.length > 0 && (
+            <ModernCard variant="glass" padding="lg">
+              <div style={{ marginBottom: 'var(--space-4)' }}>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-1) 0' }}>
+                  Limit Kullanımı
+                </h3>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-                  Tenant için kullanılabilir özellikleri etkinleştirin veya devre dışı bırakın
+                  Mevcut kaynak kullanım durumu
                 </p>
               </div>
-              
-              <div className="form-grid__field--full">
-                <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
-                  <input
-                    type="checkbox"
-                    checked={featureAiEnabled}
-                    onChange={(e) => setFeatureAiEnabled(e.target.checked)}
-                    style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
-                      AI Asistanı
-                    </div>
-                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                      KYRADI AI Asistanı özelliğini etkinleştir/devre dışı bırak
-                    </div>
-                  </div>
-                </label>
+              <div className="data-table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Kaynak</th>
+                      <th>Kullanım</th>
+                      <th>Limit</th>
+                      <th>Kalan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {limitUsage.map((item) => (
+                      <tr key={item.label}>
+                        <td>{item.label}</td>
+                        <td>{item.used.toLocaleString("tr-TR")}</td>
+                        <td>{item.limit != null ? item.limit.toLocaleString("tr-TR") : "Limitsiz"}</td>
+                        <td>
+                          {item.limit != null
+                            ? Math.max(item.limit - item.used, 0).toLocaleString("tr-TR")
+                            : "Limitsiz"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              
-              <div className="form-grid__field--full">
-                <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
-                  <input
-                    type="checkbox"
-                    checked={featureAdvancedReportsEnabled}
-                    onChange={(e) => setFeatureAdvancedReportsEnabled(e.target.checked)}
-                    style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
-                      Gelişmiş Raporlar
-                    </div>
-                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                      Gelişmiş analiz ve raporlama özelliklerini etkinleştir/devre dışı bırak
-                    </div>
-                  </div>
-                </label>
-              </div>
-              
-              <div className="form-grid__field--full">
-                <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
-                  <input
-                    type="checkbox"
-                    checked={featurePaymentGatewayEnabled}
-                    onChange={(e) => setFeaturePaymentGatewayEnabled(e.target.checked)}
-                    style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
-                      Ödeme Gateway
-                    </div>
-                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                      Online ödeme gateway entegrasyonunu etkinleştir/devre dışı bırak
-                    </div>
-                  </div>
-                </label>
-              </div>
-              
-              <div className="form-actions form-grid__field--full" style={{ marginTop: 'var(--space-4)' }}>
-                <button
-                  type="submit"
-                  className="btn btn--primary"
-                  disabled={updateMetadataMutation.isPending}
-                >
-                  {updateMetadataMutation.isPending ? "Güncelleniyor..." : "Kota ve Finans Ayarlarını Kaydet"}
-                </button>
-              </div>
-            </form>
+              <p className="table-cell-muted" style={{ marginTop: "var(--space-3)", fontSize: 'var(--text-xs)' }}>
+                * Self-service ve rapor export limitleri kaydırmalı 24 saatlik pencerede takip edilir.
+              </p>
+            </ModernCard>
+          )}
+
+          {/* Sabit Action Bar */}
+          <div style={{ 
+            position: 'fixed', 
+            bottom: 0, 
+            left: 0, 
+            right: 0, 
+            background: 'var(--bg-primary)', 
+            borderTop: '1px solid var(--border-primary)', 
+            padding: 'var(--space-4) var(--space-6)', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            zIndex: 100,
+            boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.05)'
+          }}>
+            <button
+              type="button"
+              className="btn btn--ghost-dark"
+              onClick={onClose}
+              disabled={updateMetadataMutation.isPending}
+            >
+              İptal
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={(e) => {
+                e.preventDefault();
+                handleMetadataUpdate(e);
+              }}
+              disabled={updateMetadataMutation.isPending}
+            >
+              {updateMetadataMutation.isPending ? "Güncelleniyor..." : "Kaydet"}
+            </button>
           </div>
 
           <div className="panel__header" style={{ marginTop: "2.5rem" }}>
