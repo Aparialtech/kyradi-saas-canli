@@ -71,6 +71,11 @@ class Settings(BaseSettings):
         default=True,
         validation_alias=AliasChoices("ENABLE_INTERNAL_RESERVATIONS", "KYRADI_ENABLE_INTERNAL_RESERVATIONS"),
     )
+    demo_mode: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("DEMO_MODE", "KYRADI_DEMO_MODE"),
+        description="When enabled, tenant creation is disabled in admin panel",
+    )
     public_cdn_base: str = Field(
         default="https://cdn.localhost",
         validation_alias=AliasChoices("PUBLIC_CDN_BASE", "KYRADI_PUBLIC_CDN_BASE"),

@@ -158,6 +158,23 @@ async def create_tenant(
     current_user: User = Depends(require_admin_user),
 ) -> TenantRead:
     """Create a new tenant."""
+    from ...core.config import settings
+    
+    # Check DEMO_MODE
+    if settings.demo_mode:
+        logger.warning(f"Tenant creation blocked in DEMO_MODE. Attempted by user {current_user.id} ({current_user.email})")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant creation is disabled in the demo environment. Please contact your system administrator or disable DEMO_MODE to enable tenant creation."
+        )
+    
+    # Validate slug format (lowercase, URL-safe)
+    if not payload.slug.islower() or not payload.slug.replace("-", "").replace("_", "").isalnum():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Slug must be lowercase and contain only alphanumeric characters, hyphens, and underscores"
+        )
+    
     exists = await session.execute(select(Tenant).where(Tenant.slug == payload.slug))
     if exists.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant slug already in use")
@@ -185,6 +202,7 @@ async def create_tenant(
 
     await session.commit()
     await session.refresh(tenant)
+    logger.info(f"Tenant created successfully: {tenant.slug} (ID: {tenant.id}) by user {current_user.id}")
     return TenantRead.model_validate(tenant)
 
 
@@ -807,6 +825,52 @@ async def admin_list_all_users(
     return [UserRead.model_validate(user) for user in users]
 
 
+@router.post("/users", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+async def admin_create_user(
+    payload: UserCreate,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_admin_user),
+) -> UserRead:
+    """Create a new user in the system (global user management)."""
+    # Check if email already exists
+    exists = await session.execute(select(User).where(User.email == payload.email))
+    if exists.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+    
+    user = User(
+        email=payload.email,
+        password_hash=get_password_hash(payload.password),
+        role=payload.role.value,
+        is_active=payload.is_active,
+        tenant_id=None,  # Can be assigned later via update
+    )
+    session.add(user)
+    await session.flush()
+    
+    # Log password in development mode
+    from ...core.config import settings
+    is_development = settings.environment.lower() in {"local", "dev", "development"}
+    if is_development:
+        logger.info(f"[ADMIN USER CREATE] Email: {payload.email}")
+        logger.info(f"[ADMIN USER CREATE] Password: {payload.password}")
+        logger.info(f"[ADMIN USER CREATE] Role: {payload.role.value}")
+    
+    await record_audit(
+        session,
+        tenant_id=None,
+        actor_user_id=current_user.id,
+        action="admin.user.create",
+        entity="users",
+        entity_id=user.id,
+        meta={"email": user.email, "role": user.role},
+    )
+    
+    await session.commit()
+    await session.refresh(user)
+    logger.info(f"User created successfully: {user.email} (ID: {user.id}) by admin {current_user.id}")
+    return UserRead.model_validate(user)
+
+
 @router.patch("/users/{user_id}", response_model=UserRead)
 async def admin_update_user(
     user_id: str,
@@ -835,6 +899,18 @@ async def admin_update_user(
     elif "password" in update_data:
         update_data.pop("password")
     
+    # Handle tenant_id assignment
+    if "tenant_id" in update_data:
+        tenant_id = update_data.pop("tenant_id")
+        if tenant_id:
+            # Verify tenant exists
+            tenant = await session.get(Tenant, tenant_id)
+            if tenant is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+            user.tenant_id = tenant_id
+        else:
+            user.tenant_id = None
+    
     for field, value in update_data.items():
         setattr(user, field, value)
     
@@ -850,4 +926,43 @@ async def admin_update_user(
     
     await session.commit()
     await session.refresh(user)
+    logger.info(f"User updated successfully: {user.email} (ID: {user.id}) by admin {current_user.id}")
+    return UserRead.model_validate(user)
+
+
+@router.post("/users/{user_id}/reset-password", response_model=UserRead)
+async def admin_reset_user_password(
+    user_id: str,
+    payload: UserPasswordReset,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_admin_user),
+) -> UserRead:
+    """Reset a user's password (admin operation)."""
+    user = await session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    user.password_hash = get_password_hash(payload.password)
+    
+    await record_audit(
+        session,
+        tenant_id=user.tenant_id,
+        actor_user_id=current_user.id,
+        action="admin.user.reset_password",
+        entity="users",
+        entity_id=user.id,
+        meta={"email": user.email},
+    )
+    
+    await session.commit()
+    await session.refresh(user)
+    
+    # Log password in development mode
+    from ...core.config import settings
+    is_development = settings.environment.lower() in {"local", "dev", "development"}
+    if is_development:
+        logger.info(f"[ADMIN PASSWORD RESET] User: {user.email}")
+        logger.info(f"[ADMIN PASSWORD RESET] New Password: {payload.password}")
+    
+    logger.info(f"Password reset for user: {user.email} (ID: {user.id}) by admin {current_user.id}")
     return UserRead.model_validate(user)
