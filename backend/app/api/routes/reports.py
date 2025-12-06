@@ -20,6 +20,13 @@ from ...services.limits import (
     get_storage_usage_mb,
     self_service_reservations_last24h,
 )
+from ...services.quota_checks import (
+    get_tenant_quota_from_metadata,
+    check_location_quota,
+    check_storage_quota,
+    check_user_quota,
+    check_reservation_quota,
+)
 from ...services.audit import record_audit
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -268,6 +275,65 @@ async def partner_summary(
         cancelled_reservations=int(cancelled_reservations or 0),
         monthly_revenue=[],
         monthly_reservations=[],
+    )
+
+
+@router.get("/quota", response_model=PartnerQuotaInfo)
+async def get_partner_quota(
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> PartnerQuotaInfo:
+    """Get quota usage information for the current tenant."""
+    from ...schemas.report import QuotaUsage, PartnerQuotaInfo
+    from sqlalchemy import func, select
+    from ...models import Location, Storage, Reservation
+    
+    tenant_id = getattr(current_user, "tenant_id", None)
+    if not tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant not found")
+    
+    # Get current counts
+    location_count = await session.scalar(
+        select(func.count()).select_from(Location).where(Location.tenant_id == tenant_id)
+    ) or 0
+    
+    storage_count = await session.scalar(
+        select(func.count()).select_from(Storage).where(Storage.tenant_id == tenant_id)
+    ) or 0
+    
+    user_count = await session.scalar(
+        select(func.count()).select_from(User).where(
+            User.tenant_id == tenant_id,
+            User.is_active == True,
+        )
+    ) or 0
+    
+    reservation_count = await session.scalar(
+        select(func.count()).select_from(Reservation).where(Reservation.tenant_id == tenant_id)
+    ) or 0
+    
+    # Get quota limits from metadata
+    location_quota = await get_tenant_quota_from_metadata(session, tenant_id, "max_location_count")
+    storage_quota = await get_tenant_quota_from_metadata(session, tenant_id, "max_storage_count")
+    user_quota = await get_tenant_quota_from_metadata(session, tenant_id, "max_user_count")
+    reservation_quota = await get_tenant_quota_from_metadata(session, tenant_id, "max_reservation_count")
+    
+    def calculate_quota_usage(current: int, limit: Optional[int]) -> QuotaUsage:
+        if limit is None:
+            return QuotaUsage(current=current, limit=None, percentage=0.0, can_create=True)
+        percentage = min((current / limit) * 100, 100.0) if limit > 0 else 0.0
+        return QuotaUsage(
+            current=current,
+            limit=limit,
+            percentage=round(percentage, 2),
+            can_create=current < limit,
+        )
+    
+    return PartnerQuotaInfo(
+        locations=calculate_quota_usage(location_count, location_quota),
+        storages=calculate_quota_usage(storage_count, storage_quota),
+        users=calculate_quota_usage(user_count, user_quota),
+        reservations=calculate_quota_usage(reservation_count, reservation_quota),
     )
 
 

@@ -24,6 +24,7 @@ from ...services.payment_providers import get_payment_provider, FakePaymentProvi
 from ...services.payment_service import get_existing_payment, link_payment_to_reservation
 from ...services.pricing_calculator import calculate_reservation_price
 from ...services.revenue import calculate_settlement, mark_settlement_completed
+from ...services.quota_checks import get_tenant_commission_rate
 from ...services.storage_availability import is_storage_available
 from ...services.widget_conversion import convert_widget_reservation_to_reservation
 
@@ -366,10 +367,11 @@ async def simulate_payment_success(
             await session.flush()
             logger.info(f"Created settlement {settlement.id} without reservation")
         else:
-            # Create settlement with default 5% commission
-            settlement = await calculate_settlement(session, payment, commission_rate=5.0)
+            # Create settlement with tenant-specific commission rate
+            commission_rate = await get_tenant_commission_rate(session, payment.tenant_id)
+            settlement = await calculate_settlement(session, payment, commission_rate=commission_rate)
             await session.flush()
-            logger.info(f"Created settlement {settlement.id} for reservation {payment.reservation_id}")
+            logger.info(f"Created settlement {settlement.id} for reservation {payment.reservation_id} with commission_rate={commission_rate}%")
     
     # Mark settlement as settled (use flush instead of commit to avoid double commit)
     settlement.status = "settled"

@@ -23,6 +23,7 @@ from ...services.magicpay.client import get_magicpay_client
 from ...services.magicpay.service import MagicPayService
 from ...services.payment_service import get_or_create_payment, get_existing_payment
 from ...services.revenue import calculate_settlement, mark_settlement_completed
+from ...services.quota_checks import get_tenant_commission_rate
 
 router = APIRouter(prefix="/payments/magicpay", tags=["magicpay"])
 logger = logging.getLogger(__name__)
@@ -333,7 +334,8 @@ async def complete_demo_payment(
         # Create settlement
         if payment.reservation_id:
             try:
-                settlement = await calculate_settlement(session, payment, commission_rate=5.0)
+                commission_rate = await get_tenant_commission_rate(session, payment.tenant_id)
+                settlement = await calculate_settlement(session, payment, commission_rate=commission_rate)
                 await session.flush()
                 
                 # Mark settlement as settled

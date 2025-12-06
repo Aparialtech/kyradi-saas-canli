@@ -95,3 +95,19 @@ class AdminSummary(BaseModel):
     
     # Health indicators
     system_health: SystemHealth
+
+
+class QuotaUsage(BaseModel):
+    """Quota usage information for a specific resource type."""
+    current: int
+    limit: Optional[int] = None
+    percentage: float  # 0-100
+    can_create: bool
+
+
+class PartnerQuotaInfo(BaseModel):
+    """Partner quota information from tenant metadata."""
+    locations: QuotaUsage
+    storages: QuotaUsage
+    users: QuotaUsage
+    reservations: QuotaUsage

@@ -25,7 +25,7 @@ from .locker import LockerCreate, LockerRead, LockerUpdate, StorageCreate, Stora
 from .location import LocationCreate, LocationRead, LocationUpdate
 from .payment import PaymentIntentCreate, PaymentRead, PaymentWebhookPayload
 from .qr import QRVerifyRequest, QRVerifyResponse
-from .report import AdminSummary, AdminTenantSummary, AdminDailyRevenue, AdminTopTenant, SystemHealth, PartnerSummary, LimitWarning
+from .report import AdminSummary, AdminTenantSummary, AdminDailyRevenue, AdminTopTenant, SystemHealth, PartnerSummary, LimitWarning, QuotaUsage, PartnerQuotaInfo
 from .revenue import RevenueSummary, SettlementRead
 from .staff import StaffCreate, StaffRead, StaffUpdate
 from .reservation import (
@@ -97,6 +97,8 @@ __all__ = [
     "SystemHealth",
     "PartnerSummary",
     "LimitWarning",
+    "QuotaUsage",
+    "PartnerQuotaInfo",
     "ReservationCreate",
     "ReservationListFilter",
     "ReservationRead",

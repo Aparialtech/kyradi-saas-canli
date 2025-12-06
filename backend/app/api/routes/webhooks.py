@@ -10,6 +10,7 @@ from ...db.session import get_session
 from ...models import Payment, PaymentStatus
 from ...schemas import PaymentWebhookPayload
 from ...services.revenue import calculate_settlement
+from ...services.quota_checks import get_tenant_commission_rate
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
@@ -47,8 +48,9 @@ async def handle_payment_webhook(
             sql_select(Settlement).where(Settlement.payment_id == payment.id)
         )
         if existing_settlement.scalar_one_or_none() is None:
-            # Create settlement with default 5% commission
-            await calculate_settlement(session, payment, commission_rate=5.0)
+            # Create settlement with tenant-specific commission rate
+            commission_rate = await get_tenant_commission_rate(session, payment.tenant_id)
+            await calculate_settlement(session, payment, commission_rate=commission_rate)
             await session.commit()
     
     return {"ok": True, "payment_id": payment.id, "status": payment.status}

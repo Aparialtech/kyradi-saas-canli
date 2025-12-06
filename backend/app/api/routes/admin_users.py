@@ -22,6 +22,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/users", tags=["admin-users"])
 
 
+@router.get("/find-by-email/{email}", response_model=AdminUserRead)
+async def find_user_by_email(
+    email: str,
+    session: AsyncSession = Depends(get_session),
+    _: User = Depends(require_super_admin),
+) -> AdminUserRead:
+    """Find a user by email address."""
+    stmt = select(User).where(User.email == email)
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with email '{email}' not found")
+    return AdminUserRead.model_validate(user)
+
+
 async def _load_user_or_404(session: AsyncSession, user_id: str) -> User:
     stmt = select(User).where(User.id == user_id)
     result = await session.execute(stmt)
@@ -36,6 +51,7 @@ async def list_admin_users(
     tenant_id: Optional[str] = Query(default=None),
     role: Optional[UserRole] = Query(default=None),
     is_active: Optional[bool] = Query(default=None),
+    email: Optional[str] = Query(default=None, description="Filter by email address"),
     session: AsyncSession = Depends(get_session),
     _: User = Depends(require_super_admin),
 ) -> List[AdminUserRead]:
@@ -47,6 +63,8 @@ async def list_admin_users(
         stmt = stmt.where(User.role == role.value)
     if is_active is not None:
         stmt = stmt.where(User.is_active == is_active)
+    if email:
+        stmt = stmt.where(User.email == email)
     result = await session.execute(stmt.order_by(User.created_at.desc()))
     users = result.scalars().all()
     return [AdminUserRead.model_validate(user) for user in users]
