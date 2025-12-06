@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,7 +24,7 @@ const schema = z.object({
   name: z.string().min(2, { message: "locations.nameMinLength" }),
   address: z.string().optional(),
   phone_number: z.string().optional(),
-  working_hours: z.record(z.object({
+  working_hours: z.record(z.string(), z.object({
     open: z.string(),
     close: z.string(),
   })).optional(),
@@ -110,6 +110,31 @@ export function LocationsPage() {
     name: errors.name?.message ? t(errors.name.message as any) : undefined,
   }), [errors.name, t]);
 
+  const handleNew = useCallback(() => {
+    setEditingLocation(null);
+    reset({ name: "", address: "", phone_number: "", working_hours: undefined, lat: "", lon: "" });
+  }, [reset]);
+
+  const handleEdit = useCallback((location: Location) => {
+    setEditingLocation(location);
+    reset({
+      name: location.name,
+      address: location.address ?? "",
+      phone_number: location.phone_number ?? "",
+      working_hours: (location.working_hours as Record<string, { open: string; close: string }> | undefined) ?? undefined,
+      lat: location.lat != null ? String(location.lat) : "",
+      lon: location.lon != null ? String(location.lon) : "",
+    });
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [reset]);
+
+  const handleDelete = useCallback((location: Location) => {
+    if (confirm(t("locations.confirmDelete", { name: location.name }))) {
+      deleteMutation.mutate(location.id);
+    }
+  }, [t, deleteMutation]);
+
   const submit = handleSubmit(async (values) => {
     const payload: LocationPayload = {
       name: values.name,
@@ -127,33 +152,8 @@ export function LocationsPage() {
     }
   });
 
-  const handleNew = () => {
-    setEditingLocation(null);
-    reset({ name: "", address: "", phone_number: "", working_hours: undefined, lat: "", lon: "" });
-  };
-
-  const handleEdit = (location: Location) => {
-    setEditingLocation(location);
-    reset({
-      name: location.name,
-      address: location.address ?? "",
-      phone_number: location.phone_number ?? "",
-      working_hours: location.working_hours ?? undefined,
-      lat: location.lat != null ? String(location.lat) : "",
-      lon: location.lon != null ? String(location.lon) : "",
-    });
-    // Scroll to form
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleDelete = (location: Location) => {
-    if (confirm(t("locations.confirmDelete", { name: location.name }))) {
-      deleteMutation.mutate(location.id);
-    }
-  };
-
-  // Table columns
-  const columns: Column<Location>[] = [
+  // Table columns - memoized to prevent recreation on every render
+  const columns: Column<Location>[] = useMemo(() => [
     {
       key: 'name',
       label: t("locations.name"),
@@ -212,7 +212,7 @@ export function LocationsPage() {
         </div>
       ),
     },
-  ];
+  ], [t, handleEdit, handleDelete]);
 
   return (
     <div className="page-container">
@@ -372,7 +372,7 @@ export function LocationsPage() {
                     {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
                       <div key={day} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                         <label style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
-                          {t(`locations.days.${day}`)}
+                          {t(`locations.days.${day}` as any)}
                         </label>
                         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                           <Input

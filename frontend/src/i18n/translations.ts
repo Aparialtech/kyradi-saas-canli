@@ -839,10 +839,9 @@ export const translations = {
     "locations.createError": "Lokasyon eklenemedi",
     "locations.updateError": "Güncelleme başarısız",
     "locations.deleteError": "Silme işlemi başarısız",
-    "locations.confirmDelete": "{{name}} lokasyonunu silmek istediğinize emin misiniz?",
+    "locations.confirmDelete": "{{name}} lokasyonu silinecek. Bu lokasyona bağlı tüm depolar da etkilenebilir. Emin misiniz?",
     "locations.emptyTitle": "Henüz lokasyon yok",
     "locations.emptyHint": "Yeni lokasyon ekleyerek başlayın.",
-    "locations.confirmDelete": "{{name}} lokasyonu silinecek. Bu lokasyona bağlı tüm depolar da etkilenebilir. Emin misiniz?",
     
     // Quota warnings
     "quota.locations.title": "Lokasyon kotası",

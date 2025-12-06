@@ -60,6 +60,7 @@ const floatingStyles = `
 `;
 
 export function FloatingChatWidget() {
+  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
   const { user } = useAuth();
   const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -72,17 +73,18 @@ export function FloatingChatWidget() {
     document.head.appendChild(style);
   }, []);
 
+  // Compute derived values AFTER all hooks
   const tenantId = user?.tenant_id;
   const userId = user?.id;
   const isEligible = Boolean(tenantId && userId);
 
   const toggleLabel = useMemo(() => (open ? "×" : "💬"), [open]);
+  const ariaLabel = useMemo(() => (open ? t("chat.close") : t("chat.open")), [open, t]);
 
+  // Early return AFTER all hooks (this is safe)
   if (!isEligible) {
     return null;
   }
-
-  const ariaLabel = open ? t("chat.close") : t("chat.open");
 
   return (
     <div className="kyradi-chat-widget">
