@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Modal } from "../common/Modal";
 import { useTranslation } from "../../hooks/useTranslation";
-import { QrCode, Copy, Check } from "../../lib/lucide";
+import { QrCode, Copy, Check, User, Calendar, DollarSign } from "../../lib/lucide";
 import { useToast } from "../../hooks/useToast";
 import type { Reservation } from "../../services/partner/reservations";
 
@@ -102,8 +102,9 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
 
         {/* Guest Information */}
         <section>
-          <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569" }}>
-            👤 Misafir Bilgileri
+          <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <User className="h-4 w-4" />
+            Misafir Bilgileri
           </h5>
           <div
             style={{
@@ -156,8 +157,9 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
 
         {/* Reservation Details */}
         <section>
-          <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569" }}>
-            📅 Rezervasyon Bilgileri
+          <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Calendar className="h-4 w-4" />
+            Rezervasyon Bilgileri
           </h5>
           <div
             style={{
@@ -246,8 +248,9 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
         {/* Price Information */}
         {(reservation.estimated_total_price || reservation.hourly_rate) && (
           <section>
-            <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569" }}>
-              💰 Ücret Bilgileri
+            <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <DollarSign className="h-4 w-4" />
+              Ücret Bilgileri
             </h5>
             <div
               style={{

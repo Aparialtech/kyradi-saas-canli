@@ -30,6 +30,18 @@ export interface ConfirmPosResponse {
   kyradi_commission?: number | null;
 }
 
+export interface ConfirmCashResponse {
+  ok: boolean;
+  message: string;
+  payment_id: string;
+  payment_status: string;
+  payment_mode: string;
+  paid_at?: string | null;
+  settlement_id?: string | null;
+  amount_minor: number;
+  currency: string;
+}
+
 export interface CheckoutSessionCreate {
   reservation_id: string;
 }
@@ -51,6 +63,11 @@ export const paymentService = {
 
   async confirmPos(paymentId: string): Promise<ConfirmPosResponse> {
     const response = await http.post<ConfirmPosResponse>(`/payments/${paymentId}/confirm-pos`);
+    return response.data;
+  },
+
+  async confirmCash(paymentId: string): Promise<ConfirmCashResponse> {
+    const response = await http.post<ConfirmCashResponse>(`/payments/${paymentId}/confirm-cash`);
     return response.data;
   },
 

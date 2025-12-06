@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Lock, CheckCircle2 } from "../../lib/lucide";
 
 import { env } from "../../config/env";
 import { partnerWidgetService } from "../../services/partner/widgetConfig";
@@ -633,9 +634,14 @@ export function DemoFlowPage() {
             disabled={createCheckoutSessionMutation.isPending}
             style={{ fontSize: "1rem", padding: "0.75rem 1.5rem", width: "100%" }}
           >
-            {createCheckoutSessionMutation.isPending
-              ? "Yönlendiriliyor..."
-              : "🔒 MagicPay ile Ödemeye Git"}
+            {createCheckoutSessionMutation.isPending ? (
+              "Yönlendiriliyor..."
+            ) : (
+              <>
+                <Lock className="h-4 w-4" style={{ marginRight: "0.5rem", display: "inline-block" }} />
+                MagicPay ile Ödemeye Git
+              </>
+            )}
           </button>
           {magicpayCheckoutUrl && (
             <div
@@ -647,8 +653,9 @@ export function DemoFlowPage() {
                 border: "1px solid #86efac",
               }}
             >
-              <p style={{ margin: 0, fontSize: "0.9rem", color: "#166534" }}>
-                ✅ MagicPay ödeme sayfasına yönlendiriliyorsunuz...
+              <p style={{ margin: 0, fontSize: "0.9rem", color: "#166534", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <CheckCircle2 className="h-4 w-4" />
+                MagicPay ödeme sayfasına yönlendiriliyorsunuz...
               </p>
             </div>
           )}

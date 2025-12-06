@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2 } from "../../lib/lucide";
 
 import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../services/partner/reservations";
 import { useToast } from "../../hooks/useToast";
@@ -111,8 +112,9 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
           }}
         >
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <Badge variant="success" solid size="lg">
-              ✅ {t("payment.modal.paid")}
+            <Badge variant="success" solid size="lg" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+              <CheckCircle2 className="h-4 w-4" />
+              {t("payment.modal.paid")}
             </Badge>
           </div>
           <div style={{ fontSize: "2.5rem", fontWeight: 700, color: "var(--color-text)", letterSpacing: "-0.02em" }}>

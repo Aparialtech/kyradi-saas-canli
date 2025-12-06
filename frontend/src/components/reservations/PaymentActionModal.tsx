@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2, CreditCard, CheckCircle2, Banknote } from "../../lib/lucide";
 
 import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../services/partner/reservations";
 import { paymentService } from "../../services/partner/payments";
@@ -95,6 +96,32 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
     },
   });
 
+  // Confirm Cash Payment Mutation
+  const confirmCashMutation = useMutation({
+    mutationFn: async () => {
+      if (!paymentInfo?.payment_id) {
+        throw new Error("Payment ID not found");
+      }
+      return paymentService.confirmCash(paymentInfo.payment_id);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
+      push({ 
+        title: "Nakit ödeme onaylandı", 
+        description: "Ödeme başarıyla kaydedildi ve rezervasyon aktif hale getirildi.",
+        type: "success" 
+      });
+      onClose();
+    },
+    onError: (error: unknown) => {
+      push({
+        title: "Nakit ödeme onaylanamadı",
+        description: getErrorMessage(error),
+        type: "error",
+      });
+    },
+  });
+
   if (!reservation) return null;
 
   const guestName = reservation.full_name || reservation.customer_name || reservation.guest_name || t("reservations.guestUnknown");
@@ -105,7 +132,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
   const baggageCount = reservation.baggage_count || reservation.luggage_count || 0;
   const storageCode = reservation.storage_code || "—";
 
-  const isLoading = createCheckoutMutation.isPending || markPaidMutation.isPending || isRedirecting;
+  const isLoading = createCheckoutMutation.isPending || markPaidMutation.isPending || confirmCashMutation.isPending || isRedirecting;
   const checkoutUrl = paymentInfo?.checkout_url;
 
   const handlePayClick = () => {
@@ -201,7 +228,39 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
             disabled={isLoading}
             onClick={handlePayClick}
           >
-            {isRedirecting ? "🔄" : "💳"} {isRedirecting ? t("payment.modal.redirecting") : t("payment.modal.processPayment")}
+            {isRedirecting ? (
+              <>
+                <Loader2 className="h-4 w-4" style={{ animation: "spin 1s linear infinite" }} />
+                {t("payment.modal.redirecting")}
+              </>
+            ) : (
+              <>
+                <CreditCard className="h-4 w-4" />
+                {t("payment.modal.processPayment")}
+              </>
+            )}
+          </Button>
+
+          <p style={{ 
+            fontSize: "0.8125rem", 
+            color: "var(--color-text-muted)", 
+            textAlign: "center",
+            margin: "var(--space-2) 0"
+          }}>
+            veya
+          </p>
+
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
+            isLoading={confirmCashMutation.isPending}
+            disabled={isLoading}
+            onClick={() => confirmCashMutation.mutate()}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
+          >
+            <Banknote className="h-4 w-4" />
+            Nakit Ödeme
           </Button>
 
           <p style={{ 
@@ -220,8 +279,10 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
             isLoading={markPaidMutation.isPending}
             disabled={isLoading}
             onClick={() => markPaidMutation.mutate()}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
           >
-            ✅ {t("payment.modal.markAsPaid")}
+            <CheckCircle2 className="h-4 w-4" />
+            {t("payment.modal.markAsPaid")}
           </Button>
           
           <p style={{ 

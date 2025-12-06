@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
+import { AlertCircle } from "../../../lib/lucide";
 
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -195,7 +196,7 @@ export function PartnerSettingsPage() {
       ) : settingsQuery.isError ? (
         <div className="panel">
           <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
+            <AlertCircle className="h-12 w-12" style={{ margin: "0 auto 1rem auto", color: "#dc2626" }} />
             <h3 className="empty-state__title">{t("common.error")}</h3>
             <p>{getErrorMessage(settingsQuery.error)}</p>
             <button

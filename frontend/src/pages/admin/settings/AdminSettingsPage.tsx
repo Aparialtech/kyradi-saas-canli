@@ -12,20 +12,20 @@ export function AdminSettingsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t("nav.systemSettings")}</h1>
-          <p className="page-subtitle">Global sistem konfigürasyonları ve servis ayarları</p>
+          <p className="page-subtitle">{t("admin.settings.subtitle")}</p>
         </div>
       </div>
 
       <div className="panel">
         <div className="panel__header">
           <div>
-            <h3 className="panel__title">Email Servisi Ayarları</h3>
-            <p className="panel__subtitle">Email gönderimi için kullanılan servis konfigürasyonu</p>
+            <h3 className="panel__title">{t("admin.settings.email.title")}</h3>
+            <p className="panel__subtitle">{t("admin.settings.email.subtitle")}</p>
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <label className="form-field">
-            <span className="form-field__label">Email Provider</span>
+            <span className="form-field__label">{t("admin.settings.email.provider")}</span>
             <select disabled style={{ opacity: 0.6 }}>
               <option value="log">Log (Development)</option>
               <option value="smtp">SMTP</option>
@@ -55,7 +55,7 @@ export function AdminSettingsPage() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <label className="form-field">
-            <span className="form-field__label">SMS Provider</span>
+            <span className="form-field__label">{t("admin.settings.sms.provider")}</span>
             <select disabled style={{ opacity: 0.6 }}>
               <option value="log">Log (Development)</option>
               <option value="iletimerkezi">İleti Merkezi</option>
@@ -77,7 +77,7 @@ export function AdminSettingsPage() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <label className="form-field">
-            <span className="form-field__label">Payment Provider</span>
+            <span className="form-field__label">{t("admin.settings.payment.provider")}</span>
             <select disabled style={{ opacity: 0.6 }}>
               <option value="MAGIC_PAY">MagicPay</option>
               <option value="iyzico">iyzico</option>

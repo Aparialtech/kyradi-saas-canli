@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
-import { Users, UserPlus, Edit, Key, UserCheck, UserX, Loader2, AlertCircle, Search, Mail, Phone, Shield, CheckCircle2, XCircle } from "../../../lib/lucide";
+import { Users, UserPlus, Edit, Key, UserCheck, UserX, Loader2, AlertCircle, Search, Mail, Phone, Shield, CheckCircle2, XCircle, AlertTriangle } from "../../../lib/lucide";
 
 import {
   tenantUserService,
@@ -12,6 +12,7 @@ import {
   type TenantUserCreatePayload,
   type TenantUserUpdatePayload,
 } from "../../../services/partner/users";
+import { quotaService } from "../../../services/partner/reports";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
@@ -64,6 +65,11 @@ export function UsersPage() {
     queryFn: tenantUserService.list,
   });
 
+  const quotaQuery = useQuery({
+    queryKey: ["quota"],
+    queryFn: quotaService.getQuotaInfo,
+  });
+
   // Filter users by search term
   const filteredUsers = useMemo(() => {
     const users = usersQuery.data ?? [];
@@ -87,12 +93,12 @@ export function UsersPage() {
     mutationFn: (payload: TenantUserCreatePayload) => tenantUserService.create(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tenant", "users"] });
-      push({ title: "Kullanıcı eklendi", type: "success" });
+      push({ title: t("users.created"), type: "success" });
       reset({ email: "", password: "", role: "storage_operator", is_active: true, phone_number: "" });
       setEditingUser(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Kayıt başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("users.createError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -101,12 +107,12 @@ export function UsersPage() {
       tenantUserService.update(id, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tenant", "users"] });
-      push({ title: "Kullanıcı güncellendi", type: "success" });
+      push({ title: t("users.updated"), type: "success" });
       reset({ email: "", password: "", role: "storage_operator", is_active: true, phone_number: "" });
       setEditingUser(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Güncelleme başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("users.updateError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -114,10 +120,10 @@ export function UsersPage() {
     mutationFn: (id: string) => tenantUserService.deactivate(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tenant", "users"] });
-      push({ title: "Kullanıcı pasifleştirildi", type: "info" });
+      push({ title: t("users.deactivated"), type: "info" });
     },
     onError: (error: unknown) => {
-      push({ title: "İşlem başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("users.deleteError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -299,6 +305,61 @@ export function UsersPage() {
           {t("users.newUser")}
         </ModernButton>
       </motion.div>
+
+      {/* Quota Warning Banner */}
+      {quotaQuery.data?.users && quotaQuery.data.users.limit !== null && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          style={{
+            marginBottom: 'var(--space-6)',
+            padding: 'var(--space-4)',
+            borderRadius: 'var(--radius-lg)',
+            background: quotaQuery.data.users.percentage >= 100
+              ? 'linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)'
+              : quotaQuery.data.users.percentage >= 80
+              ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)'
+              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)',
+            border: `1px solid ${
+              quotaQuery.data.users.percentage >= 100
+                ? 'rgba(220, 38, 38, 0.3)'
+                : quotaQuery.data.users.percentage >= 80
+                ? 'rgba(245, 158, 11, 0.3)'
+                : 'rgba(34, 197, 94, 0.3)'
+            }`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <AlertTriangle 
+            className="h-5 w-5" 
+            style={{ 
+              color: quotaQuery.data.users.percentage >= 100
+                ? '#dc2626'
+                : quotaQuery.data.users.percentage >= 80
+                ? '#f59e0b'
+                : '#22c55e',
+              flexShrink: 0
+            }} 
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>
+              {quotaQuery.data.users.percentage >= 100
+                ? t("quota.users.full")
+                : quotaQuery.data.users.percentage >= 80
+                ? t("quota.users.nearLimit")
+                : t("quota.users.title")}
+            </div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+              {t("quota.users.usage", { current: quotaQuery.data.users.current, limit: quotaQuery.data.users.limit })}
+              {quotaQuery.data.users.percentage >= 100 && t("quota.users.cannotCreate")}
+              {quotaQuery.data.users.percentage >= 80 && quotaQuery.data.users.percentage < 100 && t("quota.users.nearLimitHint")}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
         <div style={{ marginBottom: 'var(--space-4)' }}>

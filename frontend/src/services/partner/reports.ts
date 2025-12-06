@@ -203,3 +203,24 @@ export const partnerReportService = {
     return response.data;
   },
 };
+
+export interface QuotaUsage {
+  current: number;
+  limit: number | null;
+  percentage: number;
+  can_create: boolean;
+}
+
+export interface PartnerQuotaInfo {
+  locations: QuotaUsage;
+  storages: QuotaUsage;
+  users: QuotaUsage;
+  reservations: QuotaUsage;
+}
+
+export const quotaService = {
+  async getQuotaInfo(): Promise<PartnerQuotaInfo> {
+    const response = await http.get<PartnerQuotaInfo>("/reports/quota");
+    return response.data;
+  },
+};

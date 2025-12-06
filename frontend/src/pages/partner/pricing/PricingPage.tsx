@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, Package, MapPin, DollarSign, Building2, Calendar, Clock } from "../../../lib/lucide";
 import { pricingService, type PricingRule, type PricingRuleCreate, type PricingScope } from "../../../services/partner/pricing";
 import { locationService, type Location } from "../../../services/partner/locations";
 import { storageService, type Storage } from "../../../services/partner/storages";
@@ -299,7 +300,7 @@ export function PricingPage() {
           ) : pricingQuery.isError ? (
             <div className="panel">
               <div className="empty-state" style={{ color: "#dc2626" }}>
-                <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
+                <AlertCircle className="h-12 w-12" style={{ margin: "0 auto 1rem auto", color: "#dc2626" }} />
                 <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
                   {t("pricing.loadError")}
                 </h3>
@@ -350,15 +351,22 @@ export function PricingPage() {
                         <td>
                           {rule.scope === "STORAGE" && rule.storage_code ? (
                             <div>
-                              <span style={{ fontWeight: 500 }}>📦 {rule.storage_code}</span>
+                              <span style={{ fontWeight: 500, display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                                <Package className="h-3 w-3" />
+                                {rule.storage_code}
+                              </span>
                               {rule.location_name && (
-                                <div className="table-cell-muted" style={{ fontSize: "0.75rem" }}>
-                                  📍 {rule.location_name}
+                                <div className="table-cell-muted" style={{ fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "0.25rem", marginTop: "0.25rem" }}>
+                                  <MapPin className="h-3 w-3" />
+                                  {rule.location_name}
                                 </div>
                               )}
                             </div>
                           ) : rule.scope === "LOCATION" && rule.location_name ? (
-                            <span style={{ fontWeight: 500 }}>📍 {rule.location_name}</span>
+                            <span style={{ fontWeight: 500, display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                              <MapPin className="h-3 w-3" />
+                              {rule.location_name}
+                            </span>
                           ) : rule.name ? (
                             <span style={{ fontWeight: 500 }}>{rule.name}</span>
                           ) : (
@@ -463,7 +471,7 @@ export function PricingPage() {
           ) : (
             <div className="panel">
               <div className="empty-state">
-                <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>💰</div>
+                <DollarSign className="h-12 w-12" style={{ margin: "0 auto 1rem auto", color: "var(--text-tertiary)" }} />
                 <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
                   {t("pricing.emptyState.title")}
                 </p>
@@ -513,9 +521,9 @@ export function PricingPage() {
                     onChange={(e) => handleScopeChange(e.target.value as PricingScope)}
                     style={{ fontSize: "0.95rem" }}
                   >
-                    <option value="TENANT">🏨 {t("pricing.scope.tenant")}</option>
-                    <option value="LOCATION">📍 {t("pricing.scope.location")}</option>
-                    <option value="STORAGE">📦 {t("pricing.scope.storage")}</option>
+                    <option value="TENANT">{t("pricing.scope.tenant")}</option>
+                    <option value="LOCATION">{t("pricing.scope.location")}</option>
+                    <option value="STORAGE">{t("pricing.scope.storage")}</option>
                   </select>
                   <small style={{ color: "#64748b", fontSize: "0.75rem", display: "block", marginTop: "0.25rem" }}>
                     {t("pricing.form.scopeHelp")}
@@ -613,10 +621,10 @@ export function PricingPage() {
                     className="form-input"
                     style={{ fontSize: "0.95rem" }}
                   >
-                    <option value="hourly">⏱️ {t("pricing.type.hourly")}</option>
-                    <option value="daily">📅 {t("pricing.type.daily")}</option>
-                    <option value="weekly">📆 {t("pricing.type.weekly")}</option>
-                    <option value="monthly">🗓️ {t("pricing.type.monthly")}</option>
+                    <option value="hourly">{t("pricing.type.hourly")}</option>
+                    <option value="daily">{t("pricing.type.daily")}</option>
+                    <option value="weekly">{t("pricing.type.weekly")}</option>
+                    <option value="monthly">{t("pricing.type.monthly")}</option>
                   </select>
                   {errors.pricing_type && (
                     <span style={{ color: "#dc2626", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>

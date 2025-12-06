@@ -117,16 +117,16 @@ export function AdminUsersPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      push({ title: "Kullanıcı oluşturuldu", type: "success" });
+      push({ title: t("users.created"), type: "success" });
       setShowCreateModal(false);
       setNewUser({ email: "", password: "", full_name: "", phone_number: "", role: "staff", is_active: true, tenant_id: "", auto_generate_password: false });
     },
     onError: (error: unknown) => {
       const errorMsg = getErrorMessage(error);
       if (errorMsg.includes("already registered") || errorMsg.includes("Email already")) {
-        push({ title: "Kullanıcı oluşturulamadı", description: "Bu e-posta adresi zaten kullanılıyor", type: "error" });
+        push({ title: t("users.createError"), description: t("users.emailAlreadyExists"), type: "error" });
       } else {
-        push({ title: "Kullanıcı oluşturulamadı", description: errorMsg, type: "error" });
+        push({ title: t("users.createError"), description: errorMsg, type: "error" });
       }
     },
   });
@@ -143,7 +143,7 @@ export function AdminUsersPage() {
       setEditingUser(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Güncelleme başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("users.updateError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -180,10 +180,10 @@ export function AdminUsersPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      push({ title: "Kullanıcı devre dışı bırakıldı", type: "success" });
+      push({ title: t("users.deactivated"), type: "success" });
     },
     onError: (error: unknown) => {
-      push({ title: "Kullanıcı devre dışı bırakılamadı", description: getErrorMessage(error), type: "error" });
+      push({ title: t("users.deactivateError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -551,7 +551,7 @@ export function AdminUsersPage() {
             setShowCreateModal(false);
             setNewUser({ email: "", password: "", full_name: "", phone_number: "", role: "staff", is_active: true, tenant_id: "", auto_generate_password: false });
           }}
-          title="Yeni Kullanıcı Oluştur"
+          title={t("users.createTitle")}
           footer={
             <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
               <button

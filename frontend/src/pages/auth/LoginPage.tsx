@@ -79,13 +79,13 @@ export function LoginPage() {
           ? "/admin" 
           : "/app";
       } else {
-        setError("Giriş başarısız. Lütfen tekrar deneyin.");
+        setError(t("login.error.generic"));
       }
     } catch (err) {
       console.error(err);
       if (axios.isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: unknown })?.detail;
-        let message = "Giriş başarısız. Bilgilerinizi kontrol edin.";
+        let message = t("login.error.invalidCredentials");
 
         if (typeof detail === "string") {
           message = detail;
@@ -100,7 +100,7 @@ export function LoginPage() {
 
         setError(message);
       } else {
-        setError("Beklenmeyen bir hata oluştu.");
+        setError(t("login.error.unexpected"));
       }
     } finally {
       setSubmitting(false);
@@ -142,7 +142,7 @@ export function LoginPage() {
         const detail = (err.response?.data as { detail?: unknown })?.detail;
         setResetError(typeof detail === "string" ? detail : "Şifre sıfırlama başarısız.");
       } else {
-        setResetError("Şifre sıfırlanırken beklenmeyen bir hata oluştu.");
+        setResetError(t("login.resetError.unexpected"));
       }
     } finally {
       setResetSubmitting(false);
@@ -190,7 +190,7 @@ export function LoginPage() {
                 transition={{ delay: 0.4, duration: 0.3 }}
               >
                 <BarChart3 className={styles.featureIcon} />
-                <span>Gerçek zamanlı doluluk takibi</span>
+                <span>{t("login.feature1")}</span>
               </motion.div>
               <motion.div
                 className={styles.feature}
@@ -199,7 +199,7 @@ export function LoginPage() {
                 transition={{ delay: 0.5, duration: 0.3 }}
               >
                 <CreditCard className={styles.featureIcon} />
-                <span>Otomatik hakediş & gelir raporları</span>
+                <span>{t("login.feature2")}</span>
               </motion.div>
               <motion.div
                 className={styles.feature}
@@ -208,7 +208,7 @@ export function LoginPage() {
                 transition={{ delay: 0.6, duration: 0.3 }}
               >
                 <Building2 className={styles.featureIcon} />
-                <span>Entegre QR & ödeme akışları</span>
+                <span>{t("login.feature4")}</span>
               </motion.div>
             </div>
 

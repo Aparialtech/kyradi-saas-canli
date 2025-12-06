@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
+import { AlertCircle } from "../../../lib/lucide";
 
 import { locationService, type Location, type LocationPayload } from "../../../services/partner/locations";
+import { quotaService } from "../../../services/partner/reports";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { AlertTriangle } from "../../../lib/lucide";
 
 // New Premium UI Components
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
@@ -18,7 +21,7 @@ import { Input } from "../../../components/ui/Input";
 import { Table, type Column } from "../../../components/ui/Table";
 
 const schema = z.object({
-  name: z.string().min(2, "Ad en az 2 karakter olmalı"),
+  name: z.string().min(2, { message: "locations.nameMinLength" }),
   address: z.string().optional(),
   lat: z.string().optional(),
   lon: z.string().optional(),
@@ -37,16 +40,21 @@ export function LocationsPage() {
     queryFn: locationService.list,
   });
 
+  const quotaQuery = useQuery({
+    queryKey: ["quota"],
+    queryFn: quotaService.getQuotaInfo,
+  });
+
   const createMutation = useMutation({
     mutationFn: (payload: LocationPayload) => locationService.create(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["locations"] });
-      push({ title: "Lokasyon eklendi", type: "success" });
+      push({ title: t("locations.created"), type: "success" });
       reset({ name: "", address: "", lat: "", lon: "" });
       setEditingLocation(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Lokasyon eklenemedi", description: getErrorMessage(error), type: "error" });
+      push({ title: t("locations.createError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -55,12 +63,12 @@ export function LocationsPage() {
       locationService.update(id, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["locations"] });
-      push({ title: "Lokasyon güncellendi", type: "success" });
+      push({ title: t("locations.updated"), type: "success" });
       reset({ name: "", address: "", lat: "", lon: "" });
       setEditingLocation(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Güncelleme başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("locations.updateError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -68,10 +76,10 @@ export function LocationsPage() {
     mutationFn: (id: string) => locationService.remove(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["locations"] });
-      push({ title: "Lokasyon silindi", type: "info" });
+      push({ title: t("locations.deleted"), type: "info" });
     },
     onError: (error: unknown) => {
-      push({ title: "Silme işlemi başarısız", description: getErrorMessage(error), type: "error" });
+      push({ title: t("locations.deleteError"), description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -89,6 +97,11 @@ export function LocationsPage() {
       lon: "",
     },
   });
+
+  // Translate validation errors
+  const translatedErrors = useMemo(() => ({
+    name: errors.name?.message ? t(errors.name.message as any) : undefined,
+  }), [errors.name, t]);
 
   const submit = handleSubmit(async (values) => {
     const payload: LocationPayload = {
@@ -123,7 +136,7 @@ export function LocationsPage() {
   };
 
   const handleDelete = (location: Location) => {
-    if (confirm(`${location.name} lokasyonu silinecek. Bu lokasyona bağlı tüm depolar da etkilenebilir. Emin misiniz?`)) {
+    if (confirm(t("locations.confirmDelete", { name: location.name }))) {
       deleteMutation.mutate(location.id);
     }
   };
@@ -132,19 +145,19 @@ export function LocationsPage() {
   const columns: Column<Location>[] = [
     {
       key: 'name',
-      label: 'Lokasyon',
+      label: t("locations.name"),
       render: (value) => (
         <strong style={{ fontSize: '0.9375rem', fontWeight: 600 }}>{value}</strong>
       ),
     },
     {
       key: 'address',
-      label: 'Adres',
+      label: t("locations.address"),
       render: (value) => value || <span style={{ color: 'var(--color-text-muted)' }}>-</span>,
     },
     {
       key: 'lat',
-      label: 'Koordinat',
+      label: t("locations.coordinates"),
       render: (_, location) => {
         if (location.lat != null && location.lon != null) {
           return (
@@ -158,7 +171,7 @@ export function LocationsPage() {
     },
     {
       key: 'id',
-      label: 'İşlemler',
+      label: t("locations.actions"),
       align: 'right',
       render: (_, location) => (
         <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
@@ -167,7 +180,7 @@ export function LocationsPage() {
             size="sm"
             onClick={() => handleEdit(location)}
           >
-            Düzenle
+            {t("locations.edit")}
           </Button>
           <Button
             variant="ghost"
@@ -175,7 +188,7 @@ export function LocationsPage() {
             onClick={() => handleDelete(location)}
             style={{ color: 'var(--color-danger)' }}
           >
-            Sil
+            {t("locations.delete")}
           </Button>
         </div>
       ),
@@ -196,11 +209,67 @@ export function LocationsPage() {
         <div>
           <h1 className="page-title text-gradient">{t("nav.locations")}</h1>
           <p className="page-description">
-            Lokasyon yönetimi: Yeni lokasyon ekleyin, mevcut lokasyonları düzenleyin veya silin.
+            {t("locations.subtitle")}
           </p>
         </div>
+      </motion.div>
+
+      {/* Quota Warning Banner */}
+      {quotaQuery.data?.locations && quotaQuery.data.locations.limit !== null && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          style={{
+            marginBottom: 'var(--space-6)',
+            padding: 'var(--space-4)',
+            borderRadius: 'var(--radius-lg)',
+            background: quotaQuery.data.locations.percentage >= 100
+              ? 'linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)'
+              : quotaQuery.data.locations.percentage >= 80
+              ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)'
+              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)',
+            border: `1px solid ${
+              quotaQuery.data.locations.percentage >= 100
+                ? 'rgba(220, 38, 38, 0.3)'
+                : quotaQuery.data.locations.percentage >= 80
+                ? 'rgba(245, 158, 11, 0.3)'
+                : 'rgba(34, 197, 94, 0.3)'
+            }`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <AlertTriangle 
+            className="h-5 w-5" 
+            style={{ 
+              color: quotaQuery.data.locations.percentage >= 100
+                ? '#dc2626'
+                : quotaQuery.data.locations.percentage >= 80
+                ? '#f59e0b'
+                : '#22c55e',
+              flexShrink: 0
+            }} 
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>
+              {quotaQuery.data.locations.percentage >= 100
+                ? t("quota.locations.full")
+                : quotaQuery.data.locations.percentage >= 80
+                ? t("quota.locations.nearLimit")
+                : t("quota.locations.title")}
+            </div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+              {t("quota.locations.usage", { current: quotaQuery.data.locations.current, limit: quotaQuery.data.locations.limit })}
+              {quotaQuery.data.locations.percentage >= 100 && t("quota.locations.cannotCreate")}
+              {quotaQuery.data.locations.percentage >= 80 && quotaQuery.data.locations.percentage < 100 && t("quota.locations.nearLimitHint")}
+            </div>
+          </div>
+        </motion.div>
+      )}
         <Button variant="primary" size="lg" onClick={handleNew}>
-          + Yeni Lokasyon
+          + {t("locations.newLocation")}
         </Button>
       </motion.div>
 
@@ -212,8 +281,8 @@ export function LocationsPage() {
       >
         <Card variant="elevated" padding="none" style={{ marginBottom: 'var(--space-6)' }}>
           <CardHeader
-            title={editingLocation ? "Lokasyon Düzenle" : "Yeni Lokasyon Ekle"}
-            description="Lokasyon bilgilerini doldurun ve kaydedin."
+            title={editingLocation ? t("locations.editLocation") : t("locations.newLocation")}
+            description={t("locations.formSubtitle")}
           />
           <CardBody>
             <form onSubmit={submit}>
@@ -226,38 +295,38 @@ export function LocationsPage() {
                 <div style={{ gridColumn: '1 / -1' }}>
                   <Input
                     {...register("name")}
-                    label="Lokasyon Adı"
+                    label={t("locations.nameLabel")}
                     placeholder="Örn: Taksim Şube"
                     required
-                    error={errors.name?.message}
+                    error={translatedErrors.name}
                   />
                 </div>
 
                 <div style={{ gridColumn: '1 / -1' }}>
                   <Input
                     {...register("address")}
-                    label="Adres"
-                    placeholder="Tam adres bilgisi"
-                    helperText="Opsiyonel: Lokasyonun tam adresi"
+                    label={t("locations.addressLabel")}
+                    placeholder={t("locations.address")}
+                    helperText={t("common.optional")}
                   />
                 </div>
 
                 <Input
                   {...register("lat")}
-                  label="Enlem (Latitude)"
+                  label={t("locations.latLabel")}
                   type="number"
                   inputSize="md"
                   placeholder="41.0082"
-                  helperText="Opsiyonel: Harita konumu için"
+                  helperText={t("locations.latHelper")}
                 />
 
                 <Input
                   {...register("lon")}
-                  label="Boylam (Longitude)"
+                  label={t("locations.lonLabel")}
                   type="number"
                   inputSize="md"
                   placeholder="28.9784"
-                  helperText="Opsiyonel: Harita konumu için"
+                  helperText={t("locations.lonHelper")}
                 />
               </div>
 
@@ -269,7 +338,7 @@ export function LocationsPage() {
                     onClick={handleNew}
                     disabled={createMutation.isPending || updateMutation.isPending}
                   >
-                    İptal
+                    {t("common.cancel")}
                   </Button>
                 )}
                 <Button
@@ -278,7 +347,7 @@ export function LocationsPage() {
                   isLoading={createMutation.isPending || updateMutation.isPending}
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
-                  {editingLocation ? "Güncelle" : "Kaydet"}
+                  {editingLocation ? t("common.update") : t("common.save")}
                 </Button>
               </div>
             </form>
@@ -294,8 +363,8 @@ export function LocationsPage() {
       >
         <Card variant="elevated" padding="none">
           <CardHeader
-            title="Lokasyon Listesi"
-            description={`${data?.length ?? 0} lokasyon kayıtlı`}
+            title={t("locations.listTitle")}
+            description={t("locations.listSubtitle", { count: data?.length ?? 0 })}
           />
           <CardBody noPadding>
             {isError ? (
@@ -304,7 +373,7 @@ export function LocationsPage() {
                 textAlign: 'center',
                 color: 'var(--color-text-muted)'
               }}>
-                <div style={{ fontSize: '3rem', marginBottom: 'var(--space-4)' }}>⚠️</div>
+                <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
                 <h3 style={{ 
                   fontSize: '1.125rem', 
                   fontWeight: 600, 

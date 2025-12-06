@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { ModernCard } from '../../components/ui/ModernCard';
 import { ModernButton } from '../../components/ui/ModernButton';
 import { ModernInput } from '../../components/ui/ModernInput';
 import { HardDrive, MapPin, Package, Search, CheckCircle2, AlertTriangle } from '../../lib/lucide';
+import { quotaService } from '../../services/partner/reports';
+import { useTranslation } from '../../hooks/useTranslation';
 import styles from './ModernStoragesPage.module.css';
 
 interface Storage {
@@ -26,7 +29,13 @@ const mockStorages: Storage[] = [
 ];
 
 export const ModernStoragesPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
+
+  const quotaQuery = useQuery({
+    queryKey: ["quota"],
+    queryFn: quotaService.getQuotaInfo,
+  });
 
   const filteredStorages = mockStorages.filter((s) => {
     if (!searchTerm) return true;
@@ -82,6 +91,61 @@ export const ModernStoragesPage: React.FC = () => {
           + Yeni Depo
         </ModernButton>
       </motion.div>
+
+      {/* Quota Warning Banner */}
+      {quotaQuery.data?.storages && quotaQuery.data.storages.limit !== null && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          style={{
+            marginBottom: 'var(--space-6)',
+            padding: 'var(--space-4)',
+            borderRadius: 'var(--radius-lg)',
+            background: quotaQuery.data.storages.percentage >= 100
+              ? 'linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)'
+              : quotaQuery.data.storages.percentage >= 80
+              ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)'
+              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)',
+            border: `1px solid ${
+              quotaQuery.data.storages.percentage >= 100
+                ? 'rgba(220, 38, 38, 0.3)'
+                : quotaQuery.data.storages.percentage >= 80
+                ? 'rgba(245, 158, 11, 0.3)'
+                : 'rgba(34, 197, 94, 0.3)'
+            }`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <AlertTriangle 
+            className="h-5 w-5" 
+            style={{ 
+              color: quotaQuery.data.storages.percentage >= 100
+                ? '#dc2626'
+                : quotaQuery.data.storages.percentage >= 80
+                ? '#f59e0b'
+                : '#22c55e',
+              flexShrink: 0
+            }} 
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>
+              {quotaQuery.data.storages.percentage >= 100
+                ? t("quota.storages.full")
+                : quotaQuery.data.storages.percentage >= 80
+                ? t("quota.storages.nearLimit")
+                : t("quota.storages.title")}
+            </div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+              {t("quota.storages.usage", { current: quotaQuery.data.storages.current, limit: quotaQuery.data.storages.limit })}
+              {quotaQuery.data.storages.percentage >= 100 && t("quota.storages.cannotCreate")}
+              {quotaQuery.data.storages.percentage >= 80 && quotaQuery.data.storages.percentage < 100 && t("quota.storages.nearLimitHint")}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Toolbar */}
       <ModernCard variant="glass" padding="md">
