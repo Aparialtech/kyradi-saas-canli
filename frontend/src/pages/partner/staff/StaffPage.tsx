@@ -59,6 +59,12 @@ export function StaffPage() {
       const response = await http.get<User[]>("/users/assignable");
       return response.data;
     },
+    retry: (failureCount, error: any) => {
+      // Don't retry on 404 errors to prevent infinite retry loops
+      if (error?.response?.status === 404) return false;
+      // Retry up to 3 times for other errors
+      return failureCount < 3;
+    },
   });
 
   const storagesQuery = useQuery({
