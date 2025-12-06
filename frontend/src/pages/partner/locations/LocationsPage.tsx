@@ -268,6 +268,14 @@ export function LocationsPage() {
           </div>
         </motion.div>
       )}
+
+      {/* Action Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15, duration: 0.4 }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'flex-end' }}
+      >
         <Button variant="primary" size="lg" onClick={handleNew}>
           + {t("locations.newLocation")}
         </Button>
