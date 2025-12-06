@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
-import { Eye, Edit, Building2, Loader2, AlertCircle, Users, UserPlus } from "../../../lib/lucide";
+import { Eye, Edit, Building2, Loader2, AlertCircle, Users, UserPlus, Settings } from "../../../lib/lucide";
+import { Modal } from "../../../components/common/Modal";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
@@ -72,6 +73,7 @@ export function TenantsPage() {
   const { messages, push } = useToast();
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [quotaEditingTenantId, setQuotaEditingTenantId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [planFilter, setPlanFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -398,6 +400,15 @@ export function TenantsPage() {
                     <ModernButton
                       variant="ghost"
                       size="sm"
+                      onClick={() => setQuotaEditingTenantId(tenant.id)}
+                      leftIcon={<Settings className="h-4 w-4" />}
+                      style={{ color: 'var(--color-primary)' }}
+                    >
+                      Kota
+                    </ModernButton>
+                    <ModernButton
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setSelectedTenantId(tenant.id)}
                       leftIcon={<Eye className="h-4 w-4" />}
                     >
@@ -454,6 +465,14 @@ export function TenantsPage() {
             updatePlanLimitsMutation.mutate({ id: selectedTenantId, payload });
           }}
           onClose={() => setSelectedTenantId(null)}
+          notify={push}
+        />
+      )}
+
+      {quotaEditingTenantId && (
+        <TenantQuotaModal
+          tenantId={quotaEditingTenantId}
+          onClose={() => setQuotaEditingTenantId(null)}
           notify={push}
         />
       )}
@@ -1430,5 +1449,320 @@ function TenantDetailCard({
         </Modal>
       )}
     </div>
+  );
+}
+
+interface TenantQuotaModalProps {
+  tenantId: string;
+  onClose: () => void;
+  notify: (payload: ToastPayload) => void;
+}
+
+function TenantQuotaModal({ tenantId, onClose, notify }: TenantQuotaModalProps) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  
+  // Metadata state
+  const [quotaLocationCount, setQuotaLocationCount] = useState("");
+  const [quotaStorageCount, setQuotaStorageCount] = useState("");
+  const [quotaUserCount, setQuotaUserCount] = useState("");
+  const [quotaReservationCount, setQuotaReservationCount] = useState("");
+  const [financialCommissionRate, setFinancialCommissionRate] = useState("");
+  const [featureAiEnabled, setFeatureAiEnabled] = useState(true);
+  const [featureAdvancedReportsEnabled, setFeatureAdvancedReportsEnabled] = useState(true);
+  const [featurePaymentGatewayEnabled, setFeaturePaymentGatewayEnabled] = useState(true);
+  
+  const tenantQuery = useQuery({
+    queryKey: ["admin", "tenants", tenantId],
+    queryFn: () => adminTenantService.list().then(tenants => tenants.find(t => t.id === tenantId)),
+    enabled: Boolean(tenantId),
+  });
+  
+  const metadataQuery = useQuery({
+    queryKey: ["admin", "tenants", tenantId, "metadata"],
+    queryFn: () => adminTenantService.getMetadata(tenantId),
+    enabled: Boolean(tenantId),
+  });
+  
+  const updateMetadataMutation = useMutation({
+    mutationFn: (payload: TenantMetadataUpdate) => adminTenantService.updateMetadata(tenantId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "tenants", tenantId, "metadata"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin", "tenants", tenantId, "detail"] });
+      notify({ title: "Kota ve finans ayarları güncellendi", type: "success" });
+      onClose();
+    },
+    onError: (error: unknown) => {
+      notify({
+        title: "Güncelleme başarısız",
+        description: getErrorMessage(error),
+        type: "error",
+      });
+    },
+  });
+  
+  // Load metadata when available
+  useEffect(() => {
+    if (metadataQuery.data) {
+      const { quotas, financial, features } = metadataQuery.data;
+      setQuotaLocationCount(quotas.max_location_count != null ? String(quotas.max_location_count) : "");
+      setQuotaStorageCount(quotas.max_storage_count != null ? String(quotas.max_storage_count) : "");
+      setQuotaUserCount(quotas.max_user_count != null ? String(quotas.max_user_count) : "");
+      setQuotaReservationCount(quotas.max_reservation_count != null ? String(quotas.max_reservation_count) : "");
+      setFinancialCommissionRate(financial.commission_rate != null ? String(financial.commission_rate) : "");
+      setFeatureAiEnabled(features.ai_enabled ?? true);
+      setFeatureAdvancedReportsEnabled(features.advanced_reports_enabled ?? true);
+      setFeaturePaymentGatewayEnabled(features.payment_gateway_enabled ?? true);
+    }
+  }, [metadataQuery.data]);
+  
+  const handleMetadataUpdate = (event: React.FormEvent) => {
+    event.preventDefault();
+    const payload: TenantMetadataUpdate = {
+      quotas: {
+        max_location_count: quotaLocationCount ? Number(quotaLocationCount) : null,
+        max_storage_count: quotaStorageCount ? Number(quotaStorageCount) : null,
+        max_user_count: quotaUserCount ? Number(quotaUserCount) : null,
+        max_reservation_count: quotaReservationCount ? Number(quotaReservationCount) : null,
+      },
+      financial: {
+        commission_rate: financialCommissionRate ? Number(financialCommissionRate) : undefined,
+      },
+      features: {
+        ai_enabled: featureAiEnabled,
+        advanced_reports_enabled: featureAdvancedReportsEnabled,
+        payment_gateway_enabled: featurePaymentGatewayEnabled,
+      },
+    };
+    updateMetadataMutation.mutate(payload);
+  };
+  
+  const tenant = tenantQuery.data;
+  
+  return (
+    <Modal
+      isOpen
+      title={tenant ? `Kota ve Finans Ayarları - ${tenant.name}` : "Kota ve Finans Ayarları"}
+      onClose={onClose}
+      disableClose={updateMetadataMutation.isPending}
+      width="900px"
+    >
+      {metadataQuery.isLoading ? (
+        <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+          <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+            Ayarlar yükleniyor
+          </h3>
+          <p style={{ margin: 0 }}>Lütfen bekleyin...</p>
+        </div>
+      ) : metadataQuery.isError ? (
+        <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
+          <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: '#dc2626' }}>
+            Ayarlar yüklenemedi
+          </h3>
+          <p style={{ margin: 0 }}>{getErrorMessage(metadataQuery.error)}</p>
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => metadataQuery.refetch()}
+            style={{ marginTop: 'var(--space-4)' }}
+          >
+            Tekrar Dene
+          </button>
+        </div>
+      ) : (
+        <form className="form-grid" onSubmit={handleMetadataUpdate} style={{ marginTop: 'var(--space-4)' }}>
+          <div className="form-grid__field--full" style={{ marginBottom: 'var(--space-4)' }}>
+            <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+              Kota Ayarları
+            </h4>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              Tenant'ın oluşturabileceği maksimum kaynak sayılarını belirleyin
+            </p>
+          </div>
+          
+          <label className="form-field">
+            <span className="form-field__label">Maks. Lokasyon Sayısı</span>
+            <input
+              type="number"
+              min={0}
+              value={quotaLocationCount}
+              onChange={(e) => setQuotaLocationCount(e.target.value)}
+              placeholder="Sınırsız için boş bırakın"
+            />
+            <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+              Tenant'ın oluşturabileceği maksimum lokasyon sayısı
+            </small>
+          </label>
+          
+          <label className="form-field">
+            <span className="form-field__label">Maks. Depo Sayısı</span>
+            <input
+              type="number"
+              min={0}
+              value={quotaStorageCount}
+              onChange={(e) => setQuotaStorageCount(e.target.value)}
+              placeholder="Sınırsız için boş bırakın"
+            />
+            <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+              Tenant'ın oluşturabileceği maksimum depo sayısı
+            </small>
+          </label>
+          
+          <label className="form-field">
+            <span className="form-field__label">Maks. Kullanıcı Sayısı</span>
+            <input
+              type="number"
+              min={0}
+              value={quotaUserCount}
+              onChange={(e) => setQuotaUserCount(e.target.value)}
+              placeholder="Sınırsız için boş bırakın"
+            />
+            <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+              Tenant'ın oluşturabileceği maksimum aktif kullanıcı sayısı
+            </small>
+          </label>
+          
+          <label className="form-field">
+            <span className="form-field__label">Maks. Rezervasyon Sayısı</span>
+            <input
+              type="number"
+              min={0}
+              value={quotaReservationCount}
+              onChange={(e) => setQuotaReservationCount(e.target.value)}
+              placeholder="Sınırsız için boş bırakın"
+            />
+            <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+              Tenant'ın oluşturabileceği maksimum toplam rezervasyon sayısı
+            </small>
+          </label>
+          
+          <div className="form-grid__field--full" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+            <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+              Finans Ayarları
+            </h4>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              Platform komisyon oranını ayarlayın
+            </p>
+          </div>
+          
+          <div className="form-grid__field--full">
+            <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
+              Komisyon Oranı (%)
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={0.1}
+                value={financialCommissionRate || metadataQuery.data?.financial.commission_rate || 5.0}
+                onChange={(e) => setFinancialCommissionRate(e.target.value)}
+                style={{ flex: 1, height: '8px', borderRadius: 'var(--radius-lg)', background: 'var(--bg-tertiary)', outline: 'none' }}
+              />
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={0.1}
+                value={financialCommissionRate}
+                onChange={(e) => setFinancialCommissionRate(e.target.value)}
+                placeholder="5.0"
+                style={{ width: '120px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)' }}
+              />
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>%</span>
+            </div>
+            <small style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', display: 'block', marginTop: 'var(--space-1)' }}>
+              Kyradi platform komisyon oranı (0-100%). Raporlar ve hakedişler bu orana göre hesaplanır.
+            </small>
+          </div>
+          
+          <div className="form-grid__field--full" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+            <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+              Özellik Bayrakları
+            </h4>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              Tenant için kullanılabilir özellikleri etkinleştirin veya devre dışı bırakın
+            </p>
+          </div>
+          
+          <div className="form-grid__field--full">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={featureAiEnabled}
+                onChange={(e) => setFeatureAiEnabled(e.target.checked)}
+                style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
+                  AI Asistanı
+                </div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                  KYRADI AI Asistanı özelliğini etkinleştir/devre dışı bırak
+                </div>
+              </div>
+            </label>
+          </div>
+          
+          <div className="form-grid__field--full">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={featureAdvancedReportsEnabled}
+                onChange={(e) => setFeatureAdvancedReportsEnabled(e.target.checked)}
+                style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
+                  Gelişmiş Raporlar
+                </div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                  Gelişmiş analiz ve raporlama özelliklerini etkinleştir/devre dışı bırak
+                </div>
+              </div>
+            </label>
+          </div>
+          
+          <div className="form-grid__field--full">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={featurePaymentGatewayEnabled}
+                onChange={(e) => setFeaturePaymentGatewayEnabled(e.target.checked)}
+                style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
+                  Ödeme Gateway
+                </div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                  Online ödeme gateway entegrasyonunu etkinleştir/devre dışı bırak
+                </div>
+              </div>
+            </label>
+          </div>
+          
+          <div className="form-actions form-grid__field--full" style={{ marginTop: 'var(--space-4)' }}>
+            <button
+              type="button"
+              className="btn btn--ghost-dark"
+              onClick={onClose}
+              disabled={updateMetadataMutation.isPending}
+            >
+              İptal
+            </button>
+            <button
+              type="submit"
+              className="btn btn--primary"
+              disabled={updateMetadataMutation.isPending}
+            >
+              {updateMetadataMutation.isPending ? "Güncelleniyor..." : "Kaydet"}
+            </button>
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }
