@@ -15,7 +15,7 @@ from .auth import (
     ResendLoginSMSRequest,
     ResendLoginSMSResponse,
 )
-from .user import UserCreate, UserUpdate, UserPasswordReset
+from .user import UserCreate, UserUpdate, UserPasswordReset, PasswordResetResponse
 from .admin_user import (
     AdminUserCreate,
     AdminUserRead,
@@ -72,6 +72,7 @@ __all__ = [
     "UserCreate",
     "UserUpdate",
     "UserPasswordReset",
+    "PasswordResetResponse",
     "AdminUserCreate",
     "AdminUserRead",
     "AdminUserUpdate",

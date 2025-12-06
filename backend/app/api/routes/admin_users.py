@@ -1,6 +1,9 @@
 """Super-admin user management endpoints."""
 
 from typing import List, Optional
+import logging
+import secrets
+import string
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -11,8 +14,10 @@ from ...db.session import get_session
 from ...dependencies import require_super_admin
 from ...models import Tenant, User
 from ...models.enums import UserRole
-from ...schemas import AdminUserCreate, AdminUserRead, AdminUserUpdate
+from ...schemas import AdminUserCreate, AdminUserRead, AdminUserUpdate, PasswordResetResponse, UserPasswordReset
 from ...services.audit import record_audit
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/users", tags=["admin-users"])
 
@@ -71,13 +76,24 @@ async def create_admin_user(
     else:
         tenant = None
 
+    password_value = payload.password
+    if payload.auto_generate_password:
+        alphabet = string.ascii_letters + string.digits
+        password_value = "".join(secrets.choice(alphabet) for _ in range(12))
+    elif not password_value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is required unless auto_generate_password is true",
+        )
+
     user = User(
         tenant_id=tenant.id if tenant else None,
         email=payload.email,
-        password_hash=get_password_hash(payload.password),
+        password_hash=get_password_hash(password_value),
         role=payload.role.value,
         is_active=payload.is_active,
         phone_number=payload.phone_number,
+        full_name=payload.full_name,
         require_phone_verification_on_next_login=payload.require_phone_verification_on_next_login,
     )
     session.add(user)
@@ -90,11 +106,19 @@ async def create_admin_user(
         action="admin.user.create",
         entity="users",
         entity_id=user.id,
-        meta={"email": user.email, "role": user.role},
+        meta={"email": user.email, "role": user.role, "auto_generate_password": payload.auto_generate_password},
     )
 
     await session.commit()
     await session.refresh(user)
+    logger.info(
+        "Admin created user id=%s email=%s tenant_id=%s role=%s auto_generated=%s",
+        user.id,
+        user.email,
+        user.tenant_id,
+        user.role,
+        payload.auto_generate_password,
+    )
     return AdminUserRead.model_validate(user)
 
 
@@ -126,6 +150,8 @@ async def update_admin_user(
             user.tenant_id = None
     if "phone_number" in data:
         user.phone_number = data["phone_number"]
+    if "full_name" in data:
+        user.full_name = data["full_name"]
     if "require_phone_verification_on_next_login" in data:
         user.require_phone_verification_on_next_login = data["require_phone_verification_on_next_login"]
     if "is_active" in data:
@@ -167,3 +193,48 @@ async def deactivate_admin_user(
     )
     await session.commit()
 
+
+@router.post("/{user_id}/reset-password", response_model=PasswordResetResponse)
+async def reset_admin_user_password(
+    user_id: str,
+    payload: UserPasswordReset,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_super_admin),
+) -> PasswordResetResponse:
+    """Reset a user's password. Returns the new password if auto-generated."""
+    user = await _load_user_or_404(session, user_id)
+
+    new_password = payload.password
+    if payload.auto_generate:
+        alphabet = string.ascii_letters + string.digits
+        new_password = "".join(secrets.choice(alphabet) for _ in range(12))
+    elif not new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is required unless auto_generate is true",
+        )
+
+    user.password_hash = get_password_hash(new_password)
+
+    await record_audit(
+        session,
+        tenant_id=user.tenant_id,
+        actor_user_id=current_user.id,
+        action="admin.user.reset_password",
+        entity="users",
+        entity_id=user.id,
+        meta={"auto_generate": payload.auto_generate},
+    )
+    await session.commit()
+    logger.info(
+        "Admin reset password for user id=%s email=%s tenant_id=%s auto_generated=%s",
+        user.id,
+        user.email,
+        user.tenant_id,
+        payload.auto_generate,
+    )
+
+    return PasswordResetResponse(
+        message="Password reset successfully",
+        new_password=new_password if payload.auto_generate or not payload.password else None,
+    )

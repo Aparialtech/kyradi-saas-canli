@@ -801,13 +801,16 @@ async def admin_global_settlements(
 
 @router.get("/users", response_model=List[UserRead])
 async def admin_list_all_users(
-    tenant_id: Optional[str] = Query(default=None),
-    role: Optional[str] = Query(default=None),
-    is_active: Optional[bool] = Query(default=None),
+    tenant_id: Optional[str] = Query(default=None, description="Filter by tenant ID"),
+    role: Optional[str] = Query(default=None, description="Filter by role"),
+    is_active: Optional[bool] = Query(default=None, description="Filter by active status"),
+    email: Optional[str] = Query(default=None, description="Filter by email (contains)"),
+    page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(default=100, ge=1, le=1000, description="Items per page"),
     session: AsyncSession = Depends(get_session),
     _: None = Depends(require_admin_user),
 ) -> List[UserRead]:
-    """List all users in the system (global or filtered)."""
+    """List all users in the system (global or filtered) with pagination."""
     stmt = select(User)
     
     if tenant_id:
@@ -816,8 +819,14 @@ async def admin_list_all_users(
         stmt = stmt.where(User.role == role)
     if is_active is not None:
         stmt = stmt.where(User.is_active == is_active)
+    if email:
+        stmt = stmt.where(User.email.ilike(f"%{email}%"))
     
     stmt = stmt.order_by(User.created_at.desc())
+    
+    # Apply pagination
+    offset = (page - 1) * limit
+    stmt = stmt.offset(offset).limit(limit)
     
     result = await session.execute(stmt)
     users = result.scalars().all()
@@ -832,17 +841,42 @@ async def admin_create_user(
     current_user: User = Depends(require_admin_user),
 ) -> UserRead:
     """Create a new user in the system (global user management)."""
+    import secrets
+    import string
+    
     # Check if email already exists
     exists = await session.execute(select(User).where(User.email == payload.email))
     if exists.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
     
+    # Validate tenant_id if provided
+    tenant_id = None
+    if payload.tenant_id:
+        tenant = await session.get(Tenant, payload.tenant_id)
+        if tenant is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+        tenant_id = payload.tenant_id
+    
+    # Generate password if auto_generate is enabled
+    password = payload.password
+    if payload.auto_generate_password or not password:
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        password = ''.join(secrets.choice(alphabet) for _ in range(16))
+    
+    if not password or len(password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long"
+        )
+    
     user = User(
         email=payload.email,
-        password_hash=get_password_hash(payload.password),
+        password_hash=get_password_hash(password),
         role=payload.role.value,
         is_active=payload.is_active,
-        tenant_id=None,  # Can be assigned later via update
+        tenant_id=tenant_id,
+        phone_number=payload.phone_number,
+        full_name=payload.full_name,
     )
     session.add(user)
     await session.flush()
@@ -852,17 +886,18 @@ async def admin_create_user(
     is_development = settings.environment.lower() in {"local", "dev", "development"}
     if is_development:
         logger.info(f"[ADMIN USER CREATE] Email: {payload.email}")
-        logger.info(f"[ADMIN USER CREATE] Password: {payload.password}")
+        logger.info(f"[ADMIN USER CREATE] Password: {password}")
         logger.info(f"[ADMIN USER CREATE] Role: {payload.role.value}")
+        logger.info(f"[ADMIN USER CREATE] Full Name: {payload.full_name}")
     
     await record_audit(
         session,
-        tenant_id=None,
+        tenant_id=tenant_id,
         actor_user_id=current_user.id,
         action="admin.user.create",
         entity="users",
         entity_id=user.id,
-        meta={"email": user.email, "role": user.role},
+        meta={"email": user.email, "role": user.role, "full_name": user.full_name},
     )
     
     await session.commit()
@@ -911,6 +946,12 @@ async def admin_update_user(
         else:
             user.tenant_id = None
     
+    # Handle full_name and phone_number updates
+    if "full_name" in update_data:
+        user.full_name = update_data.pop("full_name")
+    if "phone_number" in update_data:
+        user.phone_number = update_data.pop("phone_number")
+    
     for field, value in update_data.items():
         setattr(user, field, value)
     
@@ -930,19 +971,34 @@ async def admin_update_user(
     return UserRead.model_validate(user)
 
 
-@router.post("/users/{user_id}/reset-password", response_model=UserRead)
+@router.post("/users/{user_id}/reset-password")
 async def admin_reset_user_password(
     user_id: str,
     payload: UserPasswordReset,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_admin_user),
-) -> UserRead:
+) -> dict:
     """Reset a user's password (admin operation)."""
+    import secrets
+    import string
+    
     user = await session.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
-    user.password_hash = get_password_hash(payload.password)
+    # Generate password if auto_generate is enabled or password not provided
+    new_password = payload.password
+    if payload.auto_generate or not new_password:
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        new_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+    
+    if not new_password or len(new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long"
+        )
+    
+    user.password_hash = get_password_hash(new_password)
     
     await record_audit(
         session,
@@ -962,7 +1018,49 @@ async def admin_reset_user_password(
     is_development = settings.environment.lower() in {"local", "dev", "development"}
     if is_development:
         logger.info(f"[ADMIN PASSWORD RESET] User: {user.email}")
-        logger.info(f"[ADMIN PASSWORD RESET] New Password: {payload.password}")
+        logger.info(f"[ADMIN PASSWORD RESET] New Password: {new_password}")
     
     logger.info(f"Password reset for user: {user.email} (ID: {user.id}) by admin {current_user.id}")
-    return UserRead.model_validate(user)
+    
+    return {
+        "new_password": new_password if payload.auto_generate else None,
+        "message": "Password reset successfully" if payload.auto_generate else "Password updated successfully"
+    }
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_delete_user(
+    user_id: str,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_admin_user),
+) -> None:
+    """Soft delete a user (set is_active = false)."""
+    user = await session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    # Prevent self-deactivation
+    if user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot deactivate yourself"
+        )
+    
+    if not user.is_active:
+        # Already inactive, just return
+        return
+    
+    user.is_active = False
+    
+    await record_audit(
+        session,
+        tenant_id=user.tenant_id,
+        actor_user_id=current_user.id,
+        action="admin.user.deactivate",
+        entity="users",
+        entity_id=user.id,
+        meta={"email": user.email},
+    )
+    
+    await session.commit()
+    logger.info(f"User deactivated: {user.email} (ID: {user.id}) by admin {current_user.id}")

@@ -35,6 +35,7 @@ class UserRead(IdentifiedModel):
     role: UserRole
     is_active: bool
     phone_number: Optional[str] = None
+    full_name: Optional[str] = None
     last_login_at: Optional[datetime]
 
 

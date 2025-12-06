@@ -101,6 +101,7 @@ class User(IdentifiedMixin, TimestampMixin, Base):
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), default=None)
     require_phone_verification_on_next_login: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     phone_number: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)  # For SMS verification
+    full_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # Full name of the user
 
     tenant: Mapped[Optional[Tenant]] = relationship("Tenant", back_populates="users")
     reservations: Mapped[List["Reservation"]] = relationship(
