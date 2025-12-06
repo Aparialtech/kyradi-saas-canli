@@ -835,7 +835,8 @@ function TenantDetailCard({
       )}
 
       {!isLoading && tenantDetail && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-20)' }}>
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-20)' }}>
           {/* Header */}
           <div style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: 'var(--space-4)', marginBottom: 'var(--space-2)' }}>
             <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-1) 0' }}>
@@ -1212,6 +1213,7 @@ function TenantDetailCard({
               <p style={{ margin: 0 }}>{t("common.hotel")} için yeni kullanıcı ekleyerek erişim tanımlayabilirsiniz.</p>
             </div>
           )}
+          </div>
         </>
       )}
 
