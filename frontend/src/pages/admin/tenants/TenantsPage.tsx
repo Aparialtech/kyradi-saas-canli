@@ -147,18 +147,6 @@ export function TenantsPage() {
     },
   });
 
-  const updatePlanLimitsMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: TenantPlanLimitsUpdatePayload }) =>
-      adminTenantService.updatePlanLimits(id, payload),
-    onSuccess: (_, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ["admin", "tenants"] });
-      void queryClient.invalidateQueries({ queryKey: ["admin", "tenants", variables.id, "detail"] });
-      push({ title: "Plan limitleri güncellendi", type: "success" });
-    },
-    onError: (error: unknown) => {
-      push({ title: "Plan güncellenemedi", description: getErrorMessage(error), type: "error" });
-    },
-  });
 
   const {
     register,
