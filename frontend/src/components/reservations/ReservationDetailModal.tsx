@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../common/Modal";
 import { useTranslation } from "../../hooks/useTranslation";
-import { QRCodeCanvas } from "qrcode.react";
 import { QrCode, Copy, Check, User, Calendar, DollarSign } from "../../lib/lucide";
 import { useToast } from "../../hooks/useToast";
 import type { Reservation } from "../../services/partner/reservations";
+import QRCode from "qrcode";
 
 interface ReservationDetailModalProps {
   reservation: Reservation | null;
@@ -36,6 +36,7 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
   const { t } = useTranslation();
   const { push } = useToast();
   const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   const formatDate = useMemo(() => {
     return (dateStr?: string | null) => {
@@ -65,6 +66,27 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
   if (!reservation) return null;
 
   const statusColor = statusColors[reservation.status] ?? "#6b7280";
+  const qrText = reservation.qr_code || reservation.qr_token || "";
+
+  useEffect(() => {
+    let mounted = true;
+    if (!qrText) {
+      setQrDataUrl("");
+      return;
+    }
+    QRCode.toDataURL(qrText, {
+      width: 156,
+      margin: 1,
+      color: { dark: "#0f172a", light: "#ffffff" },
+    })
+      .then((url) => {
+        if (mounted) setQrDataUrl(url);
+      })
+      .catch(() => mounted && setQrDataUrl(""));
+    return () => {
+      mounted = false;
+    };
+  }, [qrText]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Rezervasyon Detayı" width="600px">
@@ -299,7 +321,7 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
                 textAlign: "center",
               }}
             >
-              {reservation.qr_code || reservation.qr_token ? (
+              {qrDataUrl ? (
                 <>
                   <div
                     style={{
@@ -311,13 +333,7 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
                       marginBottom: "1rem",
                     }}
                   >
-                    <QRCodeCanvas
-                      value={reservation.qr_code || reservation.qr_token || ""}
-                      size={156}
-                      bgColor="#ffffff"
-                      fgColor="#0f172a"
-                      includeMargin
-                    />
+                    <img src={qrDataUrl} alt="Rezervasyon QR kodu" style={{ width: 156, height: 156 }} />
                   </div>
                   <div style={{ marginBottom: "0.75rem" }}>
                     <code
@@ -331,13 +347,12 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
                         color: "#0f172a",
                       }}
                     >
-                      {reservation.qr_code || reservation.qr_token}
+                      {qrText}
                     </code>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      const qrText = reservation.qr_code || reservation.qr_token || "";
                       navigator.clipboard.writeText(qrText).then(() => {
                         setCopied(true);
                         push({ title: "QR kodu kopyalandı", type: "success" });
