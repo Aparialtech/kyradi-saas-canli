@@ -15,6 +15,7 @@ from ...models import User, UserRole
 from ...schemas import UserCreate, UserRead, UserUpdate
 from ...services.audit import record_audit
 from ...services.limits import ensure_user_limit
+from ...services.quota_checks import check_user_quota
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +61,19 @@ async def create_user(
     """Create a new user under the tenant."""
     _validate_role(payload.role)
     if payload.is_active:
+        # Check quota from metadata (new system) first
+        can_create, quota_limit, current_count = await check_user_quota(session, current_user.tenant_id)
+        if not can_create and quota_limit is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Max kullanıcı kotasına ulaşıldı. Mevcut: {current_count}, Limit: {quota_limit}",
+            )
+        # Fallback to plan limits (backward compatibility)
         try:
             await ensure_user_limit(session, current_user.tenant_id)
         except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+            if quota_limit is None:  # Only raise if quota_limit wasn't checked
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
 
     existing = await session.execute(select(User).where(User.email == payload.email))
     if existing.scalar_one_or_none():
@@ -125,10 +135,19 @@ async def update_user(
 
     reactivating = bool(update_data.get("is_active")) and not user.is_active
     if reactivating:
+        # Check quota from metadata (new system) first
+        can_create, quota_limit, current_count = await check_user_quota(session, current_user.tenant_id)
+        if not can_create and quota_limit is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Max kullanıcı kotasına ulaşıldı. Mevcut: {current_count}, Limit: {quota_limit}",
+            )
+        # Fallback to plan limits (backward compatibility)
         try:
             await ensure_user_limit(session, current_user.tenant_id)
         except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+            if quota_limit is None:  # Only raise if quota_limit wasn't checked
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
 
     if "password" in update_data and update_data["password"]:
         new_password = update_data.pop("password")

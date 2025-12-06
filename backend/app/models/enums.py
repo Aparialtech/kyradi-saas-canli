@@ -61,5 +61,6 @@ class PaymentProvider(str, Enum):
 class PaymentMode(str, Enum):
     """Payment mode enumeration."""
     POS = "POS"  # Point of sale - cash/card at location
+    CASH = "CASH"  # Cash payment (offline, no gateway)
     GATEWAY_DEMO = "GATEWAY_DEMO"  # Gateway demo mode (MagicPay demo)
     GATEWAY_LIVE = "GATEWAY_LIVE"  # Gateway live mode (real MagicPay)

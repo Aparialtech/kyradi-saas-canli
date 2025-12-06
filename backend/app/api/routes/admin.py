@@ -32,6 +32,13 @@ from ...schemas import (
     UserUpdate,
     UserPasswordReset,
 )
+from ...schemas.tenant_metadata import (
+    TenantMetadataUpdate,
+    TenantMetadataRead,
+    TenantQuotaSettings,
+    TenantFinancialSettings,
+    TenantFeatureFlags,
+)
 from ...schemas.revenue import RevenueSummary, SettlementRead
 from ...services.audit import record_audit
 from ...services.limits import (
@@ -1064,3 +1071,111 @@ async def admin_delete_user(
     
     await session.commit()
     logger.info(f"User deactivated: {user.email} (ID: {user.id}) by admin {current_user.id}")
+
+
+@router.get("/tenants/{tenant_id}/metadata", response_model=TenantMetadataRead)
+async def get_tenant_metadata(
+    tenant_id: str,
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(require_admin_user),
+) -> TenantMetadataRead:
+    """Get tenant metadata (quotas, financial, features)."""
+    result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    
+    metadata = tenant.metadata_ or {}
+    
+    # Extract quotas
+    quotas_data = metadata.get("quotas", {})
+    quotas = TenantQuotaSettings(
+        max_location_count=quotas_data.get("max_location_count"),
+        max_storage_count=quotas_data.get("max_storage_count"),
+        max_user_count=quotas_data.get("max_user_count"),
+        max_reservation_count=quotas_data.get("max_reservation_count"),
+    )
+    
+    # Extract financial
+    financial_data = metadata.get("financial", {})
+    financial = TenantFinancialSettings(
+        commission_rate=financial_data.get("commission_rate", 5.0),
+    )
+    
+    # Extract features
+    features_data = metadata.get("features", {})
+    features = TenantFeatureFlags(
+        ai_enabled=features_data.get("ai_enabled", True),
+        advanced_reports_enabled=features_data.get("advanced_reports_enabled", True),
+        payment_gateway_enabled=features_data.get("payment_gateway_enabled", True),
+    )
+    
+    return TenantMetadataRead(quotas=quotas, financial=financial, features=features)
+
+
+@router.patch("/tenants/{tenant_id}/metadata", response_model=TenantMetadataRead)
+async def update_tenant_metadata(
+    tenant_id: str,
+    payload: TenantMetadataUpdate,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_admin_user),
+) -> TenantMetadataRead:
+    """Update tenant metadata (quotas, financial, features)."""
+    result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    
+    metadata = dict(tenant.metadata_ or {})
+    
+    # Update quotas
+    if payload.quotas is not None:
+        if "quotas" not in metadata:
+            metadata["quotas"] = {}
+        quotas_data = metadata["quotas"]
+        if payload.quotas.max_location_count is not None:
+            quotas_data["max_location_count"] = payload.quotas.max_location_count
+        if payload.quotas.max_storage_count is not None:
+            quotas_data["max_storage_count"] = payload.quotas.max_storage_count
+        if payload.quotas.max_user_count is not None:
+            quotas_data["max_user_count"] = payload.quotas.max_user_count
+        if payload.quotas.max_reservation_count is not None:
+            quotas_data["max_reservation_count"] = payload.quotas.max_reservation_count
+        metadata["quotas"] = quotas_data
+    
+    # Update financial
+    if payload.financial is not None:
+        if "financial" not in metadata:
+            metadata["financial"] = {}
+        financial_data = metadata["financial"]
+        if payload.financial.commission_rate is not None:
+            financial_data["commission_rate"] = payload.financial.commission_rate
+        metadata["financial"] = financial_data
+    
+    # Update features
+    if payload.features is not None:
+        if "features" not in metadata:
+            metadata["features"] = {}
+        features_data = metadata["features"]
+        features_data["ai_enabled"] = payload.features.ai_enabled
+        features_data["advanced_reports_enabled"] = payload.features.advanced_reports_enabled
+        features_data["payment_gateway_enabled"] = payload.features.payment_gateway_enabled
+        metadata["features"] = features_data
+    
+    tenant.metadata_ = metadata
+    
+    await record_audit(
+        session,
+        tenant_id=tenant_id,
+        actor_user_id=current_user.id,
+        action="admin.tenant.metadata.update",
+        entity="tenants",
+        entity_id=tenant_id,
+        meta=payload.model_dump(exclude_none=True),
+    )
+    
+    await session.commit()
+    await session.refresh(tenant)
+    
+    # Return updated metadata
+    return await get_tenant_metadata(tenant_id, session, current_user)

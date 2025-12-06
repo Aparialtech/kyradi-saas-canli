@@ -2,6 +2,7 @@
 
 from uuid import uuid4
 from typing import Dict, Any
+from datetime import datetime, timezone
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,7 +15,7 @@ from ...models import Payment, PaymentStatus, Reservation, User
 from ...models.enums import PaymentMode, PaymentProvider
 from ...schemas import PaymentIntentCreate, PaymentRead
 from ...core.config import settings
-from ...services.payment_service import confirm_pos_payment
+from ...services.payment_service import confirm_pos_payment, confirm_cash_payment
 from ...services.magicpay.client import get_magicpay_client
 from ...services.magicpay.service import MagicPayService
 from ...services.payment_service import get_or_create_payment
@@ -145,6 +146,99 @@ async def create_magicpay_checkout_session(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="MagicPay checkout session could not be created",
+        ) from exc
+
+
+@router.post("/{payment_id}/confirm-cash", response_model=Dict[str, Any])
+async def confirm_cash_payment_endpoint(
+    payment_id: str,
+    current_user: User = Depends(require_tenant_staff),
+    session: AsyncSession = Depends(get_session),
+) -> Dict[str, Any]:
+    """Confirm cash payment (offline payment).
+    
+    This endpoint:
+    1. Updates payment status to PAID
+    2. Sets payment mode to CASH
+    3. Updates reservation status to active
+    4. Creates settlement with commission calculation
+    """
+    payment = await session.get(Payment, payment_id)
+    if payment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Payment not found",
+        )
+    
+    if payment.tenant_id != current_user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+    
+    if payment.status == PaymentStatus.PAID.value:
+        return {
+            "ok": True,
+            "message": "Payment already confirmed",
+            "payment_id": payment.id,
+            "payment_status": payment.status,
+        }
+    
+    # Set payment mode to CASH
+    payment.mode = PaymentMode.CASH.value
+    payment.status = PaymentStatus.PAID.value
+    payment.provider = PaymentProvider.POS.value
+    payment.paid_at = datetime.now(timezone.utc)
+    
+    # Update reservation status
+    reservation = await session.get(Reservation, payment.reservation_id)
+    if reservation:
+        reservation.status = "active"
+    
+    try:
+        # Confirm cash payment using service
+        payment = await confirm_cash_payment(
+            session,
+            payment=payment,
+            actor_user_id=current_user.id,
+        )
+        
+        # Get settlement
+        from ...models import Settlement
+        from sqlalchemy import select as sql_select
+        
+        settlement_result = await session.execute(
+            sql_select(Settlement).where(Settlement.payment_id == payment.id)
+        )
+        settlement = settlement_result.scalar_one_or_none()
+        
+        logger.info(
+            f"Cash payment confirmed: payment_id={payment.id}, "
+            f"reservation_id={payment.reservation_id}, settlement_id={settlement.id if settlement else None}"
+        )
+        
+        return {
+            "ok": True,
+            "message": "Cash payment confirmed successfully",
+            "payment_id": payment.id,
+            "payment_status": payment.status,
+            "payment_mode": payment.mode,
+            "paid_at": payment.paid_at.isoformat() if payment.paid_at else None,
+            "settlement_id": settlement.id if settlement else None,
+            "settlement_status": settlement.status if settlement else None,
+            "amount_minor": payment.amount_minor,
+            "currency": payment.currency,
+        }
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.error(f"Error confirming cash payment: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to confirm cash payment: {str(exc)}",
         ) from exc
 
 

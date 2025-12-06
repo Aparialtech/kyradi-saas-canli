@@ -12,6 +12,7 @@ from ...db.session import get_session
 from ...dependencies import require_storage_operator, require_tenant_admin, require_tenant_operator
 from ...models import Location, Reservation, ReservationStatus, Storage, StorageStatus, User
 from ...services.limits import get_plan_limits_for_tenant
+from ...services.quota_checks import check_storage_quota
 from ...schemas import StorageCreate, StorageRead, StorageUpdate
 from ...services.storage_utils import generate_storage_code
 from ...services.storage_availability import (
@@ -133,17 +134,25 @@ async def create_storage(
     session: AsyncSession = Depends(get_session),
 ) -> StorageRead:
     """Create a storage unit for a given location."""
+    # Check quota from metadata (new system) first, fallback to plan limits
+    can_create, quota_limit, current_count = await check_storage_quota(session, current_user.tenant_id)
+    if not can_create and quota_limit is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Max depo kotasına ulaşıldı. Mevcut: {current_count}, Limit: {quota_limit}",
+        )
+    
+    # Fallback to plan limits (backward compatibility)
     limits = await get_plan_limits_for_tenant(session, current_user.tenant_id)
-    # Check max_storages, fallback to max_lockers for backward compatibility
     max_storages = getattr(limits, "max_storages", None) or getattr(limits, "max_lockers", None)
-    if max_storages is not None:
+    if max_storages is not None and quota_limit is None:
         storage_count = await session.scalar(
             select(func.count()).select_from(Storage).where(Storage.tenant_id == current_user.tenant_id)
         )
         if storage_count >= max_storages:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Plan limit reached: maximum storage units for this tenant",
+                detail=f"Plan limit reached: maximum storage units for this tenant. Mevcut: {storage_count}, Limit: {max_storages}",
             )
 
     location = await session.get(Location, payload.location_id)

@@ -383,6 +383,77 @@ async def _maybe_create_checkout_session(
         # Payment will be created but without checkout URL
 
 
+async def confirm_cash_payment(
+    session: AsyncSession,
+    *,
+    payment: Payment,
+    actor_user_id: Optional[str] = None,
+) -> Payment:
+    """Confirm a cash payment (offline payment).
+    
+    This function:
+    1. Updates payment status to PAID
+    2. Sets payment mode to CASH
+    3. Sets paid_at timestamp
+    4. Updates reservation status to active
+    5. Creates settlement with commission from metadata
+    
+    Args:
+        session: Database session
+        payment: Payment to confirm
+        actor_user_id: User ID who confirmed the payment
+    
+    Returns:
+        Updated Payment record
+    """
+    if payment.status == PaymentStatus.PAID.value:
+        logger.warning(f"Payment {payment.id} already confirmed")
+        return payment
+    
+    # Set payment mode to CASH
+    payment.mode = PaymentMode.CASH.value
+    payment.status = PaymentStatus.PAID.value
+    payment.paid_at = datetime.now(timezone.utc)
+    payment.provider = PaymentProvider.POS.value
+    payment.transaction_id = f"CASH_{payment.id[:8]}_{datetime.now(timezone.utc).timestamp():.0f}"
+    
+    await session.flush()
+    
+    # Update reservation status to active
+    if payment.reservation_id:
+        reservation = await session.get(Reservation, payment.reservation_id)
+        if reservation:
+            reservation.status = "active"
+    
+    # Create settlement with commission from metadata
+    if payment.reservation_id:
+        try:
+            from .revenue import calculate_settlement, mark_settlement_completed
+            from .quota_checks import get_tenant_commission_rate
+            
+            commission_rate = await get_tenant_commission_rate(session, payment.tenant_id)
+            settlement = await calculate_settlement(session, payment, commission_rate=commission_rate)
+            await session.flush()
+            
+            # Mark settlement as settled
+            settlement = await mark_settlement_completed(session, settlement.id)
+            await session.flush()
+            
+            logger.info(
+                f"Created settlement for cash payment: payment_id={payment.id}, "
+                f"settlement_id={settlement.id}, commission_rate={commission_rate}%"
+            )
+        except Exception as exc:
+            logger.error(f"Failed to create settlement for cash payment: {exc}", exc_info=True)
+    
+    await session.commit()
+    await session.refresh(payment)
+    
+    logger.info(f"Confirmed cash payment: payment_id={payment.id}, amount={payment.amount_minor}")
+    
+    return payment
+
+
 async def confirm_pos_payment(
     session: AsyncSession,
     *,
@@ -436,12 +507,14 @@ async def confirm_pos_payment(
             # Storage remains OCCUPIED if reservation is still active
             pass
     
-    # Create settlement
+    # Create settlement with commission from metadata
     if payment.reservation_id:
         try:
             from .revenue import calculate_settlement, mark_settlement_completed
+            from .quota_checks import get_tenant_commission_rate
             
-            settlement = await calculate_settlement(session, payment, commission_rate=5.0)
+            commission_rate = await get_tenant_commission_rate(session, payment.tenant_id)
+            settlement = await calculate_settlement(session, payment, commission_rate=commission_rate)
             await session.flush()
             
             # Mark settlement as settled

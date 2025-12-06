@@ -15,6 +15,7 @@ Locker = Storage
 from ..schemas import ReservationCreate
 from .audit import record_audit
 from .limits import get_plan_limits_for_tenant
+from .quota_checks import check_reservation_quota
 from .pricing_calculator import calculate_reservation_price
 from .storage_availability import is_storage_available
 
@@ -37,6 +38,12 @@ async def create_reservation(
     if payload.start_at >= payload.end_at:
         raise ValueError("Invalid reservation window")
 
+    # Check quota from metadata (new system) first
+    can_create, quota_limit, current_count = await check_reservation_quota(session, tenant_id)
+    if not can_create and quota_limit is not None:
+        raise ValueError(f"Max rezervasyon kotasına ulaşıldı. Mevcut: {current_count}, Limit: {quota_limit}")
+    
+    # Fallback to plan limits (backward compatibility)
     limits = await get_plan_limits_for_tenant(session, tenant_id)
     if limits.max_active_reservations is not None:
         active_reservation_count = await session.scalar(
@@ -47,7 +54,7 @@ async def create_reservation(
         )
         if active_reservation_count >= limits.max_active_reservations:
             raise ValueError("Plan limit reached: maximum active reservations")
-    if limits.max_reservations_total is not None:
+    if limits.max_reservations_total is not None and quota_limit is None:
         total_reservation_count = await session.scalar(
             select(func.count()).select_from(Reservation).where(
                 Reservation.tenant_id == tenant_id,

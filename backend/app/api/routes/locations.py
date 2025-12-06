@@ -10,6 +10,7 @@ from ...db.session import get_session
 from ...dependencies import require_tenant_admin, require_tenant_operator
 from ...models import Location, Locker, User
 from ...services.limits import get_plan_limits_for_tenant
+from ...services.quota_checks import check_location_quota
 from ...schemas import LocationCreate, LocationRead, LocationUpdate
 
 router = APIRouter(prefix="/locations", tags=["locations"])
@@ -34,15 +35,24 @@ async def create_location(
     session: AsyncSession = Depends(get_session),
 ) -> LocationRead:
     """Create a new location for the tenant."""
+    # Check quota from metadata (new system) first, fallback to plan limits
+    can_create, quota_limit, current_count = await check_location_quota(session, current_user.tenant_id)
+    if not can_create and quota_limit is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Max lokasyon kotasına ulaşıldı. Mevcut: {current_count}, Limit: {quota_limit}",
+        )
+    
+    # Fallback to plan limits (backward compatibility)
     limits = await get_plan_limits_for_tenant(session, current_user.tenant_id)
-    if limits.max_locations is not None:
+    if limits.max_locations is not None and quota_limit is None:
         location_count = await session.scalar(
             select(func.count()).select_from(Location).where(Location.tenant_id == current_user.tenant_id)
         )
         if location_count >= limits.max_locations:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Plan limit reached: maximum locations for this tenant",
+                detail=f"Plan limit reached: maximum locations for this tenant. Mevcut: {location_count}, Limit: {limits.max_locations}",
             )
 
     location = Location(
