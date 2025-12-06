@@ -22,9 +22,9 @@ export function LoginPage() {
   const { t } = useTranslation();
 
   const [mode, setMode] = useState<LoginMode>("partner");
-  const [tenantSlug, setTenantSlug] = useState<string>("demo-hotel");
-  const [email, setEmail] = useState<string>("admin@demo.com");
-  const [password, setPassword] = useState<string>("Kyradi!2025");
+  const [tenantSlug, setTenantSlug] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
@@ -279,7 +279,7 @@ export function LoginPage() {
                   </motion.div>
                 )}
 
-                <form className={styles.form} onSubmit={handleSubmit}>
+                <form className={styles.form} onSubmit={handleSubmit} autoComplete="off">
                   {mode === "partner" && (
                     <div className={styles.formField}>
                       <label className={styles.label}>
@@ -372,6 +372,7 @@ export function LoginPage() {
                     <motion.form
                       className={styles.resetForm}
                       onSubmit={handleForgotPassword}
+                      autoComplete="off"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
