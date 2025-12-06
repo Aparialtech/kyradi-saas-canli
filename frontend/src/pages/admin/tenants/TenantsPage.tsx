@@ -458,11 +458,6 @@ export function TenantsPage() {
           tenantId={selectedTenantId}
           tenantDetail={tenantDetailQuery.data ?? null}
           isLoading={tenantDetailQuery.isLoading}
-          isUpdating={updatePlanLimitsMutation.isPending}
-          onPlanUpdate={(payload) => {
-            if (!selectedTenantId) return;
-            updatePlanLimitsMutation.mutate({ id: selectedTenantId, payload });
-          }}
           onClose={() => setSelectedTenantId(null)}
           notify={push}
         />
@@ -485,8 +480,6 @@ interface TenantDetailCardProps {
   tenantId: string;
   tenantDetail: TenantDetail | null;
   isLoading: boolean;
-  isUpdating: boolean;
-  onPlanUpdate: (payload: TenantPlanLimitsUpdatePayload) => void;
   onClose: () => void;
   notify: (payload: ToastPayload) => void;
 }
@@ -495,21 +488,10 @@ function TenantDetailCard({
   tenantId,
   tenantDetail,
   isLoading,
-  isUpdating,
-  onPlanUpdate,
   onClose,
   notify,
 }: TenantDetailCardProps) {
   const { t } = useTranslation();
-  const [planValue, setPlanValue] = useState("");
-  const [maxLocations, setMaxLocations] = useState("");
-  const [maxLockers, setMaxLockers] = useState("");
-  const [maxActiveReservations, setMaxActiveReservations] = useState("");
-  const [maxUsers, setMaxUsers] = useState("");
-  const [maxSelfServiceDaily, setMaxSelfServiceDaily] = useState("");
-  const [maxTotalReservations, setMaxTotalReservations] = useState("");
-  const [maxReportExports, setMaxReportExports] = useState("");
-  const [maxStorageMb, setMaxStorageMb] = useState("");
   const [userModal, setUserModal] = useState<{ mode: "create" | "edit"; user?: AdminTenantUser } | null>(null);
   const [resetModal, setResetModal] = useState<{ user: AdminTenantUser } | null>(null);
   
@@ -615,60 +597,6 @@ function TenantDetailCard({
     },
   });
 
-  useEffect(() => {
-    if (!tenantDetail) {
-      setPlanValue("");
-      setMaxLocations("");
-      setMaxLockers("");
-      setMaxActiveReservations("");
-      setMaxUsers("");
-      setMaxSelfServiceDaily("");
-      setMaxTotalReservations("");
-      setMaxReportExports("");
-      setMaxStorageMb("");
-      return;
-    }
-    const basePlan = tenantDetail.tenant.plan.replace("::custom", "");
-    setPlanValue(basePlan);
-    setMaxLocations(
-      tenantDetail.plan_limits.max_locations != null
-        ? String(tenantDetail.plan_limits.max_locations)
-        : "",
-    );
-    setMaxLockers(
-      tenantDetail.plan_limits.max_lockers != null
-        ? String(tenantDetail.plan_limits.max_lockers)
-        : "",
-    );
-    // Note: max_lockers is backward compatibility for max_storages
-    setMaxActiveReservations(
-      tenantDetail.plan_limits.max_active_reservations != null
-        ? String(tenantDetail.plan_limits.max_active_reservations)
-        : "",
-    );
-    setMaxUsers(
-      tenantDetail.plan_limits.max_users != null ? String(tenantDetail.plan_limits.max_users) : "",
-    );
-    setMaxSelfServiceDaily(
-      tenantDetail.plan_limits.max_self_service_daily != null
-        ? String(tenantDetail.plan_limits.max_self_service_daily)
-        : "",
-    );
-    setMaxTotalReservations(
-      tenantDetail.plan_limits.max_reservations_total != null
-        ? String(tenantDetail.plan_limits.max_reservations_total)
-        : "",
-    );
-    setMaxReportExports(
-      tenantDetail.plan_limits.max_report_exports_daily != null
-        ? String(tenantDetail.plan_limits.max_report_exports_daily)
-        : "",
-    );
-    setMaxStorageMb(
-      tenantDetail.plan_limits.max_storage_mb != null ? String(tenantDetail.plan_limits.max_storage_mb) : "",
-    );
-  }, [tenantDetail]);
-  
   // Load metadata when available
   useEffect(() => {
     if (metadataQuery.data) {
@@ -731,25 +659,6 @@ function TenantDetailCard({
       ]
     : [];
 
-  const handlePlanUpdate = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!tenantDetail) {
-      return;
-    }
-    const normalizedPlan = planValue.trim() || tenantDetail.tenant.plan || "standard";
-    onPlanUpdate({
-      plan: normalizedPlan,
-      max_locations: maxLocations ? Number(maxLocations) : null,
-      max_lockers: maxLockers ? Number(maxLockers) : null,
-      max_active_reservations: maxActiveReservations ? Number(maxActiveReservations) : null,
-      max_users: maxUsers ? Number(maxUsers) : null,
-      max_self_service_daily: maxSelfServiceDaily ? Number(maxSelfServiceDaily) : null,
-      max_reservations_total: maxTotalReservations ? Number(maxTotalReservations) : null,
-      max_report_exports_daily: maxReportExports ? Number(maxReportExports) : null,
-      max_storage_mb: maxStorageMb ? Number(maxStorageMb) : null,
-    });
-  };
-  
   const handleMetadataUpdate = (event: React.FormEvent) => {
     event.preventDefault();
     const payload: TenantMetadataUpdate = {
