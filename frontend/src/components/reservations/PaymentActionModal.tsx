@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, CreditCard, CheckCircle2, Banknote } from "../../lib/lucide";
+import { Loader2, CreditCard, CheckCircle2, Wallet } from "../../lib/lucide";
 
 import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../services/partner/reservations";
 import { paymentService } from "../../services/partner/payments";
@@ -259,7 +259,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
             onClick={() => confirmCashMutation.mutate()}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
           >
-            <Banknote className="h-4 w-4" />
+            <Wallet className="h-4 w-4" />
             Nakit Ödeme
           </Button>
 

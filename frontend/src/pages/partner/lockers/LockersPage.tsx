@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 
 import { storageService, type Storage, type StoragePayload, type StorageStatus } from "../../../services/partner/storages";
 import { locationService } from "../../../services/partner/locations";
-import { quotaService } from "../../../services/partner/reports";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
@@ -14,7 +13,7 @@ import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
-import { HardDrive, Calendar, Edit, Trash2, AlertTriangle } from "../../../lib/lucide";
+import { HardDrive, Calendar, Edit, Trash2 } from "../../../lib/lucide";
 
 // Status badge classes - labels are fetched via i18n inside component
 const statusBadgeClass: Record<StorageStatus, string> = {
@@ -39,11 +38,6 @@ export function LockersPage() {
   const storagesQuery = useQuery({
     queryKey: ["storages", statusFilter],
     queryFn: () => storageService.list(statusFilter ? (statusFilter as StorageStatus) : undefined),
-  });
-
-  const quotaQuery = useQuery({
-    queryKey: ["quota"],
-    queryFn: quotaService.getQuotaInfo,
   });
 
   const createMutation = useMutation({

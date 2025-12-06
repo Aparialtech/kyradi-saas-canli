@@ -112,7 +112,7 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
           }}
         >
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <Badge variant="success" solid size="lg" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+            <Badge variant="success" solid size="lg" className="inline-flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
               {t("payment.modal.paid")}
             </Badge>

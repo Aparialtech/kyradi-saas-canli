@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Package, MapPin, DollarSign, Building2, Calendar, Clock } from "../../../lib/lucide";
+import { AlertCircle, Package, MapPin, DollarSign } from "../../../lib/lucide";
 import { pricingService, type PricingRule, type PricingRuleCreate, type PricingScope } from "../../../services/partner/pricing";
 import { locationService, type Location } from "../../../services/partner/locations";
 import { storageService, type Storage } from "../../../services/partner/storages";
