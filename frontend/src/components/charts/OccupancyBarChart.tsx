@@ -7,11 +7,11 @@ interface OccupancyData {
 }
 
 interface OccupancyBarChartProps {
-  data: OccupancyData[];
+  data?: OccupancyData[];
 }
 
 export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({ 
-  data 
+  data = [] 
 }) => {
   const getColor = (percent: number) => {
     if (percent >= 90) return '#EF4444';

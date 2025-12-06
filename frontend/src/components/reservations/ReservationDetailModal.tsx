@@ -79,7 +79,7 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
       margin: 1,
       color: { dark: "#0f172a", light: "#ffffff" },
     })
-      .then((url) => {
+      .then((url: string) => {
         if (mounted) setQrDataUrl(url);
       })
       .catch(() => mounted && setQrDataUrl(""));

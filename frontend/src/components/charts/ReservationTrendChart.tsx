@@ -8,11 +8,11 @@ interface TrendData {
 }
 
 interface ReservationTrendChartProps {
-  data: TrendData[];
+  data?: TrendData[];
 }
 
 export const ReservationTrendChart: React.FC<ReservationTrendChartProps> = ({ 
-  data 
+  data = [] 
 }) => {
   return (
     <ResponsiveContainer width="100%" height="100%">
