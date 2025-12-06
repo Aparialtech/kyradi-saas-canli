@@ -67,11 +67,11 @@ export function AdminReportsOverview() {
                 <Building2 className="h-5 w-5" style={{ color: '#6366f1' }} />
               </div>
               <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#6366f1', margin: '0 0 var(--space-1) 0' }}>
-                {summaryQuery.isLoading ? "..." : summaryQuery.data?.total_tenants ?? "-"}
+                {summaryQuery.isLoading ? "..." : (summaryQuery.data?.total_tenants ?? 0)}
               </p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
                 {summaryQuery.data?.active_tenants ?? 0} {t("admin.dashboard.activeHotels").toLowerCase()},{" "}
-                {(summaryQuery.data?.total_tenants ?? 0) - (summaryQuery.data?.active_tenants ?? 0)} pasif
+                {((summaryQuery.data?.total_tenants ?? 0) - (summaryQuery.data?.active_tenants ?? 0))} pasif
               </p>
             </div>
           </ModernCard>
@@ -91,7 +91,7 @@ export function AdminReportsOverview() {
                 <Users className="h-5 w-5" style={{ color: '#16a34a' }} />
               </div>
               <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#16a34a', margin: '0 0 var(--space-1) 0' }}>
-                {summaryQuery.isLoading ? "..." : summaryQuery.data?.total_users ?? "-"}
+                {summaryQuery.isLoading ? "..." : (summaryQuery.data?.total_users ?? 0)}
               </p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
                 {t("admin.dashboard.totalUsers")} - {t("common.hotel")} bazlı
@@ -114,7 +114,7 @@ export function AdminReportsOverview() {
                 <Package className="h-5 w-5" style={{ color: '#3b82f6' }} />
               </div>
               <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#3b82f6', margin: '0 0 var(--space-1) 0' }}>
-                {summaryQuery.isLoading ? "..." : summaryQuery.data?.reservations_24h ?? "-"}
+                {summaryQuery.isLoading ? "..." : (summaryQuery.data?.reservations_24h ?? 0)}
               </p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
                 {t("admin.dashboard.reservations7d")}: {summaryQuery.data?.reservations_7d ?? 0}

@@ -323,7 +323,7 @@ export function ReportsAnalyticsPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
               <StatCard
                 label={t("reports.summary.totalRevenue")}
-                value={currencyFormatter.format(overviewQuery.data.summary.total_revenue_minor / 100)}
+                value={currencyFormatter.format((overviewQuery.data.summary.total_revenue_minor ?? 0) / 100)}
                 icon={<PiggyBank className="h-6 w-6" />}
                 variant="success"
               />
@@ -332,7 +332,7 @@ export function ReportsAnalyticsPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
               <StatCard
                 label={t("reports.summary.totalReservations")}
-                value={numberFormatter.format(overviewQuery.data.summary.total_reservations)}
+                value={numberFormatter.format(overviewQuery.data.summary.total_reservations ?? 0)}
                 icon={<FileText className="h-6 w-6" />}
                 variant="primary"
               />
@@ -341,7 +341,7 @@ export function ReportsAnalyticsPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
               <StatCard
                 label={t("reports.summary.activeReservations")}
-                value={numberFormatter.format(overviewQuery.data.summary.active_reservations)}
+                value={numberFormatter.format(overviewQuery.data.summary.active_reservations ?? 0)}
                 icon={<Briefcase className="h-6 w-6" />}
                 variant="secondary"
               />
@@ -350,7 +350,7 @@ export function ReportsAnalyticsPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
               <StatCard
                 label={t("reports.summary.occupancyRate")}
-                value={`${overviewQuery.data.summary.occupancy_rate.toFixed(1)}%`}
+                value={`${(overviewQuery.data.summary.occupancy_rate ?? 0).toFixed(1)}%`}
                 icon={<LineChart className="h-6 w-6" />}
                 variant="warning"
               />

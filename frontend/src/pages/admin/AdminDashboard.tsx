@@ -1,15 +1,14 @@
 import { Outlet } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useAuth } from "../../context/AuthContext";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TranslationKey } from "../../i18n/translations";
 
-// Shared Layout Components
-import { DashboardShell } from "../../components/layout/DashboardShell";
-import { SidebarNav, type SidebarNavItem } from "../../components/layout/SidebarNav";
-import { TopBar } from "../../components/layout/TopBar";
+// Modern UI Components (same as Partner Panel)
+import { ModernSidebar, type ModernSidebarNavItem } from "../../components/layout/ModernSidebar";
+import { ModernNavbar } from "../../components/layout/ModernNavbar";
 import {
   Building2,
   BarChart3,
@@ -19,7 +18,6 @@ import {
   FileText,
   CreditCard,
 } from "../../lib/lucide";
-import styles from "./AdminDashboard.module.css";
 
 export { AdminReportsOverview } from "./reports/AdminReportsOverview";
 export { TenantsPage as AdminTenantsPage } from "./tenants/TenantsPage";
@@ -32,44 +30,61 @@ export { AdminSettingsPage } from "./settings/AdminSettingsPage";
 export function AdminDashboard() {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   
-  const navigation = useMemo((): SidebarNavItem[] => {
-    const items: Array<{ to: string; labelKey: TranslationKey; icon: React.ReactNode; end?: boolean }> = [
-      { to: "overview", labelKey: "nav.overview", icon: <BarChart3 className="h-5 w-5" />, end: true },
-      { to: "tenants", labelKey: "nav.tenants", icon: <Building2 className="h-5 w-5" /> },
-      { to: "revenue", labelKey: "nav.globalRevenue", icon: <Receipt className="h-5 w-5" /> },
-      { to: "settlements", labelKey: "nav.globalSettlements", icon: <CreditCard className="h-5 w-5" /> },
-      { to: "users", labelKey: "nav.globalUsers", icon: <Users className="h-5 w-5" /> },
-      { to: "settings", labelKey: "nav.systemSettings", icon: <Settings className="h-5 w-5" /> },
-      { to: "audit", labelKey: "nav.audit", icon: <FileText className="h-5 w-5" /> },
+  const modernNavigation = useMemo((): ModernSidebarNavItem[] => {
+    const items: ModernSidebarNavItem[] = [
+      { to: ".", label: t("nav.overview"), end: true, icon: <BarChart3 className="h-5 w-5" /> },
+      { to: "tenants", label: t("nav.tenants"), icon: <Building2 className="h-5 w-5" /> },
+      { to: "revenue", label: t("nav.globalRevenue"), icon: <Receipt className="h-5 w-5" /> },
+      { to: "settlements", label: t("nav.globalSettlements"), icon: <CreditCard className="h-5 w-5" /> },
+      { to: "users", label: t("nav.globalUsers"), icon: <Users className="h-5 w-5" /> },
+      { to: "settings", label: t("nav.systemSettings"), icon: <Settings className="h-5 w-5" /> },
+      { to: "audit", label: t("nav.audit"), icon: <FileText className="h-5 w-5" /> },
     ];
-    return items.map((item) => ({ to: item.to, label: t(item.labelKey), icon: item.icon, end: item.end }));
+    return items;
   }, [t]);
 
   return (
-    <DashboardShell variant="admin">
-      <TopBar
-        variant="admin"
-        title={t("nav.brandAdmin")}
-        userEmail={user?.email}
-        userName={user?.email?.split("@")[0]}
-        onLogout={logout}
-        actions={<LanguageSwitcher />}
-      />
-      
-      <div className={styles.layoutBody}>
-        <SidebarNav
-          variant="admin"
-          items={navigation}
-          heading={t("nav.adminHeading")}
+    <>
+      <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', background: 'var(--bg-secondary)' }}>
+        {/* Modern Sidebar (same as Partner Panel) */}
+        <ModernSidebar
+          items={modernNavigation}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
           brandName="KYRADI"
         />
-        
-        <main className={styles.mainContent}>
-          <Outlet />
-        </main>
+
+        {/* Main Content */}
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column',
+          width: '100%',
+          minWidth: 0,
+          marginLeft: sidebarOpen ? '280px' : '80px',
+          transition: 'margin-left 0.2s',
+        }}
+        className="main-content"
+        >
+          {/* Modern Navbar (same as Partner Panel) */}
+          <ModernNavbar
+            title="Admin Panel"
+            subtitle={t("nav.adminHeading")}
+            userName={user?.email ?? 'Admin'}
+            userRole="Super Admin"
+            onLogout={logout}
+            actions={<LanguageSwitcher />}
+          />
+
+          {/* Page Content */}
+          <div style={{ flex: 1, overflow: 'auto', position: 'relative', padding: 'var(--space-8)' }}>
+            <Outlet />
+          </div>
+        </div>
       </div>
-    </DashboardShell>
+    </>
   );
 }
 

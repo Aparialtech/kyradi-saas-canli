@@ -250,27 +250,56 @@ export function QRVerificationPage() {
 
             <div className="lookup-card__grid">
               <div className="lookup-card__meta">
-                <strong>Rezervasyon ID</strong>
+                <strong>Rezervasyon No</strong>
                 <span>{result.reservation_id ?? "-"}</span>
               </div>
               <div className="lookup-card__meta">
-                <strong>Depo</strong>
+                <strong>QR Kodu</strong>
+                <span>{result.qr_code ?? code.trim()}</span>
+              </div>
+              <div className="lookup-card__meta">
+                <strong>Depo Numarası</strong>
                 <span>{result.locker_id ?? "-"}</span>
               </div>
               <div className="lookup-card__meta">
-                <strong>Müşteri</strong>
-                <span>{result.customer_name ?? "Ziyaretçi"}</span>
-                {result.customer_phone && <span>{result.customer_phone}</span>}
+                <strong>Ad Soyad</strong>
+                <span>{result.full_name || result.customer_name || "Ziyaretçi"}</span>
               </div>
               <div className="lookup-card__meta">
-                <strong>Bavul</strong>
+                <strong>İletişim</strong>
+                <span>{result.customer_phone || result.phone_number || "-"}</span>
+                {result.customer_email && <span>{result.customer_email}</span>}
+              </div>
+              {(result.tc_identity_number || result.passport_number) && (
+                <div className="lookup-card__meta">
+                  <strong>Kimlik</strong>
+                  {result.tc_identity_number && (
+                    <span>TC: {result.tc_identity_number.replace(/(\d{3})(\d{2})(\d{3})(\d{3})/, "$1***$3***")}</span>
+                  )}
+                  {result.passport_number && <span>Pasaport: {result.passport_number}</span>}
+                </div>
+              )}
+              {result.hotel_room_number && (
+                <div className="lookup-card__meta">
+                  <strong>Oda Numarası</strong>
+                  <span>{result.hotel_room_number}</span>
+                </div>
+              )}
+              <div className="lookup-card__meta">
+                <strong>Rezervasyon Tarihleri</strong>
+                <span>
+                  {result.start_at ? formatDateTime(result.start_at) : "-"} - {result.end_at ? formatDateTime(result.end_at) : "-"}
+                </span>
+              </div>
+              <div className="lookup-card__meta">
+                <strong>Bavul Bilgileri</strong>
                 <span>
                   {result.baggage_count ?? 0} {result.baggage_type ?? "parça"}
                 </span>
                 {result.weight_kg != null && <span>{result.weight_kg.toFixed(1)} kg</span>}
               </div>
               <div className="lookup-card__meta">
-                <strong>Teslim</strong>
+                <strong>Depoya Teslim</strong>
                 <span>
                   {result.handover_at
                     ? `${formatDateTime(result.handover_at)} · ${result.handover_by ?? "-"}`
@@ -278,7 +307,7 @@ export function QRVerificationPage() {
                 </span>
               </div>
               <div className="lookup-card__meta">
-                <strong>İade</strong>
+                <strong>Misafire İade</strong>
                 <span>
                   {result.returned_at
                     ? `${formatDateTime(result.returned_at)} · ${result.returned_by ?? "-"}`

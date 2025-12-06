@@ -67,6 +67,55 @@ export interface PartnerOverviewFilters {
   status?: string;
 }
 
+export interface OverviewSummary {
+  total_revenue_minor: number;
+  total_reservations: number;
+  active_reservations: number;
+  occupancy_rate: number;
+  total_commission_minor: number;
+  tenant_settlement_minor: number;
+}
+
+export interface TrendDataPoint {
+  date: string;
+  revenue_minor: number;
+  reservations: number;
+  commission_minor: number;
+}
+
+export interface RevenueBreakdown {
+  total_revenue_minor: number;
+  tenant_settlement_minor: number;
+  commission_minor: number;
+  currency: string;
+}
+
+export interface StorageUsage {
+  storage_id: string;
+  storage_code: string;
+  location_name: string;
+  reservations: number;
+  occupancy_rate: number;
+  total_revenue_minor: number;
+}
+
+export interface WidgetAnalytics {
+  total_widget_reservations: number;
+  converted_reservations: number;
+  conversion_rate: number;
+  revenue_from_widget_minor: number;
+  avg_reservation_value_minor: number;
+  hourly_distribution: Array<{ hour: number; count: number }>;
+}
+
+export interface ReportsFilters {
+  date_from?: string;
+  date_to?: string;
+  location_id?: string;
+  status?: string;
+  granularity?: "daily" | "weekly" | "monthly";
+}
+
 export const partnerReportService = {
   async summary(): Promise<PartnerSummary> {
     const response = await http.get<PartnerSummary>("/reports/summary");
@@ -101,6 +150,56 @@ export const partnerReportService = {
       params,
       responseType: "blob",
     });
+    return response.data;
+  },
+  // New unified reporting endpoints
+  async getOverview(filters?: ReportsFilters): Promise<OverviewSummary> {
+    const params: Record<string, string> = {};
+    if (filters?.date_from) params.date_from = filters.date_from;
+    if (filters?.date_to) params.date_to = filters.date_to;
+    
+    const response = await http.get<OverviewSummary>("/partners/reports/overview", { params });
+    return response.data;
+  },
+  async getTrends(filters?: ReportsFilters): Promise<TrendDataPoint[]> {
+    const params: Record<string, string> = {};
+    if (filters?.date_from) params.date_from = filters.date_from;
+    if (filters?.date_to) params.date_to = filters.date_to;
+    if (filters?.granularity) params.granularity = filters.granularity;
+    
+    const response = await http.get<TrendDataPoint[]>("/partners/reports/trends", { params });
+    return response.data;
+  },
+  async getRevenues(filters?: ReportsFilters): Promise<RevenueBreakdown> {
+    const params: Record<string, string> = {};
+    if (filters?.date_from) params.date_from = filters.date_from;
+    if (filters?.date_to) params.date_to = filters.date_to;
+    
+    const response = await http.get<RevenueBreakdown>("/partners/reports/revenues", { params });
+    return response.data;
+  },
+  async getHakedis(filters?: ReportsFilters): Promise<any> {
+    const params: Record<string, string> = {};
+    if (filters?.date_from) params.date_from = filters.date_from;
+    if (filters?.date_to) params.date_to = filters.date_to;
+    
+    const response = await http.get("/partners/reports/hakedis", { params });
+    return response.data;
+  },
+  async getStorageUsage(filters?: ReportsFilters): Promise<StorageUsage[]> {
+    const params: Record<string, string> = {};
+    if (filters?.date_from) params.date_from = filters.date_from;
+    if (filters?.date_to) params.date_to = filters.date_to;
+    
+    const response = await http.get<StorageUsage[]>("/partners/reports/storage-usage", { params });
+    return response.data;
+  },
+  async getWidgetAnalytics(filters?: ReportsFilters): Promise<WidgetAnalytics> {
+    const params: Record<string, string> = {};
+    if (filters?.date_from) params.date_from = filters.date_from;
+    if (filters?.date_to) params.date_to = filters.date_to;
+    
+    const response = await http.get<WidgetAnalytics>("/partners/reports/widget-analytics", { params });
     return response.data;
   },
 };

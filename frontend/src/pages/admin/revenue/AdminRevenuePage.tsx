@@ -139,6 +139,11 @@ export function AdminRevenuePage() {
                   ? "..."
                   : formatCurrency(revenueQuery.data?.total_revenue_minor ?? 0)}
               </p>
+              {revenueQuery.data && revenueQuery.data.total_revenue_minor === 0 && (
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 'var(--space-1) 0 0 0' }}>
+                  Seçili filtreler için veri bulunamadı
+                </p>
+              )}
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
                 Seçili filtreler için toplam gelir
               </p>

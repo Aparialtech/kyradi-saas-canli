@@ -96,7 +96,7 @@ export function RevenueDashboard() {
                   <DollarSign className="h-5 w-5" style={{ color: '#16a34a' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#16a34a', margin: 0 }}>
-                  {formatCurrency(dailyQuery.data.total_revenue_minor)}
+                  {formatCurrency(dailyQuery.data.total_revenue_minor ?? 0)}
                 </p>
               </div>
             </motion.div>
@@ -111,7 +111,7 @@ export function RevenueDashboard() {
                   <CreditCard className="h-5 w-5" style={{ color: '#1d4ed8' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#1d4ed8', margin: 0 }}>
-                  {formatCurrency(dailyQuery.data.tenant_settlement_minor)}
+                  {formatCurrency(dailyQuery.data.tenant_settlement_minor ?? 0)}
                 </p>
               </div>
             </motion.div>
@@ -126,7 +126,7 @@ export function RevenueDashboard() {
                   <TrendingUp className="h-5 w-5" style={{ color: '#dc2626' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#dc2626', margin: 0 }}>
-                  {formatCurrency(dailyQuery.data.kyradi_commission_minor)}
+                  {formatCurrency(dailyQuery.data.kyradi_commission_minor ?? 0)}
                 </p>
               </div>
             </motion.div>
@@ -172,7 +172,7 @@ export function RevenueDashboard() {
                   <DollarSign className="h-5 w-5" style={{ color: '#16a34a' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#16a34a', margin: 0 }}>
-                  {formatCurrency(revenueQuery.data.total_revenue_minor)}
+                  {formatCurrency(revenueQuery.data.total_revenue_minor ?? 0)}
                 </p>
               </div>
             </motion.div>
@@ -187,7 +187,7 @@ export function RevenueDashboard() {
                   <CreditCard className="h-5 w-5" style={{ color: '#1d4ed8' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#1d4ed8', margin: 0 }}>
-                  {formatCurrency(revenueQuery.data.tenant_settlement_minor)}
+                  {formatCurrency(revenueQuery.data.tenant_settlement_minor ?? 0)}
                 </p>
               </div>
             </motion.div>
@@ -202,7 +202,7 @@ export function RevenueDashboard() {
                   <TrendingUp className="h-5 w-5" style={{ color: '#dc2626' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#dc2626', margin: 0 }}>
-                  {formatCurrency(revenueQuery.data.kyradi_commission_minor)}
+                  {formatCurrency(revenueQuery.data.kyradi_commission_minor ?? 0)}
                 </p>
               </div>
             </motion.div>
