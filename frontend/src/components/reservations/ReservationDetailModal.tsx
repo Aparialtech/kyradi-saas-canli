@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "../common/Modal";
 import { useTranslation } from "../../hooks/useTranslation";
 import { QrCode, Copy, Check, User, Calendar, DollarSign } from "../../lib/lucide";
@@ -38,35 +38,37 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
-  const formatDate = useMemo(() => {
-    return (dateStr?: string | null) => {
-      if (!dateStr) return "—";
-      try {
-        return new Date(dateStr).toLocaleString("tr-TR", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
-      } catch {
-        return dateStr;
-      }
-    };
+  const formatDate = useCallback((dateStr?: string | null) => {
+    if (!dateStr) return "—";
+    try {
+      return new Date(dateStr).toLocaleString("tr-TR", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+    } catch {
+      return dateStr;
+    }
   }, []);
 
-  const formatCurrency = useMemo(() => {
-    return (minor?: number | null) => {
-      if (minor == null) return "—";
-      return new Intl.NumberFormat("tr-TR", {
-        style: "currency",
-        currency: "TRY",
-        minimumFractionDigits: 2,
-      }).format(minor / 100);
-    };
+  const formatCurrency = useCallback((minor?: number | null) => {
+    if (minor == null) return "—";
+    return new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
+      minimumFractionDigits: 2,
+    }).format(minor / 100);
   }, []);
 
+  // Memoize qrText to prevent infinite loops when reservation object reference changes
+  // Use reservation.id as additional dependency to ensure we react to reservation changes
+  // Only recompute when the actual qr_code or qr_token values change, not the object reference
+  const qrText = useMemo(() => {
+    if (!reservation) return "";
+    return reservation.qr_code || reservation.qr_token || "";
+  }, [reservation?.id, reservation?.qr_code, reservation?.qr_token]);
+
+  // Early return if no reservation to prevent rendering issues
   if (!reservation) return null;
-
-  const statusColor = statusColors[reservation.status] ?? "#6b7280";
-  const qrText = reservation.qr_code || reservation.qr_token || "";
 
   useEffect(() => {
     let mounted = true;
@@ -82,11 +84,17 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
       .then((url: string) => {
         if (mounted) setQrDataUrl(url);
       })
-      .catch(() => mounted && setQrDataUrl(""));
+      .catch(() => {
+        if (mounted) setQrDataUrl("");
+      });
     return () => {
       mounted = false;
     };
   }, [qrText]);
+
+  if (!reservation) return null;
+
+  const statusColor = statusColors[reservation.status] ?? "#6b7280";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Rezervasyon Detayı" width="600px">

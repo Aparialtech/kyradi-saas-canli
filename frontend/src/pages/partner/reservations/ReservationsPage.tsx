@@ -395,10 +395,10 @@ export function ReservationsPage() {
       <ReservationDetailModal
         reservation={selectedReservation}
         isOpen={showDetailModal}
-        onClose={() => {
+        onClose={useCallback(() => {
           setShowDetailModal(false);
           setSelectedReservation(null);
-        }}
+        }, [])}
       />
 
       {/* Payment Action Modal (for unpaid reservations) */}
