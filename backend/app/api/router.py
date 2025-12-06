@@ -28,6 +28,7 @@ from .routes import (
     partner_reservations,
     partner_settings,
     partner_storages,
+    partner_reports,
     audit,
     auth,
     demo,
@@ -79,6 +80,10 @@ api_router.include_router(staff.router)
 api_router.include_router(qr.router)
 api_router.include_router(reports.router)
 api_router.include_router(revenue.router)
+
+# Partner reports router (unified reporting endpoints)
+from .routes import partner_reports
+api_router.include_router(partner_reports.router)
 api_router.include_router(webhooks.router)
 api_router.include_router(health.router)
 
