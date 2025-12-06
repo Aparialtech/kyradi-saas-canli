@@ -167,6 +167,53 @@ export function LocationsPage() {
       render: (value) => value || <span style={{ color: 'var(--color-text-muted)' }}>-</span>,
     },
     {
+      key: 'phone_number',
+      label: t("locations.phoneNumberLabel"),
+      render: (value) => {
+        if (value) {
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+              <Phone className="h-3.5 w-3.5" style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.875rem' }}>{value}</span>
+            </div>
+          );
+        }
+        return <span style={{ color: 'var(--color-text-muted)' }}>-</span>;
+      },
+    },
+    {
+      key: 'working_hours',
+      label: t("locations.workingHoursLabel"),
+      render: (_, location) => {
+        if (location.working_hours && typeof location.working_hours === 'object') {
+          const hours = location.working_hours as Record<string, { open: string; close: string }>;
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          const activeDays = days.filter(day => hours[day]?.open && hours[day]?.close);
+          
+          if (activeDays.length > 0) {
+            // Show first active day as summary, or show count if multiple
+            const firstDay = activeDays[0];
+            const firstDayHours = hours[firstDay];
+            const summary = activeDays.length === 7 
+              ? `${firstDayHours.open} - ${firstDayHours.close} (${t("locations.allDays")})`
+              : activeDays.length === 1
+              ? `${t(`locations.days.${firstDay}` as any)}: ${firstDayHours.open} - ${firstDayHours.close}`
+              : `${activeDays.length} ${t("locations.daysActive")} (${firstDayHours.open} - ${firstDayHours.close})`;
+            
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1.5)', maxWidth: '300px' }}>
+                <Clock className="h-3.5 w-3.5" style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }} title={activeDays.map(day => `${t(`locations.days.${day}` as any)}: ${hours[day].open} - ${hours[day].close}`).join(', ')}>
+                  {summary}
+                </span>
+              </div>
+            );
+          }
+        }
+        return <span style={{ color: 'var(--color-text-muted)' }}>-</span>;
+      },
+    },
+    {
       key: 'lat',
       label: t("locations.coordinates"),
       render: (_, location) => {
