@@ -137,167 +137,194 @@ export function useKyradiAI({
 
       let lastError: Error | null = null;
 
-      // Retry loop
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          if (attempt > 0) {
-            const delay = RETRY_DELAYS[Math.min(attempt - 1, RETRY_DELAYS.length - 1)];
-            console.log(`Kyradi AI: Retry attempt ${attempt} after ${delay}ms`);
-            await sleep(delay);
-          }
-
-          const headers: Record<string, string> = {
-            "Content-Type": "application/json",
-          };
-          
-          // Only add auth header for /ai/chat endpoint
-          if (!useAssistantEndpoint && jwt) {
-            headers["Authorization"] = `Bearer ${jwt}`;
-          }
-
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers,
-            body: JSON.stringify(payload),
-          });
-
-          let data: any = null;
+      try {
+        // Retry loop
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
-            data = await response.json();
-          } catch {
-            data = null;
-          }
+            if (attempt > 0) {
+              const delay = RETRY_DELAYS[Math.min(attempt - 1, RETRY_DELAYS.length - 1)];
+              console.log(`Kyradi AI: Retry attempt ${attempt} after ${delay}ms`);
+              await sleep(delay);
+            }
 
-          // Handle HTTP errors with typed error responses
-          if (!response.ok) {
-            const statusCode = response.status;
-            let aiError: AIError;
+            const headers: Record<string, string> = {
+              "Content-Type": "application/json",
+            };
+            
+            // Only add auth header for /ai/chat endpoint
+            if (!useAssistantEndpoint && jwt) {
+              headers["Authorization"] = `Bearer ${jwt}`;
+            }
 
-            // Try to parse structured error response
-            if (data?.detail && typeof data.detail === 'object' && data.detail.code) {
-              aiError = {
-                code: data.detail.code,
-                message: data.detail.message || ERROR_MESSAGES.UNKNOWN_ERROR,
-                retryAfterSeconds: data.detail.retry_after_seconds,
-              };
-            } else {
-              // Fallback to status code based errors
-              switch (statusCode) {
-                case 401:
-                  aiError = {
-                    code: "AUTH_ERROR",
-                    message: ERROR_MESSAGES.API_KEY_MISSING,
-                  };
-                  break;
-                case 403:
-                  aiError = {
-                    code: "AUTH_ERROR",
-                    message: ERROR_MESSAGES.AUTH_ERROR,
-                  };
-                  break;
-                case 429:
-                  aiError = {
-                    code: "RATE_LIMIT",
-                    message: ERROR_MESSAGES.RATE_LIMIT_ERROR,
-                    retryAfterSeconds: 10,
-                  };
-                  break;
-                case 503:
-                  aiError = {
-                    code: data?.detail?.code || "AI_DISABLED",
-                    message: data?.detail?.message || data?.detail || ERROR_MESSAGES.SERVER_ERROR,
-                  };
-                  break;
-                case 500:
-                case 502:
-                case 504:
-                  aiError = {
-                    code: "SERVER_ERROR",
-                    message: data?.detail?.message || data?.detail || ERROR_MESSAGES.SERVER_ERROR,
-                  };
-                  // Retry on server errors
-                  if (attempt < maxRetries) {
-                    lastError = new Error(aiError.message);
-                    continue;
-                  }
-                  break;
-                default:
-                  aiError = {
-                    code: "UNKNOWN",
-                    message: data?.detail?.message || data?.detail || ERROR_MESSAGES.UNKNOWN_ERROR,
-                  };
+            const response = await fetch(endpoint, {
+              method: "POST",
+              headers,
+              body: JSON.stringify(payload),
+            });
+
+            let data: any = null;
+            try {
+              data = await response.json();
+            } catch {
+              data = null;
+            }
+
+            // Handle HTTP errors with typed error responses
+            if (!response.ok) {
+              const statusCode = response.status;
+              let aiError: AIError;
+
+              // Try to parse structured error response
+              if (data?.detail && typeof data.detail === 'object' && data.detail.code) {
+                aiError = {
+                  code: data.detail.code,
+                  message: data.detail.message || ERROR_MESSAGES.UNKNOWN_ERROR,
+                  retryAfterSeconds: data.detail.retry_after_seconds,
+                };
+              } else {
+                // Fallback to status code based errors
+                switch (statusCode) {
+                  case 401:
+                    aiError = {
+                      code: "AUTH_ERROR",
+                      message: ERROR_MESSAGES.API_KEY_MISSING,
+                    };
+                    break;
+                  case 403:
+                    aiError = {
+                      code: "AUTH_ERROR",
+                      message: ERROR_MESSAGES.AUTH_ERROR,
+                    };
+                    break;
+                  case 429:
+                    aiError = {
+                      code: "RATE_LIMIT",
+                      message: ERROR_MESSAGES.RATE_LIMIT_ERROR,
+                      retryAfterSeconds: 10,
+                    };
+                    break;
+                  case 503:
+                    aiError = {
+                      code: data?.detail?.code || "AI_DISABLED",
+                      message: data?.detail?.message || data?.detail || ERROR_MESSAGES.SERVER_ERROR,
+                    };
+                    break;
+                  case 500:
+                  case 502:
+                  case 504:
+                    aiError = {
+                      code: "SERVER_ERROR",
+                      message: data?.detail?.message || data?.detail || ERROR_MESSAGES.SERVER_ERROR,
+                    };
+                    // Retry on server errors
+                    if (attempt < maxRetries) {
+                      lastError = new Error(aiError.message);
+                      continue;
+                    }
+                    break;
+                  default:
+                    aiError = {
+                      code: "UNKNOWN",
+                      message: data?.detail?.message || data?.detail || ERROR_MESSAGES.UNKNOWN_ERROR,
+                    };
+                }
               }
+
+              setError(aiError.message);
+              const error = new Error(aiError.message) as Error & AIError;
+              error.code = aiError.code;
+              error.retryAfterSeconds = aiError.retryAfterSeconds;
+              
+              // Don't retry for certain errors
+              if (aiError.code === "AUTH_ERROR" || aiError.code === "AI_DISABLED") {
+                setIsLoading(false);
+                throw error;
+              }
+              
+              // Retry for other errors
+              if (attempt < maxRetries) {
+                lastError = error;
+                continue;
+              }
+              
+              setIsLoading(false);
+              throw error;
             }
 
-            setError(aiError.message);
-            const error = new Error(aiError.message) as Error & AIError;
-            error.code = aiError.code;
-            error.retryAfterSeconds = aiError.retryAfterSeconds;
-            throw error;
-          }
+            // Check for success flag in response
+            if (data?.success === false) {
+              const errorMessage = data?.error || ERROR_MESSAGES.UNKNOWN_ERROR;
+              
+              // Check if it's an API key issue
+              if (errorMessage.includes("OPENAI_API_KEY")) {
+                setIsLoading(false);
+                setError(ERROR_MESSAGES.API_KEY_MISSING);
+                throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
+              }
+              
+              // Retry on transient errors
+              if (attempt < maxRetries && (errorMessage.includes("zaman aşımı") || errorMessage.includes("timeout"))) {
+                lastError = new Error(errorMessage);
+                continue;
+              }
+              
+              setIsLoading(false);
+              setError(errorMessage);
+              throw new Error(errorMessage);
+            }
 
-          // Check for success flag in response
-          if (data?.success === false) {
-            const errorMessage = data?.error || ERROR_MESSAGES.UNKNOWN_ERROR;
+            // Parse successful response
+            const result: KyradiAIResult = {
+              answer: data?.answer ?? "",
+              sources: data?.sources ?? [],
+              usage: {
+                inputTokens: data?.usage?.input_tokens ?? data?.usage?.inputTokens ?? 0,
+                outputTokens: data?.usage?.output_tokens ?? data?.usage?.outputTokens ?? 0,
+              },
+              requestId: data?.request_id ?? data?.requestId ?? "",
+              model: data?.model,
+              latencyMs: data?.latency_ms ?? data?.latencyMs,
+            };
+
+            setLastAnswer(result);
+            setError(null);
+            setIsLoading(false); // Reset loading state on success
+            return result;
             
-            // Check if it's an API key issue
-            if (errorMessage.includes("OPENAI_API_KEY")) {
-              setError(ERROR_MESSAGES.API_KEY_MISSING);
-              throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
+          } catch (err) {
+            // Handle network errors
+            if (err instanceof TypeError && (err.message.includes("fetch") || err.message.includes("network"))) {
+              const errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+              if (attempt < maxRetries) {
+                lastError = new Error(errorMessage);
+                continue;
+              }
+              setIsLoading(false);
+              setError(errorMessage);
+              throw new Error(errorMessage);
             }
-            
-            // Retry on transient errors
-            if (attempt < maxRetries && (errorMessage.includes("zaman aşımı") || errorMessage.includes("timeout"))) {
-              lastError = new Error(errorMessage);
-              continue;
-            }
-            setError(errorMessage);
-            throw new Error(errorMessage);
-          }
 
-          // Parse successful response
-          const result: KyradiAIResult = {
-            answer: data?.answer ?? "",
-            sources: data?.sources ?? [],
-            usage: {
-              inputTokens: data?.usage?.input_tokens ?? data?.usage?.inputTokens ?? 0,
-              outputTokens: data?.usage?.output_tokens ?? data?.usage?.outputTokens ?? 0,
-            },
-            requestId: data?.request_id ?? data?.requestId ?? "",
-            model: data?.model,
-            latencyMs: data?.latency_ms ?? data?.latencyMs,
-          };
-
-          setLastAnswer(result);
-          setError(null);
-          return result;
-          
-        } catch (err) {
-          // Handle network errors
-          if (err instanceof TypeError && (err.message.includes("fetch") || err.message.includes("network"))) {
-            const errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
-            if (attempt < maxRetries) {
-              lastError = new Error(errorMessage);
-              continue;
-            }
-            setError(errorMessage);
-            throw new Error(errorMessage);
-          }
-
-          // Re-throw other errors
-          if (err instanceof Error) {
-            lastError = err;
-            if (attempt >= maxRetries) {
-              throw err;
+            // Re-throw other errors
+            if (err instanceof Error) {
+              lastError = err;
+              if (attempt >= maxRetries) {
+                setIsLoading(false);
+                throw err;
+              }
             }
           }
         }
-      }
 
-      // If we get here, all retries failed
-      const finalError = lastError?.message || ERROR_MESSAGES.UNKNOWN_ERROR;
-      setError(finalError);
-      throw new Error(finalError);
+        // If we get here, all retries failed
+        const finalError = lastError?.message || ERROR_MESSAGES.UNKNOWN_ERROR;
+        setIsLoading(false);
+        setError(finalError);
+        throw new Error(finalError);
+      } catch (err) {
+        // Ensure loading is reset even if unexpected error occurs
+        setIsLoading(false);
+        throw err;
+      }
     },
     [endpoint, tenantId, userId, locale, token, useAssistantEndpoint],
   );
