@@ -105,12 +105,15 @@ export function WidgetDemoPage() {
   }, [apiBase, cdnBase, tenantId, widgetKey, selectedLocale]);
 
   useEffect(() => {
-    setSelectedLocale(locale);
-  }, [locale]);
+    if (locale !== selectedLocale) {
+      setSelectedLocale(locale);
+    }
+  }, [locale, selectedLocale]);
 
   useEffect(() => {
     mountWidget();
-  }, [mountWidget]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiBase, cdnBase, tenantId, widgetKey, selectedLocale]); // Use dependencies directly instead of mountWidget to avoid infinite loops
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();

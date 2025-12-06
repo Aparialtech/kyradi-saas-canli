@@ -13,10 +13,13 @@ export function useToast() {
   useEffect(() => {
     if (messages.length === 0) return;
     const timer = setTimeout(() => {
-      setMessages((current) => current.slice(1));
+      setMessages((current) => {
+        if (current.length === 0) return current;
+        return current.slice(1);
+      });
     }, 3500);
     return () => clearTimeout(timer);
-  }, [messages]);
+  }, [messages.length]); // Use messages.length instead of messages array to avoid infinite loops
 
   const push = useCallback(
     (message: Omit<ToastMessage, "id">) => {
@@ -25,7 +28,7 @@ export function useToast() {
         { id: crypto.randomUUID(), type: "info", ...message },
       ]);
     },
-    [setMessages],
+    [], // setMessages is stable, no need for dependency
   );
 
   return { messages, push };
