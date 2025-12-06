@@ -7,6 +7,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_operator, require_tenant_staff
@@ -49,9 +50,13 @@ async def _get_reservation_for_tenant(
     tenant_id: str,
     session: AsyncSession,
 ) -> Reservation:
-    stmt = select(Reservation).where(
-        Reservation.id == reservation_id,
-        Reservation.tenant_id == tenant_id,
+    stmt = (
+        select(Reservation)
+        .options(selectinload(Reservation.storage).selectinload(Storage.location))
+        .where(
+            Reservation.id == reservation_id,
+            Reservation.tenant_id == tenant_id,
+        )
     )
     reservation = (await session.execute(stmt)).scalar_one_or_none()
     if reservation is None:
@@ -92,7 +97,11 @@ async def list_reservations(
     session: AsyncSession = Depends(get_session),
 ) -> List[ReservationRead]:
     """List reservations for the tenant with optional filters."""
-    stmt = select(Reservation).where(Reservation.tenant_id == current_user.tenant_id)
+    stmt = (
+        select(Reservation)
+        .options(selectinload(Reservation.storage).selectinload(Storage.location))
+        .where(Reservation.tenant_id == current_user.tenant_id)
+    )
     if status_filter:
         stmt = stmt.where(Reservation.status == status_filter.value)
     if date_from:
@@ -106,11 +115,8 @@ async def list_reservations(
     
     # Include payment information and storage/location details
     from ...models import Payment, Storage, Location
-    from sqlalchemy.orm import selectinload
     reservation_reads = []
     for res in reservations:
-        # Load storage and location relationships
-        await session.refresh(res, ["storage", "storage.location"])
         storage = res.storage
         location = storage.location if storage else None
         
@@ -148,8 +154,6 @@ async def get_reservation(
     """Get a single reservation by ID."""
     reservation = await _get_reservation_for_tenant(reservation_id, current_user.tenant_id, session)
     
-    # Load storage and location relationships
-    await session.refresh(reservation, ["storage", "storage.location"])
     storage = reservation.storage
     location = storage.location if storage else None
     

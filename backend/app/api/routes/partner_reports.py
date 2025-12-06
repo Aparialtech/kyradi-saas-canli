@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import func, select, and_, or_, cast, Date, case
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_operator
@@ -430,10 +431,11 @@ async def get_reports_storage_usage(
         date_to = datetime.now(timezone.utc)
     
     # Get all storages for tenant
-    storages_stmt = select(Storage).join(
-        Location, Location.id == Storage.location_id
-    ).where(
-        Storage.tenant_id == tenant_id
+    storages_stmt = (
+        select(Storage)
+        .options(selectinload(Storage.location))
+        .join(Location, Location.id == Storage.location_id)
+        .where(Storage.tenant_id == tenant_id)
     )
     
     storages = (await session.execute(storages_stmt)).scalars().all()
@@ -596,4 +598,3 @@ async def get_reports_widget_analytics(
         avg_reservation_value_minor=avg_reservation_value,
         hourly_distribution=hourly_distribution,
     )
-
