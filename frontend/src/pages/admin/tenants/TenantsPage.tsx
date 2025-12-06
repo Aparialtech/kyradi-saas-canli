@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { Eye, Edit, Building2, Loader2, AlertCircle, Users, UserPlus, Settings } from "../../../lib/lucide";
-import { Modal } from "../../../components/common/Modal";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
@@ -1459,7 +1458,6 @@ interface TenantQuotaModalProps {
 }
 
 function TenantQuotaModal({ tenantId, onClose, notify }: TenantQuotaModalProps) {
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   
   // Metadata state
