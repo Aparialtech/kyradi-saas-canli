@@ -286,14 +286,15 @@ export function LoginPage() {
                         <Building2 className={styles.labelIcon} />
                         {t("login.tenantLabel")}
                       </label>
-                      <input
-                        id="tenant"
-                        type="text"
-                        className={styles.input}
-                        placeholder={t("login.tenantPlaceholder")}
-                        value={tenantSlug}
-                        onChange={(event) => setTenantSlug(event.target.value)}
-                      />
+                    <input
+                      id="tenant"
+                      type="text"
+                      className={styles.input}
+                      placeholder={t("login.tenantPlaceholder")}
+                      value={tenantSlug}
+                      onChange={(event) => setTenantSlug(event.target.value)}
+                      autoComplete="off"
+                    />
                     </div>
                   )}
 
@@ -306,7 +307,7 @@ export function LoginPage() {
                       id="email"
                       type="email"
                       className={styles.input}
-                      autoComplete="email"
+                      autoComplete="off"
                       placeholder={mode === "partner" ? "admin@demo.com" : "admin@kyradi.com"}
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
@@ -324,7 +325,7 @@ export function LoginPage() {
                         id="password"
                         type={showPassword ? "text" : "password"}
                         className={styles.input}
-                        autoComplete="current-password"
+                        autoComplete="off"
                         placeholder="••••••••"
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
@@ -390,6 +391,7 @@ export function LoginPage() {
                             value={resetTenantSlug}
                             onChange={(event) => setResetTenantSlug(event.target.value)}
                             placeholder={t("login.resetTenantPlaceholder")}
+                            autoComplete="off"
                           />
                         </div>
                       )}
@@ -404,6 +406,7 @@ export function LoginPage() {
                           className={styles.input}
                           value={resetEmail}
                           onChange={(event) => setResetEmail(event.target.value)}
+                          autoComplete="off"
                           required
                         />
                       </div>
