@@ -316,7 +316,7 @@ async def toggle_user_active(
 
 @router.get("/assignable", response_model=List[UserRead])
 async def list_assignable_users(
-    current_user: User = Depends(require_tenant_admin),
+    current_user: User = Depends(require_tenant_admin),  # Staff assignment requires admin privileges
     session: AsyncSession = Depends(get_session),
 ) -> List[UserRead]:
     """List users that can be assigned as staff.
