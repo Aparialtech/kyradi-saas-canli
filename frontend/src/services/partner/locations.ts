@@ -4,6 +4,8 @@ export interface Location {
   id: string;
   name: string;
   address?: string | null;
+  phone_number?: string | null;
+  working_hours?: Record<string, { open: string; close: string }> | null;
   lat?: number | null;
   lon?: number | null;
   created_at: string;
@@ -12,6 +14,8 @@ export interface Location {
 export interface LocationPayload {
   name: string;
   address?: string | null;
+  phone_number?: string | null;
+  working_hours?: Record<string, { open: string; close: string }> | null;
   lat?: number | null;
   lon?: number | null;
 }

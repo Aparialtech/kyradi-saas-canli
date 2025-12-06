@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { AlertCircle } from "../../../lib/lucide";
+import { AlertCircle, Edit, Trash2, Phone, Clock } from "../../../lib/lucide";
 
 import { locationService, type Location, type LocationPayload } from "../../../services/partner/locations";
 import { quotaService } from "../../../services/partner/reports";
@@ -23,6 +23,11 @@ import { Table, type Column } from "../../../components/ui/Table";
 const schema = z.object({
   name: z.string().min(2, { message: "locations.nameMinLength" }),
   address: z.string().optional(),
+  phone_number: z.string().optional(),
+  working_hours: z.record(z.object({
+    open: z.string(),
+    close: z.string(),
+  })).optional(),
   lat: z.string().optional(),
   lon: z.string().optional(),
 });
@@ -50,7 +55,7 @@ export function LocationsPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["locations"] });
       push({ title: t("locations.created"), type: "success" });
-      reset({ name: "", address: "", lat: "", lon: "" });
+      reset({ name: "", address: "", phone_number: "", working_hours: undefined, lat: "", lon: "" });
       setEditingLocation(null);
     },
     onError: (error: unknown) => {
@@ -64,7 +69,7 @@ export function LocationsPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["locations"] });
       push({ title: t("locations.updated"), type: "success" });
-      reset({ name: "", address: "", lat: "", lon: "" });
+      reset({ name: "", address: "", phone_number: "", working_hours: undefined, lat: "", lon: "" });
       setEditingLocation(null);
     },
     onError: (error: unknown) => {
@@ -93,6 +98,8 @@ export function LocationsPage() {
     defaultValues: {
       name: "",
       address: "",
+      phone_number: "",
+      working_hours: undefined,
       lat: "",
       lon: "",
     },
@@ -107,6 +114,8 @@ export function LocationsPage() {
     const payload: LocationPayload = {
       name: values.name,
       address: values.address?.trim() ? values.address.trim() : undefined,
+      phone_number: values.phone_number?.trim() ? values.phone_number.trim() : undefined,
+      working_hours: values.working_hours && Object.keys(values.working_hours).length > 0 ? values.working_hours : undefined,
       lat: values.lat ? Number(values.lat) : undefined,
       lon: values.lon ? Number(values.lon) : undefined,
     };
@@ -120,7 +129,7 @@ export function LocationsPage() {
 
   const handleNew = () => {
     setEditingLocation(null);
-    reset({ name: "", address: "", lat: "", lon: "" });
+    reset({ name: "", address: "", phone_number: "", working_hours: undefined, lat: "", lon: "" });
   };
 
   const handleEdit = (location: Location) => {
@@ -128,6 +137,8 @@ export function LocationsPage() {
     reset({
       name: location.name,
       address: location.address ?? "",
+      phone_number: location.phone_number ?? "",
+      working_hours: location.working_hours ?? undefined,
       lat: location.lat != null ? String(location.lat) : "",
       lon: location.lon != null ? String(location.lon) : "",
     });
@@ -179,15 +190,23 @@ export function LocationsPage() {
             variant="ghost"
             size="sm"
             onClick={() => handleEdit(location)}
+            style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}
           >
+            <Edit className="h-4 w-4" />
             {t("locations.edit")}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleDelete(location)}
-            style={{ color: 'var(--color-danger)' }}
+            style={{ 
+              color: 'var(--color-danger)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-1)'
+            }}
           >
+            <Trash2 className="h-4 w-4" />
             {t("locations.delete")}
           </Button>
         </div>
@@ -317,6 +336,62 @@ export function LocationsPage() {
                     placeholder={t("locations.address")}
                     helperText={t("common.optional")}
                   />
+                </div>
+
+                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <Phone className="h-4 w-4" style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <Input
+                      {...register("phone_number")}
+                      label={t("locations.phoneNumberLabel")}
+                      placeholder="+90 555 123 45 67"
+                      helperText={t("common.optional")}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                    <Clock className="h-4 w-4" style={{ color: 'var(--color-text-secondary)' }} />
+                    <label style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text)' }}>
+                      {t("locations.workingHoursLabel")}
+                    </label>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
+                      {t("common.optional")}
+                    </span>
+                  </div>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: 'var(--space-3)',
+                    padding: 'var(--space-3)',
+                    background: 'var(--color-surface-secondary)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)'
+                  }}>
+                    {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                      <div key={day} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                        <label style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
+                          {t(`locations.days.${day}`)}
+                        </label>
+                        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                          <Input
+                            {...register(`working_hours.${day}.open`)}
+                            placeholder="09:00"
+                            inputSize="sm"
+                            style={{ flex: 1 }}
+                          />
+                          <span style={{ alignSelf: 'center', color: 'var(--color-text-muted)' }}>-</span>
+                          <Input
+                            {...register(`working_hours.${day}.close`)}
+                            placeholder="18:00"
+                            inputSize="sm"
+                            style={{ flex: 1 }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <Input
