@@ -59,16 +59,20 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
     }).format(minor / 100);
   }, []);
 
-  // Memoize qrText to prevent infinite loops when reservation object reference changes
-  // Use reservation.id as additional dependency to ensure we react to reservation changes
-  // Only recompute when the actual qr_code or qr_token values change, not the object reference
-  const qrText = useMemo(() => {
-    if (!reservation) return "";
-    return reservation.qr_code || reservation.qr_token || "";
-  }, [reservation?.id, reservation?.qr_code, reservation?.qr_token]);
-
   // Early return if no reservation to prevent rendering issues
   if (!reservation) return null;
+
+  // Memoize qrText to prevent infinite loops when reservation object reference changes
+  // Use only primitive values (id, qr_code, qr_token) as dependencies to avoid re-renders
+  // when the reservation object reference changes but values remain the same
+  const reservationId = reservation?.id;
+  const reservationQrCode = reservation?.qr_code;
+  const reservationQrToken = reservation?.qr_token;
+  
+  const qrText = useMemo(() => {
+    if (!reservation) return "";
+    return reservationQrCode || reservationQrToken || "";
+  }, [reservationId, reservationQrCode, reservationQrToken]);
 
   useEffect(() => {
     let mounted = true;
@@ -91,8 +95,6 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
       mounted = false;
     };
   }, [qrText]);
-
-  if (!reservation) return null;
 
   const statusColor = statusColors[reservation.status] ?? "#6b7280";
 

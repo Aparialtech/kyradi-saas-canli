@@ -33,7 +33,8 @@ export function Modal({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, disableClose, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, disableClose]); // onClose is stable from parent, no need to include in deps
 
   if (!isOpen) {
     return null;
