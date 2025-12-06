@@ -108,12 +108,28 @@ export function TenantsPage() {
 
   const createMutation = useMutation({
     mutationFn: (payload: TenantCreatePayload) => adminTenantService.create(payload),
-    onSuccess: () => {
+    onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "tenants"] });
-      push({ title: "Tenant eklendi", type: "success" });
+      push({ 
+        title: "Tenant oluşturuldu", 
+        description: `${data.name} (${data.slug}) başarıyla oluşturuldu.`,
+        type: "success" 
+      });
+      reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
+      setEditingTenant(null);
     },
     onError: (error: unknown) => {
-      push({ title: "Kayıt başarısız", description: getErrorMessage(error), type: "error" });
+      const errorMsg = getErrorMessage(error);
+      // Check if it's a DEMO_MODE error
+      if (errorMsg.includes("demo environment") || errorMsg.includes("DEMO_MODE")) {
+        push({ 
+          title: "Demo Modu Aktif", 
+          description: "Demo ortamında yeni tenant oluşturma devre dışı bırakılmıştır. Lütfen DEMO_MODE ayarını kontrol edin.",
+          type: "error" 
+        });
+      } else {
+        push({ title: "Tenant oluşturulamadı", description: errorMsg, type: "error" });
+      }
     },
   });
 
@@ -163,10 +179,11 @@ export function TenantsPage() {
       const { slug, ...payload } = values;
       await updateMutation.mutateAsync({ id: editingTenant.id, payload });
       setEditingTenant(null);
+      reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
     } else {
       await createMutation.mutateAsync(values);
+      // Form reset is handled in createMutation.onSuccess
     }
-    reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
   });
 
   return (

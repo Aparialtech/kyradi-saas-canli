@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle } from "../../../lib/lucide";
+import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key } from "../../../lib/lucide";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
@@ -45,7 +45,20 @@ export function AdminUsersPage() {
   const [isActiveFilter, setIsActiveFilter] = useState<string>("");
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  
+  // Create user form state
+  const [newUser, setNewUser] = useState({
+    email: "",
+    password: "",
+    role: "staff" as UserRole,
+    is_active: true,
+    tenant_id: "",
+  });
 
   const tenantsQuery = useQuery({
     queryKey: ["admin", "tenants"],
@@ -89,6 +102,22 @@ export function AdminUsersPage() {
     setSearchTerm(value);
   }, []);
 
+  const createUserMutation = useMutation({
+    mutationFn: async (payload: { email: string; password: string; role: UserRole; is_active: boolean }) => {
+      const response = await http.post<User>("/admin/users", payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      push({ title: "Kullanıcı oluşturuldu", type: "success" });
+      setShowCreateModal(false);
+      setNewUser({ email: "", password: "", role: "staff", is_active: true, tenant_id: "" });
+    },
+    onError: (error: unknown) => {
+      push({ title: "Kullanıcı oluşturulamadı", description: getErrorMessage(error), type: "error" });
+    },
+  });
+
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, payload }: { userId: string; payload: Partial<User> }) => {
       const response = await http.patch<User>(`/admin/users/${userId}`, payload);
@@ -105,19 +134,65 @@ export function AdminUsersPage() {
     },
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const response = await http.post<User>(`/admin/users/${userId}/reset-password`, { password });
+      return response.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      push({ title: "Parola sıfırlandı", type: "success" });
+      setShowResetPasswordModal(false);
+      setResetPasswordUser(null);
+      setNewPassword("");
+    },
+    onError: (error: unknown) => {
+      push({ title: "Parola sıfırlanamadı", description: getErrorMessage(error), type: "error" });
+    },
+  });
+
   const handleEdit = (user: User) => {
-    setEditingUser(user);
+    setEditingUser({ ...user });
     setShowEditModal(true);
+  };
+
+  const handleCreate = () => {
+    if (!newUser.email || !newUser.password || newUser.password.length < 8) {
+      push({ title: "Eksik bilgi", description: "Email ve en az 8 karakterlik parola gereklidir", type: "error" });
+      return;
+    }
+    createUserMutation.mutate({
+      email: newUser.email,
+      password: newUser.password,
+      role: newUser.role,
+      is_active: newUser.is_active,
+    });
   };
 
   const handleSave = () => {
     if (!editingUser) return;
+    const payload: any = {
+      role: editingUser.role,
+      is_active: editingUser.is_active,
+    };
+    // Only include tenant_id if it's being changed
+    if (editingUser.tenant_id !== undefined) {
+      payload.tenant_id = editingUser.tenant_id || null;
+    }
     updateUserMutation.mutate({
       userId: editingUser.id,
-      payload: {
-        role: editingUser.role,
-        is_active: editingUser.is_active,
-      },
+      payload,
+    });
+  };
+
+  const handleResetPassword = () => {
+    if (!resetPasswordUser || !newPassword || newPassword.length < 8) {
+      push({ title: "Eksik bilgi", description: "Yeni parola en az 8 karakter olmalıdır", type: "error" });
+      return;
+    }
+    resetPasswordMutation.mutate({
+      userId: resetPasswordUser.id,
+      password: newPassword,
     });
   };
 
@@ -128,14 +203,26 @@ export function AdminUsersPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{ marginBottom: 'var(--space-6)' }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)' }}
       >
-        <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
-          {t("nav.globalUsers")}
-        </h1>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
-          Tüm sistem kullanıcılarını görüntüle ve yönet
-        </p>
+        <div>
+          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
+            {t("nav.globalUsers")}
+          </h1>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+            Tüm sistem kullanıcılarını görüntüle ve yönet
+          </p>
+        </div>
+        <ModernButton
+          variant="primary"
+          onClick={() => {
+            setNewUser({ email: "", password: "", role: "staff", is_active: true, tenant_id: "" });
+            setShowCreateModal(true);
+          }}
+          leftIcon={<UserPlus className="h-4 w-4" />}
+        >
+          Yeni Kullanıcı
+        </ModernButton>
       </motion.div>
 
       <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
@@ -328,7 +415,7 @@ export function AdminUsersPage() {
                 label: t("common.actions"),
                 align: 'right',
                 render: (_, row) => (
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                     <ModernButton
                       variant="ghost"
                       size="sm"
@@ -336,6 +423,18 @@ export function AdminUsersPage() {
                       leftIcon={<Edit className="h-4 w-4" />}
                     >
                       Düzenle
+                    </ModernButton>
+                    <ModernButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setResetPasswordUser(row);
+                        setNewPassword("");
+                        setShowResetPasswordModal(true);
+                      }}
+                      leftIcon={<Key className="h-4 w-4" />}
+                    >
+                      Parola Sıfırla
                     </ModernButton>
                   </div>
                 ),
@@ -358,6 +457,91 @@ export function AdminUsersPage() {
         )}
       </ModernCard>
 
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <Modal
+          isOpen={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false);
+            setNewUser({ email: "", password: "", role: "staff", is_active: true, tenant_id: "" });
+          }}
+          title="Yeni Kullanıcı Oluştur"
+          footer={
+            <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setNewUser({ email: "", password: "", role: "staff", is_active: true, tenant_id: "" });
+                }}
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={handleCreate}
+                disabled={createUserMutation.isPending}
+              >
+                {createUserMutation.isPending ? "Oluşturuluyor..." : "Oluştur"}
+              </button>
+            </div>
+          }
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            <label className="form-field">
+              <span className="form-field__label">Email <span style={{ color: "#dc2626" }}>*</span></span>
+              <input
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                placeholder="kullanici@ornek.com"
+                required
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Parola <span style={{ color: "#dc2626" }}>*</span></span>
+              <input
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                placeholder="En az 8 karakter"
+                minLength={8}
+                required
+              />
+              <small style={{ color: "var(--text-tertiary)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
+                Minimum 8 karakter olmalıdır
+              </small>
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Rol <span style={{ color: "#dc2626" }}>*</span></span>
+              <select
+                value={newUser.role}
+                onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
+              >
+                {Object.entries(userRoleLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="form-field">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <input
+                  type="checkbox"
+                  checked={newUser.is_active}
+                  onChange={(e) => setNewUser({ ...newUser, is_active: e.target.checked })}
+                />
+                <span className="form-field__label">Aktif</span>
+              </div>
+            </label>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit User Modal */}
       {showEditModal && editingUser && (
         <Modal
           isOpen={showEditModal}
@@ -395,6 +579,22 @@ export function AdminUsersPage() {
               <input type="email" value={editingUser.email} disabled style={{ opacity: 0.6 }} />
             </label>
             <label className="form-field">
+              <span className="form-field__label">Tenant (Otel)</span>
+              <select
+                value={editingUser.tenant_id || ""}
+                onChange={(e) =>
+                  setEditingUser({ ...editingUser, tenant_id: e.target.value || undefined })
+                }
+              >
+                <option value="">Tenant atanmamış</option>
+                {tenantsQuery.data?.map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>
+                    {tenant.name} ({tenant.slug})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="form-field">
               <span className="form-field__label">Rol</span>
               <select
                 value={editingUser.role}
@@ -420,6 +620,62 @@ export function AdminUsersPage() {
                 />
                 <span className="form-field__label">Aktif</span>
               </div>
+            </label>
+          </div>
+        </Modal>
+      )}
+
+      {/* Reset Password Modal */}
+      {showResetPasswordModal && resetPasswordUser && (
+        <Modal
+          isOpen={showResetPasswordModal}
+          onClose={() => {
+            setShowResetPasswordModal(false);
+            setResetPasswordUser(null);
+            setNewPassword("");
+          }}
+          title="Parola Sıfırla"
+          footer={
+            <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => {
+                  setShowResetPasswordModal(false);
+                  setResetPasswordUser(null);
+                  setNewPassword("");
+                }}
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={handleResetPassword}
+                disabled={resetPasswordMutation.isPending}
+              >
+                {resetPasswordMutation.isPending ? "Sıfırlanıyor..." : "Parolayı Sıfırla"}
+              </button>
+            </div>
+          }
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            <p style={{ margin: 0, color: "var(--text-tertiary)" }}>
+              <strong>{resetPasswordUser.email}</strong> kullanıcısı için yeni parola belirleyin.
+            </p>
+            <label className="form-field">
+              <span className="form-field__label">Yeni Parola <span style={{ color: "#dc2626" }}>*</span></span>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="En az 8 karakter"
+                minLength={8}
+                required
+              />
+              <small style={{ color: "var(--text-tertiary)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
+                Minimum 8 karakter olmalıdır
+              </small>
             </label>
           </div>
         </Modal>
