@@ -60,7 +60,14 @@ class Settings(BaseSettings):
     )
 
     cors_origins: List[str] = Field(
-        default_factory=lambda: ["http://localhost:5173"],
+        default_factory=lambda: [
+            "https://kyradi-saas-canli.vercel.app",
+            "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173",
+        ],
         validation_alias=AliasChoices("CORS_ORIGINS", "KYRADI_CORS_ORIGINS"),
     )
     ai_allowed_origins: List[str] = Field(
