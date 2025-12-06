@@ -2,28 +2,18 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface OccupancyData {
-  location: string;
-  occupied: number;
-  total: number;
+  label: string;
+  occupancy_rate: number;
 }
 
 interface OccupancyBarChartProps {
-  data?: OccupancyData[];
+  data: OccupancyData[];
 }
 
-const defaultData: OccupancyData[] = [
-  { location: 'Terminal 1', occupied: 18, total: 25 },
-  { location: 'Terminal 2', occupied: 22, total: 30 },
-  { location: 'Terminal 3', occupied: 12, total: 20 },
-  { location: 'Terminal 4', occupied: 8, total: 15 },
-  { location: 'VIP Lounge', occupied: 6, total: 10 },
-];
-
 export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({ 
-  data = defaultData 
+  data 
 }) => {
-  const getColor = (occupied: number, total: number) => {
-    const percent = (occupied / total) * 100;
+  const getColor = (percent: number) => {
     if (percent >= 90) return '#EF4444';
     if (percent >= 70) return '#F59E0B';
     return '#10B981';
@@ -43,7 +33,7 @@ export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
         <XAxis 
-          dataKey="location" 
+          dataKey="label" 
           stroke="#9ca3af"
           style={{ fontSize: '12px', fontFamily: 'Satoshi' }}
         />
@@ -57,15 +47,15 @@ export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({
             border: '1px solid #e5e7eb',
             borderRadius: '12px',
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-            fontFamily: 'Satoshi',
+          fontFamily: 'Satoshi',
           }}
-          formatter={(value: number, _name: string, props: any) => {
-            const percent = Math.round((props.payload.occupied / props.payload.total) * 100);
-            return [`${value} / ${props.payload.total} (%${percent})`, 'Doluluk'];
+          formatter={(value: number) => {
+            const percent = Math.round(value);
+            return [`%${percent}`, 'Doluluk'];
           }}
         />
         <Bar 
-          dataKey="occupied" 
+          dataKey="occupancy_rate" 
           radius={[8, 8, 0, 0]}
           animationDuration={1500}
           animationEasing="ease-out"
@@ -73,7 +63,7 @@ export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({
           {data.map((entry, index) => (
             <Cell 
               key={`cell-${index}`} 
-              fill={getColor(entry.occupied, entry.total)}
+              fill={getColor(entry.occupancy_rate)}
             />
           ))}
         </Bar>
@@ -81,4 +71,3 @@ export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({
     </ResponsiveContainer>
   );
 };
-

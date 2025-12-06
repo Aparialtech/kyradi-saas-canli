@@ -8,6 +8,10 @@ export interface QRVerifyResult {
   valid: boolean;
   reservation_id?: string;
   locker_id?: string;
+  storage_id?: string | null;
+  storage_code?: string | null;
+  location_id?: string | null;
+  location_name?: string | null;
   status?: string;
   status_override?: string;
   customer_name?: string | null;

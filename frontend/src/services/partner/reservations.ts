@@ -83,16 +83,15 @@ export interface ReservationListResponse {
 }
 
 export const reservationService = {
-  async list(params?: { status?: string; from?: string; to?: string; domain?: string }): Promise<Reservation[]> {
-    const response = await http.get<ReservationListResponse>("/partners/widget-reservations", {
+  async list(params?: { status?: string; from?: string; to?: string }): Promise<Reservation[]> {
+    const response = await http.get<Reservation[]>("/reservations", {
       params: {
         status: params?.status,
-        date_from: params?.from,
-        date_to: params?.to,
-        origin: params?.domain,
+        from: params?.from,
+        to: params?.to,
       },
     });
-    return response.data.items;
+    return response.data;
   },
   async cancel(id: number): Promise<Reservation> {
     const response = await http.post<Reservation>(`/partners/widget-reservations/${id}/cancel`);

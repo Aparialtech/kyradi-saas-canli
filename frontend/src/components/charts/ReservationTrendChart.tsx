@@ -4,25 +4,15 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 interface TrendData {
   date: string;
   reservations: number;
-  completed: number;
+  revenue?: number;
 }
 
 interface ReservationTrendChartProps {
-  data?: TrendData[];
+  data: TrendData[];
 }
 
-const defaultData: TrendData[] = [
-  { date: '01 Ara', reservations: 12, completed: 8 },
-  { date: '02 Ara', reservations: 19, completed: 15 },
-  { date: '03 Ara', reservations: 15, completed: 12 },
-  { date: '04 Ara', reservations: 25, completed: 18 },
-  { date: '05 Ara', reservations: 22, completed: 20 },
-  { date: '06 Ara', reservations: 30, completed: 25 },
-  { date: '07 Ara', reservations: 28, completed: 24 },
-];
-
 export const ReservationTrendChart: React.FC<ReservationTrendChartProps> = ({ 
-  data = defaultData 
+  data 
 }) => {
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -35,7 +25,7 @@ export const ReservationTrendChart: React.FC<ReservationTrendChartProps> = ({
             <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
             <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
           </linearGradient>
-          <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
             <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
           </linearGradient>
@@ -68,17 +58,18 @@ export const ReservationTrendChart: React.FC<ReservationTrendChartProps> = ({
           fill="url(#colorReservations)"
           animationDuration={1500}
         />
-        <Area
-          type="monotone"
-          dataKey="completed"
-          stroke="#10B981"
-          strokeWidth={3}
-          fillOpacity={1}
-          fill="url(#colorCompleted)"
-          animationDuration={1500}
-        />
+        {data.some((d) => d.revenue != null) && (
+          <Area
+            type="monotone"
+            dataKey="revenue"
+            stroke="#10B981"
+            strokeWidth={3}
+            fillOpacity={1}
+            fill="url(#colorRevenue)"
+            animationDuration={1500}
+          />
+        )}
       </AreaChart>
     </ResponsiveContainer>
   );
 };
-

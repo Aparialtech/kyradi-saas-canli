@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Modal } from "../common/Modal";
 import { useTranslation } from "../../hooks/useTranslation";
+import { QRCodeCanvas } from "qrcode.react";
 import { QrCode, Copy, Check, User, Calendar, DollarSign } from "../../lib/lucide";
 import { useToast } from "../../hooks/useToast";
 import type { Reservation } from "../../services/partner/reservations";
@@ -298,60 +299,74 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
                 textAlign: "center",
               }}
             >
-              <div
-                style={{
-                  display: "inline-block",
-                  padding: "1rem",
-                  background: "white",
-                  borderRadius: "8px",
-                  border: "2px solid #e2e8f0",
-                  marginBottom: "1rem",
-                }}
-              >
-                <QrCode className="h-32 w-32" style={{ color: "#0f172a" }} />
-              </div>
-              <div style={{ marginBottom: "0.75rem" }}>
-                <code
-                  style={{
-                    fontSize: "0.875rem",
-                    fontFamily: "monospace",
-                    background: "#f1f5f9",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "6px",
-                    display: "inline-block",
-                    color: "#0f172a",
-                  }}
-                >
-                  {reservation.qr_code || reservation.qr_token}
-                </code>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const qrText = reservation.qr_code || reservation.qr_token || "";
-                  navigator.clipboard.writeText(qrText).then(() => {
-                    setCopied(true);
-                    push({ title: "QR kodu kopyalandı", type: "success" });
-                    setTimeout(() => setCopied(false), 2000);
-                  });
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.5rem 1rem",
-                  background: "#0f172a",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "0.875rem",
-                  fontWeight: 500,
-                }}
-              >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied ? "Kopyalandı" : "Kopyala"}
-              </button>
+              {reservation.qr_code || reservation.qr_token ? (
+                <>
+                  <div
+                    style={{
+                      display: "inline-block",
+                      padding: "1rem",
+                      background: "white",
+                      borderRadius: "8px",
+                      border: "2px solid #e2e8f0",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    <QRCodeCanvas
+                      value={reservation.qr_code || reservation.qr_token || ""}
+                      size={156}
+                      bgColor="#ffffff"
+                      fgColor="#0f172a"
+                      includeMargin
+                    />
+                  </div>
+                  <div style={{ marginBottom: "0.75rem" }}>
+                    <code
+                      style={{
+                        fontSize: "0.875rem",
+                        fontFamily: "monospace",
+                        background: "#f1f5f9",
+                        padding: "0.5rem 1rem",
+                        borderRadius: "6px",
+                        display: "inline-block",
+                        color: "#0f172a",
+                      }}
+                    >
+                      {reservation.qr_code || reservation.qr_token}
+                    </code>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const qrText = reservation.qr_code || reservation.qr_token || "";
+                      navigator.clipboard.writeText(qrText).then(() => {
+                        setCopied(true);
+                        push({ title: "QR kodu kopyalandı", type: "success" });
+                        setTimeout(() => setCopied(false), 2000);
+                      });
+                    }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem 1rem",
+                      background: "#0f172a",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copied ? "Kopyalandı" : "Kopyala"}
+                  </button>
+                </>
+              ) : (
+                <p style={{ margin: 0, color: "#475569" }}>
+                  Bu rezervasyon için QR kodu bulunamadı.
+                </p>
+              )}
             </div>
           </section>
         )}
@@ -385,4 +400,3 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
     </Modal>
   );
 }
-

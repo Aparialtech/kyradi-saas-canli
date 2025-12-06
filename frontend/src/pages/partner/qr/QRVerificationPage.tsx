@@ -262,6 +262,13 @@ export function QRVerificationPage() {
                 <span>{result.locker_id ?? "-"}</span>
               </div>
               <div className="lookup-card__meta">
+                <strong>Depo Kodu</strong>
+                <span>{result.storage_code ?? "-"}</span>
+                {result.location_name && (
+                  <span className="table-cell-muted">{result.location_name}</span>
+                )}
+              </div>
+              <div className="lookup-card__meta">
                 <strong>Ad Soyad</strong>
                 <span>{result.full_name || result.customer_name || "Ziyaretçi"}</span>
               </div>

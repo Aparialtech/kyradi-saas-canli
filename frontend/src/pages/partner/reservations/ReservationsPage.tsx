@@ -257,7 +257,7 @@ export function ReservationsPage() {
                 render: (_, row: Reservation) => (
                   <div>
                     <div style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
-                      {row.full_name || row.guest_name || 'Bilinmiyor'}
+                      {row.full_name || row.customer_name || row.guest_name || 'Bilinmiyor'}
                     </div>
                     <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                       #{String(row.id).slice(0, 8)}
@@ -270,8 +270,10 @@ export function ReservationsPage() {
                 label: t("reservations.table.contact"),
                 render: (_, row: Reservation) => (
                   <div>
-                    <div style={{ fontSize: 'var(--text-sm)' }}>{row.guest_email || '—'}</div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{row.guest_phone || '—'}</div>
+                    <div style={{ fontSize: 'var(--text-sm)' }}>{row.guest_email || row.customer_email || '—'}</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                      {row.guest_phone || row.phone_number || row.customer_phone || '—'}
+                    </div>
                   </div>
                 ),
               },
@@ -279,8 +281,8 @@ export function ReservationsPage() {
                 key: 'dates',
                 label: 'Tarihler',
                 render: (_, row: Reservation) => {
-                  const startDate = row.start_datetime || row.start_at;
-                  const endDate = row.end_datetime || row.end_at;
+                  const startDate = row.start_datetime || row.start_at || row.checkin_date;
+                  const endDate = row.end_datetime || row.end_at || row.checkout_date;
                   return (
                     <div>
                       <div style={{ fontSize: 'var(--text-sm)' }}>
