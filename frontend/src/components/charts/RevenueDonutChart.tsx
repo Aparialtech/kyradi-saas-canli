@@ -22,8 +22,16 @@ const defaultData: RevenueData[] = [
 export const RevenueDonutChart: React.FC<RevenueDonutChartProps> = ({ 
   data = defaultData 
 }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+        <p style={{ color: '#9ca3af', fontSize: '14px' }}>No data available</p>
+      </div>
+    );
+  }
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%" minHeight={200}>
       <PieChart>
         <Pie
           data={data}

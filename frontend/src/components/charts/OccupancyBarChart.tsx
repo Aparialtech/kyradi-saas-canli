@@ -19,8 +19,16 @@ export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({
     return '#10B981';
   };
 
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+        <p style={{ color: '#9ca3af', fontSize: '14px' }}>No data available</p>
+      </div>
+    );
+  }
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%" minHeight={200}>
       <BarChart
         data={data}
         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
