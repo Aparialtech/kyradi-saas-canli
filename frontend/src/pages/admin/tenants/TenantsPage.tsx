@@ -15,11 +15,7 @@ import {
   type TenantUpdatePayload,
   type TenantDetail,
   type TenantPlanLimitsUpdatePayload,
-  type TenantMetadata,
   type TenantMetadataUpdate,
-  type TenantQuotaSettings,
-  type TenantFinancialSettings,
-  type TenantFeatureFlags,
 } from "../../../services/admin/tenants";
 import {
   adminTenantUserService,
@@ -490,7 +486,6 @@ function TenantDetailCard({
   const [planValue, setPlanValue] = useState("");
   const [maxLocations, setMaxLocations] = useState("");
   const [maxLockers, setMaxLockers] = useState("");
-  const [commissionRate, setCommissionRate] = useState("");
   const [maxActiveReservations, setMaxActiveReservations] = useState("");
   const [maxUsers, setMaxUsers] = useState("");
   const [maxSelfServiceDaily, setMaxSelfServiceDaily] = useState("");
@@ -499,8 +494,40 @@ function TenantDetailCard({
   const [maxStorageMb, setMaxStorageMb] = useState("");
   const [userModal, setUserModal] = useState<{ mode: "create" | "edit"; user?: AdminTenantUser } | null>(null);
   const [resetModal, setResetModal] = useState<{ user: AdminTenantUser } | null>(null);
+  
+  // Metadata state (quotas, financial, features)
+  const [quotaLocationCount, setQuotaLocationCount] = useState("");
+  const [quotaStorageCount, setQuotaStorageCount] = useState("");
+  const [quotaUserCount, setQuotaUserCount] = useState("");
+  const [quotaReservationCount, setQuotaReservationCount] = useState("");
+  const [financialCommissionRate, setFinancialCommissionRate] = useState("");
+  const [featureAiEnabled, setFeatureAiEnabled] = useState(true);
+  const [featureAdvancedReportsEnabled, setFeatureAdvancedReportsEnabled] = useState(true);
+  const [featurePaymentGatewayEnabled, setFeaturePaymentGatewayEnabled] = useState(true);
 
   const queryClient = useQueryClient();
+  
+  const metadataQuery = useQuery({
+    queryKey: ["admin", "tenants", tenantId, "metadata"],
+    queryFn: () => adminTenantService.getMetadata(tenantId),
+    enabled: Boolean(tenantId),
+  });
+  
+  const updateMetadataMutation = useMutation({
+    mutationFn: (payload: TenantMetadataUpdate) => adminTenantService.updateMetadata(tenantId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "tenants", tenantId, "metadata"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin", "tenants", tenantId, "detail"] });
+      notify({ title: "Kota ve finans ayarları güncellendi", type: "success" });
+    },
+    onError: (error: unknown) => {
+      notify({
+        title: "Güncelleme başarısız",
+        description: getErrorMessage(error),
+        type: "error",
+      });
+    },
+  });
   const usersQuery = useQuery({
     queryKey: ["admin", "tenants", tenantId, "users"],
     queryFn: () => adminTenantUserService.list(tenantId),
@@ -704,6 +731,27 @@ function TenantDetailCard({
       max_storage_mb: maxStorageMb ? Number(maxStorageMb) : null,
     });
   };
+  
+  const handleMetadataUpdate = (event: React.FormEvent) => {
+    event.preventDefault();
+    const payload: TenantMetadataUpdate = {
+      quotas: {
+        max_location_count: quotaLocationCount ? Number(quotaLocationCount) : null,
+        max_storage_count: quotaStorageCount ? Number(quotaStorageCount) : null,
+        max_user_count: quotaUserCount ? Number(quotaUserCount) : null,
+        max_reservation_count: quotaReservationCount ? Number(quotaReservationCount) : null,
+      },
+      financial: {
+        commission_rate: financialCommissionRate ? Number(financialCommissionRate) : undefined,
+      },
+      features: {
+        ai_enabled: featureAiEnabled,
+        advanced_reports_enabled: featureAdvancedReportsEnabled,
+        payment_gateway_enabled: featurePaymentGatewayEnabled,
+      },
+    };
+    updateMetadataMutation.mutate(payload);
+  };
 
   const isUserMutationPending = createUserMutation.isPending || updateUserMutation.isPending;
   const isResetPending = resetPasswordMutation.isPending;
@@ -814,7 +862,7 @@ function TenantDetailCard({
             </div>
             <div className="stat-card">
               <span className="stat-card__label">{t("admin.tenants.commissionRate")}</span>
-              <p className="stat-card__value">{commissionRate || "5.0"}%</p>
+              <p className="stat-card__value">{financialCommissionRate || metadataQuery.data?.financial.commission_rate || "5.0"}%</p>
               <p className="stat-card__hint">Varsayılan: 5.0%</p>
             </div>
           </div>
@@ -948,6 +996,176 @@ function TenantDetailCard({
             </button>
           </div>
         </form>
+
+          {/* Quota & Financial Settings Section */}
+          <ModernCard variant="glass" padding="lg" style={{ marginTop: 'var(--space-6)' }}>
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+                Kota ve Finans Ayarları
+              </h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Lokasyon, depo, kullanıcı ve rezervasyon kotası ile komisyon oranını yönetin
+              </p>
+            </div>
+            
+            <form className="form-grid" onSubmit={handleMetadataUpdate}>
+              <div style={{ gridColumn: 'span 2', marginBottom: 'var(--space-4)' }}>
+                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: '0 0 var(--space-3) 0' }}>
+                  Kota Ayarları
+                </h4>
+              </div>
+              
+              <ModernInput
+                label="Maks. Lokasyon Sayısı"
+                type="number"
+                min={0}
+                value={quotaLocationCount}
+                onChange={(e) => setQuotaLocationCount(e.target.value)}
+                placeholder="Sınırsız için boş bırakın"
+                helperText="Tenant'ın oluşturabileceği maksimum lokasyon sayısı"
+                fullWidth
+              />
+              
+              <ModernInput
+                label="Maks. Depo Sayısı"
+                type="number"
+                min={0}
+                value={quotaStorageCount}
+                onChange={(e) => setQuotaStorageCount(e.target.value)}
+                placeholder="Sınırsız için boş bırakın"
+                helperText="Tenant'ın oluşturabileceği maksimum depo sayısı"
+                fullWidth
+              />
+              
+              <ModernInput
+                label="Maks. Kullanıcı Sayısı"
+                type="number"
+                min={0}
+                value={quotaUserCount}
+                onChange={(e) => setQuotaUserCount(e.target.value)}
+                placeholder="Sınırsız için boş bırakın"
+                helperText="Tenant'ın oluşturabileceği maksimum aktif kullanıcı sayısı"
+                fullWidth
+              />
+              
+              <ModernInput
+                label="Maks. Rezervasyon Sayısı"
+                type="number"
+                min={0}
+                value={quotaReservationCount}
+                onChange={(e) => setQuotaReservationCount(e.target.value)}
+                placeholder="Sınırsız için boş bırakın"
+                helperText="Tenant'ın oluşturabileceği maksimum toplam rezervasyon sayısı"
+                fullWidth
+              />
+              
+              <div style={{ gridColumn: 'span 2', marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: '0 0 var(--space-3) 0' }}>
+                  Finans Ayarları
+                </h4>
+              </div>
+              
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
+                  Komisyon Oranı (%)
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={financialCommissionRate || metadataQuery.data?.financial.commission_rate || 5.0}
+                    onChange={(e) => setFinancialCommissionRate(e.target.value)}
+                    style={{ flex: 1, height: '8px', borderRadius: 'var(--radius-lg)', background: 'var(--bg-tertiary)', outline: 'none' }}
+                  />
+                  <ModernInput
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={financialCommissionRate}
+                    onChange={(e) => setFinancialCommissionRate(e.target.value)}
+                    placeholder="5.0"
+                    style={{ width: '120px' }}
+                  />
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>%</span>
+                </div>
+                <small style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', display: 'block', marginTop: 'var(--space-1)' }}>
+                  Kyradi platform komisyon oranı (0-100%). Raporlar ve hakedişler bu orana göre hesaplanır.
+                </small>
+              </div>
+              
+              <div style={{ gridColumn: 'span 2', marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: '0 0 var(--space-3) 0' }}>
+                  Özellik Bayrakları
+                </h4>
+              </div>
+              
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)' }}>
+                <input
+                  type="checkbox"
+                  checked={featureAiEnabled}
+                  onChange={(e) => setFeatureAiEnabled(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <div>
+                  <div style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+                    AI Asistanı
+                  </div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                    KYRADI AI Asistanı özelliğini etkinleştir/devre dışı bırak
+                  </div>
+                </div>
+              </label>
+              
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)' }}>
+                <input
+                  type="checkbox"
+                  checked={featureAdvancedReportsEnabled}
+                  onChange={(e) => setFeatureAdvancedReportsEnabled(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <div>
+                  <div style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+                    Gelişmiş Raporlar
+                  </div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                    Gelişmiş analiz ve raporlama özelliklerini etkinleştir/devre dışı bırak
+                  </div>
+                </div>
+              </label>
+              
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)' }}>
+                <input
+                  type="checkbox"
+                  checked={featurePaymentGatewayEnabled}
+                  onChange={(e) => setFeaturePaymentGatewayEnabled(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <div>
+                  <div style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+                    Ödeme Gateway
+                  </div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                    Online ödeme gateway entegrasyonunu etkinleştir/devre dışı bırak
+                  </div>
+                </div>
+              </label>
+              
+              <div className="form-actions form-grid__field--full" style={{ marginTop: 'var(--space-4)' }}>
+                <ModernButton
+                  type="submit"
+                  variant="primary"
+                  disabled={updateMetadataMutation.isPending}
+                  isLoading={updateMetadataMutation.isPending}
+                  loadingText="Güncelleniyor..."
+                >
+                  Kota ve Finans Ayarlarını Kaydet
+                </ModernButton>
+              </div>
+            </form>
+          </ModernCard>
 
           <div className="panel__header" style={{ marginTop: "2.5rem" }}>
             <div>
