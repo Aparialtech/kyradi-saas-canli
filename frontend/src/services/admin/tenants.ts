@@ -69,6 +69,35 @@ export interface TenantPlanLimitsUpdatePayload {
   max_storage_mb?: number | null;
 }
 
+export interface TenantQuotaSettings {
+  max_location_count?: number | null;
+  max_storage_count?: number | null;
+  max_user_count?: number | null;
+  max_reservation_count?: number | null;
+}
+
+export interface TenantFinancialSettings {
+  commission_rate?: number;
+}
+
+export interface TenantFeatureFlags {
+  ai_enabled?: boolean;
+  advanced_reports_enabled?: boolean;
+  payment_gateway_enabled?: boolean;
+}
+
+export interface TenantMetadata {
+  quotas: TenantQuotaSettings;
+  financial: TenantFinancialSettings;
+  features: TenantFeatureFlags;
+}
+
+export interface TenantMetadataUpdate {
+  quotas?: TenantQuotaSettings;
+  financial?: TenantFinancialSettings;
+  features?: TenantFeatureFlags;
+}
+
 export const adminTenantService = {
   async list(): Promise<Tenant[]> {
     const response = await http.get<Tenant[]>("/admin/tenants");
@@ -88,6 +117,14 @@ export const adminTenantService = {
   },
   async updatePlanLimits(id: string, payload: TenantPlanLimitsUpdatePayload): Promise<TenantDetail> {
     const response = await http.patch<TenantDetail>(`/admin/tenants/${id}/plan-limits`, payload);
+    return response.data;
+  },
+  async getMetadata(id: string): Promise<TenantMetadata> {
+    const response = await http.get<TenantMetadata>(`/admin/tenants/${id}/metadata`);
+    return response.data;
+  },
+  async updateMetadata(id: string, payload: TenantMetadataUpdate): Promise<TenantMetadata> {
+    const response = await http.patch<TenantMetadata>(`/admin/tenants/${id}/metadata`, payload);
     return response.data;
   },
 };

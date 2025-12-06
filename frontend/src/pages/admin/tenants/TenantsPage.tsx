@@ -15,6 +15,11 @@ import {
   type TenantUpdatePayload,
   type TenantDetail,
   type TenantPlanLimitsUpdatePayload,
+  type TenantMetadata,
+  type TenantMetadataUpdate,
+  type TenantQuotaSettings,
+  type TenantFinancialSettings,
+  type TenantFeatureFlags,
 } from "../../../services/admin/tenants";
 import {
   adminTenantUserService,
@@ -618,6 +623,21 @@ function TenantDetailCard({
       tenantDetail.plan_limits.max_storage_mb != null ? String(tenantDetail.plan_limits.max_storage_mb) : "",
     );
   }, [tenantDetail]);
+  
+  // Load metadata when available
+  useEffect(() => {
+    if (metadataQuery.data) {
+      const { quotas, financial, features } = metadataQuery.data;
+      setQuotaLocationCount(quotas.max_location_count != null ? String(quotas.max_location_count) : "");
+      setQuotaStorageCount(quotas.max_storage_count != null ? String(quotas.max_storage_count) : "");
+      setQuotaUserCount(quotas.max_user_count != null ? String(quotas.max_user_count) : "");
+      setQuotaReservationCount(quotas.max_reservation_count != null ? String(quotas.max_reservation_count) : "");
+      setFinancialCommissionRate(financial.commission_rate != null ? String(financial.commission_rate) : "");
+      setFeatureAiEnabled(features.ai_enabled ?? true);
+      setFeatureAdvancedReportsEnabled(features.advanced_reports_enabled ?? true);
+      setFeaturePaymentGatewayEnabled(features.payment_gateway_enabled ?? true);
+    }
+  }, [metadataQuery.data]);
 
   useEffect(() => {
     if (!userModal) {
@@ -863,21 +883,6 @@ function TenantDetailCard({
               </small>
             </label>
             
-            <label className="form-field">
-              <span className="form-field__label">{t("admin.tenants.commissionRate")} (%)</span>
-              <input
-                value={commissionRate}
-                onChange={(event) => setCommissionRate(event.target.value)}
-                type="number"
-                min={0}
-                max={100}
-                step={0.1}
-                placeholder="5.0"
-              />
-              <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
-                Kyradi komisyon oranı (placeholder - henüz backend'e bağlı değil)
-              </small>
-            </label>
 
             <label className="form-field">
               <span className="form-field__label">Maks. Aktif Rezervasyon</span>
