@@ -221,7 +221,6 @@ export function AdminUsersPage() {
     
     createUserMutation.mutate(payload, {
       onError: (error: unknown) => {
-        const errorMsg = getErrorMessage(error);
         console.error("Create user error:", error);
         // Error handling is already in mutation definition, but ensure modal stays open on error
       },
