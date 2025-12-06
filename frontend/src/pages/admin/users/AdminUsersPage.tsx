@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key } from "../../../lib/lucide";
+import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key, Trash2, Copy } from "../../../lib/lucide";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
@@ -21,6 +21,8 @@ interface User {
   role: UserRole;
   is_active: boolean;
   tenant_id?: string;
+  full_name?: string;
+  phone_number?: string;
   created_at: string;
   last_login_at?: string;
 }
@@ -48,16 +50,19 @@ export function AdminUsersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
-  const [newPassword, setNewPassword] = useState("");
+  const [resetPasswordResult, setResetPasswordResult] = useState<{ new_password?: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   
   // Create user form state
   const [newUser, setNewUser] = useState({
     email: "",
     password: "",
+    full_name: "",
+    phone_number: "",
     role: "staff" as UserRole,
     is_active: true,
     tenant_id: "",
+    auto_generate_password: false,
   });
 
   const tenantsQuery = useQuery({
@@ -66,12 +71,13 @@ export function AdminUsersPage() {
   });
 
   const usersQuery = useQuery({
-    queryKey: ["admin", "users", selectedTenantId, selectedRole, isActiveFilter],
+    queryKey: ["admin", "users", selectedTenantId, selectedRole, isActiveFilter, searchTerm],
     queryFn: async (): Promise<User[]> => {
       const params: Record<string, string> = {};
       if (selectedTenantId) params.tenant_id = selectedTenantId;
       if (selectedRole) params.role = selectedRole;
       if (isActiveFilter !== "") params.is_active = isActiveFilter;
+      if (searchTerm) params.email = searchTerm;
       const response = await http.get<User[]>("/admin/users", { params });
       return response.data;
     },
@@ -82,7 +88,7 @@ export function AdminUsersPage() {
     [tenantsQuery.data]
   );
 
-  // Filter users by search term
+  // Filter users by search term (client-side for full_name, phone_number)
   const filteredUsers = useMemo(() => {
     const users = usersQuery.data ?? [];
     if (!searchTerm.trim()) return users;
@@ -92,9 +98,11 @@ export function AdminUsersPage() {
       const tenant = user.tenant_id ? tenantsById.get(user.tenant_id) : null;
       const tenantName = (tenant?.name ?? "").toLowerCase();
       const email = user.email.toLowerCase();
+      const fullName = (user.full_name ?? "").toLowerCase();
+      const phone = (user.phone_number ?? "").toLowerCase();
       const role = (userRoleLabels[user.role] ?? user.role).toLowerCase();
       
-      return email.includes(term) || tenantName.includes(term) || role.includes(term);
+      return email.includes(term) || tenantName.includes(term) || role.includes(term) || fullName.includes(term) || phone.includes(term);
     });
   }, [usersQuery.data, searchTerm, tenantsById]);
 
@@ -103,7 +111,7 @@ export function AdminUsersPage() {
   }, []);
 
   const createUserMutation = useMutation({
-    mutationFn: async (payload: { email: string; password: string; role: UserRole; is_active: boolean }) => {
+    mutationFn: async (payload: any) => {
       const response = await http.post<User>("/admin/users", payload);
       return response.data;
     },
@@ -111,10 +119,15 @@ export function AdminUsersPage() {
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       push({ title: "Kullanıcı oluşturuldu", type: "success" });
       setShowCreateModal(false);
-      setNewUser({ email: "", password: "", role: "staff", is_active: true, tenant_id: "" });
+      setNewUser({ email: "", password: "", full_name: "", phone_number: "", role: "staff", is_active: true, tenant_id: "", auto_generate_password: false });
     },
     onError: (error: unknown) => {
-      push({ title: "Kullanıcı oluşturulamadı", description: getErrorMessage(error), type: "error" });
+      const errorMsg = getErrorMessage(error);
+      if (errorMsg.includes("already registered") || errorMsg.includes("Email already")) {
+        push({ title: "Kullanıcı oluşturulamadı", description: "Bu e-posta adresi zaten kullanılıyor", type: "error" });
+      } else {
+        push({ title: "Kullanıcı oluşturulamadı", description: errorMsg, type: "error" });
+      }
     },
   });
 
@@ -135,19 +148,42 @@ export function AdminUsersPage() {
   });
 
   const resetPasswordMutation = useMutation({
-    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
-      const response = await http.post<User>(`/admin/users/${userId}/reset-password`, { password });
+    mutationFn: async ({ userId, auto_generate }: { userId: string; auto_generate: boolean }) => {
+      const response = await http.post<{ new_password?: string; message: string }>(`/admin/users/${userId}/reset-password`, { 
+        auto_generate,
+        password: undefined 
+      });
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      push({ title: "Parola sıfırlandı", type: "success" });
-      setShowResetPasswordModal(false);
-      setResetPasswordUser(null);
-      setNewPassword("");
+      setResetPasswordResult(data);
+      if (data.new_password) {
+        // Copy to clipboard
+        navigator.clipboard.writeText(data.new_password).then(() => {
+          push({ title: "Parola sıfırlandı", description: "Yeni parola panoya kopyalandı", type: "success" });
+        }).catch(() => {
+          push({ title: "Parola sıfırlandı", description: `Yeni parola: ${data.new_password}`, type: "success" });
+        });
+      } else {
+        push({ title: "Parola sıfırlandı", type: "success" });
+      }
     },
     onError: (error: unknown) => {
       push({ title: "Parola sıfırlanamadı", description: getErrorMessage(error), type: "error" });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await http.delete(`/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      push({ title: "Kullanıcı devre dışı bırakıldı", type: "success" });
+    },
+    onError: (error: unknown) => {
+      push({ title: "Kullanıcı devre dışı bırakılamadı", description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -157,16 +193,25 @@ export function AdminUsersPage() {
   };
 
   const handleCreate = () => {
-    if (!newUser.email || !newUser.password || newUser.password.length < 8) {
-      push({ title: "Eksik bilgi", description: "Email ve en az 8 karakterlik parola gereklidir", type: "error" });
+    if (!newUser.email) {
+      push({ title: "Eksik bilgi", description: "Email gereklidir", type: "error" });
       return;
     }
-    createUserMutation.mutate({
+    if (!newUser.auto_generate_password && (!newUser.password || newUser.password.length < 8)) {
+      push({ title: "Eksik bilgi", description: "Parola en az 8 karakter olmalıdır veya otomatik oluşturulmalıdır", type: "error" });
+      return;
+    }
+    const payload: any = {
       email: newUser.email,
-      password: newUser.password,
       role: newUser.role,
       is_active: newUser.is_active,
-    });
+      auto_generate_password: newUser.auto_generate_password,
+    };
+    if (newUser.full_name) payload.full_name = newUser.full_name;
+    if (newUser.phone_number) payload.phone_number = newUser.phone_number;
+    if (newUser.tenant_id) payload.tenant_id = newUser.tenant_id;
+    if (!newUser.auto_generate_password && newUser.password) payload.password = newUser.password;
+    createUserMutation.mutate(payload);
   };
 
   const handleSave = () => {
@@ -175,24 +220,32 @@ export function AdminUsersPage() {
       role: editingUser.role,
       is_active: editingUser.is_active,
     };
-    // Only include tenant_id if it's being changed
-    if (editingUser.tenant_id !== undefined) {
-      payload.tenant_id = editingUser.tenant_id || null;
-    }
+    if (editingUser.full_name !== undefined) payload.full_name = editingUser.full_name || null;
+    if (editingUser.phone_number !== undefined) payload.phone_number = editingUser.phone_number || null;
+    if (editingUser.tenant_id !== undefined) payload.tenant_id = editingUser.tenant_id || null;
     updateUserMutation.mutate({
       userId: editingUser.id,
       payload,
     });
   };
 
-  const handleResetPassword = () => {
-    if (!resetPasswordUser || !newPassword || newPassword.length < 8) {
-      push({ title: "Eksik bilgi", description: "Yeni parola en az 8 karakter olmalıdır", type: "error" });
-      return;
-    }
+  const handleResetPassword = (autoGenerate: boolean = true) => {
+    if (!resetPasswordUser) return;
     resetPasswordMutation.mutate({
       userId: resetPasswordUser.id,
-      password: newPassword,
+      auto_generate: autoGenerate,
+    });
+  };
+
+  const handleDelete = (user: User) => {
+    if (window.confirm(`${user.email} kullanıcısını devre dışı bırakmak istediğinizden emin misiniz?`)) {
+      deleteUserMutation.mutate(user.id);
+    }
+  };
+
+  const copyPassword = (password: string) => {
+    navigator.clipboard.writeText(password).then(() => {
+      push({ title: "Kopyalandı", description: "Parola panoya kopyalandı", type: "success" });
     });
   };
 
@@ -216,7 +269,7 @@ export function AdminUsersPage() {
         <ModernButton
           variant="primary"
           onClick={() => {
-            setNewUser({ email: "", password: "", role: "staff", is_active: true, tenant_id: "" });
+            setNewUser({ email: "", password: "", full_name: "", phone_number: "", role: "staff", is_active: true, tenant_id: "", auto_generate_password: false });
             setShowCreateModal(true);
           }}
           leftIcon={<UserPlus className="h-4 w-4" />}
@@ -321,7 +374,7 @@ export function AdminUsersPage() {
             <ModernInput
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="E-posta, otel veya rol ile ara..."
+              placeholder="Ad, soyad, e-posta, telefon, otel veya rol ile ara..."
               leftIcon={<Search className="h-4 w-4" />}
               fullWidth
             />
@@ -339,6 +392,16 @@ export function AdminUsersPage() {
                 key: 'email',
                 label: 'Email',
                 render: (value) => <strong>{value}</strong>,
+              },
+              {
+                key: 'full_name',
+                label: 'Ad Soyad',
+                render: (value) => value ? <strong>{value}</strong> : <span style={{ color: "var(--text-tertiary)" }}>—</span>,
+              },
+              {
+                key: 'phone_number',
+                label: 'Telefon',
+                render: (value) => value || <span style={{ color: "var(--text-tertiary)" }}>—</span>,
               },
               {
                 key: 'tenant_id',
@@ -429,13 +492,23 @@ export function AdminUsersPage() {
                       size="sm"
                       onClick={() => {
                         setResetPasswordUser(row);
-                        setNewPassword("");
+                        setResetPasswordResult(null);
                         setShowResetPasswordModal(true);
                       }}
                       leftIcon={<Key className="h-4 w-4" />}
                     >
                       Parola Sıfırla
                     </ModernButton>
+                    {row.is_active && (
+                      <ModernButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(row)}
+                        leftIcon={<Trash2 className="h-4 w-4" />}
+                      >
+                        Devre Dışı Bırak
+                      </ModernButton>
+                    )}
                   </div>
                 ),
               },
@@ -463,7 +536,7 @@ export function AdminUsersPage() {
           isOpen={showCreateModal}
           onClose={() => {
             setShowCreateModal(false);
-            setNewUser({ email: "", password: "", role: "staff", is_active: true, tenant_id: "" });
+            setNewUser({ email: "", password: "", full_name: "", phone_number: "", role: "staff", is_active: true, tenant_id: "", auto_generate_password: false });
           }}
           title="Yeni Kullanıcı Oluştur"
           footer={
@@ -473,7 +546,7 @@ export function AdminUsersPage() {
                 className="btn btn--secondary"
                 onClick={() => {
                   setShowCreateModal(false);
-                  setNewUser({ email: "", password: "", role: "staff", is_active: true, tenant_id: "" });
+                  setNewUser({ email: "", password: "", full_name: "", phone_number: "", role: "staff", is_active: true, tenant_id: "", auto_generate_password: false });
                 }}
               >
                 İptal
@@ -501,18 +574,36 @@ export function AdminUsersPage() {
               />
             </label>
             <label className="form-field">
-              <span className="form-field__label">Parola <span style={{ color: "#dc2626" }}>*</span></span>
+              <span className="form-field__label">Ad Soyad</span>
               <input
-                type="password"
-                value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                placeholder="En az 8 karakter"
-                minLength={8}
-                required
+                type="text"
+                value={newUser.full_name}
+                onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                placeholder="Kullanıcının tam adı"
               />
-              <small style={{ color: "var(--text-tertiary)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                Minimum 8 karakter olmalıdır
-              </small>
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Telefon</span>
+              <input
+                type="tel"
+                value={newUser.phone_number}
+                onChange={(e) => setNewUser({ ...newUser, phone_number: e.target.value })}
+                placeholder="905551234567"
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Tenant (Otel)</span>
+              <select
+                value={newUser.tenant_id}
+                onChange={(e) => setNewUser({ ...newUser, tenant_id: e.target.value })}
+              >
+                <option value="">Tenant seçilmedi</option>
+                {tenantsQuery.data?.map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>
+                    {tenant.name} ({tenant.slug})
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="form-field">
               <span className="form-field__label">Rol <span style={{ color: "#dc2626" }}>*</span></span>
@@ -527,6 +618,32 @@ export function AdminUsersPage() {
                 ))}
               </select>
             </label>
+            <label className="form-field">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <input
+                  type="checkbox"
+                  checked={newUser.auto_generate_password}
+                  onChange={(e) => setNewUser({ ...newUser, auto_generate_password: e.target.checked, password: "" })}
+                />
+                <span className="form-field__label">Parolayı otomatik oluştur</span>
+              </div>
+            </label>
+            {!newUser.auto_generate_password && (
+              <label className="form-field">
+                <span className="form-field__label">Parola <span style={{ color: "#dc2626" }}>*</span></span>
+                <input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  placeholder="En az 8 karakter"
+                  minLength={8}
+                  required={!newUser.auto_generate_password}
+                />
+                <small style={{ color: "var(--text-tertiary)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
+                  Minimum 8 karakter olmalıdır
+                </small>
+              </label>
+            )}
             <label className="form-field">
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <input
@@ -579,6 +696,24 @@ export function AdminUsersPage() {
               <input type="email" value={editingUser.email} disabled style={{ opacity: 0.6 }} />
             </label>
             <label className="form-field">
+              <span className="form-field__label">Ad Soyad</span>
+              <input
+                type="text"
+                value={editingUser.full_name || ""}
+                onChange={(e) => setEditingUser({ ...editingUser, full_name: e.target.value })}
+                placeholder="Kullanıcının tam adı"
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Telefon</span>
+              <input
+                type="tel"
+                value={editingUser.phone_number || ""}
+                onChange={(e) => setEditingUser({ ...editingUser, phone_number: e.target.value })}
+                placeholder="905551234567"
+              />
+            </label>
+            <label className="form-field">
               <span className="form-field__label">Tenant (Otel)</span>
               <select
                 value={editingUser.tenant_id || ""}
@@ -621,6 +756,19 @@ export function AdminUsersPage() {
                 <span className="form-field__label">Aktif</span>
               </div>
             </label>
+            <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border-primary)" }}>
+              <ModernButton
+                variant="ghost"
+                onClick={() => {
+                  setResetPasswordUser(editingUser);
+                  setResetPasswordResult(null);
+                  setShowResetPasswordModal(true);
+                }}
+                leftIcon={<Key className="h-4 w-4" />}
+              >
+                Parola Sıfırla
+              </ModernButton>
+            </div>
           </div>
         </Modal>
       )}
@@ -632,7 +780,7 @@ export function AdminUsersPage() {
           onClose={() => {
             setShowResetPasswordModal(false);
             setResetPasswordUser(null);
-            setNewPassword("");
+            setResetPasswordResult(null);
           }}
           title="Parola Sıfırla"
           footer={
@@ -643,7 +791,7 @@ export function AdminUsersPage() {
                 onClick={() => {
                   setShowResetPasswordModal(false);
                   setResetPasswordUser(null);
-                  setNewPassword("");
+                  setResetPasswordResult(null);
                 }}
               >
                 İptal
@@ -651,7 +799,7 @@ export function AdminUsersPage() {
               <button
                 type="button"
                 className="btn btn--primary"
-                onClick={handleResetPassword}
+                onClick={() => handleResetPassword(true)}
                 disabled={resetPasswordMutation.isPending}
               >
                 {resetPasswordMutation.isPending ? "Sıfırlanıyor..." : "Parolayı Sıfırla"}
@@ -661,22 +809,44 @@ export function AdminUsersPage() {
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             <p style={{ margin: 0, color: "var(--text-tertiary)" }}>
-              <strong>{resetPasswordUser.email}</strong> kullanıcısı için yeni parola belirleyin.
+              <strong>{resetPasswordUser.email}</strong> kullanıcısı için parola sıfırlama.
             </p>
-            <label className="form-field">
-              <span className="form-field__label">Yeni Parola <span style={{ color: "#dc2626" }}>*</span></span>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="En az 8 karakter"
-                minLength={8}
-                required
-              />
-              <small style={{ color: "var(--text-tertiary)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                Minimum 8 karakter olmalıdır
-              </small>
-            </label>
+            {resetPasswordResult?.new_password ? (
+              <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
+                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Yeni Parola Oluşturuldu:</p>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <code style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", fontFamily: "monospace" }}>
+                    {resetPasswordResult.new_password}
+                  </code>
+                  <ModernButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyPassword(resetPasswordResult.new_password!)}
+                    leftIcon={<Copy className="h-4 w-4" />}
+                  >
+                    Kopyala
+                  </ModernButton>
+                </div>
+                <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem", color: "var(--text-tertiary)" }}>
+                  Bu parolayı güvenli bir yerde saklayın. Kullanıcıya iletebilirsiniz.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p style={{ margin: "0 0 1rem 0", color: "var(--text-tertiary)" }}>
+                  Otomatik olarak güvenli bir parola oluşturulacak.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() => handleResetPassword(true)}
+                  disabled={resetPasswordMutation.isPending}
+                  style={{ width: "100%" }}
+                >
+                  {resetPasswordMutation.isPending ? "Sıfırlanıyor..." : "Otomatik Parola Oluştur"}
+                </button>
+              </div>
+            )}
           </div>
         </Modal>
       )}
