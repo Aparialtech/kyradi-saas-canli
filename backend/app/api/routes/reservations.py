@@ -114,7 +114,7 @@ async def list_reservations(
     reservations = result.scalars().all()
     
     # Include payment information and storage/location details
-    from ...models import Payment, Storage, Location
+    from ...models import Payment, Location
     reservation_reads = []
     for res in reservations:
         storage = res.storage
