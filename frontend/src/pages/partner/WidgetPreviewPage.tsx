@@ -71,7 +71,8 @@ export function WidgetPreviewPage() {
     if (tenantQuery.error) {
       push({ title: t("widget.preview.toastError"), description: getErrorMessage(tenantQuery.error), type: "error" });
     }
-  }, [tenantQuery.error, push, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantQuery.isError]); // Only depend on isError boolean to avoid infinite loops from error object reference changes
 
   return (
     <section className="page">

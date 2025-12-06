@@ -270,7 +270,8 @@ export function DemoFlowPage() {
         widgetEl.removeEventListener("kyradi-reservation-success", handleWidgetSuccess as EventListener);
       }
     };
-  }, [tenantQuery.data, locale, push, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantQuery.data?.tenant_id, tenantQuery.data?.widget_public_key, tenantQuery.isLoading, tenantQuery.isError, locale, push, t]); // Use specific fields instead of entire data object to avoid infinite loops
 
   // handlePayment removed - using MagicPay flow instead
 
