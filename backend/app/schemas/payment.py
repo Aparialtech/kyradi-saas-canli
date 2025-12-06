@@ -24,7 +24,7 @@ class PaymentRead(IdentifiedModel):
     amount_minor: int
     currency: str
     transaction_id: Optional[str] = None
-    paid_at: Optional[str] = None
+    paid_at: Optional[datetime] = None
     meta: Optional[Dict[str, Any]] = None
 
 

@@ -137,10 +137,11 @@ async def list_reservations(
             "location_id": location.id if location else None,
             "location_name": location.name if location else None,
         }
-        reservation_dict = ReservationRead.model_validate(res_dict).model_dump()
+        reservation_obj = ReservationRead.model_validate(res_dict)
         if payment:
-            reservation_dict["payment"] = PaymentRead.model_validate(payment).model_dump()
-        reservation_reads.append(ReservationRead.model_validate(reservation_dict))
+            # Serialize payment to dict with JSON-compatible values (datetime -> ISO string)
+            reservation_obj.payment = PaymentRead.model_validate(payment).model_dump(mode='json')
+        reservation_reads.append(reservation_obj)
     
     return reservation_reads
 
@@ -175,12 +176,13 @@ async def get_reservation(
         "location_id": location.id if location else None,
         "location_name": location.name if location else None,
     }
-    reservation_dict = ReservationRead.model_validate(reservation_dict_data).model_dump()
+    reservation_obj = ReservationRead.model_validate(reservation_dict_data)
     # Add payment info as a dict (not part of schema to avoid forward reference)
     if payment:
-        reservation_dict["payment"] = PaymentRead.model_validate(payment).model_dump()
+        # Serialize payment to dict with JSON-compatible values (datetime -> ISO string)
+        reservation_obj.payment = PaymentRead.model_validate(payment).model_dump(mode='json')
     else:
-        reservation_dict["payment"] = None
+        reservation_obj.payment = None
     
     return ReservationRead.model_validate(reservation_dict)
 
