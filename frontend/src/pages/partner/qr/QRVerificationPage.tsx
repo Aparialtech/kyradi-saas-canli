@@ -72,9 +72,16 @@ export function QRVerificationPage() {
       const response = await qrService.verify(code.trim());
       setResult(response);
       if (response.valid) {
-        push({ title: "QR doğrulandı", type: "success" });
+        push({ title: "QR doğrulandı", description: "Rezervasyon aktif ve geçerli", type: "success" });
       } else {
-        push({ title: "QR geçersiz", description: response.status ?? "Geçersiz kod", type: "error" });
+        const statusMessages: Record<string, string> = {
+          not_found: "Bu QR kod ile eşleşen aktif rezervasyon bulunamadı.",
+          cancelled: "Bu rezervasyon iptal edilmiş.",
+          completed: "Bu rezervasyon tamamlanmış.",
+          expired: "Bu rezervasyonun süresi dolmuş.",
+        };
+        const errorMessage = statusMessages[response.status || ""] || response.status || "Geçersiz QR kodu";
+        push({ title: "QR doğrulama başarısız", description: errorMessage, type: "error" });
       }
     } catch (error) {
       push({ title: "Doğrulama başarısız", description: getErrorMessage(error), type: "error" });

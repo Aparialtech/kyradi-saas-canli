@@ -101,7 +101,23 @@ export function DemoFlowPage() {
   });
 
   useEffect(() => {
-    if (!tenantQuery.data || !containerRef.current) return;
+    if (tenantQuery.isLoading) return;
+    if (tenantQuery.isError) {
+      push({
+        title: t("demo.flow.widgetError"),
+        description: getErrorMessage(tenantQuery.error) || "Widget yapılandırması yüklenemedi. Lütfen sayfayı yenileyin.",
+        type: "error",
+      });
+      return;
+    }
+    if (!tenantQuery.data || !containerRef.current) {
+      push({
+        title: t("demo.flow.widgetError"),
+        description: "Demo widget yapılandırması bulunamadı. Lütfen sistem yöneticisiyle iletişime geçin.",
+        type: "error",
+      });
+      return;
+    }
     const { tenant_id, widget_public_key } = tenantQuery.data;
     const cdnBase = env.PUBLIC_CDN_BASE || window.location.origin;
 

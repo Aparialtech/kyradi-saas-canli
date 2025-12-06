@@ -193,8 +193,8 @@ export function AdminUsersPage() {
   };
 
   const handleCreate = () => {
-    if (!newUser.email) {
-      push({ title: "Eksik bilgi", description: "Email gereklidir", type: "error" });
+    if (!newUser.email || !newUser.email.trim()) {
+      push({ title: "Eksik bilgi", description: "Email adresi gereklidir", type: "error" });
       return;
     }
     if (!newUser.auto_generate_password && (!newUser.password || newUser.password.length < 8)) {
@@ -202,16 +202,30 @@ export function AdminUsersPage() {
       return;
     }
     const payload: any = {
-      email: newUser.email,
+      email: newUser.email.trim(),
       role: newUser.role,
       is_active: newUser.is_active,
       auto_generate_password: newUser.auto_generate_password,
     };
-    if (newUser.full_name) payload.full_name = newUser.full_name;
-    if (newUser.phone_number) payload.phone_number = newUser.phone_number;
+    if (newUser.full_name?.trim()) payload.full_name = newUser.full_name.trim();
+    if (newUser.phone_number?.trim()) payload.phone_number = newUser.phone_number.trim();
     if (newUser.tenant_id) payload.tenant_id = newUser.tenant_id;
     if (!newUser.auto_generate_password && newUser.password) payload.password = newUser.password;
-    createUserMutation.mutate(payload);
+    
+    // Ensure role is valid enum value
+    const validRoles = ["super_admin", "support", "tenant_admin", "staff", "viewer", "accounting"];
+    if (!validRoles.includes(payload.role)) {
+      push({ title: "Geçersiz rol", description: "Seçilen rol geçerli değil", type: "error" });
+      return;
+    }
+    
+    createUserMutation.mutate(payload, {
+      onError: (error: unknown) => {
+        const errorMsg = getErrorMessage(error);
+        console.error("Create user error:", error);
+        // Error handling is already in mutation definition, but ensure modal stays open on error
+      },
+    });
   };
 
   const handleSave = () => {

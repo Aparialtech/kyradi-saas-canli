@@ -292,14 +292,27 @@ export function PricingPage() {
             </div>
           </div>
 
-          {pricingQuery.isLoading ? (
+          {pricingQuery.isLoading && !pricingQuery.data ? (
             <div className="panel">
               <div className="empty-state">{t("common.loading")}</div>
             </div>
           ) : pricingQuery.isError ? (
             <div className="panel">
               <div className="empty-state" style={{ color: "#dc2626" }}>
-                {t("pricing.loadError")}: {getErrorMessage(pricingQuery.error)}
+                <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
+                  {t("pricing.loadError")}
+                </h3>
+                <p style={{ fontSize: "0.9rem", color: "#64748b", marginBottom: "1.5rem" }}>
+                  {getErrorMessage(pricingQuery.error)}
+                </p>
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() => pricingQuery.refetch()}
+                >
+                  {t("common.retry")}
+                </button>
               </div>
             </div>
           ) : filteredRules.length > 0 ? (

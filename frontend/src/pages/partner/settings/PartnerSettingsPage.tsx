@@ -184,7 +184,7 @@ export function PartnerSettingsPage() {
         </div>
       </div>
 
-      {settingsQuery.isLoading ? (
+      {settingsQuery.isLoading && !settingsQuery.data ? (
         <div className="panel">
           <div className="empty-state">
             <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
