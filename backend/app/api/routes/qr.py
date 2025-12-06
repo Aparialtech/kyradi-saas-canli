@@ -45,14 +45,33 @@ async def verify_qr_code(
     current_user: User = Depends(require_tenant_staff),
     session: AsyncSession = Depends(get_session),
 ) -> QRVerifyResponse:
-    """Validate reservation QR codes."""
+    """Validate reservation QR codes.
+    
+    Returns detailed error information for better UX:
+    - valid=False, status="not_found" - QR code not found
+    - valid=False, status="cancelled" - Reservation cancelled
+    - valid=False, status="completed" - Reservation completed
+    - valid=False, status="expired" - Reservation expired
+    - valid=True - Active reservation
+    """
     stmt = select(Reservation).where(
         Reservation.qr_code == payload.code,
         Reservation.tenant_id == current_user.tenant_id,
     )
     reservation = (await session.execute(stmt)).scalar_one_or_none()
     if reservation is None:
-        return QRVerifyResponse(valid=False)
+        return QRVerifyResponse(
+            valid=False,
+            status="not_found",
+            reservation_id=None,
+            locker_id=None,
+        )
+
+    if reservation.status == ReservationStatus.CANCELLED.value:
+        return _serialize_reservation(reservation, valid=False, status_override="cancelled")
+    
+    if reservation.status == ReservationStatus.COMPLETED.value:
+        return _serialize_reservation(reservation, valid=False, status_override="completed")
 
     if reservation.status != ReservationStatus.ACTIVE.value:
         return _serialize_reservation(reservation, valid=False)
