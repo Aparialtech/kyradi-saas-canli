@@ -998,74 +998,94 @@ function TenantDetailCard({
         </form>
 
           {/* Quota & Financial Settings Section */}
-          <ModernCard variant="glass" padding="lg" style={{ marginTop: 'var(--space-6)' }}>
-            <div style={{ marginBottom: 'var(--space-4)' }}>
-              <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
-                Kota ve Finans Ayarları
-              </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-                Lokasyon, depo, kullanıcı ve rezervasyon kotası ile komisyon oranını yönetin
-              </p>
+          <div className="panel" style={{ marginTop: 'var(--space-6)', border: '2px solid var(--border-primary)', background: 'var(--bg-primary)' }}>
+            <div className="panel__header" style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+              <div>
+                <h3 className="panel__title" style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                  Kota ve Finans Ayarları
+                </h3>
+                <p className="panel__subtitle" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-2)' }}>
+                  Lokasyon, depo, kullanıcı ve rezervasyon kotası ile komisyon oranını yönetin
+                </p>
+              </div>
             </div>
             
-            <form className="form-grid" onSubmit={handleMetadataUpdate}>
-              <div style={{ gridColumn: 'span 2', marginBottom: 'var(--space-4)' }}>
-                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: '0 0 var(--space-3) 0' }}>
+            <form className="form-grid" onSubmit={handleMetadataUpdate} style={{ marginTop: 'var(--space-4)' }}>
+              <div className="form-grid__field--full" style={{ marginBottom: 'var(--space-4)' }}>
+                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
                   Kota Ayarları
                 </h4>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                  Tenant'ın oluşturabileceği maksimum kaynak sayılarını belirleyin
+                </p>
               </div>
               
-              <ModernInput
-                label="Maks. Lokasyon Sayısı"
-                type="number"
-                min={0}
-                value={quotaLocationCount}
-                onChange={(e) => setQuotaLocationCount(e.target.value)}
-                placeholder="Sınırsız için boş bırakın"
-                helperText="Tenant'ın oluşturabileceği maksimum lokasyon sayısı"
-                fullWidth
-              />
+              <label className="form-field">
+                <span className="form-field__label">Maks. Lokasyon Sayısı</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={quotaLocationCount}
+                  onChange={(e) => setQuotaLocationCount(e.target.value)}
+                  placeholder="Sınırsız için boş bırakın"
+                />
+                <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                  Tenant'ın oluşturabileceği maksimum lokasyon sayısı
+                </small>
+              </label>
               
-              <ModernInput
-                label="Maks. Depo Sayısı"
-                type="number"
-                min={0}
-                value={quotaStorageCount}
-                onChange={(e) => setQuotaStorageCount(e.target.value)}
-                placeholder="Sınırsız için boş bırakın"
-                helperText="Tenant'ın oluşturabileceği maksimum depo sayısı"
-                fullWidth
-              />
+              <label className="form-field">
+                <span className="form-field__label">Maks. Depo Sayısı</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={quotaStorageCount}
+                  onChange={(e) => setQuotaStorageCount(e.target.value)}
+                  placeholder="Sınırsız için boş bırakın"
+                />
+                <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                  Tenant'ın oluşturabileceği maksimum depo sayısı
+                </small>
+              </label>
               
-              <ModernInput
-                label="Maks. Kullanıcı Sayısı"
-                type="number"
-                min={0}
-                value={quotaUserCount}
-                onChange={(e) => setQuotaUserCount(e.target.value)}
-                placeholder="Sınırsız için boş bırakın"
-                helperText="Tenant'ın oluşturabileceği maksimum aktif kullanıcı sayısı"
-                fullWidth
-              />
+              <label className="form-field">
+                <span className="form-field__label">Maks. Kullanıcı Sayısı</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={quotaUserCount}
+                  onChange={(e) => setQuotaUserCount(e.target.value)}
+                  placeholder="Sınırsız için boş bırakın"
+                />
+                <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                  Tenant'ın oluşturabileceği maksimum aktif kullanıcı sayısı
+                </small>
+              </label>
               
-              <ModernInput
-                label="Maks. Rezervasyon Sayısı"
-                type="number"
-                min={0}
-                value={quotaReservationCount}
-                onChange={(e) => setQuotaReservationCount(e.target.value)}
-                placeholder="Sınırsız için boş bırakın"
-                helperText="Tenant'ın oluşturabileceği maksimum toplam rezervasyon sayısı"
-                fullWidth
-              />
+              <label className="form-field">
+                <span className="form-field__label">Maks. Rezervasyon Sayısı</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={quotaReservationCount}
+                  onChange={(e) => setQuotaReservationCount(e.target.value)}
+                  placeholder="Sınırsız için boş bırakın"
+                />
+                <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+                  Tenant'ın oluşturabileceği maksimum toplam rezervasyon sayısı
+                </small>
+              </label>
               
-              <div style={{ gridColumn: 'span 2', marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: '0 0 var(--space-3) 0' }}>
+              <div className="form-grid__field--full" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
                   Finans Ayarları
                 </h4>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                  Platform komisyon oranını ayarlayın
+                </p>
               </div>
               
-              <div style={{ gridColumn: 'span 2' }}>
+              <div className="form-grid__field--full">
                 <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
                   Komisyon Oranı (%)
                 </label>
@@ -1079,7 +1099,7 @@ function TenantDetailCard({
                     onChange={(e) => setFinancialCommissionRate(e.target.value)}
                     style={{ flex: 1, height: '8px', borderRadius: 'var(--radius-lg)', background: 'var(--bg-tertiary)', outline: 'none' }}
                   />
-                  <ModernInput
+                  <input
                     type="number"
                     min={0}
                     max={100}
@@ -1087,7 +1107,7 @@ function TenantDetailCard({
                     value={financialCommissionRate}
                     onChange={(e) => setFinancialCommissionRate(e.target.value)}
                     placeholder="5.0"
-                    style={{ width: '120px' }}
+                    style={{ width: '120px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)' }}
                   />
                   <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>%</span>
                 </div>
@@ -1096,76 +1116,83 @@ function TenantDetailCard({
                 </small>
               </div>
               
-              <div style={{ gridColumn: 'span 2', marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: '0 0 var(--space-3) 0' }}>
+              <div className="form-grid__field--full" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+                <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
                   Özellik Bayrakları
                 </h4>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                  Tenant için kullanılabilir özellikleri etkinleştirin veya devre dışı bırakın
+                </p>
               </div>
               
-              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)' }}>
-                <input
-                  type="checkbox"
-                  checked={featureAiEnabled}
-                  onChange={(e) => setFeatureAiEnabled(e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <div>
-                  <div style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
-                    AI Asistanı
+              <div className="form-grid__field--full">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
+                  <input
+                    type="checkbox"
+                    checked={featureAiEnabled}
+                    onChange={(e) => setFeatureAiEnabled(e.target.checked)}
+                    style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
+                      AI Asistanı
+                    </div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                      KYRADI AI Asistanı özelliğini etkinleştir/devre dışı bırak
+                    </div>
                   </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-                    KYRADI AI Asistanı özelliğini etkinleştir/devre dışı bırak
-                  </div>
-                </div>
-              </label>
+                </label>
+              </div>
               
-              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)' }}>
-                <input
-                  type="checkbox"
-                  checked={featureAdvancedReportsEnabled}
-                  onChange={(e) => setFeatureAdvancedReportsEnabled(e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <div>
-                  <div style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
-                    Gelişmiş Raporlar
+              <div className="form-grid__field--full">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
+                  <input
+                    type="checkbox"
+                    checked={featureAdvancedReportsEnabled}
+                    onChange={(e) => setFeatureAdvancedReportsEnabled(e.target.checked)}
+                    style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
+                      Gelişmiş Raporlar
+                    </div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                      Gelişmiş analiz ve raporlama özelliklerini etkinleştir/devre dışı bırak
+                    </div>
                   </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-                    Gelişmiş analiz ve raporlama özelliklerini etkinleştir/devre dışı bırak
-                  </div>
-                </div>
-              </label>
+                </label>
+              </div>
               
-              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)' }}>
-                <input
-                  type="checkbox"
-                  checked={featurePaymentGatewayEnabled}
-                  onChange={(e) => setFeaturePaymentGatewayEnabled(e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <div>
-                  <div style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
-                    Ödeme Gateway
+              <div className="form-grid__field--full">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
+                  <input
+                    type="checkbox"
+                    checked={featurePaymentGatewayEnabled}
+                    onChange={(e) => setFeaturePaymentGatewayEnabled(e.target.checked)}
+                    style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
+                      Ödeme Gateway
+                    </div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                      Online ödeme gateway entegrasyonunu etkinleştir/devre dışı bırak
+                    </div>
                   </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-                    Online ödeme gateway entegrasyonunu etkinleştir/devre dışı bırak
-                  </div>
-                </div>
-              </label>
+                </label>
+              </div>
               
               <div className="form-actions form-grid__field--full" style={{ marginTop: 'var(--space-4)' }}>
-                <ModernButton
+                <button
                   type="submit"
-                  variant="primary"
+                  className="btn btn--primary"
                   disabled={updateMetadataMutation.isPending}
-                  isLoading={updateMetadataMutation.isPending}
-                  loadingText="Güncelleniyor..."
                 >
-                  Kota ve Finans Ayarlarını Kaydet
-                </ModernButton>
+                  {updateMetadataMutation.isPending ? "Güncelleniyor..." : "Kota ve Finans Ayarlarını Kaydet"}
+                </button>
               </div>
             </form>
-          </ModernCard>
+          </div>
 
           <div className="panel__header" style={{ marginTop: "2.5rem" }}>
             <div>
