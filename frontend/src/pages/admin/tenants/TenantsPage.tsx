@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { SearchInput } from "../../../components/common/SearchInput";
+import { motion } from "framer-motion";
+import { Eye, Edit, Search, Building2, CheckCircle2, XCircle, Loader2, AlertCircle, Users, UserPlus } from "../../../lib/lucide";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
-import { ModernTable } from "../../../components/ui/ModernTable";
-import { Eye, Edit } from "../../../lib/lucide";
+import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { ModernInput } from "../../../components/ui/ModernInput";
 
 import {
   adminTenantService,
@@ -166,112 +167,129 @@ export function TenantsPage() {
   });
 
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
 
-      <header className="page-header">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+      >
         <div>
-          <h1 className="page-title">Tenant Yönetimi</h1>
-          <p className="page-subtitle">
+          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
+            Tenant Yönetimi
+          </h1>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
             Tenant bilgilerini, lisans planlarını ve markalama ayarlarını buradan yönetebilirsiniz.
           </p>
         </div>
-        <div className="page-actions">
-          <button
-            type="button"
-            className="btn btn--primary"
-            onClick={() => {
-              setEditingTenant(null);
-              reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
-            }}
-          >
-            Yeni Tenant
-          </button>
-        </div>
-      </header>
+        <ModernButton
+          variant="primary"
+          onClick={() => {
+            setEditingTenant(null);
+            reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
+          }}
+          leftIcon={<UserPlus className="h-4 w-4" />}
+        >
+          Yeni Tenant
+        </ModernButton>
+      </motion.div>
 
-      <div className="panel">
-        <div className="panel__header">
-          <div>
-            <h2 className="panel__title">
-              {editingTenant ? `${editingTenant.name} Tenantını Güncelle` : "Yeni Tenant Oluştur"}
-            </h2>
-            <p className="panel__subtitle">
-              Slug ve ad gibi temel bilgileri doldurun. Dilerseniz marka rengi ve logo URL’i ekleyebilirsiniz.
-            </p>
-          </div>
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+            {editingTenant ? `${editingTenant.name} Tenantını Güncelle` : "Yeni Tenant Oluştur"}
+          </h2>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+            Slug ve ad gibi temel bilgileri doldurun. Dilerseniz marka rengi ve logo URL’i ekleyebilirsiniz.
+          </p>
         </div>
 
-        <form className="form-grid" onSubmit={submit}>
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           {!editingTenant && (
-            <label className="form-field">
-              <span className="form-field__label">{t("common.shortName")}</span>
-              <input
-                {...register("slug", { required: `${t("common.shortName")} zorunlu` })}
-                placeholder="demo-hotel"
-              />
-              <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
-                {t("common.shortNameHint")}
-              </small>
-              {errors.slug && <span className="field-error">{errors.slug.message}</span>}
-            </label>
+            <ModernInput
+              label={t("common.shortName")}
+              placeholder="demo-hotel"
+              {...register("slug", { required: `${t("common.shortName")} zorunlu` })}
+              error={errors.slug?.message}
+              helperText={t("common.shortNameHint")}
+              fullWidth
+              required
+            />
           )}
 
-          <label className="form-field">
-            <span className="form-field__label">{t("admin.tenants.hotelName")}</span>
-            <input {...register("name", { required: "Ad zorunlu" })} placeholder="Otel Adı" />
-            {errors.name && <span className="field-error">{errors.name.message}</span>}
+          <ModernInput
+            label={t("admin.tenants.hotelName")}
+            placeholder="Otel Adı"
+            {...register("name", { required: "Ad zorunlu" })}
+            error={errors.name?.message}
+            fullWidth
+            required
+          />
+
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+              Plan
+            </label>
+            <input
+              {...register("plan")}
+              placeholder="pro"
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+              }}
+            />
+          </div>
+
+          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
+            <input type="checkbox" {...register("is_active")} style={{ width: '18px', height: '18px' }} />
+            <span style={{ fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>Aktif</span>
           </label>
 
-          <label className="form-field">
-            <span className="form-field__label">Plan</span>
-            <input {...register("plan")} placeholder="pro" />
-          </label>
+          <ModernInput
+            label="Marka Rengi"
+            placeholder="#00A389"
+            {...register("brand_color")}
+            fullWidth
+          />
 
-          <label className="form-field form-field--inline">
-            <span className="form-field__label">Aktif</span>
-            <input type="checkbox" {...register("is_active")} />
-          </label>
+          <ModernInput
+            label="Logo URL"
+            placeholder="https://..."
+            {...register("logo_url")}
+            fullWidth
+          />
 
-          <label className="form-field">
-            <span className="form-field__label">Marka Rengi</span>
-            <input {...register("brand_color")} placeholder="#00A389" />
-          </label>
-
-          <label className="form-field">
-            <span className="form-field__label">Logo URL</span>
-            <input {...register("logo_url")} placeholder="https://..." />
-          </label>
-
-          <div className="form-actions form-grid__field--full">
+          <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end", marginTop: 'var(--space-2)' }}>
             {editingTenant && (
-              <button
+              <ModernButton
                 type="button"
-                className="btn btn--ghost-dark"
+                variant="ghost"
                 onClick={() => {
                   setEditingTenant(null);
                   reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
                 }}
               >
                 İptal
-              </button>
+              </ModernButton>
             )}
-            <button
+            <ModernButton
               type="submit"
-              className="btn btn--primary"
+              variant="primary"
               disabled={createMutation.isPending || updateMutation.isPending}
+              isLoading={createMutation.isPending || updateMutation.isPending}
+              loadingText={editingTenant ? "Güncelleniyor..." : "Kaydediliyor..."}
             >
-              {editingTenant
-                ? updateMutation.isPending
-                  ? "Güncelleniyor..."
-                  : "Tenantı Güncelle"
-                : createMutation.isPending
-                  ? "Kaydediliyor..."
-                  : "Tenant Oluştur"}
-            </button>
+              {editingTenant ? "Tenantı Güncelle" : "Tenant Oluştur"}
+            </ModernButton>
           </div>
         </form>
-      </div>
+      </ModernCard>
 
       <ModernCard variant="glass" padding="lg">
         <div style={{ marginBottom: 'var(--space-6)' }}>
@@ -286,10 +304,12 @@ export function TenantsPage() {
         {/* Filters */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
           <div style={{ minWidth: '250px' }}>
-            <SearchInput
+            <ModernInput
               value={searchTerm}
-              onChange={setSearchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="İsim, slug veya email ile ara..."
+              leftIcon={<Search className="h-4 w-4" />}
+              fullWidth
             />
           </div>
           <div>
@@ -340,16 +360,20 @@ export function TenantsPage() {
         </div>
 
         {tenantsQuery.isLoading ? (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-            <h3 className="empty-state__title">{t("admin.tenants.title")} listesi yükleniyor</h3>
-            <p>Liste birkaç saniye içinde görüntülenecektir.</p>
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+              {t("admin.tenants.title")} listesi yükleniyor
+            </h3>
+            <p style={{ margin: 0 }}>Liste birkaç saniye içinde görüntülenecektir.</p>
           </div>
         ) : tenantsQuery.isError ? (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-            <h3 className="empty-state__title">{t("admin.tenants.title")} listesi alınamadı</h3>
-            <p>Lütfen sayfayı yenileyerek tekrar deneyin.</p>
+          <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
+            <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: '#dc2626' }}>
+              {t("admin.tenants.title")} listesi alınamadı
+            </h3>
+            <p style={{ margin: 0 }}>Lütfen sayfayı yenileyerek tekrar deneyin.</p>
           </div>
         ) : filteredTenants.length > 0 ? (
           <ModernTable
@@ -362,7 +386,7 @@ export function TenantsPage() {
               {
                 key: 'slug',
                 label: t("common.shortName"),
-                render: (value) => <code style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>{value}</code>,
+                render: (value) => <code style={{ fontSize: 'var(--text-xs)', background: 'var(--bg-tertiary)', padding: 'var(--space-1) var(--space-2)', borderRadius: 'var(--radius-sm)', fontFamily: 'monospace', color: 'var(--text-tertiary)' }}>{value}</code>,
               },
               {
                 key: 'plan',
@@ -373,7 +397,18 @@ export function TenantsPage() {
                 key: 'is_active',
                 label: t("admin.tenants.status"),
                 render: (value) => (
-                  <span className={value ? "badge badge--success" : "badge badge--danger"}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-1)',
+                    padding: 'var(--space-1) var(--space-2)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: value ? 'rgba(34, 197, 94, 0.1)' : 'rgba(220, 38, 38, 0.1)',
+                    color: value ? '#16a34a' : '#dc2626',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 'var(--font-medium)',
+                  }}>
+                    {value ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
                     {value ? "Aktif" : "Pasif"}
                   </span>
                 ),
@@ -388,7 +423,7 @@ export function TenantsPage() {
                 key: 'id',
                 label: 'İşlemler',
                 render: (_, tenant) => (
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
                     <ModernButton
                       variant="ghost"
                       size="sm"
@@ -419,12 +454,17 @@ export function TenantsPage() {
                 ),
                 align: 'right',
               },
-            ]}
+            ] as ModernTableColumn<Tenant>[]}
             data={filteredTenants}
+            loading={tenantsQuery.isLoading}
+            striped
+            hoverable
+            stickyHeader
           />
         ) : (
-          <div style={{ textAlign: 'center', padding: 'var(--space-16)', color: 'var(--text-tertiary)' }}>
-            <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Building2 className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--text-muted)' }} />
+            <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
               {searchTerm || planFilter || statusFilter ? "Filtrelere uygun sonuç bulunamadı" : "Henüz tenant kaydı yok"}
             </p>
             <p style={{ margin: 0 }}>Yukarıdaki formu kullanarak yeni bir tenant oluşturabilirsiniz.</p>
@@ -446,7 +486,7 @@ export function TenantsPage() {
           notify={push}
         />
       )}
-    </section>
+    </div>
   );
 }
 
@@ -742,10 +782,12 @@ function TenantDetailCard({
       </div>
 
       {isLoading && (
-        <div className="empty-state">
-          <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-          <h3 className="empty-state__title">Detaylar yükleniyor</h3>
-          <p>Lütfen bekleyin...</p>
+        <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+          <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+            Detaylar yükleniyor
+          </h3>
+          <p style={{ margin: 0 }}>Lütfen bekleyin...</p>
         </div>
       )}
 
@@ -951,16 +993,20 @@ function TenantDetailCard({
           </div>
 
           {usersQuery.isLoading ? (
-            <div className="empty-state">
-              <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-              <h3 className="empty-state__title">Kullanıcılar yükleniyor</h3>
-              <p>Lütfen birkaç saniye bekleyin.</p>
+            <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+              <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
+                Kullanıcılar yükleniyor
+              </h3>
+              <p style={{ margin: 0 }}>Lütfen birkaç saniye bekleyin.</p>
             </div>
           ) : usersQuery.isError ? (
-            <div className="empty-state">
-              <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-              <h3 className="empty-state__title">Kullanıcı bilgileri alınamadı</h3>
-              <p>Sayfayı yenileyip tekrar deneyebilirsiniz.</p>
+            <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
+              <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: '#dc2626' }}>
+                Kullanıcı bilgileri alınamadı
+              </h3>
+              <p style={{ margin: 0 }}>Sayfayı yenileyip tekrar deneyebilirsiniz.</p>
             </div>
           ) : usersQuery.data && usersQuery.data.length > 0 ? (
             <div className="data-table-wrapper">
@@ -1016,20 +1062,24 @@ function TenantDetailCard({
               </table>
             </div>
           ) : (
-            <div className="empty-state">
-              <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>👥</div>
-              <h3 className="empty-state__title">Kullanıcı bulunmuyor</h3>
-              <p>{t("common.hotel")} için yeni kullanıcı ekleyerek erişim tanımlayabilirsiniz.</p>
+            <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+              <Users className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--text-muted)' }} />
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
+                Kullanıcı bulunmuyor
+              </h3>
+              <p style={{ margin: 0 }}>{t("common.hotel")} için yeni kullanıcı ekleyerek erişim tanımlayabilirsiniz.</p>
             </div>
           )}
         </>
       )}
 
       {!isLoading && !tenantDetail && (
-        <div className="empty-state">
-          <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-          <h3 className="empty-state__title">{t("common.hotel")} bilgisi bulunamadı</h3>
-          <p>Detaylar yüklenemedi. Sayfayı yenileyip tekrar deneyin.</p>
+        <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
+          <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: '#dc2626' }}>
+            {t("common.hotel")} bilgisi bulunamadı
+          </h3>
+          <p style={{ margin: 0 }}>Detaylar yüklenemedi. Sayfayı yenileyip tekrar deneyin.</p>
         </div>
       )}
 

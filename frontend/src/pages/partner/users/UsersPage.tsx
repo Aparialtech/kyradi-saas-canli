@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { motion } from "framer-motion";
+import { Users, UserPlus, Edit, Key, UserCheck, UserX, Loader2, AlertCircle, Search, Mail, Phone, Shield, CheckCircle2, XCircle } from "../../../lib/lucide";
 
 import {
   tenantUserService,
@@ -13,11 +15,14 @@ import {
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
-import { SearchInput } from "../../../components/common/SearchInput";
 import { getErrorMessage } from "../../../lib/httpError";
 import type { UserRole } from "../../../types/auth";
 import { useAuth } from "../../../context/AuthContext";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernButton } from "../../../components/ui/ModernButton";
+import { ModernInput } from "../../../components/ui/ModernInput";
+import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 
 // Partner panelde sadece personel (staff) rolleri yönetilebilir
 const staffRoles = ["storage_operator", "hotel_manager", "accounting"] as const satisfies readonly UserRole[];
@@ -270,273 +275,337 @@ export function UsersPage() {
   );
 
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
-      <div className="page-header">
+      
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+      >
         <div>
-          <h1 className="page-title">{t("users.title")}</h1>
-          <p className="page-subtitle">{t("users.subtitle")}</p>
+          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
+            {t("users.title")}
+          </h1>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("users.subtitle")}
+          </p>
         </div>
-        <div className="page-actions">
-          <button type="button" className="btn btn--primary" onClick={handleNew}>
-            {t("users.newUser")}
-          </button>
-        </div>
-      </div>
+        <ModernButton
+          variant="primary"
+          onClick={handleNew}
+          leftIcon={<UserPlus className="h-4 w-4" />}
+        >
+          {t("users.newUser")}
+        </ModernButton>
+      </motion.div>
 
-      <div className="panel">
-        <div className="panel__header">
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+            {editingUser ? t("users.editUser") : t("users.newUser")}
+          </h2>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("users.formSubtitle")}
+          </p>
+        </div>
+
+        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          <ModernInput
+            label={t("users.email")}
+            type="email"
+            placeholder="kullanici@ornek.com"
+            {...register("email")}
+            disabled={Boolean(editingUser)}
+            leftIcon={<Mail className="h-4 w-4" />}
+            error={errors.email?.message}
+            fullWidth
+            required
+          />
+
           <div>
-            <h2 className="panel__title">
-              {editingUser ? t("users.editUser") : t("users.newUser")}
-            </h2>
-            <p className="panel__subtitle">{t("users.formSubtitle")}</p>
+            <ModernInput
+              label={`${t("users.password")} ${editingUser ? `(${t("common.optional")})` : ""}`}
+              type="text"
+              placeholder="En az 8 karakter"
+              {...register("password")}
+              error={errors.password?.message}
+              fullWidth
+              required={!editingUser}
+            />
+            {!editingUser && (
+              <ModernButton
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const temp = generatePassword();
+                  setValue("password", temp);
+                  push({ title: t("users.passwordGenerated"), description: temp, type: "info" });
+                  copyToClipboard(temp).catch(() => undefined);
+                }}
+                style={{ marginTop: 'var(--space-2)' }}
+              >
+                {t("users.generatePassword")}
+              </ModernButton>
+            )}
           </div>
-        </div>
 
-        <form className="form-grid" onSubmit={onSubmit}>
-          <label className="form-field">
-            <span className="form-field__label">{t("users.email")}</span>
-            <input
-              {...register("email")}
-              type="email"
-              placeholder="kullanici@ornek.com"
-              disabled={Boolean(editingUser)}
-            />
-            {errors.email && <span className="field-error">{errors.email.message}</span>}
-          </label>
+          <ModernInput
+            label={t("users.phone")}
+            type="tel"
+            placeholder="0 545 219 68 63"
+            {...register("phone_number")}
+            leftIcon={<Phone className="h-4 w-4" />}
+            error={errors.phone_number?.message}
+            fullWidth
+          />
 
-          <label className="form-field">
-            <span className="form-field__label">
-              {t("users.password")} {editingUser ? `(${t("common.optional")})` : ""}
-            </span>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <input
-                {...register("password")}
-                type="text"
-                placeholder="En az 8 karakter"
-                style={{ flex: 1 }}
-              />
-              {!editingUser && (
-                <button
-                  type="button"
-                  className="btn btn--outline"
-                  onClick={() => {
-                    const temp = generatePassword();
-                    setValue("password", temp);
-                    push({ title: t("users.passwordGenerated"), description: temp, type: "info" });
-                    copyToClipboard(temp).catch(() => undefined);
-                  }}
-                >
-                  {t("users.generatePassword")}
-                </button>
-              )}
-            </div>
-            {errors.password && <span className="field-error">{errors.password.message}</span>}
-          </label>
-
-          <label className="form-field">
-            <span className="form-field__label">{t("users.phone")}</span>
-            <input
-              {...register("phone_number")}
-              type="tel"
-              placeholder="0 545 219 68 63"
-            />
-            {errors.phone_number && <span className="field-error">{errors.phone_number.message}</span>}
-          </label>
-
-          <label className="form-field">
-            <span className="form-field__label">{t("users.role")}</span>
-            <select {...register("role")}>
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+              {t("users.role")}
+            </label>
+            <select
+              {...register("role")}
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+              }}
+            >
               {staffRoles.map((role) => (
                 <option key={role} value={role}>
                   {roleLabels[role]}
                 </option>
               ))}
             </select>
+          </div>
+
+          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
+            <input type="checkbox" {...register("is_active")} style={{ width: '18px', height: '18px' }} />
+            <span style={{ fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>{t("users.active")}</span>
           </label>
 
-          <label className="form-field form-field--inline">
-            <span className="form-field__label">{t("users.active")}</span>
-            <input type="checkbox" {...register("is_active")} />
-          </label>
-
-          <div className="form-actions form-grid__field--full">
+          <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end", marginTop: 'var(--space-2)' }}>
             {editingUser && (
-              <button
+              <ModernButton
                 type="button"
-                className="btn btn--ghost-dark"
+                variant="ghost"
                 onClick={handleNew}
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
                 {t("common.cancel")}
-              </button>
+              </ModernButton>
             )}
-            <button
+            <ModernButton
               type="submit"
-              className="btn btn--primary"
+              variant="primary"
               disabled={createMutation.isPending || updateMutation.isPending}
+              isLoading={createMutation.isPending || updateMutation.isPending}
+              loadingText={t("common.saving")}
             >
-              {editingUser
-                ? updateMutation.isPending
-                  ? t("common.saving")
-                  : t("common.update")
-                : createMutation.isPending
-                  ? t("common.saving")
-                  : t("common.save")}
-            </button>
+              {editingUser ? t("common.update") : t("common.save")}
+            </ModernButton>
           </div>
         </form>
-      </div>
+      </ModernCard>
 
-      <div className="panel">
-        <div className="panel__header">
+      <ModernCard variant="glass" padding="lg">
+        <div style={{ marginBottom: 'var(--space-4)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div>
-            <h2 className="panel__title">{t("users.listTitle")}</h2>
-            <p className="panel__subtitle">
+            <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+              {t("users.listTitle")}
+            </h2>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
               {filteredUsers.length} / {usersQuery.data?.length ?? 0} {t("common.records")}
             </p>
           </div>
-          <div style={{ minWidth: "250px" }}>
-            <SearchInput
+          <div style={{ minWidth: "250px", flex: '1', maxWidth: '400px' }}>
+            <ModernInput
               value={searchTerm}
-              onChange={handleSearchChange}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder={t("common.search")}
+              leftIcon={<Search className="h-4 w-4" />}
+              fullWidth
             />
           </div>
         </div>
 
         {usersQuery.isLoading ? (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-            <h3 className="empty-state__title">Personel yükleniyor</h3>
-            <p>Lütfen bekleyin...</p>
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>Personel yükleniyor</h3>
+            <p style={{ margin: 0 }}>Lütfen bekleyin...</p>
           </div>
         ) : usersQuery.isError ? (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-            <h3 className="empty-state__title">Personel listesi alınamadı</h3>
-            <p>Sayfayı yenileyerek tekrar deneyin.</p>
+          <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
+            <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: '#dc2626' }}>Personel listesi alınamadı</h3>
+            <p style={{ margin: 0 }}>Sayfayı yenileyerek tekrar deneyin.</p>
           </div>
         ) : filteredUsers.length > 0 ? (
-          <div className="data-table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>E-posta</th>
-                  <th>Telefon</th>
-                  <th>Rol</th>
-                  <th>Durum</th>
-                  <th>{t("common.lastLogin")}</th>
-                  <th>İşlemler</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => {
-      const isActive = user.is_active;
-      const isCurrentUser = currentUser?.id === user.id;
-      return (
-        <tr key={user.id}>
-                      <td>
-                        <strong>{user.email}</strong>
-                        {isCurrentUser && (
-                          <div className="table-cell-muted">(Siz)</div>
-                        )}
-                      </td>
-                      <td>
-                        {user.phone_number ? (
-                          <span>{user.phone_number}</span>
-                        ) : (
-                          <span className="table-cell-muted">-</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="badge">{roleLabels[user.role] ?? user.role}</span>
-                      </td>
-                      <td>
-                        <span
-                          className={isActive ? "badge badge--success" : "badge badge--danger"}
+          <ModernTable
+            columns={[
+              {
+                key: 'email',
+                label: 'E-posta',
+                render: (value, row) => {
+                  const isCurrentUser = currentUser?.id === row.id;
+                  return (
+                    <div>
+                      <div style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
+                        {value}
+                      </div>
+                      {isCurrentUser && (
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>
+                          (Siz)
+                        </div>
+                      )}
+                    </div>
+                  );
+                },
+              },
+              {
+                key: 'phone_number',
+                label: 'Telefon',
+                render: (value) => value ? <span>{value}</span> : <span style={{ color: 'var(--text-tertiary)' }}>—</span>,
+              },
+              {
+                key: 'role',
+                label: 'Rol',
+                render: (value) => (
+                  <span style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 'var(--space-1)', 
+                    padding: 'var(--space-1) var(--space-2)', 
+                    borderRadius: 'var(--radius-sm)', 
+                    background: 'rgba(99, 102, 241, 0.1)', 
+                    color: '#6366f1', 
+                    fontSize: 'var(--text-xs)', 
+                    fontWeight: 'var(--font-medium)' 
+                  }}>
+                    <Shield className="h-3 w-3" />
+                    {roleLabels[value as UserRole] ?? value}
+                  </span>
+                ),
+              },
+              {
+                key: 'is_active',
+                label: 'Durum',
+                render: (value) => {
+                  const isActive = value;
+                  return (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-1)',
+                      padding: 'var(--space-1) var(--space-2)',
+                      borderRadius: 'var(--radius-sm)',
+                      background: isActive ? 'rgba(34, 197, 94, 0.1)' : 'rgba(220, 38, 38, 0.1)',
+                      color: isActive ? '#16a34a' : '#dc2626',
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 'var(--font-medium)',
+                    }}>
+                      {isActive ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                      {isActive ? "Aktif" : "Pasif"}
+                    </span>
+                  );
+                },
+                align: 'center',
+              },
+              {
+                key: 'last_login_at',
+                label: t("common.lastLogin"),
+                render: (value) => value
+                  ? new Date(value).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })
+                  : <span style={{ color: 'var(--text-tertiary)' }}>—</span>,
+              },
+              {
+                key: 'actions',
+                label: t("common.actions"),
+                align: 'right',
+                render: (_, row) => {
+                  const isActive = row.is_active;
+                  const isCurrentUser = currentUser?.id === row.id;
+                  return (
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+                      <ModernButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingUser(row);
+                          reset({
+                            email: row.email,
+                            password: "",
+                            phone_number: row.phone_number || "",
+                            role: row.role as FormValues["role"],
+                            is_active: row.is_active,
+                          });
+                        }}
+                        leftIcon={<Edit className="h-4 w-4" />}
+                      >
+                        Düzenle
+                      </ModernButton>
+                      <ModernButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setResetUser(row);
+                          setResetPassword(generatePassword());
+                        }}
+                        leftIcon={<Key className="h-4 w-4" />}
+                      >
+                        Parola
+                      </ModernButton>
+                      {isActive ? (
+                        <ModernButton
+                          variant="danger"
+                          size="sm"
+                          disabled={isCurrentUser}
+                          onClick={() => {
+                            if (!isCurrentUser && confirm(`${row.email} kullanıcısını pasifleştirmek istediğinize emin misiniz?`)) {
+                              deactivateMutation.mutate(row.id);
+                            }
+                          }}
+                          title={isCurrentUser ? "Kendi hesabınızı pasifleştiremezsiniz" : undefined}
+                          leftIcon={<UserX className="h-4 w-4" />}
                         >
-              {isActive ? "Aktif" : "Pasif"}
-            </span>
-          </td>
-                      <td>
-                        {user.last_login_at
-                          ? new Date(user.last_login_at).toLocaleString("tr-TR", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : "-"}
-          </td>
-                      <td>
-                        <div className="table-actions">
-              <button
-                type="button"
-                            className="action-link"
-                onClick={() => {
-                  setEditingUser(user);
-                  reset({
-                    email: user.email,
-                    password: "",
-                    phone_number: user.phone_number || "",
-                    role: user.role as FormValues["role"],
-                    is_active: user.is_active,
-                  });
-                }}
-              >
-                Düzenle
-              </button>
-              <button
-                type="button"
-                            className="action-link"
-                onClick={() => {
-                  setResetUser(user);
-                  setResetPassword(generatePassword());
-                }}
-              >
-                Parola Sıfırla
-              </button>
-              {isActive ? (
-                <button
-                  type="button"
-                              className="action-link action-link--danger"
-                              disabled={isCurrentUser}
-                              onClick={() => {
-                                if (!isCurrentUser && confirm(`${user.email} kullanıcısını pasifleştirmek istediğinize emin misiniz?`)) {
-                                  deactivateMutation.mutate(user.id);
-                                }
-                              }}
-                  title={isCurrentUser ? "Kendi hesabınızı pasifleştiremezsiniz" : undefined}
-                >
-                  Pasifleştir
-                </button>
-              ) : (
-                <button
-                  type="button"
-                              className="action-link"
-                  onClick={() =>
-                    updateMutation.mutate({ id: user.id, payload: { is_active: true } })
-                  }
-                >
-                  Aktif Et
-                </button>
-              )}
-            </div>
-          </td>
-        </tr>
-      );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          Pasif
+                        </ModernButton>
+                      ) : (
+                        <ModernButton
+                          variant="success"
+                          size="sm"
+                          onClick={() => updateMutation.mutate({ id: row.id, payload: { is_active: true } })}
+                          leftIcon={<UserCheck className="h-4 w-4" />}
+                        >
+                          Aktif
+                        </ModernButton>
+                      )}
+                    </div>
+                  );
+                },
+              },
+            ] as ModernTableColumn<TenantUser>[]}
+            data={filteredUsers}
+            loading={usersQuery.isLoading}
+            striped
+            hoverable
+            stickyHeader
+          />
         ) : (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>👥</div>
-            <h3 className="empty-state__title">Henüz personel kaydı yok</h3>
-            <p>Yukarıdaki formu kullanarak yeni personel ekleyebilirsiniz.</p>
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Users className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--text-muted)' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>Henüz personel kaydı yok</h3>
+            <p style={{ margin: 0 }}>Yukarıdaki formu kullanarak yeni personel ekleyebilirsiniz.</p>
           </div>
         )}
-      </div>
+      </ModernCard>
 
       {resetUser && (
         <Modal
@@ -622,6 +691,6 @@ export function UsersPage() {
           </form>
         </Modal>
       )}
-    </section>
+    </div>
   );
 }

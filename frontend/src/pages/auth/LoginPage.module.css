@@ -86,6 +86,12 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
+.logoIconSvg {
+  width: 32px;
+  height: 32px;
+  color: white;
+}
+
 .brandName {
   font-size: 2rem;
   font-weight: 700;
@@ -177,6 +183,15 @@
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.toggleIcon {
+  width: 16px;
+  height: 16px;
 }
 
 .toggleButton:hover {

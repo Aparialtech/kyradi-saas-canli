@@ -11,7 +11,7 @@ import type { AuthUser } from "../../types/auth";
 import { authService } from "../../services/auth";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tokenStorage } from "../../lib/tokenStorage";
-import { Lock, Mail, Building2, BarChart3, CreditCard, Eye, EyeOff } from "../../lib/lucide";
+import { Lock, Mail, Building2, BarChart3, CreditCard, Eye, EyeOff, Database, UserCog } from "../../lib/lucide";
 import styles from "./LoginPage.module.css";
 
 type LoginMode = "partner" | "admin";
@@ -122,11 +122,11 @@ export function LoginPage() {
       
       if (response.reset_token) {
         const resetUrl = `${window.location.origin}/reset-password?token=${response.reset_token}`;
-        message = `✅ Şifre sıfırlama linki oluşturuldu!\n\n🔗 Development Modu - Link:\n${resetUrl}\n\n💡 Not: Development modunda email gönderilmiyor. Linki kopyalayıp tarayıcıda açabilirsiniz.`;
+        message = `Şifre sıfırlama linki oluşturuldu!\n\nDevelopment Modu - Link:\n${resetUrl}\n\nNot: Development modunda email gönderilmiyor. Linki kopyalayıp tarayıcıda açabilirsiniz.`;
         
         try {
           await navigator.clipboard.writeText(resetUrl);
-          message += "\n\n✅ Link panoya kopyalandı!";
+          message += "\n\nLink panoya kopyalandı!";
         } catch {
           // Clipboard erişimi yoksa devam et
         }
@@ -172,7 +172,9 @@ export function LoginPage() {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.4 }}
             >
-              <div className={styles.logoIcon}>K</div>
+              <div className={styles.logoIcon}>
+                <Database className={styles.logoIconSvg} />
+              </div>
               <h1 className={styles.brandName}>KYRADI</h1>
             </motion.div>
 
@@ -225,30 +227,36 @@ export function LoginPage() {
           <div className={styles.formContent}>
             {/* Mode Toggle */}
             <div className={styles.modeToggle}>
-              <button
+              <motion.button
                 type="button"
                 className={clsx(styles.toggleButton, mode === "partner" && styles.toggleButtonActive)}
                 onClick={() => setMode("partner")}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
+                <Building2 className={styles.toggleIcon} />
                 Partner Girişi
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 type="button"
                 className={clsx(styles.toggleButton, mode === "admin" && styles.toggleButtonActive)}
                 onClick={() => setMode("admin")}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
+                <UserCog className={styles.toggleIcon} />
                 Admin Girişi
-              </button>
+              </motion.button>
             </div>
 
             {/* Form */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={mode}
-                initial={{ opacity: 0, x: mode === "partner" ? -10 : 10 }}
+                initial={{ opacity: 0, x: mode === "partner" ? -20 : 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: mode === "partner" ? 10 : -10 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0, x: mode === "partner" ? 20 : -20 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
               >
                 <div className={styles.formHeader}>
                   <h2 className={styles.formTitle}>

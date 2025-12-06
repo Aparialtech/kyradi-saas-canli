@@ -1,14 +1,19 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle } from "../../../lib/lucide";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
-import { SearchInput } from "../../../components/common/SearchInput";
 import { getErrorMessage } from "../../../lib/httpError";
 import type { UserRole } from "../../../types/auth";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernInput } from "../../../components/ui/ModernInput";
+import { ModernButton } from "../../../components/ui/ModernButton";
+import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 
 interface User {
   id: string;
@@ -117,28 +122,45 @@ export function AdminUsersPage() {
   };
 
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">{t("nav.globalUsers")}</h1>
-          <p className="page-subtitle">Tüm sistem kullanıcılarını görüntüle ve yönet</p>
-        </div>
-      </div>
+      
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)' }}
+      >
+        <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
+          {t("nav.globalUsers")}
+        </h1>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+          Tüm sistem kullanıcılarını görüntüle ve yönet
+        </p>
+      </motion.div>
 
-      <div className="panel">
-        <div className="panel__header">
-          <div>
-            <h3 className="panel__title">Filtreler</h3>
-          </div>
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: 0 }}>
+            Filtreler
+          </h3>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-          <label className="form-field">
-            <span className="form-field__label">{t("common.hotel")} Seç</span>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-4)" }}>
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+              {t("common.hotel")} Seç
+            </label>
             <select
               value={selectedTenantId}
               onChange={(e) => setSelectedTenantId(e.target.value)}
-              style={{ width: "100%" }}
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+              }}
             >
               <option value="">{t("common.allHotels" as any)}</option>
               {tenantsQuery.data?.map((tenant) => (
@@ -147,13 +169,23 @@ export function AdminUsersPage() {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="form-field">
-            <span className="form-field__label">Rol</span>
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+              Rol
+            </label>
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
-              style={{ width: "100%" }}
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+              }}
             >
               <option value="">Tüm Roller</option>
               {Object.entries(userRoleLabels).map(([value, label]) => (
@@ -162,135 +194,169 @@ export function AdminUsersPage() {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="form-field">
-            <span className="form-field__label">Durum</span>
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+              Durum
+            </label>
             <select
               value={isActiveFilter}
               onChange={(e) => setIsActiveFilter(e.target.value)}
-              style={{ width: "100%" }}
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+              }}
             >
               <option value="">Tüm Durumlar</option>
               <option value="true">Aktif</option>
               <option value="false">Pasif</option>
             </select>
-          </label>
+          </div>
         </div>
-      </div>
+      </ModernCard>
 
-      <div className="panel">
-        <div className="panel__header">
+      <ModernCard variant="glass" padding="lg">
+        <div style={{ marginBottom: 'var(--space-4)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div>
-            <h3 className="panel__title">Kullanıcılar</h3>
-            <p className="panel__subtitle">
+            <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+              Kullanıcılar
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
               {filteredUsers.length} / {usersQuery.data?.length ?? 0} kullanıcı gösteriliyor
             </p>
           </div>
-          <div style={{ minWidth: "250px" }}>
-            <SearchInput
+          <div style={{ minWidth: "250px", flex: '1', maxWidth: '400px' }}>
+            <ModernInput
               value={searchTerm}
-              onChange={handleSearchChange}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="E-posta, otel veya rol ile ara..."
+              leftIcon={<Search className="h-4 w-4" />}
+              fullWidth
             />
           </div>
         </div>
-        <div className="data-table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>{t("common.hotel")}</th>
-                <th>Rol</th>
-                <th>Durum</th>
-                <th>Son Giriş</th>
-                <th>Oluşturulma</th>
-                <th>İşlemler</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usersQuery.isLoading ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div style={{ textAlign: "center", padding: "2rem" }}>
-                      <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>⏳</div>
-                      <p>Veriler yükleniyor...</p>
+        {usersQuery.isLoading ? (
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>Veriler yükleniyor...</p>
+          </div>
+        ) : filteredUsers.length > 0 ? (
+          <ModernTable
+            columns={[
+              {
+                key: 'email',
+                label: 'Email',
+                render: (value) => <strong>{value}</strong>,
+              },
+              {
+                key: 'tenant_id',
+                label: t("common.hotel"),
+                render: (value) => {
+                  const tenant = value ? tenantsById.get(value) : null;
+                  return tenant ? (
+                    <div>
+                      <strong>{tenant.name}</strong>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>
+                        #{tenant.slug}
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              ) : filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => {
-                  const tenant = user.tenant_id ? tenantsById.get(user.tenant_id) : null;
-                  return (
-                    <tr key={user.id}>
-                      <td>
-                        <strong>{user.email}</strong>
-                      </td>
-                      <td>
-                        {tenant ? (
-                          <>
-                            <strong>{tenant.name}</strong>
-                            <div className="table-cell-muted">#{tenant.slug}</div>
-                          </>
-                        ) : (
-                          <span style={{ color: "var(--color-muted)" }}>—</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="badge">{userRoleLabels[user.role] ?? user.role}</span>
-                      </td>
-                      <td>
-                        <span
-                          className="badge"
-                          style={{
-                            background: user.is_active ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                            color: user.is_active ? "#10b981" : "#ef4444",
-                          }}
-                        >
-                          {user.is_active ? "Aktif" : "Pasif"}
-                        </span>
-                      </td>
-                      <td>
-                        {user.last_login_at
-                          ? new Date(user.last_login_at).toLocaleString("tr-TR", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : "—"}
-                      </td>
-                      <td>
-                        {new Date(user.created_at).toLocaleString("tr-TR", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })}
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn--ghost"
-                          onClick={() => handleEdit(user)}
-                          style={{ fontSize: "0.875rem", padding: "0.5rem 1rem" }}
-                        >
-                          Düzenle
-                        </button>
-                      </td>
-                    </tr>
+                  ) : (
+                    <span style={{ color: "var(--text-tertiary)" }}>—</span>
                   );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="empty-state" style={{ margin: "2rem 0" }}>
-                      <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>👥</div>
-                      <h3 className="empty-state__title">Kullanıcı bulunamadı</h3>
-                      <p>Seçili filtrelerle eşleşen kullanıcı bulunamadı. Filtreleri değiştirerek tekrar deneyin.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                },
+              },
+              {
+                key: 'role',
+                label: 'Rol',
+                render: (value) => (
+                  <span style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 'var(--space-1)', 
+                    padding: 'var(--space-1) var(--space-2)', 
+                    borderRadius: 'var(--radius-sm)', 
+                    background: 'rgba(99, 102, 241, 0.1)', 
+                    color: '#6366f1', 
+                    fontSize: 'var(--text-xs)', 
+                    fontWeight: 'var(--font-medium)' 
+                  }}>
+                    <Shield className="h-3 w-3" />
+                    {userRoleLabels[value as UserRole] ?? value}
+                  </span>
+                ),
+              },
+              {
+                key: 'is_active',
+                label: 'Durum',
+                render: (value) => (
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-1)',
+                    padding: 'var(--space-1) var(--space-2)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: value ? 'rgba(34, 197, 94, 0.1)' : 'rgba(220, 38, 38, 0.1)',
+                    color: value ? '#16a34a' : '#dc2626',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 'var(--font-medium)',
+                  }}>
+                    {value ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                    {value ? "Aktif" : "Pasif"}
+                  </span>
+                ),
+                align: 'center',
+              },
+              {
+                key: 'last_login_at',
+                label: 'Son Giriş',
+                render: (value) => value
+                  ? new Date(value).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })
+                  : <span style={{ color: 'var(--text-tertiary)' }}>—</span>,
+              },
+              {
+                key: 'created_at',
+                label: 'Oluşturulma',
+                render: (value) => new Date(value).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }),
+              },
+              {
+                key: 'actions',
+                label: t("common.actions"),
+                align: 'right',
+                render: (_, row) => (
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+                    <ModernButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(row)}
+                      leftIcon={<Edit className="h-4 w-4" />}
+                    >
+                      Düzenle
+                    </ModernButton>
+                  </div>
+                ),
+              },
+            ] as ModernTableColumn<User>[]}
+            data={filteredUsers}
+            loading={usersQuery.isLoading}
+            striped
+            hoverable
+            stickyHeader
+          />
+        ) : (
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Users className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--text-muted)' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
+              Kullanıcı bulunamadı
+            </h3>
+            <p style={{ margin: 0 }}>Seçili filtrelerle eşleşen kullanıcı bulunamadı. Filtreleri değiştirerek tekrar deneyin.</p>
+          </div>
+        )}
+      </ModernCard>
 
       {showEditModal && editingUser && (
         <Modal
@@ -360,11 +426,17 @@ export function AdminUsersPage() {
       )}
 
       {usersQuery.isError && (
-        <div className="panel">
-          <p className="field-error">Kullanıcı verileri alınamadı. Lütfen daha sonra tekrar deneyin.</p>
-        </div>
+        <ModernCard variant="glass" padding="lg">
+          <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
+            <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
+            <p style={{ color: "#dc2626", fontWeight: 600, marginBottom: "0.5rem", fontSize: 'var(--text-lg)' }}>
+              Kullanıcı verileri alınamadı
+            </p>
+            <p style={{ margin: 0 }}>Lütfen daha sonra tekrar deneyin.</p>
+          </div>
+        </ModernCard>
       )}
-    </section>
+    </div>
   );
 }
 

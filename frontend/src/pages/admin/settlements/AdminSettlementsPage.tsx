@@ -1,11 +1,15 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Search, Filter, FileText, Loader2, AlertCircle, CheckCircle2, XCircle, Clock, CreditCard } from "../../../lib/lucide";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
-import { SearchInput } from "../../../components/common/SearchInput";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernInput } from "../../../components/ui/ModernInput";
+import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 
 interface Settlement {
   id: string;
@@ -73,29 +77,57 @@ export function AdminSettlementsPage() {
     setSearchTerm(value);
   }, []);
 
-  return (
-    <section className="page">
-      <ToastContainer messages={messages} />
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">{t("nav.globalSettlements")}</h1>
-          <p className="page-subtitle">{t("common.allHotels" as any)} hakediş kayıtları ve detayları</p>
-        </div>
-      </div>
+  const formatCurrency = (minor: number) => {
+    return new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
+      minimumFractionDigits: 2,
+    }).format(minor / 100);
+  };
 
-      <div className="panel">
-        <div className="panel__header">
-          <div>
-            <h3 className="panel__title">Filtreler</h3>
+  return (
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
+      <ToastContainer messages={messages} />
+      
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)' }}
+      >
+        <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
+          {t("nav.globalSettlements")}
+        </h1>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+          {t("common.allHotels" as any)} hakediş kayıtları ve detayları
+        </p>
+      </motion.div>
+
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+            <Filter className="h-5 w-5" style={{ color: 'var(--text-tertiary)' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: 0 }}>
+              Filtreler
+            </h3>
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-          <label className="form-field">
-            <span className="form-field__label">{t("common.hotel")} Seç</span>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-4)" }}>
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+              {t("common.hotel")} Seç
+            </label>
             <select
               value={selectedTenantId}
               onChange={(e) => setSelectedTenantId(e.target.value)}
-              style={{ width: "100%" }}
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+              }}
             >
               <option value="">{t("common.allHotels" as any)}</option>
               {tenantsQuery.data?.map((tenant) => (
@@ -104,165 +136,186 @@ export function AdminSettlementsPage() {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="form-field">
-            <span className="form-field__label">Durum</span>
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+              Durum
+            </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ width: "100%" }}
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+              }}
             >
               <option value="">Tüm Durumlar</option>
               <option value="pending">Beklemede</option>
               <option value="settled">Ödendi</option>
               <option value="cancelled">İptal</option>
             </select>
-          </label>
-          <label className="form-field">
-            <span className="form-field__label">Başlangıç Tarihi</span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              style={{ width: "100%" }}
-            />
-          </label>
-          <label className="form-field">
-            <span className="form-field__label">Bitiş Tarihi</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              style={{ width: "100%" }}
-            />
-          </label>
+          </div>
+          <ModernInput
+            type="date"
+            label="Başlangıç Tarihi"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            leftIcon={<FileText className="h-4 w-4" />}
+            fullWidth
+          />
+          <ModernInput
+            type="date"
+            label="Bitiş Tarihi"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            leftIcon={<FileText className="h-4 w-4" />}
+            fullWidth
+          />
         </div>
-      </div>
+      </ModernCard>
 
-      <div className="panel">
-        <div className="panel__header">
+      <ModernCard variant="glass" padding="lg">
+        <div style={{ marginBottom: 'var(--space-4)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div>
-            <h3 className="panel__title">Hakediş Kayıtları</h3>
-            <p className="panel__subtitle">
+            <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+              Hakediş Kayıtları
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
               {filteredSettlements.length} / {settlementsQuery.data?.length ?? 0} kayıt gösteriliyor
             </p>
           </div>
-          <div style={{ minWidth: "250px" }}>
-            <SearchInput
+          <div style={{ minWidth: "250px", flex: '1', maxWidth: '400px' }}>
+            <ModernInput
               value={searchTerm}
-              onChange={handleSearchChange}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Otel adı, payment ID veya tutar ile ara..."
+              leftIcon={<Search className="h-4 w-4" />}
+              fullWidth
             />
           </div>
         </div>
-        <div className="data-table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Tarih</th>
-                <th>{t("common.hotel")}</th>
-                <th>Payment ID</th>
-                <th>Toplam Tutar</th>
-                <th>Otel Payı</th>
-                <th>Kyradi Komisyonu</th>
-                <th>Durum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {settlementsQuery.isLoading ? (
-                <tr>
-                  <td colSpan={7}>Veriler yükleniyor...</td>
-                </tr>
-              ) : filteredSettlements.length > 0 ? (
-                filteredSettlements.map((settlement) => {
-                  const tenant = tenantsById.get(settlement.tenant_id);
+        {settlementsQuery.isLoading ? (
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>Veriler yükleniyor...</p>
+          </div>
+        ) : filteredSettlements.length > 0 ? (
+          <ModernTable
+            columns={[
+              {
+                key: 'created_at',
+                label: 'Tarih',
+                render: (value) => new Date(value).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }),
+              },
+              {
+                key: 'tenant_id',
+                label: t("common.hotel"),
+                render: (_, row) => {
+                  const tenant = tenantsById.get(row.tenant_id);
                   return (
-                    <tr key={settlement.id}>
-                      <td>
-                        {new Date(settlement.created_at).toLocaleString("tr-TR", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })}
-                      </td>
-                      <td>
-                        <strong>{tenant?.name ?? `Bilinmeyen ${t("common.hotel")}`}</strong>
-                        <div className="table-cell-muted">#{settlement.tenant_id.slice(0, 8)}</div>
-                      </td>
-                      <td>
-                        <code style={{ fontSize: "0.875rem" }}>{settlement.payment_id.slice(0, 8)}</code>
-                      </td>
-                      <td>
-                        ₺ {(settlement.total_amount_minor / 100).toLocaleString("tr-TR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td>
-                        ₺ {(settlement.tenant_settlement_minor / 100).toLocaleString("tr-TR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td>
-                        ₺ {(settlement.kyradi_commission_minor / 100).toLocaleString("tr-TR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td>
-                        <span
-                          className="badge"
-                          style={{
-                            background:
-                              settlement.status === "settled"
-                                ? "rgba(16, 185, 129, 0.1)"
-                                : settlement.status === "pending"
-                                  ? "rgba(245, 158, 11, 0.1)"
-                                  : "rgba(239, 68, 68, 0.1)",
-                            color:
-                              settlement.status === "settled"
-                                ? "#10b981"
-                                : settlement.status === "pending"
-                                  ? "#f59e0b"
-                                  : "#ef4444",
-                          }}
-                        >
-                          {settlement.status === "settled"
-                            ? "Ödendi"
-                            : settlement.status === "pending"
-                              ? "Beklemede"
-                              : "İptal"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="empty-state" style={{ margin: "2rem 0" }}>
-                      <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>💰</div>
-                      <h3 className="empty-state__title">Hakediş kaydı bulunamadı</h3>
-                      <p>Seçili filtrelerle eşleşen hakediş kaydı bulunamadı. Filtreleri değiştirerek tekrar deneyin.</p>
+                    <div>
+                      <strong>{tenant?.name ?? `Bilinmeyen ${t("common.hotel")}`}</strong>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>
+                        #{row.tenant_id.slice(0, 8)}
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  );
+                },
+              },
+              {
+                key: 'payment_id',
+                label: 'Payment ID',
+                render: (value) => (
+                  <code style={{ fontSize: "var(--text-xs)", background: "var(--bg-tertiary)", padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)", fontFamily: 'monospace' }}>
+                    {value.slice(0, 8)}...
+                  </code>
+                ),
+              },
+              {
+                key: 'total_amount_minor',
+                label: 'Toplam Tutar',
+                render: (value) => <strong>{formatCurrency(value)}</strong>,
+                align: 'right',
+              },
+              {
+                key: 'tenant_settlement_minor',
+                label: 'Otel Payı',
+                render: (value) => <span style={{ color: "#1d4ed8", fontWeight: 'var(--font-semibold)' }}>{formatCurrency(value)}</span>,
+                align: 'right',
+              },
+              {
+                key: 'kyradi_commission_minor',
+                label: 'Kyradi Komisyonu',
+                render: (value) => <span style={{ color: "#dc2626", fontWeight: 'var(--font-semibold)' }}>{formatCurrency(value)}</span>,
+                align: 'right',
+              },
+              {
+                key: 'status',
+                label: 'Durum',
+                render: (value) => {
+                  const statusConfig = {
+                    settled: { icon: CheckCircle2, color: '#16a34a', bg: 'rgba(34, 197, 94, 0.1)' },
+                    cancelled: { icon: XCircle, color: '#dc2626', bg: 'rgba(220, 38, 38, 0.1)' },
+                    pending: { icon: Clock, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+                  };
+                  const config = statusConfig[value as keyof typeof statusConfig] || statusConfig.pending;
+                  const Icon = config.icon;
+                  return (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-1)',
+                        padding: 'var(--space-1) var(--space-2)',
+                        borderRadius: 'var(--radius-sm)',
+                        background: config.bg,
+                        color: config.color,
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 'var(--font-medium)',
+                      }}
+                    >
+                      <Icon className="h-3 w-3" />
+                      {value === "settled" ? "Ödendi" : value === "pending" ? "Beklemede" : "İptal"}
+                    </span>
+                  );
+                },
+                align: 'center',
+              },
+            ] as ModernTableColumn<Settlement>[]}
+            data={filteredSettlements}
+            loading={settlementsQuery.isLoading}
+            striped
+            hoverable
+            stickyHeader
+          />
+        ) : (
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <CreditCard className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--text-muted)' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
+              Hakediş kaydı bulunamadı
+            </h3>
+            <p style={{ margin: 0 }}>Seçili filtrelerle eşleşen hakediş kaydı bulunamadı. Filtreleri değiştirerek tekrar deneyin.</p>
+          </div>
+        )}
+      </ModernCard>
 
       {settlementsQuery.isError && (
-        <div className="panel">
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-            <h3 className="empty-state__title">Hakediş verileri alınamadı</h3>
-            <p className="field-error">Lütfen daha sonra tekrar deneyin veya filtreleri değiştirin.</p>
+        <ModernCard variant="glass" padding="lg">
+          <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
+            <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: '#dc2626' }}>
+              Hakediş verileri alınamadı
+            </h3>
+            <p style={{ margin: 0 }}>Lütfen daha sonra tekrar deneyin veya filtreleri değiştirin.</p>
           </div>
-        </div>
+        </ModernCard>
       )}
-    </section>
+    </div>
   );
 }
 

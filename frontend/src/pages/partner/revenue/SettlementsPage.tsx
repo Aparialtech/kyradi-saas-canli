@@ -1,12 +1,17 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Search, Filter, DollarSign, CreditCard, TrendingUp, FileText, Loader2, AlertCircle, CheckCircle2, XCircle, Clock } from "../../../lib/lucide";
 import { revenueService } from "../../../services/partner/revenue";
 import { locationService } from "../../../services/partner/locations";
 import { storageService } from "../../../services/partner/storages";
 import { ToastContainer } from "../../../components/common/ToastContainer";
-import { SearchInput } from "../../../components/common/SearchInput";
 import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernButton } from "../../../components/ui/ModernButton";
+import { ModernInput } from "../../../components/ui/ModernInput";
+import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 
 export function SettlementsPage() {
   const { t } = useTranslation();
@@ -77,273 +82,335 @@ export function SettlementsPage() {
   };
 
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">{t("nav.settlements")}</h1>
-          <p className="page-subtitle">
-            Tüm hakediş kayıtlarını görüntüleyin ve filtreleyin.
-          </p>
-        </div>
-      </div>
+      
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)' }}
+      >
+        <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
+          {t("nav.settlements")}
+        </h1>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+          Tüm hakediş kayıtlarını görüntüleyin ve filtreleyin.
+        </p>
+      </motion.div>
 
       {/* Summary Cards */}
       {!settlementsQuery.isLoading && !settlementsQuery.isError && settlements.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1rem",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <div className="panel" style={{ padding: "1.25rem" }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginBottom: "0.25rem" }}>
-              Toplam Gelir
-            </div>
-            <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--color-text)" }}>
-              {formatCurrency(totals.income)}
-            </div>
-            <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>
-              {totals.count} işlem
-            </div>
-          </div>
-          <div className="panel" style={{ padding: "1.25rem" }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginBottom: "0.25rem" }}>
-              Otel Hakedişi
-            </div>
-            <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#1d4ed8" }}>
-              {formatCurrency(totals.payout)}
-            </div>
-            <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>
-              Net ödeme tutarı
-            </div>
-          </div>
-          <div className="panel" style={{ padding: "1.25rem" }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginBottom: "0.25rem" }}>
-              Komisyon
-            </div>
-            <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#dc2626" }}>
-              {formatCurrency(totals.commission)}
-            </div>
-            <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>
-              Platform komisyonu
-            </div>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <ModernCard variant="glass" padding="lg" hoverable>
+              <div style={{ padding: 'var(--space-4)', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", fontWeight: 'var(--font-medium)', margin: 0 }}>
+                    Toplam Gelir
+                  </p>
+                  <DollarSign className="h-5 w-5" style={{ color: '#16a34a' }} />
+                </div>
+                <div style={{ fontSize: "var(--text-2xl)", fontWeight: 700, color: "#16a34a", marginBottom: 'var(--space-1)' }}>
+                  {formatCurrency(totals.income)}
+                </div>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", margin: 0 }}>
+                  {totals.count} işlem
+                </div>
+              </div>
+            </ModernCard>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <ModernCard variant="glass" padding="lg" hoverable>
+              <div style={{ padding: 'var(--space-4)', background: 'linear-gradient(135deg, rgba(29, 78, 216, 0.1) 0%, rgba(29, 78, 216, 0.05) 100%)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(29, 78, 216, 0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", fontWeight: 'var(--font-medium)', margin: 0 }}>
+                    Otel Hakedişi
+                  </p>
+                  <CreditCard className="h-5 w-5" style={{ color: '#1d4ed8' }} />
+                </div>
+                <div style={{ fontSize: "var(--text-2xl)", fontWeight: 700, color: "#1d4ed8", marginBottom: 'var(--space-1)' }}>
+                  {formatCurrency(totals.payout)}
+                </div>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", margin: 0 }}>
+                  Net ödeme tutarı
+                </div>
+              </div>
+            </ModernCard>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <ModernCard variant="glass" padding="lg" hoverable>
+              <div style={{ padding: 'var(--space-4)', background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(220, 38, 38, 0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", fontWeight: 'var(--font-medium)', margin: 0 }}>
+                    Komisyon
+                  </p>
+                  <TrendingUp className="h-5 w-5" style={{ color: '#dc2626' }} />
+                </div>
+                <div style={{ fontSize: "var(--text-2xl)", fontWeight: 700, color: "#dc2626", marginBottom: 'var(--space-1)' }}>
+                  {formatCurrency(totals.commission)}
+                </div>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", margin: 0 }}>
+                  Platform komisyonu
+                </div>
+              </div>
+            </ModernCard>
+          </motion.div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="panel">
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "1rem",
-            padding: "1rem",
-          }}
-        >
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+            <Filter className="h-5 w-5" style={{ color: 'var(--text-tertiary)' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: 0 }}>
+              Filtreler
+            </h3>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-4)" }}>
           <div style={{ minWidth: "250px" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
-              Ara
-            </label>
-            <SearchInput
+            <ModernInput
               value={searchTerm}
-              onChange={handleSearchChange}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="ID veya tutar ile ara..."
+              leftIcon={<Search className="h-4 w-4" />}
+              fullWidth
             />
           </div>
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
               {t("common.status")}
-          </label>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.65rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5f5",
-            }}
-          >
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+              }}
+            >
               <option value="">{t("common.all")}</option>
-            <option value="pending">Beklemede</option>
-            <option value="settled">Hesaplaştı</option>
-            <option value="cancelled">İptal</option>
-          </select>
-        </div>
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
+              <option value="pending">Beklemede</option>
+              <option value="settled">Hesaplaştı</option>
+              <option value="cancelled">İptal</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
               Lokasyon
-          </label>
-          <select
-            value={locationId}
-            onChange={(e) => {
-              setLocationId(e.target.value);
-              setStorageId(""); // Reset storage when location changes
-            }}
-            style={{
-              width: "100%",
-              padding: "0.65rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5f5",
-            }}
-          >
-            <option value="">Tümü</option>
-            {locationsQuery.data?.map((loc) => (
-              <option key={loc.id} value={loc.id}>
-                {loc.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
+            </label>
+            <select
+              value={locationId}
+              onChange={(e) => {
+                setLocationId(e.target.value);
+                setStorageId("");
+              }}
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+              }}
+            >
+              <option value="">Tümü</option>
+              {locationsQuery.data?.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
               Depo
-          </label>
-          <select
-            value={storageId}
-            onChange={(e) => setStorageId(e.target.value)}
-            disabled={!locationId}
-            style={{
-              width: "100%",
-              padding: "0.65rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5f5",
-              opacity: locationId ? 1 : 0.6,
-            }}
-          >
-            <option value="">Tümü</option>
-            {filteredStorages.map((storage) => (
-              <option key={storage.id} value={storage.id}>
-                {storage.code}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
-              {t("common.from")}
-          </label>
-          <input
+            </label>
+            <select
+              value={storageId}
+              onChange={(e) => setStorageId(e.target.value)}
+              disabled={!locationId}
+              style={{
+                width: "100%",
+                padding: "var(--space-3)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+                opacity: locationId ? 1 : 0.6,
+                cursor: locationId ? "pointer" : "not-allowed",
+              }}
+            >
+              <option value="">Tümü</option>
+              {filteredStorages.map((storage) => (
+                <option key={storage.id} value={storage.id}>
+                  {storage.code}
+                </option>
+              ))}
+            </select>
+          </div>
+          <ModernInput
             type="date"
+            label={t("common.from")}
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.65rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5f5",
-            }}
+            leftIcon={<FileText className="h-4 w-4" />}
+            fullWidth
           />
-        </div>
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.85rem" }}>
-              {t("common.to")}
-          </label>
-          <input
+          <ModernInput
             type="date"
+            label={t("common.to")}
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.65rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5f5",
-            }}
+            leftIcon={<FileText className="h-4 w-4" />}
+            fullWidth
           />
-          </div>
         </div>
-      </div>
+      </ModernCard>
 
       {/* Settlements table */}
       {settlementsQuery.isLoading ? (
-        <div className="panel">
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-            <h3 className="empty-state__title">{t("common.loading")}</h3>
-            <p>Hakediş verileri yükleniyor...</p>
+        <ModernCard variant="glass" padding="lg">
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>{t("common.loading")}</h3>
+            <p style={{ margin: 0 }}>Hakediş verileri yükleniyor...</p>
           </div>
-        </div>
+        </ModernCard>
       ) : settlementsQuery.isError ? (
-        <div className="panel">
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-            <h3 className="empty-state__title">{t("common.error")}</h3>
-            <p style={{ color: "#dc2626" }}>Hakedişler yüklenemedi. Lütfen sayfayı yenileyin.</p>
-            <button
-              type="button"
-              className="btn btn--primary"
+        <ModernCard variant="glass" padding="lg">
+          <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
+            <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: '#dc2626' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: '#dc2626' }}>{t("common.error")}</h3>
+            <p style={{ color: "#dc2626", marginBottom: 'var(--space-4)' }}>Hakedişler yüklenemedi. Lütfen sayfayı yenileyin.</p>
+            <ModernButton
+              variant="primary"
               onClick={() => settlementsQuery.refetch()}
-              style={{ marginTop: "1rem" }}
             >
               Tekrar Dene
-            </button>
+            </ModernButton>
           </div>
-        </div>
+        </ModernCard>
       ) : settlements.length > 0 ? (
-        <div className="panel">
-          <div className="panel__header">
-            <h2 className="panel__title">Hakediş Kayıtları</h2>
-            <p className="panel__subtitle">{totals.count} kayıt bulundu</p>
+        <ModernCard variant="glass" padding="lg">
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+              Hakediş Kayıtları
+            </h2>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              {totals.count} kayıt bulundu
+            </p>
           </div>
-          <div className="data-table-wrapper">
-            <table className="data-table">
-            <thead>
-                <tr>
-                  <th>Tarih</th>
-                  <th>Payment ID</th>
-                  <th>Toplam Tutar</th>
-                  <th>Otel Hakedişi</th>
-                  <th>Komisyon</th>
-                  <th>Oran</th>
-                  <th>Durum</th>
-              </tr>
-            </thead>
-            <tbody>
-                {settlements.map((settlement) => (
-                  <tr key={settlement.id}>
-                    <td>{formatDate(settlement.settled_at || settlement.created_at)}</td>
-                    <td>
-                      <code style={{ fontSize: "0.75rem", background: "var(--color-surface)", padding: "0.15rem 0.35rem", borderRadius: "3px" }}>
-                        {settlement.payment_id.slice(0, 8)}...
-                      </code>
-                  </td>
-                    <td><strong>{formatCurrency(settlement.total_amount_minor)}</strong></td>
-                    <td style={{ color: "#1d4ed8" }}>{formatCurrency(settlement.tenant_settlement_minor)}</td>
-                    <td style={{ color: "#dc2626" }}>{formatCurrency(settlement.kyradi_commission_minor)}</td>
-                    <td>%{settlement.commission_rate}</td>
-                    <td>
+          <ModernTable
+            columns={[
+              {
+                key: 'date',
+                label: 'Tarih',
+                render: (_, row) => formatDate(row.settled_at || row.created_at),
+              },
+              {
+                key: 'payment_id',
+                label: 'Payment ID',
+                render: (_, row) => (
+                  <code style={{ fontSize: "var(--text-xs)", background: "var(--bg-tertiary)", padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)", fontFamily: 'monospace' }}>
+                    {row.payment_id.slice(0, 8)}...
+                  </code>
+                ),
+              },
+              {
+                key: 'total_amount_minor',
+                label: 'Toplam Tutar',
+                render: (value) => <strong>{formatCurrency(value)}</strong>,
+                align: 'right',
+              },
+              {
+                key: 'tenant_settlement_minor',
+                label: 'Otel Hakedişi',
+                render: (value) => <span style={{ color: "#1d4ed8", fontWeight: 'var(--font-semibold)' }}>{formatCurrency(value)}</span>,
+                align: 'right',
+              },
+              {
+                key: 'kyradi_commission_minor',
+                label: 'Komisyon',
+                render: (value) => <span style={{ color: "#dc2626", fontWeight: 'var(--font-semibold)' }}>{formatCurrency(value)}</span>,
+                align: 'right',
+              },
+              {
+                key: 'commission_rate',
+                label: 'Oran',
+                render: (value) => `%${value}`,
+                align: 'center',
+              },
+              {
+                key: 'status',
+                label: 'Durum',
+                render: (value) => {
+                  const statusConfig = {
+                    settled: { icon: CheckCircle2, color: '#16a34a', bg: 'rgba(34, 197, 94, 0.1)' },
+                    cancelled: { icon: XCircle, color: '#dc2626', bg: 'rgba(220, 38, 38, 0.1)' },
+                    pending: { icon: Clock, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+                  };
+                  const config = statusConfig[value as keyof typeof statusConfig] || statusConfig.pending;
+                  const Icon = config.icon;
+                  return (
                     <span
-                        className={`badge ${
-                          settlement.status === "settled" 
-                            ? "badge--success" 
-                            : settlement.status === "cancelled" 
-                              ? "badge--danger" 
-                              : "badge--warning"
-                        }`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-1)',
+                        padding: 'var(--space-1) var(--space-2)',
+                        borderRadius: 'var(--radius-sm)',
+                        background: config.bg,
+                        color: config.color,
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 'var(--font-medium)',
+                      }}
                     >
-                      {statusLabels[settlement.status] || settlement.status}
+                      <Icon className="h-3 w-3" />
+                      {statusLabels[value] || value}
                     </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        </div>
+                  );
+                },
+                align: 'center',
+              },
+            ] as ModernTableColumn<typeof settlements[0]>[]}
+            data={settlements}
+            loading={settlementsQuery.isLoading}
+            striped
+            hoverable
+            stickyHeader
+          />
+        </ModernCard>
       ) : (
-        <div className="panel">
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>💼</div>
-            <h3 className="empty-state__title">{t("common.noData")}</h3>
-            <p>Henüz hakediş kaydı bulunmuyor veya seçili filtrelerde sonuç yok.</p>
+        <ModernCard variant="glass" padding="lg">
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <FileText className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--text-muted)' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>{t("common.noData")}</h3>
+            <p style={{ margin: 0 }}>Henüz hakediş kaydı bulunmuyor veya seçili filtrelerde sonuç yok.</p>
           </div>
-        </div>
+        </ModernCard>
       )}
-    </section>
+    </div>
   );
 }
 
