@@ -520,7 +520,15 @@ export function PricingPage() {
             </button>
           </div>
 
-          <form onSubmit={submit}>
+          <form 
+            id="pricing-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              submit(e);
+            }}
+            noValidate
+          >
             {/* Scope Selection Section */}
             <div style={{ marginBottom: "2rem" }}>
               <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem", color: "#0f172a" }}>
@@ -835,48 +843,63 @@ export function PricingPage() {
               </div>
             </div>
 
-            {/* Form Actions */}
-            <div
-              style={{
-                display: "flex",
-                gap: "0.75rem",
-                justifyContent: "flex-end",
-                paddingTop: "1.5rem",
-                borderTop: "1px solid #e2e8f0",
+          </form>
+          
+          {/* Form Actions - Outside form to prevent submit issues */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.75rem",
+              justifyContent: "flex-end",
+              paddingTop: "1.5rem",
+              borderTop: "1px solid #e2e8f0",
+              marginTop: "1.5rem",
+            }}
+          >
+            <button 
+              type="button" 
+              className="btn btn--primary" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("[PricingPage] Submit button clicked", { editingRule: editingRule?.id });
+                // Trigger form submit using handleSubmit
+                submit();
+              }}
+              disabled={createMutation.isPending || updateMutation.isPending}
+              style={{ 
+                cursor: createMutation.isPending || updateMutation.isPending ? "not-allowed" : "pointer", 
+                pointerEvents: "auto",
+                zIndex: 10,
+                position: "relative"
               }}
             >
-              <button 
-                type="button" 
-                className="btn btn--outline" 
-                onClick={(e) => {
-                  console.log("[PricingPage] Cancel button clicked");
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleCancel(e);
-                }}
-                disabled={createMutation.isPending || updateMutation.isPending}
-                style={{ cursor: createMutation.isPending || updateMutation.isPending ? "not-allowed" : "pointer", pointerEvents: "auto" }}
-              >
-                {t("common.cancel")}
-              </button>
-              <button 
-                type="submit" 
-                className="btn btn--primary" 
-                disabled={createMutation.isPending || updateMutation.isPending}
-                onClick={(e) => {
-                  console.log("[PricingPage] Submit button clicked", { editingRule: editingRule?.id });
-                  e.stopPropagation();
-                }}
-                style={{ cursor: createMutation.isPending || updateMutation.isPending ? "not-allowed" : "pointer", pointerEvents: "auto" }}
-              >
-                {createMutation.isPending || updateMutation.isPending
-                  ? t("common.saving")
-                  : editingRule
-                    ? t("common.update")
-                    : t("common.save")}
-              </button>
-            </div>
-          </form>
+              {createMutation.isPending || updateMutation.isPending
+                ? t("common.saving")
+                : editingRule
+                  ? t("common.update")
+                  : t("common.save")}
+            </button>
+            <button 
+              type="button" 
+              className="btn btn--outline" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("[PricingPage] Cancel button clicked");
+                handleCancel(e);
+              }}
+              disabled={createMutation.isPending || updateMutation.isPending}
+              style={{ 
+                cursor: createMutation.isPending || updateMutation.isPending ? "not-allowed" : "pointer", 
+                pointerEvents: "auto",
+                zIndex: 10,
+                position: "relative"
+              }}
+            >
+              {t("common.cancel")}
+            </button>
+          </div>
         </div>
       )}
     </section>
