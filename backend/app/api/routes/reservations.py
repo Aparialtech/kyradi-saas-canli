@@ -360,11 +360,18 @@ async def complete_reservation(
         logger.info(f"Reservation {reservation_id} already completed, returning success")
         return ReservationStatusResponse(id=reservation.id, status=ReservationStatus.COMPLETED)
     
-    if reservation.status != ReservationStatus.ACTIVE.value:
+    # Allow completing RESERVED or ACTIVE reservations
+    allowed_statuses = [ReservationStatus.RESERVED.value, ReservationStatus.ACTIVE.value]
+    if reservation.status not in allowed_statuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot complete reservation with status '{reservation.status}'. Only active reservations can be completed."
+            detail=f"Cannot complete reservation with status '{reservation.status}'. Only reserved or active reservations can be completed."
         )
+    
+    # If status is RESERVED, automatically transition to ACTIVE first
+    if reservation.status == ReservationStatus.RESERVED.value:
+        reservation.status = ReservationStatus.ACTIVE.value
+        logger.info(f"Reservation {reservation_id} auto-transitioned from RESERVED to ACTIVE before completion")
 
     reservation.status = ReservationStatus.COMPLETED.value
     reservation.returned_by = current_user.email

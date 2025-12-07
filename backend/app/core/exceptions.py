@@ -60,11 +60,21 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     IMPORTANT: Always returns JSONResponse with CORS headers to ensure
     frontend can read error messages even when backend errors occur.
     """
+    from app.core.config import settings
+    
     # Extract tenant_id from headers if available
     tenant_id = request.headers.get("X-Tenant-ID", "unknown")
     
     # Get origin from request headers for CORS
     origin = request.headers.get("origin")
+    
+    # Build CORS headers
+    cors_headers: dict[str, str] = {}
+    if origin and origin in settings.cors_origins:
+        cors_headers["Access-Control-Allow-Origin"] = origin
+        cors_headers["Access-Control-Allow-Credentials"] = "true"
+        cors_headers["Access-Control-Allow-Methods"] = "*"
+        cors_headers["Access-Control-Allow-Headers"] = "*"
     
     # Handle custom exceptions
     if isinstance(exc, KyradiException):
@@ -80,6 +90,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
                 "detail": exc.message,
                 "errors": exc.detail,
             },
+            headers=cors_headers,
         )
     
     # Handle WidgetTokenError from common.security
@@ -94,6 +105,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": str(exc)},
+            headers=cors_headers,
         )
     
     # Handle FastAPI/Starlette exceptions
@@ -110,6 +122,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
+            headers=cors_headers,
         )
     
     # Handle Pydantic validation errors
@@ -127,6 +140,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
                 "detail": "Geçersiz istek verisi",
                 "errors": errors,
             },
+            headers=cors_headers,
         )
     
     # Handle SQLAlchemy IntegrityError (unique constraint violations, etc.)
@@ -143,10 +157,12 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             return JSONResponse(
                 status_code=status.HTTP_409_CONFLICT,
                 content={"detail": "Bu kayıt zaten mevcut."},
+                headers=cors_headers,
             )
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": "Veritabanı kısıtlaması hatası."},
+            headers=cors_headers,
         )
     
     # Handle other SQLAlchemy errors
@@ -161,6 +177,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Veritabanı hatası. Lütfen daha sonra tekrar deneyin."},
+            headers=cors_headers,
         )
     
     # Log unexpected exceptions with full traceback (only once)
@@ -180,5 +197,6 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         content={
             "detail": "Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
         },
+        headers=cors_headers,
     )
 
