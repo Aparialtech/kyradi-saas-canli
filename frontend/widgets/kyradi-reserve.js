@@ -551,9 +551,10 @@
     
     async setupContractModals() {
       // Fetch legal texts from backend
-      let legalTexts = { kvkk_text: '', aydinlatma_text: '' };
+      let legalTexts = { kvkk_text: '', aydinlatma_text: '', terms_text: '' };
       try {
-        const response = await fetch('/api/public/legal-texts');
+        const legalTextsUrl = new URL('/public/legal-texts', this.options.apiBase);
+        const response = await fetch(legalTextsUrl.toString());
         if (response.ok) {
           legalTexts = await response.json();
         }
@@ -573,7 +574,7 @@
       
       const contractTexts = {
         kvkk: legalTexts.kvkk_text || this.kvkkText || 'KVKK metni yüklenemedi.',
-        terms: 'Depo kullanım şartları ve koşulları burada yer almaktadır. Lütfen dikkatle okuyunuz.',
+        terms: legalTexts.terms_text || 'Depo kullanım şartları ve koşulları burada yer almaktadır. Lütfen dikkatle okuyunuz.',
         disclosure: legalTexts.aydinlatma_text || 'Aydınlatma metni burada yer almaktadır. Lütfen dikkatle okuyunuz.'
       };
       
