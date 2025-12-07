@@ -104,7 +104,7 @@ async def list_available_storages(
 @router.get("", response_model=List[StorageRead])
 async def list_storages(
     status_filter: Optional[str] = Query(default=None, alias="status"),
-    current_user: User = Depends(require_storage_operator),
+    current_user: User = Depends(require_tenant_operator),
     session: AsyncSession = Depends(get_session),
 ) -> List[StorageRead]:
     """List storage units for the tenant."""
