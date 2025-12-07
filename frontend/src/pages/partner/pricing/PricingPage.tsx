@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Package, MapPin, DollarSign } from "../../../lib/lucide";
@@ -140,6 +140,7 @@ export function PricingPage() {
   }, [pricingQuery.data, scopeFilter, searchQuery]);
 
   const submit = handleSubmit(async (values) => {
+    console.log("[PricingPage] Form submit called", { editingRule: editingRule?.id, values });
     // Clean up payload based on scope
     const payload: PricingRuleCreate = {
       ...values,
@@ -230,13 +231,16 @@ export function PricingPage() {
     });
   };
 
-  const handleCancel = (e?: React.MouseEvent<HTMLButtonElement>) => {
-    e?.preventDefault();
-    e?.stopPropagation();
+  const handleCancel = useCallback((e?: React.MouseEvent<HTMLButtonElement>) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    console.log("[PricingPage] handleCancel called");
     setShowForm(false);
     setEditingRule(null);
     reset();
-  };
+  }, [reset]);
 
   // Handle scope change - clear location/storage if not needed
   const handleScopeChange = (newScope: PricingScope) => {
@@ -505,10 +509,12 @@ export function PricingPage() {
               type="button" 
               className="btn btn--outline" 
               onClick={(e) => {
+                console.log("[PricingPage] Close button clicked");
                 e.preventDefault();
                 e.stopPropagation();
                 handleCancel(e);
               }}
+              style={{ cursor: "pointer", pointerEvents: "auto" }}
             >
               ✕ {t("common.close")}
             </button>
@@ -843,11 +849,13 @@ export function PricingPage() {
                 type="button" 
                 className="btn btn--outline" 
                 onClick={(e) => {
+                  console.log("[PricingPage] Cancel button clicked");
                   e.preventDefault();
                   e.stopPropagation();
                   handleCancel(e);
                 }}
                 disabled={createMutation.isPending || updateMutation.isPending}
+                style={{ cursor: createMutation.isPending || updateMutation.isPending ? "not-allowed" : "pointer", pointerEvents: "auto" }}
               >
                 {t("common.cancel")}
               </button>
@@ -855,6 +863,11 @@ export function PricingPage() {
                 type="submit" 
                 className="btn btn--primary" 
                 disabled={createMutation.isPending || updateMutation.isPending}
+                onClick={(e) => {
+                  console.log("[PricingPage] Submit button clicked", { editingRule: editingRule?.id });
+                  e.stopPropagation();
+                }}
+                style={{ cursor: createMutation.isPending || updateMutation.isPending ? "not-allowed" : "pointer", pointerEvents: "auto" }}
               >
                 {createMutation.isPending || updateMutation.isPending
                   ? t("common.saving")
