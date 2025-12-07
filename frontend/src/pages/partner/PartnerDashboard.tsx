@@ -92,6 +92,20 @@ export function PartnerOverview() {
     queryFn: () => partnerReportService.summary(),
   });
 
+  // Chart data queries
+  const trendQuery = useQuery({
+    queryKey: ["partner", "trends"],
+    queryFn: () =>
+      partnerReportService.getTrends({
+        granularity: "daily",
+      }),
+  });
+
+  const storageUsageQuery = useQuery({
+    queryKey: ["partner", "storage-usage"],
+    queryFn: () => partnerReportService.getStorageUsage(),
+  });
+
   useEffect(() => {
     if (summaryQuery.error) {
       push({
@@ -120,6 +134,30 @@ export function PartnerOverview() {
       }),
     [locale],
   );
+
+  // Chart data transformations
+  const trendData = useMemo(() => {
+    if (!trendQuery.data) return [];
+    return trendQuery.data.map((point) => {
+      const dateLabel = new Date(point.date).toLocaleDateString(locale, {
+        day: "2-digit",
+        month: "short",
+      });
+      return {
+        date: dateLabel,
+        reservations: point.reservations ?? 0,
+        revenue: Math.round((point.revenue_minor ?? 0) / 100),
+      };
+    });
+  }, [trendQuery.data, locale]);
+
+  const occupancyData = useMemo(() => {
+    if (!storageUsageQuery.data) return [];
+    return storageUsageQuery.data.map((item) => ({
+      label: `${item.location_name} / ${item.storage_code}`,
+      occupancy_rate: item.occupancy_rate ?? 0,
+    }));
+  }, [storageUsageQuery.data]);
 
   const statItems = useMemo(() => {
     const totalLimit =
@@ -369,7 +407,11 @@ export function PartnerOverview() {
             Rezervasyon Trendi
           </h3>
           <div style={{ height: '300px' }}>
-            <ReservationTrendChart />
+            {trendQuery.isLoading ? (
+              <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
+            ) : (
+              <ReservationTrendChart data={trendData} />
+            )}
           </div>
         </ModernCard>
 
@@ -387,7 +429,11 @@ export function PartnerOverview() {
             Depo Doluluk Oranları
           </h3>
           <div style={{ height: '300px' }}>
-            <OccupancyBarChart />
+            {storageUsageQuery.isLoading ? (
+              <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
+            ) : (
+              <OccupancyBarChart data={occupancyData} />
+            )}
           </div>
         </ModernCard>
       </motion.div>

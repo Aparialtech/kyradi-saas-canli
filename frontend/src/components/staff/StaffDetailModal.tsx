@@ -165,10 +165,24 @@ export function StaffDetailModal({
                     </div>
                     {storage.status && (
                       <span
-                        className={`badge badge--${storage.status === "idle" ? "success" : storage.status === "occupied" ? "warning" : "danger"}`}
+                        className={`badge badge--${
+                          storage.status === "idle" 
+                            ? "success" // Yeşil - Boş
+                            : storage.status === "occupied" 
+                            ? "danger" // Kırmızı - Dolu
+                            : storage.status === "reserved"
+                            ? "warning" // Kahverengi - Rezervasyon
+                            : "danger" // Arızalı
+                        }`}
                         style={{ fontSize: "0.65rem", marginLeft: "auto" }}
                       >
-                        {storage.status === "idle" ? t("storages.status.idle") : storage.status === "occupied" ? t("storages.status.occupied") : t("storages.status.faulty")}
+                        {storage.status === "idle" 
+                          ? t("storages.status.idle") 
+                          : storage.status === "occupied" 
+                          ? t("storages.status.occupied") 
+                          : storage.status === "reserved"
+                          ? t("storages.status.reserved")
+                          : t("storages.status.faulty")}
                       </span>
                     )}
                   </div>

@@ -47,15 +47,15 @@ const variantMap: Record<string, StatusVariant> = {
   captured: "success",
   authorized: "info",
   pending: "warning",
-  reserved: "warning",
+  reserved: "warning", // Kahverengi - Rezervasyon
   active: "primary",
   completed: "success",
   cancelled: "muted",
   failed: "danger",
   refunded: "muted",
   no_show: "muted",
-  idle: "muted",
-  occupied: "primary",
+  idle: "success", // Yeşil - Boş
+  occupied: "danger", // Kırmızı - Dolu
   out_of_service: "danger",
   inactive: "muted",
 };

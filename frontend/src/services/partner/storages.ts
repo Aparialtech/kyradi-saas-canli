@@ -1,6 +1,6 @@
 import { http } from "../../lib/http";
 
-export type StorageStatus = "idle" | "occupied" | "faulty";
+export type StorageStatus = "idle" | "occupied" | "reserved" | "faulty";
 
 export interface Storage {
   id: string;

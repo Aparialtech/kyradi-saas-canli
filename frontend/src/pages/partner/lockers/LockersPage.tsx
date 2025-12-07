@@ -16,9 +16,11 @@ import { ModernButton } from "../../../components/ui/ModernButton";
 import { HardDrive, Calendar, Edit, Trash2 } from "../../../lib/lucide";
 
 // Status badge classes - labels are fetched via i18n inside component
+// Colors: dolu=kırmızı, boş=yeşil, rezervasyon=kahverengi
 const statusBadgeClass: Record<StorageStatus, string> = {
-  idle: "badge badge--success",
-  occupied: "badge badge--warning",
+  idle: "badge badge--success", // Yeşil - Boş
+  occupied: "badge badge--danger", // Kırmızı - Dolu
+  reserved: "badge badge--warning", // Kahverengi - Rezervasyon
   faulty: "badge badge--danger",
 };
 
@@ -215,6 +217,7 @@ export function LockersPage() {
             <select {...register("status")}>
               <option value="idle">{t("storages.status.idle")}</option>
               <option value="occupied">{t("storages.status.occupied")}</option>
+              <option value="reserved">{t("storages.status.reserved")}</option>
               <option value="faulty">{t("storages.status.faulty")}</option>
             </select>
           </label>
@@ -288,6 +291,7 @@ export function LockersPage() {
                 <option value="">{t("storages.filter.allStatuses")}</option>
                 <option value="idle">{t("storages.status.idle")}</option>
                 <option value="occupied">{t("storages.status.occupied")}</option>
+                <option value="reserved">{t("storages.status.reserved")}</option>
                 <option value="faulty">{t("storages.status.faulty")}</option>
               </select>
             </label>
