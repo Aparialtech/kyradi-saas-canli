@@ -60,11 +60,18 @@ export function StaffPage() {
       return response.data;
     },
     retry: (failureCount, error: any) => {
-      // Don't retry on 404 errors to prevent infinite retry loops
+      // Don't retry on 404, 401, 403, or network errors
       if (error?.response?.status === 404) return false;
-      // Retry up to 3 times for other errors
-      return failureCount < 3;
+      if (error?.response?.status === 401) return false;
+      if (error?.response?.status === 403) return false;
+      if (error?.isNetworkError) return false;
+      // Retry up to 2 times for other errors (reduced from 3)
+      return failureCount < 2;
     },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Exponential backoff
+    staleTime: 60000, // 1 minute
+    gcTime: 300000, // 5 minutes (formerly cacheTime)
+    enabled: true, // Always enabled, but retry logic prevents infinite loops
   });
 
   const storagesQuery = useQuery({

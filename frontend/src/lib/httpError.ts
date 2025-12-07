@@ -92,6 +92,10 @@ const errorTranslations: Record<string, string> = {
   // Reservation errors
   "Reservation not found": "Rezervasyon bulunamadı.",
   "Reservation already cancelled": "Bu rezervasyon zaten iptal edilmiş.",
+  "Cannot complete reservation": "Rezervasyon tamamlanamıyor.",
+  "Only active reservations can be completed": "Sadece aktif rezervasyonlar tamamlanabilir.",
+  "Only reserved or active reservations can be completed": "Sadece rezerve edilmiş veya aktif rezervasyonlar tamamlanabilir.",
+  "Cannot complete reservation with status": "Bu durumdaki rezervasyon tamamlanamaz.",
   
   // Generic
   "Something went wrong": "Bir şeyler yanlış gitti. Lütfen tekrar deneyin.",
