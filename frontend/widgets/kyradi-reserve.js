@@ -383,19 +383,19 @@
             </fieldset>
             
             <!-- Contract Modal -->
-            <div class="kyradi-reserve__modal" id="contract-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; overflow-y: auto; padding: 20px;">
-              <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-                <h3 style="margin: 0 0 16px 0; font-size: 1.25rem; font-weight: 600;" id="contract-modal-title">Sözleşme</h3>
-                <div style="max-height: 400px; overflow-y: auto; padding: 16px; background: #f8f9fa; border-radius: 8px; margin-bottom: 16px; line-height: 1.6; font-size: 0.9rem; white-space: pre-wrap;" id="contract-modal-content"></div>
-                <div style="margin-bottom: 16px;">
-                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="contract-modal-accept" />
+            <div class="kyradi-reserve__modal" id="contract-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
+              <div style="max-width: 700px; width: 100%; margin: 20px auto; background: white; border-radius: 16px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); position: relative;">
+                <h3 style="margin: 0 0 24px 0; font-size: 1.5rem; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px;" id="contract-modal-title">Sözleşme</h3>
+                <div style="max-height: 500px; overflow-y: auto; padding: 20px; background: #f8fafc; border-radius: 12px; margin-bottom: 24px; line-height: 1.8; font-size: 0.95rem; white-space: pre-wrap; color: #334155; border: 1px solid #e2e8f0;" id="contract-modal-content"></div>
+                <div style="margin-bottom: 24px; padding: 16px; background: #f1f5f9; border-radius: 10px; border: 1px solid #e2e8f0;">
+                  <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 500; color: #475569;">
+                    <input type="checkbox" id="contract-modal-accept" style="width: 18px; height: 18px; cursor: pointer; accent-color: #00a389;" />
                     <span>Okudum, kabul ediyorum</span>
                   </label>
                 </div>
-                <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                  <button type="button" class="kyradi-reserve__button" id="contract-modal-close" style="background: #6b7280; padding: 10px 20px; border: none; border-radius: 8px; color: white; cursor: pointer;">Kapat</button>
-                  <button type="button" class="kyradi-reserve__button" id="contract-modal-confirm" style="background: #00a389; padding: 10px 20px; border: none; border-radius: 8px; color: white; cursor: pointer; opacity: 0.5;" disabled>Kabul Ediyorum</button>
+                <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                  <button type="button" class="kyradi-reserve__button" id="contract-modal-close" style="background: #64748b; padding: 12px 24px; border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s;">Kapat</button>
+                  <button type="button" class="kyradi-reserve__button" id="contract-modal-confirm" style="background: #00a389; padding: 12px 24px; border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.95rem; opacity: 0.5; transition: all 0.2s;" disabled>Kabul Ediyorum</button>
                 </div>
               </div>
             </div>
@@ -593,6 +593,7 @@
           modalAccept.checked = false;
           modalConfirm.disabled = true;
           modalConfirm.style.opacity = '0.5';
+          modalConfirm.style.cursor = 'not-allowed';
           modal.style.display = 'flex';
         });
       });
@@ -600,6 +601,7 @@
       modalAccept.addEventListener('change', () => {
         modalConfirm.disabled = !modalAccept.checked;
         modalConfirm.style.opacity = modalAccept.checked ? '1' : '0.5';
+        modalConfirm.style.cursor = modalAccept.checked ? 'pointer' : 'not-allowed';
       });
       
       modalClose.addEventListener('click', () => {
