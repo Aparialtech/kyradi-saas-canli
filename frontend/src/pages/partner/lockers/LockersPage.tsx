@@ -40,6 +40,15 @@ export function LockersPage() {
   const storagesQuery = useQuery({
     queryKey: ["storages", statusFilter],
     queryFn: () => storageService.list(statusFilter ? (statusFilter as StorageStatus) : undefined),
+    retry: (failureCount, error: any) => {
+      // Don't retry on 401, 403, 404
+      if (error?.response?.status === 401) return false;
+      if (error?.response?.status === 403) return false;
+      if (error?.response?.status === 404) return false;
+      // Retry up to 1 time for other errors
+      return failureCount < 1;
+    },
+    retryDelay: 1000,
   });
 
   const createMutation = useMutation({
@@ -256,7 +265,9 @@ export function LockersPage() {
             {t("storages.title")}
           </h2>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-            {filteredStorages.length} / {storagesQuery.data?.length ?? 0} {t("common.records")}
+            {storagesQuery.isLoading 
+              ? t("common.loading") 
+              : `${filteredStorages.length} / ${storagesQuery.data?.length ?? 0} ${t("common.records")}`}
           </p>
         </div>
         <div style={{ marginBottom: 'var(--space-4)' }}>

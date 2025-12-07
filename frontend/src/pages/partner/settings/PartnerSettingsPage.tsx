@@ -69,6 +69,9 @@ export function PartnerSettingsPage() {
     if (settingsQuery.data) {
       reset({
         tenant_name: settingsQuery.data.tenant_name || "",
+        legal_name: settingsQuery.data.legal_name || "",
+        tax_id: settingsQuery.data.tax_id || "",
+        tax_office: settingsQuery.data.tax_office || "",
         contact_email: settingsQuery.data.contact_email || "",
         contact_phone: settingsQuery.data.contact_phone || "",
         brand_color: settingsQuery.data.brand_color || "",
@@ -98,7 +101,7 @@ export function PartnerSettingsPage() {
         logo_url: data.logo_url || "",
         notification_email: data.notification_email || "",
         notification_sms: data.notification_sms || false,
-      });
+      }, { keepDirty: false });
     },
     onError: (error: unknown) => {
       push({
@@ -110,39 +113,18 @@ export function PartnerSettingsPage() {
   });
 
   const onSubmit = handleSubmit((values) => {
-    const payload: PartnerSettingsUpdatePayload = {};
-    
-    // Only include changed fields
-    if (values.tenant_name !== settingsQuery.data?.tenant_name) {
-      payload.tenant_name = values.tenant_name;
-    }
-    if (values.legal_name !== settingsQuery.data?.legal_name) {
-      payload.legal_name = values.legal_name;
-    }
-    if (values.tax_id !== settingsQuery.data?.tax_id) {
-      payload.tax_id = values.tax_id;
-    }
-    if (values.tax_office !== settingsQuery.data?.tax_office) {
-      payload.tax_office = values.tax_office;
-    }
-    if (values.contact_email !== settingsQuery.data?.contact_email) {
-      payload.contact_email = values.contact_email;
-    }
-    if (values.contact_phone !== settingsQuery.data?.contact_phone) {
-      payload.contact_phone = values.contact_phone;
-    }
-    if (values.brand_color !== settingsQuery.data?.brand_color) {
-      payload.brand_color = values.brand_color;
-    }
-    if (values.logo_url !== settingsQuery.data?.logo_url) {
-      payload.logo_url = values.logo_url;
-    }
-    if (values.notification_email !== settingsQuery.data?.notification_email) {
-      payload.notification_email = values.notification_email;
-    }
-    if (values.notification_sms !== settingsQuery.data?.notification_sms) {
-      payload.notification_sms = values.notification_sms;
-    }
+    const payload: PartnerSettingsUpdatePayload = {
+      tenant_name: values.tenant_name,
+      legal_name: values.legal_name || null,
+      tax_id: values.tax_id || null,
+      tax_office: values.tax_office || null,
+      contact_email: values.contact_email || null,
+      contact_phone: values.contact_phone || null,
+      brand_color: values.brand_color || null,
+      logo_url: values.logo_url || null,
+      notification_email: values.notification_email || null,
+      notification_sms: values.notification_sms || false,
+    };
 
     updateMutation.mutate(payload);
   });
@@ -153,6 +135,9 @@ export function PartnerSettingsPage() {
     if (settingsQuery.data) {
       reset({
         tenant_name: settingsQuery.data.tenant_name || "",
+        legal_name: settingsQuery.data.legal_name || "",
+        tax_id: settingsQuery.data.tax_id || "",
+        tax_office: settingsQuery.data.tax_office || "",
         contact_email: settingsQuery.data.contact_email || "",
         contact_phone: settingsQuery.data.contact_phone || "",
         brand_color: settingsQuery.data.brand_color || "",

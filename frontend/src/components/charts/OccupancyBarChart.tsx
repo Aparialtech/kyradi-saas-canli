@@ -14,9 +14,10 @@ export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({
   data = [] 
 }) => {
   const getColor = (percent: number) => {
-    if (percent >= 90) return '#EF4444';
-    if (percent >= 70) return '#F59E0B';
-    return '#10B981';
+    // Dolu depolar kırmızı, boş depolar yeşil
+    // Eşik değeri %50: >= 50 dolu (kırmızı), < 50 boş (yeşil)
+    if (percent >= 50) return '#EF4444'; // Kırmızı - Dolu
+    return '#10B981'; // Yeşil - Boş
   };
 
   if (!data || data.length === 0) {

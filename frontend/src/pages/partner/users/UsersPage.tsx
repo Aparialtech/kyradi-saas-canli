@@ -533,7 +533,10 @@ export function UsersPage() {
               {
                 key: 'phone_number',
                 label: 'Telefon',
-                render: (value) => value ? <span>{value}</span> : <span style={{ color: 'var(--text-tertiary)' }}>—</span>,
+                render: (value, row) => {
+                  const phoneNumber = row.phone_number || value;
+                  return phoneNumber ? <span>{phoneNumber}</span> : <span style={{ color: 'var(--text-tertiary)' }}>—</span>;
+                },
               },
               {
                 key: 'role',
