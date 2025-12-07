@@ -230,7 +230,9 @@ export function PricingPage() {
     });
   };
 
-  const handleCancel = () => {
+  const handleCancel = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     setShowForm(false);
     setEditingRule(null);
     reset();
@@ -499,7 +501,15 @@ export function PricingPage() {
                 {editingRule ? t("pricing.form.editSubtitle") : t("pricing.form.createSubtitle")}
               </p>
             </div>
-            <button type="button" className="btn btn--outline" onClick={handleCancel}>
+            <button 
+              type="button" 
+              className="btn btn--outline" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCancel(e);
+              }}
+            >
               ✕ {t("common.close")}
             </button>
           </div>
@@ -829,10 +839,23 @@ export function PricingPage() {
                 borderTop: "1px solid #e2e8f0",
               }}
             >
-              <button type="button" className="btn btn--outline" onClick={handleCancel} disabled={createMutation.isPending || updateMutation.isPending}>
+              <button 
+                type="button" 
+                className="btn btn--outline" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCancel(e);
+                }}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
                 {t("common.cancel")}
               </button>
-              <button type="submit" className="btn btn--primary" disabled={createMutation.isPending || updateMutation.isPending}>
+              <button 
+                type="submit" 
+                className="btn btn--primary" 
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
                 {createMutation.isPending || updateMutation.isPending
                   ? t("common.saving")
                   : editingRule

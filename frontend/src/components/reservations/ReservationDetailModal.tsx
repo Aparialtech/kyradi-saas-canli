@@ -33,6 +33,7 @@ const statusColors: Record<string, string> = {
 };
 
 export function ReservationDetailModal({ reservation, isOpen, onClose }: ReservationDetailModalProps) {
+  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
   const { t } = useTranslation();
   const { push } = useToast();
   const [copied, setCopied] = useState(false);
@@ -59,9 +60,6 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
     }).format(minor / 100);
   }, []);
 
-  // Early return if no reservation to prevent rendering issues
-  if (!reservation) return null;
-
   // Memoize qrText to prevent infinite loops when reservation object reference changes
   // Use only primitive values (id, qr_code, qr_token) as dependencies to avoid re-renders
   // when the reservation object reference changes but values remain the same
@@ -72,7 +70,7 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
   const qrText = useMemo(() => {
     if (!reservation) return "";
     return reservationQrCode || reservationQrToken || "";
-  }, [reservationId, reservationQrCode, reservationQrToken]);
+  }, [reservation, reservationId, reservationQrCode, reservationQrToken]);
 
   useEffect(() => {
     let mounted = true;
@@ -95,6 +93,9 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
       mounted = false;
     };
   }, [qrText]);
+
+  // Early return AFTER all hooks (this is safe)
+  if (!reservation) return null;
 
   const statusColor = statusColors[reservation.status] ?? "#6b7280";
 
