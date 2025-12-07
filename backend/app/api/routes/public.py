@@ -264,8 +264,9 @@ async def self_return_reservation(
 
 @router.get("/legal-texts", response_model=LegalTextsResponse)
 async def legal_texts() -> LegalTextsResponse:
-    """Return texts required for KVKK and Aydınlatma displays."""
+    """Return texts required for KVKK, Aydınlatma, and Terms displays."""
     return LegalTextsResponse(
         kvkk_text=settings.kvkk_text,
         aydinlatma_text=settings.aydinlatma_text,
+        terms_text=settings.terms_text,
     )
