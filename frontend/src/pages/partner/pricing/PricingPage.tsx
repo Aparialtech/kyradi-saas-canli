@@ -521,13 +521,7 @@ export function PricingPage() {
           </div>
 
           <form 
-            id="pricing-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              submit(e);
-            }}
-            noValidate
+            onSubmit={submit}
           >
             {/* Scope Selection Section */}
             <div style={{ marginBottom: "2rem" }}>
@@ -843,63 +837,67 @@ export function PricingPage() {
               </div>
             </div>
 
+            {/* Form Actions */}
+            <div
+              className="form-actions"
+              style={{
+                display: "flex",
+                gap: "0.75rem",
+                justifyContent: "flex-end",
+                paddingTop: "1.5rem",
+                borderTop: "1px solid #e2e8f0",
+                marginTop: "1.5rem",
+              }}
+            >
+              <button 
+                type="button" 
+                className="btn btn--primary" 
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("[PricingPage] Submit button clicked", { editingRule: editingRule?.id });
+                  
+                  // Get form values directly
+                  const formValues = watchedValues;
+                  const payload: PricingRuleCreate = {
+                    ...formValues,
+                    location_id: formValues.scope === "LOCATION" ? formValues.location_id : null,
+                    storage_id: formValues.scope === "STORAGE" ? formValues.storage_id : null,
+                  };
+
+                  try {
+                    if (editingRule) {
+                      await updateMutation.mutateAsync({ id: editingRule.id, payload });
+                    } else {
+                      await createMutation.mutateAsync(payload);
+                    }
+                  } catch (error) {
+                    console.error("[PricingPage] Submit error:", error);
+                  }
+                }}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {createMutation.isPending || updateMutation.isPending
+                  ? t("common.saving")
+                  : editingRule
+                    ? t("common.update")
+                    : t("common.save")}
+              </button>
+              <button 
+                type="button" 
+                className="btn btn--outline" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("[PricingPage] Cancel button clicked");
+                  handleCancel(e);
+                }}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
           </form>
-          
-          {/* Form Actions - Outside form to prevent submit issues */}
-          <div
-            style={{
-              display: "flex",
-              gap: "0.75rem",
-              justifyContent: "flex-end",
-              paddingTop: "1.5rem",
-              borderTop: "1px solid #e2e8f0",
-              marginTop: "1.5rem",
-            }}
-          >
-            <button 
-              type="button" 
-              className="btn btn--primary" 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log("[PricingPage] Submit button clicked", { editingRule: editingRule?.id });
-                // Trigger form submit using handleSubmit
-                submit();
-              }}
-              disabled={createMutation.isPending || updateMutation.isPending}
-              style={{ 
-                cursor: createMutation.isPending || updateMutation.isPending ? "not-allowed" : "pointer", 
-                pointerEvents: "auto",
-                zIndex: 10,
-                position: "relative"
-              }}
-            >
-              {createMutation.isPending || updateMutation.isPending
-                ? t("common.saving")
-                : editingRule
-                  ? t("common.update")
-                  : t("common.save")}
-            </button>
-            <button 
-              type="button" 
-              className="btn btn--outline" 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log("[PricingPage] Cancel button clicked");
-                handleCancel(e);
-              }}
-              disabled={createMutation.isPending || updateMutation.isPending}
-              style={{ 
-                cursor: createMutation.isPending || updateMutation.isPending ? "not-allowed" : "pointer", 
-                pointerEvents: "auto",
-                zIndex: 10,
-                position: "relative"
-              }}
-            >
-              {t("common.cancel")}
-            </button>
-          </div>
         </div>
       )}
     </section>
