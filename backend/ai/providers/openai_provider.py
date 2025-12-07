@@ -10,6 +10,26 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger("kyradi.ai.openai")
 
+# Import settings safely
+try:
+    from app.core.config import settings
+except ImportError:
+    # Fallback if settings not available (shouldn't happen in normal operation)
+    logger.warning("Could not import settings, OpenAI provider will use defaults")
+    settings = None
+
+# Import error classes
+try:
+    from ai.schemas import AIProviderError
+except ImportError:
+    # Fallback error class if schemas not available
+    class AIProviderError(Exception):
+        def __init__(self, code: str, message: str, retry_after_seconds: Optional[int] = None):
+            self.code = code
+            self.message = message
+            self.retry_after_seconds = retry_after_seconds
+            super().__init__(message)
+
 # Safe import of OpenAI - NEVER crash on import
 OPENAI_AVAILABLE = False
 AsyncOpenAI = None
@@ -60,9 +80,15 @@ class OpenAIChatProvider:
             org_id: OpenAI organization ID (defaults to settings.openai_org_id if None)
         """
         # Use settings if not provided
-        self.api_key = api_key or settings.openai_api_key
-        self.model = model or settings.ai_model
-        self.org_id = org_id or settings.openai_org_id
+        if settings is not None:
+            self.api_key = api_key or settings.openai_api_key
+            self.model = model or settings.ai_model
+            self.org_id = org_id or settings.openai_org_id
+        else:
+            # Fallback if settings not available
+            self.api_key = api_key
+            self.model = model or "gpt-4o-mini"
+            self.org_id = org_id
         self.client = None
         self.enabled = False
         self._error: Optional[str] = None
