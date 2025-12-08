@@ -1,12 +1,17 @@
 """Admin panel endpoints."""
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone, date
 from typing import List, Optional
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Select, case, func, select, cast, String
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy import Select, case, func, select, cast, String, Date
 from sqlalchemy.ext.asyncio import AsyncSession
+import csv
+import io
+import json
 
 from ...core.security import get_password_hash
 from ...db.session import get_session
@@ -804,6 +809,476 @@ async def admin_global_settlements(
     settlements = result.scalars().all()
     
     return [SettlementRead.model_validate(settlement) for settlement in settlements]
+
+
+@router.get("/reports/export")
+async def admin_export_reports(
+    tenant_id: Optional[str] = Query(default=None),
+    date_from: Optional[datetime] = Query(default=None, alias="from"),
+    date_to: Optional[datetime] = Query(default=None, alias="to"),
+    format: str = Query(default="csv", regex="^(csv|json)$"),
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(require_admin_user),
+):
+    """Export admin reports in CSV or JSON format."""
+    # Get summary data
+    summary = await admin_summary(session, _)
+    
+    # Get detailed reservation data
+    stmt = select(Reservation).join(
+        Tenant, Reservation.tenant_id == Tenant.id
+    )
+    
+    if tenant_id:
+        stmt = stmt.where(Reservation.tenant_id == tenant_id)
+    if date_from:
+        stmt = stmt.where(Reservation.created_at >= date_from)
+    if date_to:
+        stmt = stmt.where(Reservation.created_at <= date_to)
+    
+    stmt = stmt.order_by(Reservation.created_at.desc())
+    result = await session.execute(stmt)
+    reservations = result.scalars().all()
+    
+    # Prepare data
+    data = []
+    for reservation in reservations:
+        # Get payment
+        payment_stmt = select(Payment).where(Payment.reservation_id == reservation.id).limit(1)
+        payment_result = await session.execute(payment_stmt)
+        payment = payment_result.scalar_one_or_none()
+        
+        # Get storage and location
+        storage = None
+        location = None
+        if reservation.storage_id:
+            storage_stmt = select(Storage).where(Storage.id == reservation.storage_id)
+            storage_result = await session.execute(storage_stmt)
+            storage = storage_result.scalar_one_or_none()
+            if storage and storage.location_id:
+                location_stmt = select(Location).where(Location.id == storage.location_id)
+                location_result = await session.execute(location_stmt)
+                location = location_result.scalar_one_or_none()
+        
+        # Get tenant
+        tenant_stmt = select(Tenant).where(Tenant.id == reservation.tenant_id)
+        tenant_result = await session.execute(tenant_stmt)
+        tenant = tenant_result.scalar_one_or_none()
+        
+        data.append({
+            "reservation_id": str(reservation.id),
+            "tenant_name": tenant.name if tenant else "",
+            "customer_name": reservation.customer_name or "",
+            "customer_phone": reservation.customer_phone or "",
+            "customer_email": reservation.customer_email or "",
+            "storage_code": storage.code if storage else "",
+            "location_name": location.name if location else "",
+            "start_at": reservation.start_at.isoformat() if reservation.start_at else "",
+            "end_at": reservation.end_at.isoformat() if reservation.end_at else "",
+            "status": reservation.status,
+            "amount_minor": reservation.amount_minor or 0,
+            "currency": reservation.currency or "TRY",
+            "payment_status": payment.status if payment else "",
+            "payment_amount": payment.amount_minor if payment else 0,
+            "created_at": reservation.created_at.isoformat() if reservation.created_at else "",
+        })
+    
+    if format == "csv":
+        # Generate CSV
+        output = io.StringIO()
+        if data:
+            writer = csv.DictWriter(output, fieldnames=data[0].keys())
+            writer.writeheader()
+            writer.writerows(data)
+        
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f"attachment; filename=kyradi-rapor-{datetime.now().strftime('%Y%m%d')}.csv"
+            }
+        )
+    else:  # JSON
+        return Response(
+            content=json.dumps({
+                "summary": summary.model_dump(),
+                "data": data,
+                "exported_at": datetime.now(timezone.utc).isoformat(),
+            }, indent=2, ensure_ascii=False),
+            media_type="application/json; charset=utf-8",
+            headers={
+                "Content-Disposition": f"attachment; filename=kyradi-rapor-{datetime.now().strftime('%Y%m%d')}.json"
+            }
+        )
+
+
+class InvoiceItemCreate(BaseModel):
+    description: str
+    quantity: int
+    unit_price_minor: int
+    total_minor: int
+
+
+class InvoiceCreate(BaseModel):
+    tenant_id: str
+    invoice_number: str
+    invoice_date: str
+    due_date: str
+    items: List[InvoiceItemCreate]
+    subtotal_minor: int
+    tax_rate: float
+    tax_amount_minor: int
+    total_minor: int
+    notes: Optional[str] = None
+
+
+@router.post("/invoices/generate")
+async def admin_generate_invoice(
+    payload: InvoiceCreate,
+    format: str = Query(default="pdf", description="Export format: pdf or html"),
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(require_admin_user),
+):
+    """Generate invoice HTML/PDF for a tenant."""
+    # Get tenant
+    tenant = await session.get(Tenant, payload.tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    
+    # Generate HTML invoice
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Fatura - {payload.invoice_number}</title>
+        <style>
+            @page {{
+                size: A4;
+                margin: 2cm;
+            }}
+            body {{ font-family: Arial, sans-serif; margin: 40px; color: #333; }}
+            .header {{ display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px; }}
+            .company {{ font-size: 24px; font-weight: bold; }}
+            .invoice-info {{ text-align: right; }}
+            .section {{ margin-bottom: 30px; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+            th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+            th {{ background-color: #f2f2f2; font-weight: bold; }}
+            .total {{ text-align: right; margin-top: 20px; }}
+            .total-row {{ font-weight: bold; font-size: 18px; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="company">
+                <h1>KYRADİ</h1>
+                <p>Depolama ve Rezervasyon Yönetim Sistemi</p>
+            </div>
+            <div class="invoice-info">
+                <h2>FATURA</h2>
+                <p>Fatura No: {payload.invoice_number}</p>
+                <p>Tarih: {payload.invoice_date}</p>
+                <p>Vade: {payload.due_date}</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>Fatura Edilecek:</h3>
+            <p><strong>{tenant.name}</strong></p>
+            {f'<p>{tenant.legal_name}</p>' if tenant.legal_name else ''}
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Açıklama</th>
+                    <th>Adet</th>
+                    <th>Birim Fiyat</th>
+                    <th>Toplam</th>
+                </tr>
+            </thead>
+            <tbody>
+    """
+    
+    for item in payload.items:
+        html_content += f"""
+                <tr>
+                    <td>{item.description}</td>
+                    <td>{item.quantity}</td>
+                    <td>{item.unit_price_minor / 100:.2f} ₺</td>
+                    <td>{item.total_minor / 100:.2f} ₺</td>
+                </tr>
+        """
+    
+    html_content += f"""
+            </tbody>
+        </table>
+        
+        <div class="total">
+            <p>Ara Toplam: {payload.subtotal_minor / 100:.2f} ₺</p>
+            <p>KDV (%{payload.tax_rate * 100:.0f}): {payload.tax_amount_minor / 100:.2f} ₺</p>
+            <p class="total-row">TOPLAM: {payload.total_minor / 100:.2f} ₺</p>
+        </div>
+        
+        {f'<div class="section"><p><strong>Notlar:</strong> {payload.notes}</p></div>' if payload.notes else ''}
+    </body>
+    </html>
+    """
+    
+    # Convert to PDF if requested
+    if format == "pdf":
+        try:
+            from weasyprint import HTML
+            pdf_bytes = HTML(string=html_content).write_pdf()
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.pdf"
+                }
+            )
+        except ImportError:
+            logger.warning("weasyprint not installed, falling back to HTML")
+            return Response(
+                content=html_content,
+                media_type="text/html; charset=utf-8",
+                headers={
+                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html"
+                }
+            )
+    
+    # Return as downloadable HTML file
+    return Response(
+        content=html_content,
+        media_type="text/html; charset=utf-8",
+        headers={
+            "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html"
+        }
+    )
+
+
+class AdminTrendDataPoint(BaseModel):
+    """Single data point for admin trend charts."""
+    date: str  # ISO date string
+    revenue_minor: int
+    reservations: int
+    commission_minor: int
+
+
+class AdminStorageUsage(BaseModel):
+    """Storage usage metrics for admin."""
+    storage_id: str
+    storage_code: str
+    location_name: str
+    tenant_name: str
+    reservations: int
+    occupancy_rate: float
+    total_revenue_minor: int
+
+
+@router.get("/reports/trends")
+async def admin_get_trends(
+    tenant_id: Optional[str] = Query(default=None, description="Filter by tenant ID"),
+    date_from: Optional[datetime] = Query(default=None, alias="from"),
+    date_to: Optional[datetime] = Query(default=None, alias="to"),
+    granularity: str = Query(default="daily", description="daily, weekly, monthly"),
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(require_admin_user),
+) -> List[AdminTrendDataPoint]:
+    """Get trend data for revenue and reservations over time (admin view).
+    
+    Returns time-series data for charts across all tenants or filtered by tenant.
+    """
+    # Default to last 30 days if no date range provided
+    if not date_from:
+        date_from = datetime.now(timezone.utc) - timedelta(days=30)
+    if not date_to:
+        date_to = datetime.now(timezone.utc)
+    
+    # Group by date based on granularity
+    if granularity == "daily":
+        date_expr = cast(Reservation.created_at, Date)
+        payment_date_expr = cast(Payment.created_at, Date)
+    elif granularity == "weekly":
+        date_expr = func.date_trunc("week", Reservation.created_at)
+        payment_date_expr = func.date_trunc("week", Payment.created_at)
+    elif granularity == "monthly":
+        date_expr = func.date_trunc("month", Reservation.created_at)
+        payment_date_expr = func.date_trunc("month", Payment.created_at)
+    else:
+        date_expr = cast(Reservation.created_at, Date)
+        payment_date_expr = cast(Payment.created_at, Date)
+    
+    # Build filters
+    reservation_filters = [
+        Reservation.created_at >= date_from,
+        Reservation.created_at <= date_to,
+    ]
+    payment_filters = [
+        Payment.status == PaymentStatus.PAID.value,
+        Payment.created_at >= date_from,
+        Payment.created_at <= date_to,
+    ]
+    
+    if tenant_id:
+        reservation_filters.append(Reservation.tenant_id == tenant_id)
+        payment_filters.append(Payment.tenant_id == tenant_id)
+    
+    # Get reservation counts by date
+    reservation_trends_stmt = select(
+        date_expr.label("date"),
+        func.count(Reservation.id).label("reservations")
+    ).where(
+        *reservation_filters
+    ).group_by(
+        date_expr
+    ).order_by(
+        date_expr
+    )
+    
+    reservation_trends = await session.execute(reservation_trends_stmt)
+    reservation_data = {row.date: row.reservations for row in reservation_trends}
+    
+    # Get revenue by date (from payments)
+    revenue_trends_stmt = select(
+        payment_date_expr.label("date"),
+        func.coalesce(func.sum(Payment.amount_minor), 0).label("revenue_minor")
+    ).where(
+        *payment_filters
+    ).group_by(
+        payment_date_expr
+    ).order_by(
+        payment_date_expr
+    )
+    
+    revenue_trends = await session.execute(revenue_trends_stmt)
+    revenue_data = {row.date: int(row.revenue_minor or 0) for row in revenue_trends}
+    
+    # Get commission separately from settlements
+    settlement_filters = [
+        Settlement.created_at >= date_from,
+        Settlement.created_at <= date_to,
+    ]
+    if tenant_id:
+        settlement_filters.append(Settlement.tenant_id == tenant_id)
+    
+    commission_date_expr = payment_date_expr
+    commission_trends_stmt = select(
+        commission_date_expr.label("date"),
+        func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0).label("commission_minor")
+    ).select_from(
+        Payment
+    ).outerjoin(
+        Settlement, Settlement.payment_id == Payment.id
+    ).where(
+        Payment.status == PaymentStatus.PAID.value,
+        Payment.created_at >= date_from,
+        Payment.created_at <= date_to,
+        *([Payment.tenant_id == tenant_id] if tenant_id else [])
+    ).group_by(
+        commission_date_expr
+    ).order_by(
+        commission_date_expr
+    )
+    
+    commission_trends = await session.execute(commission_trends_stmt)
+    commission_data = {row.date: int(row.commission_minor or 0) for row in commission_trends}
+    
+    # Combine all dates
+    all_dates = set(reservation_data.keys()) | set(revenue_data.keys()) | set(commission_data.keys())
+    trends = []
+    
+    for date_val in sorted(all_dates):
+        trends.append(AdminTrendDataPoint(
+            date=date_val.isoformat() if hasattr(date_val, "isoformat") else str(date_val),
+            revenue_minor=revenue_data.get(date_val, 0),
+            reservations=reservation_data.get(date_val, 0),
+            commission_minor=commission_data.get(date_val, 0),
+        ))
+    
+    return trends
+
+
+@router.get("/reports/storage-usage")
+async def admin_get_storage_usage(
+    tenant_id: Optional[str] = Query(default=None, description="Filter by tenant ID"),
+    date_from: Optional[datetime] = Query(default=None, alias="from"),
+    date_to: Optional[datetime] = Query(default=None, alias="to"),
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(require_admin_user),
+) -> List[AdminStorageUsage]:
+    """Get storage usage metrics with occupancy rates (admin view).
+    
+    Returns storage usage across all tenants or filtered by tenant.
+    """
+    if not date_from:
+        date_from = datetime.now(timezone.utc) - timedelta(days=30)
+    if not date_to:
+        date_to = datetime.now(timezone.utc)
+    
+    # Build filters
+    storage_filters = []
+    if tenant_id:
+        storage_filters.append(Storage.tenant_id == tenant_id)
+    
+    # Get all storages
+    storages_stmt = (
+        select(Storage, Location, Tenant)
+        .join(Location, Location.id == Storage.location_id)
+        .join(Tenant, Tenant.id == Storage.tenant_id)
+    )
+    if storage_filters:
+        storages_stmt = storages_stmt.where(*storage_filters)
+    
+    storages_result = await session.execute(storages_stmt)
+    storage_rows = storages_result.all()
+    
+    storage_usage = []
+    
+    for storage, location, tenant in storage_rows:
+        # Count reservations for this storage
+        reservation_filters = [
+            Reservation.storage_id == storage.id,
+            Reservation.created_at >= date_from,
+            Reservation.created_at <= date_to,
+        ]
+        reservation_count_stmt = select(func.count()).select_from(Reservation).where(
+            *reservation_filters
+        )
+        reservation_count = int((await session.execute(reservation_count_stmt)).scalar_one() or 0)
+        
+        # Calculate revenue from reservations using this storage
+        revenue_stmt = select(
+            func.coalesce(func.sum(Payment.amount_minor), 0)
+        ).join(
+            Reservation, Reservation.id == Payment.reservation_id
+        ).where(
+            Reservation.storage_id == storage.id,
+            Payment.status == PaymentStatus.PAID.value,
+            Payment.created_at >= date_from,
+            Payment.created_at <= date_to,
+        )
+        revenue_minor = int((await session.execute(revenue_stmt)).scalar_one() or 0)
+        
+        # Occupancy rate (simplified: reservations / capacity)
+        capacity = getattr(storage, "capacity", 1) or 1
+        occupancy_rate = round(min(reservation_count / capacity * 100, 100), 2) if capacity > 0 else 0.0
+        
+        storage_usage.append(AdminStorageUsage(
+            storage_id=storage.id,
+            storage_code=storage.code or "Unknown",
+            location_name=location.name if location else "Unknown",
+            tenant_name=tenant.name if tenant else "Unknown",
+            reservations=reservation_count,
+            occupancy_rate=occupancy_rate,
+            total_revenue_minor=revenue_minor,
+        ))
+    
+    # Sort by reservations descending
+    storage_usage.sort(key=lambda x: x.reservations, reverse=True)
+    
+    return storage_usage
 
 
 @router.get("/users", response_model=List[UserRead])
