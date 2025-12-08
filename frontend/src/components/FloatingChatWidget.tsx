@@ -1,69 +1,115 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 
 import { KyradiChat } from "./KyradiChat";
 import { useAuth } from "../context/AuthContext";
 import { env } from "../config/env";
 import { useTranslation } from "../hooks/useTranslation";
+import { MessageSquare, X } from "../lib/lucide";
 
 const floatingStyles = `
 .kyradi-chat-widget {
   position: fixed;
   z-index: 999;
-  bottom: 24px;
-  right: 24px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  user-select: none;
 }
 .kyradi-chat-widget__toggle {
-  width: 52px;
-  height: 52px;
-  border-radius: 999px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  background: linear-gradient(135deg, #00a389 0%, #0066ff 100%);
   color: white;
-  font-size: 1.5rem;
-  cursor: pointer;
-  box-shadow: 0 12px 25px rgba(37, 99, 235, 0.4);
-  animation: kyradi-bounce 2.5s infinite;
+  cursor: grab;
+  box-shadow: 0 8px 24px rgba(0, 163, 137, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+.kyradi-chat-widget__toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 32px rgba(0, 163, 137, 0.4);
+}
+.kyradi-chat-widget__toggle:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+.kyradi-chat-widget__toggle svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.5;
+}
+.kyradi-chat-widget__toggle--close svg {
+  width: 20px;
+  height: 20px;
 }
 .kyradi-chat-widget__panel {
-  width: 340px;
-  max-height: 540px;
+  width: 380px;
+  max-height: 600px;
   background: #fff;
-  border-radius: 20px;
-  box-shadow: 0 40px 60px rgba(15, 23, 42, 0.3);
-  margin-bottom: 12px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
+  margin-bottom: 16px;
   overflow: hidden;
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   transform-origin: bottom right;
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 .kyradi-chat-widget__panel--hidden {
-  transform: scale(0.8);
+  transform: scale(0.85) translateY(10px);
   opacity: 0;
   pointer-events: none;
 }
-@keyframes kyradi-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
 @media (max-width: 640px) {
   .kyradi-chat-widget {
-    right: 16px;
-    bottom: 16px;
+    right: 16px !important;
+    bottom: 16px !important;
+    left: auto !important;
+    top: auto !important;
   }
   .kyradi-chat-widget__panel {
     width: calc(100vw - 32px);
+    max-width: 380px;
   }
 }
 `;
+
+const STORAGE_KEY = "kyradi-chat-widget-position";
 
 export function FloatingChatWidget() {
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
   const { user } = useAuth();
   const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<{ x: number; y: number }>(() => {
+    // Load saved position from localStorage
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return { x: parsed.x ?? window.innerWidth - 80, y: parsed.y ?? window.innerHeight - 80 };
+        } catch {
+          // Invalid JSON, use defaults
+        }
+      }
+    }
+    return { x: typeof window !== "undefined" ? window.innerWidth - 80 : 0, y: typeof window !== "undefined" ? window.innerHeight - 80 : 0 };
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const widgetRef = useRef<HTMLDivElement>(null);
+
+  // Save position to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined" && position.x > 0 && position.y > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(position));
+    }
+  }, [position]);
 
   useEffect(() => {
     if (document.getElementById("kyradi-chat-widget-style")) return;
@@ -73,12 +119,64 @@ export function FloatingChatWidget() {
     document.head.appendChild(style);
   }, []);
 
+  // Drag handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left mouse button
+    e.preventDefault();
+    setIsDragging(true);
+    if (widgetRef.current) {
+      const rect = widgetRef.current.getBoundingClientRect();
+      dragStartPos.current = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    }
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging || !dragStartPos.current) return;
+      e.preventDefault();
+
+      const newX = e.clientX - dragStartPos.current.x;
+      const newY = e.clientY - dragStartPos.current.y;
+
+      // Constrain to viewport
+      const maxX = window.innerWidth - 56;
+      const maxY = window.innerHeight - 56;
+      const constrainedX = Math.max(0, Math.min(newX, maxX));
+      const constrainedY = Math.max(0, Math.min(newY, maxY));
+
+      setPosition({ x: constrainedX, y: constrainedY });
+    },
+    [isDragging]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    dragStartPos.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "grabbing";
+      document.body.style.userSelect = "none";
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   // Compute derived values AFTER all hooks
   const tenantId = user?.tenant_id;
   const userId = user?.id;
   const isEligible = Boolean(tenantId && userId);
 
-  const toggleLabel = useMemo(() => (open ? "×" : "💬"), [open]);
   const ariaLabel = useMemo(() => (open ? t("chat.close") : t("chat.open")), [open, t]);
 
   // Early return AFTER all hooks (this is safe)
@@ -86,8 +184,15 @@ export function FloatingChatWidget() {
     return null;
   }
 
+  const widgetStyle: React.CSSProperties = {
+    right: "auto",
+    bottom: "auto",
+    left: `${position.x}px`,
+    top: `${position.y}px`,
+  };
+
   return (
-    <div className="kyradi-chat-widget">
+    <div ref={widgetRef} className="kyradi-chat-widget" style={widgetStyle}>
       <div className={`kyradi-chat-widget__panel ${open ? "" : "kyradi-chat-widget__panel--hidden"}`}>
         {open && (
           <KyradiChat
@@ -102,11 +207,17 @@ export function FloatingChatWidget() {
       </div>
       <button
         type="button"
-        className="kyradi-chat-widget__toggle"
+        className={`kyradi-chat-widget__toggle ${open ? "kyradi-chat-widget__toggle--close" : ""}`}
         aria-label={ariaLabel}
-        onClick={() => setOpen((prev) => !prev)}
+        onMouseDown={handleMouseDown}
+        onClick={(e) => {
+          // Only toggle if not dragging
+          if (!isDragging && dragStartPos.current === null) {
+            setOpen((prev) => !prev);
+          }
+        }}
       >
-        {toggleLabel}
+        {open ? <X /> : <MessageSquare />}
       </button>
     </div>
   );

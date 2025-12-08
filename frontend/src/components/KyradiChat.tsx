@@ -67,7 +67,7 @@ const chatCopy: Record<
     retry: "Tekrar Dene",
     errorTitle: "Hata",
     brandName: "Kyradi AI",
-    welcomeTitle: "Merhaba! 👋",
+    welcomeTitle: "Merhaba!",
     welcomeMessage: "Ben Kyradi AI, rezervasyon, ödeme veya panel kullanımıyla ilgili sorularınızı yanıtlamak için buradayım.",
     suggestionReservation: "Rezervasyon nasıl onaylanır?",
     suggestionPayment: "Ödeme sistemi nasıl çalışır?",
@@ -82,7 +82,7 @@ const chatCopy: Record<
     retry: "Retry",
     errorTitle: "Error",
     brandName: "Kyradi AI",
-    welcomeTitle: "Hello! 👋",
+    welcomeTitle: "Hello!",
     welcomeMessage: "I'm Kyradi AI, here to help with reservations, payments, and panel usage questions.",
     suggestionReservation: "How do I confirm a reservation?",
     suggestionPayment: "How does the payment system work?",
@@ -127,9 +127,12 @@ const baseStyles = `
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  font-weight: 700;
   color: white;
+}
+.kyradi-chat__avatar svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
 }
 .kyradi-chat__brand {
   font-weight: 600;
@@ -532,7 +535,11 @@ export function KyradiChat({
     <div className={`kyradi-chat kyradi-chat--${theme}`}>
       {/* Header with branding */}
       <div className="kyradi-chat__header">
-        <div className="kyradi-chat__avatar">🤖</div>
+        <div className="kyradi-chat__avatar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </div>
         <span className="kyradi-chat__brand">{copy.brandName}</span>
       </div>
 
