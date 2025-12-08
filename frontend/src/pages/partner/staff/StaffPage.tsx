@@ -13,7 +13,6 @@ import { getErrorMessage } from "../../../lib/httpError";
 import { http } from "../../../lib/http";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
-import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 import { Badge } from "../../../components/ui/Badge";
 
@@ -468,9 +467,11 @@ export function StaffPage() {
                       {row.assigned_storage_ids.map((id: string) => {
                         const storage = storagesById.get(id);
                         return (
-                          <Badge key={id} variant="info" style={{ fontSize: 'var(--text-xs)' }}>
-                            <Package className="h-3 w-3" style={{ marginRight: 'var(--space-1)' }} />
-                            {storage?.code ?? id.slice(0, 8)}
+                          <Badge key={id} variant="info">
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-xs)' }}>
+                              <Package className="h-3 w-3" />
+                              {storage?.code ?? id.slice(0, 8)}
+                            </span>
                           </Badge>
                         );
                       })}
@@ -490,9 +491,11 @@ export function StaffPage() {
                       {row.assigned_location_ids.map((id: string) => {
                         const location = locationsById.get(id);
                         return (
-                          <Badge key={id} variant="success" style={{ fontSize: 'var(--text-xs)' }}>
-                            <MapPin className="h-3 w-3" style={{ marginRight: 'var(--space-1)' }} />
-                            {location?.name ?? id.slice(0, 8)}
+                          <Badge key={id} variant="success">
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-xs)' }}>
+                              <MapPin className="h-3 w-3" />
+                              {location?.name ?? id.slice(0, 8)}
+                            </span>
                           </Badge>
                         );
                       })}

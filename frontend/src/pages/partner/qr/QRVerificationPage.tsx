@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { QrCode, CheckCircle2, XCircle, Loader2 } from "../../../lib/lucide";
+import { QrCode, CheckCircle2, XCircle } from "../../../lib/lucide";
 
 import { qrService, type QRVerifyResult } from "../../../services/partner/qr";
 import { reservationService } from "../../../services/partner/reservations";
@@ -192,7 +192,7 @@ export function QRVerificationPage() {
     if (status === "active") return "success";
     if (status === "completed") return "info";
     if (status === "cancelled") return "danger";
-    return "muted";
+    return "neutral";
   };
 
   return (
