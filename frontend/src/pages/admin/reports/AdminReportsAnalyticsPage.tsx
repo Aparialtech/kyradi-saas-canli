@@ -178,8 +178,14 @@ export function AdminReportsAnalyticsPage() {
       window.URL.revokeObjectURL(url);
 
       push({ title: "Komisyon faturası oluşturuldu", type: "success" });
-    } catch (error) {
-      push({ title: "Fatura oluşturulamadı", description: String(error), type: "error" });
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || error?.message || String(error);
+      push({ 
+        title: "Fatura oluşturulamadı", 
+        description: errorMessage,
+        type: "error" 
+      });
+      console.error("Invoice generation error:", error);
     }
   };
 
@@ -231,8 +237,14 @@ export function AdminReportsAnalyticsPage() {
       window.URL.revokeObjectURL(url);
 
       push({ title: "Gelir faturası oluşturuldu", type: "success" });
-    } catch (error) {
-      push({ title: "Fatura oluşturulamadı", description: String(error), type: "error" });
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || error?.message || String(error);
+      push({ 
+        title: "Fatura oluşturulamadı", 
+        description: errorMessage,
+        type: "error" 
+      });
+      console.error("Invoice generation error:", error);
     }
   };
 
