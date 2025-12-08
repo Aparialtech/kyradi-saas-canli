@@ -962,6 +962,9 @@ async def admin_generate_invoice(
         legal_name_value = getattr(tenant, "legal_name", None) or (tenant.metadata_ or {}).get("legal_name") if tenant.metadata_ else None
         legal_name_escaped = escape_html(legal_name_value) if legal_name_value else ""
         
+        # Logo SVG (base64 encoded)
+        logo_svg_base64 = "PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImJsdWVHcmFkaWVudCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMDBEOUZGO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMwMDY2RkY7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGZpbHRlciBpZD0iZ2xvdyI+CiAgICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjQiIHJlc3VsdD0iY29sb3JlZEJsdXIiLz4KICAgICAgPGZlTWVyZ2U+CiAgICAgICAgPGZlTWVyZ2VOb2RlIGluPSJjb2xvcmVkQmx1ciIvPgogICAgICAgIDxmZU1lcmdlTm9kZSBpbj0iU291cmNlR3JhcGhpYyIvPgogICAgICA8L2ZlTWVyZ2U+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CiAgPCEtLSBCYWNrZ3JvdW5kIGJyaWVmY2FzZS9jb250YWluZXIgc2hhcGUgLS0+CiAgPHJlY3QgeD0iMjAiIHk9IjQwIiB3aWR0aD0iMTYwIiBoZWlnaHQ9IjEyMCIgcng9IjEyIiByeT0iMTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNibHVlR3JhZGllbnQpIiBzdHJva2Utd2lkdGg9IjQiIG9wYWNpdHk9IjAuOTUiIGZpbHRlcj0idXJsKCNnbG93KSIvPgogIDwhLS0gSGFuZGxlIC0tPgogIDxwYXRoIGQ9Ik0gODAgNDAgUSAxMDAgMjAgMTIwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjYmx1ZUdyYWRpZW50KSIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuOTUiIGZpbHRlcj0idXJsKCNnbG93KSIvPgogIDwhLS0gTGV0dGVyIEsgLS0+CiAgPHBhdGggZD0iTSA1MCA3MCBMIDUwIDEzMCBNIDUwIDEwMCBMIDkwIDcwIE0gNTAgMTAwIEwgOTAgMTMwIiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjYmx1ZUdyYWRpZW50KSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIG9wYWNpdHk9IjAuOTUiIGZpbHRlcj0idXJsKCNnbG93KSIvPgogIDwhLS0gQ2lyY3VpdC9kYXRhIGVsZW1lbnRzICgzIGNpcmNsZXMgd2l0aCBjb25uZWN0aW5nIGxpbmVzKSAtLT4KICA8Y2lyY2xlIGN4PSIxMTAiIGN5PSI4MCIgcj0iNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ1cmwoI2JsdWVHcmFkaWVudCkiIHN0cm9rZS13aWR0aD0iMyIgb3BhY2l0eT0iMC45NSIgZmlsdGVyPSJ1cmwoI2dsb3cpIi8+CiAgPGNpcmNsZSBjeD0iMTEwIiBjeT0iMTAwIiByPSI2IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjYmx1ZUdyYWRpZW50KSIgc3Ryb2tlLXdpZHRoPSIzIiBvcGFjaXR5PSIwLjk1IiBmaWx0ZXI9InVybCgjZ2xvdykiLz4KICA8Y2lyY2xlIGN4PSIxMTAiIGN5PSIxMjAiIHI9IjYiIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNibHVlR3JhZGllbnQpIiBzdHJva2Utd2lkdGg9IjMiIG9wYWNpdHk9IjAuOTUiIGZpbHRlcj0idXJsKCNnbG93KSIvPgogIDwhLS0gQ29ubmVjdGluZyBsaW5lcyAtLT4KICA8cGF0aCBkPSJNIDExMCA4MCBRIDk1IDkwIDkwIDEwMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ1cmwoI2JsdWVHcmFkaWVudCkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjgiIGZpbHRlcj0idXJsKCNnbG93KSIvPgogIDxwYXRoIGQ9Ik0gMTEwIDEwMCBRIDk1IDEwMCA5MCAxMDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNibHVlR3JhZGllbnQpIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC44IiBmaWx0ZXI9InVybCgjZ2xvdykiLz4KICA8cGF0aCBkPSJNIDExMCAxMjAgUSA5NSAxMTAgOTAgMTAwIiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjYmx1ZUdyYWRpZW50KSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuOCIgZmlsdGVyPSJ1cmwoI2dsb3cpIi8+Cjwvc3ZnPgoK"
+        
         # Generate HTML invoice
         html_content = f"""
     <!DOCTYPE html>
@@ -975,8 +978,11 @@ async def admin_generate_invoice(
                 margin: 2cm;
             }}
             body {{ font-family: Arial, sans-serif; margin: 40px; color: #333; }}
-            .header {{ display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px; }}
-            .company {{ font-size: 24px; font-weight: bold; }}
+            .header {{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px; }}
+            .company {{ display: flex; flex-direction: column; gap: 10px; }}
+            .company-logo {{ width: 80px; height: 80px; }}
+            .company-text {{ font-size: 24px; font-weight: bold; }}
+            .company-subtitle {{ font-size: 14px; color: #666; }}
             .invoice-info {{ text-align: right; }}
             .section {{ margin-bottom: 30px; }}
             table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
@@ -989,8 +995,9 @@ async def admin_generate_invoice(
     <body>
         <div class="header">
             <div class="company">
-                <h1>KYRADİ</h1>
-                <p>Depolama ve Rezervasyon Yönetim Sistemi</p>
+                <img src="data:image/svg+xml;base64,{logo_svg_base64}" alt="KYRADİ Logo" class="company-logo" />
+                <div class="company-text">KYRADİ</div>
+                <div class="company-subtitle">Depolama ve Rezervasyon Yönetim Sistemi</div>
             </div>
             <div class="invoice-info">
                 <h2>FATURA</h2>
