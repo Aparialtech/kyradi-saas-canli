@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Download, Users, Building2, DollarSign, Package, Receipt, X } from "../../../lib/lucide";
+import { Download, Users, Building2, DollarSign, Package, Receipt } from "../../../lib/lucide";
 
-import { adminReportService, AdminStorageUsage } from "../../../services/admin/reports";
+import { adminReportService } from "../../../services/admin/reports";
+import type { AdminStorageUsage } from "../../../services/admin/reports";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -76,10 +77,6 @@ export function AdminReportsAnalyticsPage() {
       total_revenue_minor: storage.total_revenue_minor,
     }));
   }, [storageUsageQuery.data]);
-
-  const selectedTenant = useMemo(() => {
-    return tenantsQuery.data?.find((t) => t.id === selectedTenantId);
-  }, [tenantsQuery.data, selectedTenantId]);
 
   // Calculate totals from trends data
   const totals = useMemo(() => {
