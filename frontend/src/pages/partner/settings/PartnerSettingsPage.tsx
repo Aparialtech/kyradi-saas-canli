@@ -115,14 +115,14 @@ export function PartnerSettingsPage() {
   const onSubmit = handleSubmit((values) => {
     const payload: PartnerSettingsUpdatePayload = {
       tenant_name: values.tenant_name,
-      legal_name: values.legal_name || null,
-      tax_id: values.tax_id || null,
-      tax_office: values.tax_office || null,
-      contact_email: values.contact_email || null,
-      contact_phone: values.contact_phone || null,
-      brand_color: values.brand_color || null,
-      logo_url: values.logo_url || null,
-      notification_email: values.notification_email || null,
+      legal_name: values.legal_name || undefined,
+      tax_id: values.tax_id || undefined,
+      tax_office: values.tax_office || undefined,
+      contact_email: values.contact_email || undefined,
+      contact_phone: values.contact_phone || undefined,
+      brand_color: values.brand_color || undefined,
+      logo_url: values.logo_url || undefined,
+      notification_email: values.notification_email || undefined,
       notification_sms: values.notification_sms || false,
     };
 
