@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Building2, Users, Package, DollarSign, HardDrive, Mail, MessageSquare, CreditCard, Loader2, AlertCircle, CheckCircle2, XCircle } from "../../../lib/lucide";
 
-import { adminReportService } from "../../../services/admin/reports";
+import { adminReportService, type AdminSummaryResponse } from "../../../services/admin/reports";
 import { adminTenantService } from "../../../services/admin/tenants";
 import type { Tenant } from "../../../services/admin/tenants";
 import { useToast } from "../../../hooks/useToast";
@@ -15,7 +15,10 @@ import { ModernTable, type ModernTableColumn } from "../../../components/ui/Mode
 export function AdminReportsOverview() {
   const { t } = useTranslation();
   const { messages } = useToast();
-  const summaryQuery = useQuery({ queryKey: ["admin", "summary"], queryFn: adminReportService.summary });
+  const summaryQuery = useQuery<AdminSummaryResponse>({ 
+    queryKey: ["admin", "summary"], 
+    queryFn: () => adminReportService.summary(),
+  });
   const tenantsQuery = useQuery({ queryKey: ["admin", "tenants"], queryFn: adminTenantService.list });
 
   const tenantsById = useMemo(() => {
