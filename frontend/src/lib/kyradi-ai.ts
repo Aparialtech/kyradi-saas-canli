@@ -31,7 +31,7 @@ export interface KyradiAIResult {
 
 export interface UseKyradiAIParams {
   apiBase: string;
-  tenantId: string;
+  tenantId?: string;
   userId: string;
   locale?: string;
   token?: string;
@@ -127,7 +127,7 @@ export function useKyradiAI({
             locale,
           }
         : {
-            tenant_id: tenantId,
+            ...(tenantId && { tenant_id: tenantId }),
             user_id: userId,
             message: trimmed,
             locale,
