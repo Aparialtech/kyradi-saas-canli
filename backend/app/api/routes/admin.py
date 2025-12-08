@@ -966,20 +966,30 @@ async def admin_generate_invoice(
         import os
         import base64
         # Try multiple paths for logo
+        current_file_dir = os.path.dirname(os.path.abspath(__file__))
         logo_paths = [
-            os.path.join(os.path.dirname(__file__), "..", "static", "logo.png"),  # backend/app/static/logo.png
-            os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "image1.png"),  # project root
+            os.path.join(current_file_dir, "..", "static", "logo.png"),  # backend/app/static/logo.png
+            os.path.join(current_file_dir, "..", "..", "..", "..", "image1.png"),  # project root
+            os.path.join(os.path.dirname(current_file_dir), "static", "logo.png"),  # alternative path
         ]
         logo_png_base64 = ""
+        logo_loaded = False
         for logo_path in logo_paths:
-            if os.path.exists(logo_path):
+            abs_logo_path = os.path.abspath(logo_path)
+            if os.path.exists(abs_logo_path):
                 try:
-                    with open(logo_path, "rb") as logo_file:
+                    with open(abs_logo_path, "rb") as logo_file:
                         logo_png_base64 = base64.b64encode(logo_file.read()).decode("utf-8")
+                    logger.info(f"Logo successfully loaded from: {abs_logo_path} (size: {len(logo_png_base64)} chars)")
+                    logo_loaded = True
                     break
                 except Exception as e:
-                    logger.warning(f"Failed to load logo from {logo_path}: {e}")
+                    logger.warning(f"Failed to load logo from {abs_logo_path}: {e}")
                     continue
+        
+        if not logo_loaded:
+            logger.error("Logo file not found in any of the expected paths. Invoice will be generated without logo.")
+            logger.debug(f"Searched paths: {[os.path.abspath(p) for p in logo_paths]}")
         
         # Generate HTML invoice
         html_content = f"""
@@ -1011,7 +1021,7 @@ async def admin_generate_invoice(
     <body>
         <div class="header">
             <div class="company">
-                <img src="data:image/png;base64,{logo_png_base64}" alt="KYRADİ Logo" class="company-logo" />
+                {f'<img src="data:image/png;base64,{logo_png_base64}" alt="KYRADİ Logo" class="company-logo" />' if logo_png_base64 else ''}
                 <div class="company-text">KYRADİ</div>
                 <div class="company-subtitle">Depolama ve Rezervasyon Yönetim Sistemi</div>
             </div>
@@ -1144,9 +1154,21 @@ async def admin_generate_invoice(
                 section.left_margin = Inches(0.8)
                 section.right_margin = Inches(0.8)
             
-            # Header
+            # Header with logo
             header_para = doc.add_paragraph()
             header_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            
+            # Add logo image if available
+            if logo_png_base64:
+                try:
+                    logo_bytes = base64.b64decode(logo_png_base64)
+                    logo_stream = io.BytesIO(logo_bytes)
+                    run = header_para.add_run()
+                    run.add_picture(logo_stream, width=Inches(1.0))  # 1 inch width
+                    header_para.add_run("\n")  # Line break after logo
+                except Exception as e:
+                    logger.warning(f"Failed to add logo to Word document: {e}")
+            
             header_run = header_para.add_run("KYRADİ")
             header_run.bold = True
             header_run.font.size = Pt(24)
