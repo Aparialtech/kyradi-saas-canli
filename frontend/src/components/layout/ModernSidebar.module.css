@@ -119,11 +119,7 @@
   height: 100%;
   object-fit: contain;
   border-radius: var(--radius-lg);
-  filter: brightness(0) invert(0); /* Black logo */
-}
-
-[data-theme="dark"] .brandLogo {
-  filter: brightness(0) invert(1); /* White logo in dark mode */
+  /* PNG logos don't need filter - they are already in the correct color */
 }
 
 .brandLogoPlaceholder {

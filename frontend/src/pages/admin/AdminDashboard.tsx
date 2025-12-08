@@ -58,7 +58,7 @@ export function AdminDashboard() {
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
           brandName="KYRADI"
-          brandLogo="/logo-black.svg"
+          brandLogo="/logo-black.png"
         />
 
         {/* Main Content */}
