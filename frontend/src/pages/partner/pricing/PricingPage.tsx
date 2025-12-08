@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Package, MapPin, DollarSign } from "../../../lib/lucide";
+import { motion } from "framer-motion";
+import { AlertCircle, Package, MapPin, DollarSign, Plus, Edit, Trash2, X, Loader2 } from "../../../lib/lucide";
 import { pricingService, type PricingRule, type PricingRuleCreate, type PricingScope } from "../../../services/partner/pricing";
 import { locationService, type Location } from "../../../services/partner/locations";
 import { storageService, type Storage } from "../../../services/partner/storages";
@@ -10,6 +11,11 @@ import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
 import { SearchInput } from "../../../components/common/SearchInput";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernButton } from "../../../components/ui/ModernButton";
+import { ModernInput } from "../../../components/ui/ModernInput";
+import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { Badge } from "../../../components/ui/Badge";
 
 export function PricingPage() {
   const { t } = useTranslation();
@@ -169,15 +175,6 @@ export function PricingPage() {
     return labels[scope] || scope;
   };
 
-  const getScopeBadgeClass = (scope: PricingScope) => {
-    const classes: Record<PricingScope, string> = {
-      GLOBAL: "badge badge--info",
-      TENANT: "badge badge--primary",
-      LOCATION: "badge badge--success",
-      STORAGE: "badge badge--warning",
-    };
-    return classes[scope] || "badge";
-  };
 
   const getPricingTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -255,26 +252,38 @@ export function PricingPage() {
   };
 
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
-      <header className="page-header">
+      
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+      >
         <div>
-          <h1 className="page-title">{t("pricing.title")}</h1>
-          <p className="page-subtitle">{t("pricing.subtitle")}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+            <DollarSign className="h-8 w-8" style={{ color: 'var(--primary)' }} />
+            <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: 0 }}>
+              {t("pricing.title")}
+            </h1>
+          </div>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("pricing.subtitle")}
+          </p>
         </div>
         {!showForm && (
-          <button type="button" className="btn btn--primary" onClick={handleNewRule}>
-            + {t("pricing.newRule")}
-          </button>
+          <ModernButton variant="primary" onClick={handleNewRule} leftIcon={<Plus className="h-4 w-4" />}>
+            {t("pricing.newRule")}
+          </ModernButton>
         )}
-      </header>
+      </motion.div>
 
       {/* Pricing Rules List */}
       {!showForm && (
         <>
           {/* Search and Filter Controls */}
-          <div className="panel" style={{ marginBottom: "1rem" }}>
-            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+          <ModernCard variant="glass" padding="md" style={{ marginBottom: 'var(--space-4)' }}>
+            <div style={{ display: "flex", gap: "var(--space-4)", flexWrap: "wrap", alignItems: "center" }}>
               <div style={{ flex: "1 1 300px" }}>
                 <SearchInput
                   value={searchQuery}
@@ -284,10 +293,17 @@ export function PricingPage() {
               </div>
               <div style={{ flex: "0 0 200px" }}>
                 <select
-                  className="form-input"
                   value={scopeFilter}
                   onChange={(e) => setScopeFilter(e.target.value as PricingScope | "")}
-                  style={{ fontSize: "0.95rem" }}
+                  style={{
+                    width: '100%',
+                    padding: 'var(--space-3)',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--border-primary)',
+                    background: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                    fontSize: 'var(--text-sm)',
+                  }}
                 >
                   <option value="">{t("pricing.filter.allScopes")}</option>
                   <option value="GLOBAL">{t("pricing.scope.global")}</option>
@@ -297,253 +313,253 @@ export function PricingPage() {
                 </select>
               </div>
             </div>
-          </div>
+          </ModernCard>
 
           {pricingQuery.isLoading && !pricingQuery.data ? (
-            <div className="panel">
-              <div className="empty-state">{t("common.loading")}</div>
-            </div>
+            <ModernCard variant="glass" padding="lg">
+              <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+                <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+                <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>{t("common.loading")}</p>
+              </div>
+            </ModernCard>
           ) : pricingQuery.isError ? (
-            <div className="panel">
-              <div className="empty-state" style={{ color: "#dc2626" }}>
-                <AlertCircle className="h-12 w-12" style={{ margin: "0 auto 1rem auto", color: "#dc2626" }} />
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
+            <ModernCard variant="glass" padding="lg">
+              <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--danger-500)' }}>
+                <AlertCircle className="h-12 w-12" style={{ margin: "0 auto var(--space-4) auto" }} />
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
                   {t("pricing.loadError")}
                 </h3>
-                <p style={{ fontSize: "0.9rem", color: "#64748b", marginBottom: "1.5rem" }}>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-4)' }}>
                   {getErrorMessage(pricingQuery.error)}
                 </p>
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  onClick={() => pricingQuery.refetch()}
-                >
+                <ModernButton variant="primary" onClick={() => pricingQuery.refetch()}>
                   {t("common.retry")}
-                </button>
+                </ModernButton>
               </div>
-            </div>
+            </ModernCard>
           ) : filteredRules.length > 0 ? (
-            <div className="panel">
-              <div className="panel__header">
-                <h2 className="panel__title">{t("pricing.rulesTitle")}</h2>
-                <p className="panel__subtitle">{t("pricing.rulesSubtitle", { count: filteredRules.length })}</p>
-              </div>
-              <div style={{ overflowX: "auto" }}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>{t("pricing.table.scope")}</th>
-                      <th>{t("pricing.table.target")}</th>
-                      <th>{t("pricing.table.type")}</th>
-                      <th>{t("pricing.table.hourly")}</th>
-                      <th>{t("pricing.table.daily")}</th>
-                      <th>{t("pricing.table.minimum")}</th>
-                      <th>{t("pricing.table.currency")}</th>
-                      <th>{t("pricing.table.priority")}</th>
-                      <th>{t("pricing.table.status")}</th>
-                      <th style={{ textAlign: "right" }}>{t("common.actions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRules.map((rule) => (
-                      <tr key={rule.id}>
-                        {/* Scope */}
-                        <td>
-                          <span className={getScopeBadgeClass(rule.scope)}>
-                            {getScopeLabel(rule.scope)}
-                          </span>
-                        </td>
-                        {/* Target (Location/Storage) */}
-                        <td>
-                          {rule.scope === "STORAGE" && rule.storage_code ? (
-                            <div>
-                              <span style={{ fontWeight: 500, display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-                                <Package className="h-3 w-3" />
-                                {rule.storage_code}
-                              </span>
-                              {rule.location_name && (
-                                <div className="table-cell-muted" style={{ fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "0.25rem", marginTop: "0.25rem" }}>
-                                  <MapPin className="h-3 w-3" />
-                                  {rule.location_name}
-                                </div>
-                              )}
-                            </div>
-                          ) : rule.scope === "LOCATION" && rule.location_name ? (
-                            <span style={{ fontWeight: 500, display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-                              <MapPin className="h-3 w-3" />
-                              {rule.location_name}
-                            </span>
-                          ) : rule.name ? (
-                            <span style={{ fontWeight: 500 }}>{rule.name}</span>
-                          ) : (
-                            <span className="table-cell-muted">—</span>
-                          )}
-                        </td>
-                        {/* Pricing Type */}
-                        <td>
-                          <span
-                            style={{
-                              padding: "0.25rem 0.75rem",
-                              borderRadius: "4px",
-                              fontSize: "0.75rem",
-                              fontWeight: 600,
-                              textTransform: "capitalize",
-                              backgroundColor: "#e0f2fe",
-                              color: "#0c4a6e",
-                            }}
-                          >
-                            {getPricingTypeLabel(rule.pricing_type)}
-                          </span>
-                        </td>
-                        {/* Hourly Rate */}
-                        <td>
-                          <span style={{ fontWeight: 500 }}>{formatPrice(rule.price_per_hour_minor)}</span>
-                        </td>
-                        {/* Daily Rate */}
-                        <td>
-                          <span style={{ fontWeight: 500 }}>{formatPrice(rule.price_per_day_minor)}</span>
-                        </td>
-                        {/* Minimum */}
-                        <td>
-                          <span style={{ fontWeight: 500, color: "#dc2626" }}>
-                            {formatPrice(rule.minimum_charge_minor)}
-                          </span>
-                        </td>
-                        {/* Currency */}
-                        <td>
-                          <span style={{ fontWeight: 500 }}>{rule.currency}</span>
-                        </td>
-                        {/* Priority */}
-                        <td>
-                          <span
-                            style={{
-                              padding: "0.25rem 0.5rem",
-                              borderRadius: "4px",
-                              fontSize: "0.75rem",
-                              backgroundColor: rule.priority > 0 ? "#fef3c7" : "#f1f5f9",
-                              color: rule.priority > 0 ? "#92400e" : "#64748b",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {rule.priority}
-                          </span>
-                        </td>
-                        {/* Status */}
-                        <td>
-                          <span
-                            style={{
-                              padding: "0.25rem 0.75rem",
-                              borderRadius: "4px",
-                              fontSize: "0.75rem",
-                              fontWeight: 600,
-                              background: rule.is_active ? "#dcfce7" : "#fee2e2",
-                              color: rule.is_active ? "#166534" : "#991b1b",
-                            }}
-                          >
-                            {rule.is_active ? t("common.active") : t("common.passive")}
-                          </span>
-                        </td>
-                        {/* Actions */}
-                        <td>
-                          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-                            <button
-                              type="button"
-                              className="btn btn--link"
-                              onClick={() => handleEditRule(rule)}
-                              style={{ padding: "0.25rem 0.5rem" }}
-                            >
-                              {t("common.edit")}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn--link btn--danger"
-                              onClick={() => {
-                                if (confirm(t("pricing.confirmDelete"))) {
-                                  deleteMutation.mutate(rule.id);
-                                }
-                              }}
-                              style={{ padding: "0.25rem 0.5rem" }}
-                            >
-                              {t("common.delete")}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="panel">
-              <div className="empty-state">
-                <DollarSign className="h-12 w-12" style={{ margin: "0 auto 1rem auto", color: "var(--text-tertiary)" }} />
-                <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-                  {t("pricing.emptyState.title")}
+            <ModernCard variant="glass" padding="lg">
+              <div style={{ marginBottom: 'var(--space-4)' }}>
+                <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-1) 0' }}>
+                  {t("pricing.rulesTitle")}
+                </h2>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                  {t("pricing.rulesSubtitle", { count: filteredRules.length })}
                 </p>
-                <p style={{ fontSize: "0.9rem", color: "#64748b", marginBottom: "1.5rem" }}>
+              </div>
+              <ModernTable
+                columns={[
+                  {
+                    key: 'scope',
+                    label: t("pricing.table.scope"),
+                    render: (_, row) => {
+                      const variantMap: Record<PricingScope, "info" | "primary" | "success" | "warning"> = {
+                        GLOBAL: "info",
+                        TENANT: "primary",
+                        LOCATION: "success",
+                        STORAGE: "warning",
+                      };
+                      return <Badge variant={variantMap[row.scope]}>{getScopeLabel(row.scope)}</Badge>;
+                    },
+                  },
+                  {
+                    key: 'target',
+                    label: t("pricing.table.target"),
+                    render: (_, row) => {
+                      if (row.scope === "STORAGE" && row.storage_code) {
+                        return (
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                              <Package className="h-3 w-3" />
+                              <strong>{row.storage_code}</strong>
+                            </div>
+                            {row.location_name && (
+                              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                                <MapPin className="h-3 w-3" />
+                                {row.location_name}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      if (row.scope === "LOCATION" && row.location_name) {
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                            <MapPin className="h-3 w-3" />
+                            <strong>{row.location_name}</strong>
+                          </div>
+                        );
+                      }
+                      if (row.name) {
+                        return <strong>{row.name}</strong>;
+                      }
+                      return <span style={{ color: 'var(--text-tertiary)' }}>—</span>;
+                    },
+                  },
+                  {
+                    key: 'pricing_type',
+                    label: t("pricing.table.type"),
+                    render: (_, row) => (
+                      <Badge variant="info">
+                        {getPricingTypeLabel(row.pricing_type)}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'price_per_hour_minor',
+                    label: t("pricing.table.hourly"),
+                    render: (value) => <strong>{formatPrice(value)}</strong>,
+                    align: 'right',
+                  },
+                  {
+                    key: 'price_per_day_minor',
+                    label: t("pricing.table.daily"),
+                    render: (value) => <strong>{formatPrice(value)}</strong>,
+                    align: 'right',
+                  },
+                  {
+                    key: 'minimum_charge_minor',
+                    label: t("pricing.table.minimum"),
+                    render: (value) => <strong style={{ color: 'var(--danger-500)' }}>{formatPrice(value)}</strong>,
+                    align: 'right',
+                  },
+                  {
+                    key: 'currency',
+                    label: t("pricing.table.currency"),
+                    render: (value) => <strong>{value}</strong>,
+                    align: 'center',
+                  },
+                  {
+                    key: 'priority',
+                    label: t("pricing.table.priority"),
+                    render: (value) => (
+                      <Badge variant={value > 0 ? "warning" : "neutral"}>
+                        {value}
+                      </Badge>
+                    ),
+                    align: 'center',
+                  },
+                  {
+                    key: 'is_active',
+                    label: t("pricing.table.status"),
+                    render: (_, row) => (
+                      <Badge variant={row.is_active ? "success" : "danger"}>
+                        {row.is_active ? t("common.active") : t("common.passive")}
+                      </Badge>
+                    ),
+                    align: 'center',
+                  },
+                  {
+                    key: 'actions',
+                    label: t("common.actions"),
+                    render: (_, row) => (
+                      <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
+                        <ModernButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditRule(row)}
+                          leftIcon={<Edit className="h-3 w-3" />}
+                        >
+                          {t("common.edit")}
+                        </ModernButton>
+                        <ModernButton
+                          variant="danger"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(t("pricing.confirmDelete"))) {
+                              deleteMutation.mutate(row.id);
+                            }
+                          }}
+                          leftIcon={<Trash2 className="h-3 w-3" />}
+                        >
+                          {t("common.delete")}
+                        </ModernButton>
+                      </div>
+                    ),
+                    align: 'right',
+                  },
+                ] as ModernTableColumn<PricingRule>[]}
+                data={filteredRules}
+                loading={pricingQuery.isLoading}
+                striped
+                hoverable
+                stickyHeader
+              />
+            </ModernCard>
+          ) : (
+            <ModernCard variant="glass" padding="lg">
+              <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+                <DollarSign className="h-16 w-16" style={{ margin: "0 auto var(--space-4) auto", color: 'var(--text-muted)' }} />
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
+                  {t("pricing.emptyState.title")}
+                </h3>
+                <p style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-4)' }}>
                   {t("pricing.emptyState.description")}
                 </p>
-                <button type="button" className="btn btn--primary" onClick={handleNewRule}>
+                <ModernButton variant="primary" onClick={handleNewRule} leftIcon={<Plus className="h-4 w-4" />}>
                   {t("pricing.emptyState.button")}
-                </button>
+                </ModernButton>
               </div>
-            </div>
+            </ModernCard>
           )}
         </>
       )}
 
       {/* Form Panel */}
       {showForm && (
-        <div className="panel" style={{ marginBottom: "2rem" }}>
-          <div className="panel__header">
+        <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
             <div>
-              <h2 className="panel__title">
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
                 {editingRule ? t("pricing.form.editTitle") : t("pricing.form.createTitle")}
               </h2>
-              <p className="panel__subtitle">
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
                 {editingRule ? t("pricing.form.editSubtitle") : t("pricing.form.createSubtitle")}
               </p>
             </div>
-            <button 
-              type="button" 
-              className="btn btn--outline" 
+            <ModernButton 
+              variant="ghost" 
+              size="sm"
               onClick={(e) => {
-                console.log("[PricingPage] Close button clicked");
                 e.preventDefault();
                 e.stopPropagation();
                 handleCancel(e);
               }}
-              style={{ cursor: "pointer", pointerEvents: "auto" }}
+              leftIcon={<X className="h-4 w-4" />}
             >
-              ✕ {t("common.close")}
-            </button>
+              {t("common.close")}
+            </ModernButton>
           </div>
 
-          <form 
-            onSubmit={submit}
-          >
+          <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
             {/* Scope Selection Section */}
-            <div style={{ marginBottom: "2rem" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem", color: "#0f172a" }}>
+            <div>
+              <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', marginBottom: 'var(--space-4)', color: 'var(--text-primary)' }}>
                 {t("pricing.form.scopeSection")}
               </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "var(--space-4)" }}>
                 <div>
-                  <label className="form-label">
-                    {t("pricing.form.scope")} <span style={{ color: "#dc2626" }}>*</span>
+                  <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    {t("pricing.form.scope")} <span style={{ color: 'var(--danger-500)' }}>*</span>
                   </label>
                   <select
-                    className="form-input"
                     value={selectedScope}
                     onChange={(e) => handleScopeChange(e.target.value as PricingScope)}
-                    style={{ fontSize: "0.95rem" }}
+                    style={{
+                      width: '100%',
+                      padding: 'var(--space-3)',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--border-primary)',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      fontSize: 'var(--text-sm)',
+                    }}
                   >
                     <option value="TENANT">{t("pricing.scope.tenant")}</option>
                     <option value="LOCATION">{t("pricing.scope.location")}</option>
                     <option value="STORAGE">{t("pricing.scope.storage")}</option>
                   </select>
-                  <small style={{ color: "#64748b", fontSize: "0.75rem", display: "block", marginTop: "0.25rem" }}>
+                  <small style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'block' }}>
                     {t("pricing.form.scopeHelp")}
                   </small>
                 </div>
@@ -551,8 +567,8 @@ export function PricingPage() {
                 {/* Location selection for LOCATION and STORAGE scopes */}
                 {(selectedScope === "LOCATION" || selectedScope === "STORAGE") && (
                   <div>
-                    <label className="form-label">
-                      {t("pricing.form.location")} <span style={{ color: "#dc2626" }}>*</span>
+                    <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      {t("pricing.form.location")} <span style={{ color: 'var(--danger-500)' }}>*</span>
                     </label>
                     <select
                       {...register("location_id", { 
@@ -560,8 +576,15 @@ export function PricingPage() {
                           ? t("pricing.form.locationRequired") 
                           : false 
                       })}
-                      className="form-input"
-                      style={{ fontSize: "0.95rem" }}
+                      style={{
+                        width: '100%',
+                        padding: 'var(--space-3)',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--border-primary)',
+                        background: 'var(--bg-tertiary)',
+                        color: 'var(--text-primary)',
+                        fontSize: 'var(--text-sm)',
+                      }}
                     >
                       <option value="">{t("pricing.form.selectLocation")}</option>
                       {locationsQuery.data?.map((loc) => (
@@ -571,7 +594,7 @@ export function PricingPage() {
                       ))}
                     </select>
                     {errors.location_id && (
-                      <span style={{ color: "#dc2626", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                      <span style={{ color: 'var(--danger-500)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)', display: 'block' }}>
                         {errors.location_id.message}
                       </span>
                     )}
@@ -581,15 +604,22 @@ export function PricingPage() {
                 {/* Storage selection for STORAGE scope */}
                 {selectedScope === "STORAGE" && selectedLocationId && (
                   <div>
-                    <label className="form-label">
-                      {t("pricing.form.storage")} <span style={{ color: "#dc2626" }}>*</span>
+                    <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      {t("pricing.form.storage")} <span style={{ color: 'var(--danger-500)' }}>*</span>
                     </label>
                     <select
                       {...register("storage_id", { 
                         required: selectedScope === "STORAGE" ? t("pricing.form.storageRequired") : false 
                       })}
-                      className="form-input"
-                      style={{ fontSize: "0.95rem" }}
+                      style={{
+                        width: '100%',
+                        padding: 'var(--space-3)',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--border-primary)',
+                        background: 'var(--bg-tertiary)',
+                        color: 'var(--text-primary)',
+                        fontSize: 'var(--text-sm)',
+                      }}
                     >
                       <option value="">{t("pricing.form.selectStorage")}</option>
                       {filteredStorages.map((storage) => (
@@ -599,12 +629,12 @@ export function PricingPage() {
                       ))}
                     </select>
                     {errors.storage_id && (
-                      <span style={{ color: "#dc2626", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                      <span style={{ color: 'var(--danger-500)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)', display: 'block' }}>
                         {errors.storage_id.message}
                       </span>
                     )}
                     {filteredStorages.length === 0 && (
-                      <small style={{ color: "#f59e0b", fontSize: "0.75rem", display: "block", marginTop: "0.25rem" }}>
+                      <small style={{ color: '#f59e0b', fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)', display: 'block' }}>
                         {t("pricing.form.noStoragesInLocation")}
                       </small>
                     )}
@@ -612,13 +642,11 @@ export function PricingPage() {
                 )}
 
                 <div>
-                  <label className="form-label">{t("pricing.form.name")}</label>
-                  <input
-                    type="text"
+                  <ModernInput
+                    label={t("pricing.form.name")}
                     {...register("name")}
-                    className="form-input"
                     placeholder={t("pricing.form.namePlaceholder")}
-                    style={{ fontSize: "0.95rem" }}
+                    fullWidth
                   />
                 </div>
               </div>
@@ -898,8 +926,8 @@ export function PricingPage() {
               </button>
             </div>
           </form>
-        </div>
+        </ModernCard>
       )}
-    </section>
+    </div>
   );
 }

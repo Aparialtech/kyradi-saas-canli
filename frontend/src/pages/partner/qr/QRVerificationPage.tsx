@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { QrCode, CheckCircle2, XCircle, Loader2 } from "../../../lib/lucide";
 
 import { qrService, type QRVerifyResult } from "../../../services/partner/qr";
 import { reservationService } from "../../../services/partner/reservations";
@@ -7,17 +9,15 @@ import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
 import { getErrorMessage } from "../../../lib/httpError";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernButton } from "../../../components/ui/ModernButton";
+import { ModernInput } from "../../../components/ui/ModernInput";
+import { Badge } from "../../../components/ui/Badge";
 
 const statusLabels: Record<string, string> = {
   active: "Aktif",
   completed: "Tamamlandı",
   cancelled: "İptal",
-};
-
-const statusClassMap: Record<string, string> = {
-  active: "badge badge--success",
-  completed: "badge badge--info",
-  cancelled: "badge badge--danger",
 };
 
 const formatDateTime = (value?: string | null) => {
@@ -188,134 +188,176 @@ export function QRVerificationPage() {
     return "Rezervasyon bulundu ancak QR kodu şu anda kullanılamıyor.";
   }, [result]);
 
+  const getStatusBadgeVariant = (status?: string) => {
+    if (status === "active") return "success";
+    if (status === "completed") return "info";
+    if (status === "cancelled") return "danger";
+    return "muted";
+  };
+
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1200px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">QR Doğrulama</h1>
-          <p className="page-subtitle">
-            Müşteri QR kodunu kontrol ederek depodaki teslim ve iade işlemlerini hızla başlatın.
+      
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+          <QrCode className="h-8 w-8" style={{ color: 'var(--primary)' }} />
+          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: 0 }}>
+            QR Doğrulama
+          </h1>
+        </div>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+          Müşteri QR kodunu kontrol ederek depodaki teslim ve iade işlemlerini hızla başlatın.
+        </p>
+      </motion.div>
+
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+            Kod Doğrulama
+          </h2>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+            QR kodu girip doğrulayın; geçerliyse teslim veya iade adımını başlatabilirsiniz.
           </p>
         </div>
-      </header>
 
-      <div className="panel" style={{ maxWidth: "760px" }}>
-        <div className="panel__header">
-          <div>
-            <h2 className="panel__title">Kod Doğrulama</h2>
-            <p className="panel__subtitle">
-              QR kodu girip doğrulayın; geçerliyse teslim veya iade adımını başlatabilirsiniz.
-            </p>
-          </div>
-        </div>
-
-        <form className="form-grid" onSubmit={handleVerifySubmit}>
-          <label className="form-field form-grid__field--full">
-            <span className="form-field__label">QR Kodu</span>
-            <input
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              placeholder="örn. QR-ABC123"
-              autoComplete="off"
-            />
-          </label>
-          <div className="form-actions form-grid__field--full">
-            <button type="submit" className="btn btn--primary" disabled={loading}>
-              {loading ? "Doğrulanıyor..." : "Doğrula"}
-            </button>
+        <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          <ModernInput
+            label="QR Kodu"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="örn. QR-ABC123"
+            autoComplete="off"
+            leftIcon={<QrCode className="h-4 w-4" />}
+            fullWidth
+          />
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <ModernButton 
+              type="submit" 
+              variant="primary" 
+              disabled={loading}
+              isLoading={loading}
+              loadingText="Doğrulanıyor..."
+              leftIcon={!loading && <QrCode className="h-4 w-4" />}
+            >
+              Doğrula
+            </ModernButton>
             {(result || code) && (
-              <button type="button" className="btn btn--ghost-dark" onClick={clearResult} disabled={loading}>
+              <ModernButton 
+                type="button" 
+                variant="ghost" 
+                onClick={clearResult} 
+                disabled={loading}
+              >
                 Temizle
-              </button>
+              </ModernButton>
             )}
           </div>
         </form>
 
         {result && (
-          <div className="lookup-card">
-            <div className="lookup-card__header">
+          <ModernCard variant="glass" padding="lg" style={{ marginTop: 'var(--space-6)', background: 'var(--bg-secondary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
               <div>
-                <h3 className="lookup-card__title">Rezervasyon Özeti</h3>
-                <p className="table-cell-muted">
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                  Rezervasyon Özeti
+                </h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
                   Kod: <strong>{code.trim()}</strong>
                 </p>
               </div>
               {result.status && (
-                <span className={statusClassMap[result.status] ?? "badge badge--info"}>
+                <Badge variant={getStatusBadgeVariant(result.status)}>
                   {statusLabels[result.status] ?? result.status}
-                </span>
+                </Badge>
               )}
             </div>
 
-            <div className="lookup-card__grid">
-              <div className="lookup-card__meta">
-                <strong>Rezervasyon No</strong>
-                <span>{result.reservation_id ?? "-"}</span>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+              gap: 'var(--space-4)',
+              marginBottom: 'var(--space-4)'
+            }}>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Rezervasyon No</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>{result.reservation_id ?? "-"}</span>
               </div>
-              <div className="lookup-card__meta">
-                <strong>QR Kodu</strong>
-                <span>{result.qr_code ?? code.trim()}</span>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>QR Kodu</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>{result.qr_code ?? code.trim()}</span>
               </div>
-              <div className="lookup-card__meta">
-                <strong>Depo Numarası</strong>
-                <span>{result.locker_id ?? "-"}</span>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Depo Numarası</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>{result.locker_id ?? "-"}</span>
               </div>
-              <div className="lookup-card__meta">
-                <strong>Depo Kodu</strong>
-                <span>{result.storage_code ?? "-"}</span>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Depo Kodu</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>{result.storage_code ?? "-"}</span>
                 {result.location_name && (
-                  <span className="table-cell-muted">{result.location_name}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', display: 'block', marginTop: 'var(--space-1)' }}>{result.location_name}</span>
                 )}
               </div>
-              <div className="lookup-card__meta">
-                <strong>Ad Soyad</strong>
-                <span>{result.full_name || result.customer_name || "Ziyaretçi"}</span>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Ad Soyad</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>{result.full_name || result.customer_name || "Ziyaretçi"}</span>
               </div>
-              <div className="lookup-card__meta">
-                <strong>İletişim</strong>
-                <span>{result.customer_phone || result.phone_number || "-"}</span>
-                {result.customer_email && <span>{result.customer_email}</span>}
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>İletişim</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', display: 'block' }}>{result.customer_phone || result.phone_number || "-"}</span>
+                {result.customer_email && (
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginTop: 'var(--space-1)' }}>{result.customer_email}</span>
+                )}
               </div>
               {(result.tc_identity_number || result.passport_number) && (
-                <div className="lookup-card__meta">
-                  <strong>Kimlik</strong>
+                <div>
+                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Kimlik</strong>
                   {result.tc_identity_number && (
-                    <span>TC: {result.tc_identity_number.replace(/(\d{3})(\d{2})(\d{3})(\d{3})/, "$1***$3***")}</span>
+                    <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', display: 'block' }}>
+                      TC: {result.tc_identity_number.replace(/(\d{3})(\d{2})(\d{3})(\d{3})/, "$1***$3***")}
+                    </span>
                   )}
-                  {result.passport_number && <span>Pasaport: {result.passport_number}</span>}
+                  {result.passport_number && (
+                    <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', display: 'block' }}>Pasaport: {result.passport_number}</span>
+                  )}
                 </div>
               )}
               {result.hotel_room_number && (
-                <div className="lookup-card__meta">
-                  <strong>Oda Numarası</strong>
-                  <span>{result.hotel_room_number}</span>
+                <div>
+                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Oda Numarası</strong>
+                  <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>{result.hotel_room_number}</span>
                 </div>
               )}
-              <div className="lookup-card__meta">
-                <strong>Rezervasyon Tarihleri</strong>
-                <span>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Rezervasyon Tarihleri</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', display: 'block' }}>
                   {result.start_at ? formatDateTime(result.start_at) : "-"} - {result.end_at ? formatDateTime(result.end_at) : "-"}
                 </span>
               </div>
-              <div className="lookup-card__meta">
-                <strong>Bavul Bilgileri</strong>
-                <span>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Bavul Bilgileri</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', display: 'block' }}>
                   {result.baggage_count ?? 0} {result.baggage_type ?? "parça"}
                 </span>
-                {result.weight_kg != null && <span>{result.weight_kg.toFixed(1)} kg</span>}
+                {result.weight_kg != null && (
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginTop: 'var(--space-1)' }}>{result.weight_kg.toFixed(1)} kg</span>
+                )}
               </div>
-              <div className="lookup-card__meta">
-                <strong>Depoya Teslim</strong>
-                <span>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Depoya Teslim</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', display: 'block' }}>
                   {result.handover_at
                     ? `${formatDateTime(result.handover_at)} · ${result.handover_by ?? "-"}`
                     : "Bekleniyor"}
                 </span>
               </div>
-              <div className="lookup-card__meta">
-                <strong>Misafire İade</strong>
-                <span>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Misafire İade</strong>
+                <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', display: 'block' }}>
                   {result.returned_at
                     ? `${formatDateTime(result.returned_at)} · ${result.returned_by ?? "-"}`
                     : "Bekleniyor"}
@@ -323,51 +365,72 @@ export function QRVerificationPage() {
               </div>
             </div>
             {(result.notes || result.evidence_url) && (
-              <div className="lookup-card__meta" style={{ marginTop: "1rem" }}>
+              <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--border-primary)' }}>
                 {result.notes && (
-                  <p style={{ margin: 0, color: "#475569" }}>
+                  <p style={{ margin: '0 0 var(--space-2) 0', color: 'var(--text-secondary)' }}>
                     <strong>Audit Notu:</strong> {result.notes}
                   </p>
                 )}
                 {result.evidence_url && (
-                  <a href={result.evidence_url} target="_blank" rel="noreferrer" className="action-link">
-                    Ek / Fotoğrafı Aç
+                  <a 
+                    href={result.evidence_url} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    style={{ color: 'var(--primary)', textDecoration: 'none' }}
+                  >
+                    Ek / Fotoğrafı Aç →
                   </a>
                 )}
               </div>
             )}
 
             {result.valid && (
-              <div className="lookup-card__actions">
-                <div className="table-actions">
-                  <button
-                    type="button"
-                    className="btn btn--secondary"
+              <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--border-primary)' }}>
+                <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                  <ModernButton
+                    variant="secondary"
                     onClick={() => !handoverDisabled && openActionModal("handover")}
                     disabled={handoverDisabled}
+                    isLoading={handoverMutation.isPending}
+                    loadingText="Kaydediliyor..."
+                    leftIcon={!handoverMutation.isPending && <CheckCircle2 className="h-4 w-4" />}
                   >
-                    {handoverMutation.isPending ? "Kaydediliyor..." : "Depoya Teslim Alındı"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--primary"
+                    Depoya Teslim Alındı
+                  </ModernButton>
+                  <ModernButton
+                    variant="primary"
                     onClick={() => !returnDisabled && openActionModal("return")}
                     disabled={returnDisabled}
+                    isLoading={returnMutation.isPending}
+                    loadingText="Kaydediliyor..."
+                    leftIcon={!returnMutation.isPending && <CheckCircle2 className="h-4 w-4" />}
                   >
-                    {returnMutation.isPending ? "Kaydediliyor..." : "Misafire Teslim Edildi"}
-                  </button>
+                    Misafire Teslim Edildi
+                  </ModernButton>
                 </div>
-                <p className="table-cell-muted">
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 'var(--space-2) 0 0 0' }}>
                   Kaydedilen işlemler rezervasyon listesine ve denetim kayıtlarına otomatik olarak yansır.
                 </p>
               </div>
             )}
             {invalidMessage && (
-              <p className="field-error lookup-card__alert">{invalidMessage}</p>
+              <div style={{ 
+                marginTop: 'var(--space-4)', 
+                padding: 'var(--space-3)', 
+                background: 'rgba(220, 38, 38, 0.1)', 
+                border: '1px solid rgba(220, 38, 38, 0.2)',
+                borderRadius: 'var(--radius-lg)',
+                color: '#dc2626'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <XCircle className="h-4 w-4" />
+                  <span style={{ fontSize: 'var(--text-sm)' }}>{invalidMessage}</span>
+                </div>
+              </div>
             )}
-          </div>
+          </ModernCard>
         )}
-      </div>
+      </ModernCard>
 
       {actionModal && result && (
         <Modal
@@ -377,61 +440,54 @@ export function QRVerificationPage() {
           disableClose={handoverMutation.isPending || returnMutation.isPending}
           width="520px"
         >
-          <form className="form-grid" onSubmit={handleActionSubmit}>
-            <div className="form-grid__field--full" style={{ color: "#475569" }}>
-              <div>
+          <form onSubmit={handleActionSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div style={{ padding: 'var(--space-3)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', color: 'var(--text-secondary)' }}>
+              <div style={{ marginBottom: 'var(--space-2)' }}>
                 <strong>Rezervasyon:</strong> {result.reservation_id ?? "-"}
               </div>
-              <div>
+              <div style={{ marginBottom: 'var(--space-2)' }}>
                 <strong>Dolap:</strong> {result.locker_id ?? "-"}
               </div>
               <div>
                 <strong>Müşteri:</strong> {result.customer_name ?? "Ziyaretçi"}
               </div>
             </div>
-            <label className="form-field form-grid__field--full">
-              <span className="form-field__label">Not</span>
-              <textarea
-                value={actionModal.notes}
-                onChange={(event) => handleActionFieldChange("notes", event.target.value)}
-                placeholder="Teslim/İade sırasında kaydetmek istediğiniz notlar"
-                rows={3}
-              />
-            </label>
-            <label className="form-field form-grid__field--full">
-              <span className="form-field__label">Fotoğraf / Tutanak URL</span>
-              <input
-                value={actionModal.evidence}
-                onChange={(event) => handleActionFieldChange("evidence", event.target.value)}
-                placeholder="https://..."
-              />
-            </label>
-            <div className="form-actions form-grid__field--full">
-              <button
+            <ModernInput
+              label="Not"
+              value={actionModal.notes}
+              onChange={(e) => handleActionFieldChange("notes", e.target.value)}
+              placeholder="Teslim/İade sırasında kaydetmek istediğiniz notlar"
+              fullWidth
+            />
+            <ModernInput
+              label="Fotoğraf / Tutanak URL"
+              value={actionModal.evidence}
+              onChange={(e) => handleActionFieldChange("evidence", e.target.value)}
+              placeholder="https://..."
+              fullWidth
+            />
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+              <ModernButton
                 type="button"
-                className="btn btn--ghost-dark"
+                variant="ghost"
                 onClick={closeActionModal}
                 disabled={handoverMutation.isPending || returnMutation.isPending}
               >
                 Vazgeç
-              </button>
-              <button
+              </ModernButton>
+              <ModernButton
                 type="submit"
-                className="btn btn--primary"
+                variant="primary"
                 disabled={handoverMutation.isPending || returnMutation.isPending}
+                isLoading={actionModal.mode === "handover" ? handoverMutation.isPending : returnMutation.isPending}
+                loadingText="Kaydediliyor..."
               >
-                {actionModal.mode === "handover"
-                  ? handoverMutation.isPending
-                    ? "Kaydediliyor..."
-                    : "Teslimi Kaydet"
-                  : returnMutation.isPending
-                    ? "Kaydediliyor..."
-                    : "İadeyi Kaydet"}
-              </button>
+                {actionModal.mode === "handover" ? "Teslimi Kaydet" : "İadeyi Kaydet"}
+              </ModernButton>
             </div>
           </form>
         </Modal>
       )}
-    </section>
+    </div>
   );
 }

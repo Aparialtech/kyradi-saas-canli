@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Code, Eye, Loader2, AlertCircle } from "../../lib/lucide";
 
 import { env } from "../../config/env";
 import { partnerWidgetService } from "../../services/partner/widgetConfig";
@@ -7,6 +9,8 @@ import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
 import { useTranslation } from "../../hooks/useTranslation";
+import { ModernCard } from "../../components/ui/ModernCard";
+import { ModernButton } from "../../components/ui/ModernButton";
 
 declare global {
   interface Window {
@@ -75,57 +79,73 @@ export function WidgetPreviewPage() {
   }, [tenantQuery.isError]); // Only depend on isError boolean to avoid infinite loops from error object reference changes
 
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
-      <header className="page-header">
+      
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+      >
         <div>
-          <h1 className="page-title">{t("widget.preview.title")}</h1>
-          <p className="page-subtitle">{t("widget.preview.subtitle")}</p>
-        </div>
-        <div className="page-actions">
-          <a
-            href="/docs/embedding_guide.md"
-            className="btn btn--outline"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("widget.preview.docButton")}
-          </a>
-        </div>
-      </header>
-
-      <div className="panel">
-        <div className="panel__header" style={{ justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h2 className="panel__title">{t("widget.preview.liveTitle")}</h2>
-            <p className="panel__subtitle">{t("widget.preview.liveSubtitle")}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+            <Code className="h-8 w-8" style={{ color: 'var(--primary)' }} />
+            <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: 0 }}>
+              {t("widget.preview.title")}
+            </h1>
           </div>
-          <a className="btn btn--ghost" href="/widget-demo" target="_blank" rel="noreferrer">
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("widget.preview.subtitle")}
+          </p>
+        </div>
+        <ModernButton variant="outline" onClick={() => window.open("/docs/embedding_guide.md", "_blank")}>
+          {t("widget.preview.docButton")}
+        </ModernButton>
+      </motion.div>
+
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
+          <div>
+            <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+              {t("widget.preview.liveTitle")}
+            </h2>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              {t("widget.preview.liveSubtitle")}
+            </p>
+          </div>
+          <ModernButton variant="ghost" onClick={() => window.open("/widget-demo", "_blank")} leftIcon={<Eye className="h-4 w-4" />}>
             {t("widget.preview.demoButton")}
-          </a>
+          </ModernButton>
         </div>
         {tenantQuery.isLoading ? (
-          <div className="empty-state">
-            <p>{t("widget.preview.loading")}</p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>{t("widget.preview.loading")}</p>
+          </div>
+        ) : tenantQuery.isError ? (
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--danger-500)' }}>
+            <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto' }} />
+            <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>{t("common.error")}</p>
+            <p style={{ margin: 'var(--space-2) 0 0 0' }}>{getErrorMessage(tenantQuery.error)}</p>
           </div>
         ) : (
-          <div ref={containerRef} className="widget-preview"></div>
+          <div ref={containerRef} style={{ minHeight: '400px', padding: 'var(--space-4)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)' }}></div>
         )}
-      </div>
+      </ModernCard>
 
-      <div className="panel">
-        <div className="panel__header" style={{ justifyContent: "space-between", alignItems: "center" }}>
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
           <div>
-            <h3 className="panel__title">{t("widget.preview.staticTitle")}</h3>
-            <p className="panel__subtitle">{t("widget.preview.staticSubtitle")}</p>
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+              {t("widget.preview.staticTitle")}
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              {t("widget.preview.staticSubtitle")}
+            </p>
           </div>
-          <button
-            type="button"
-            className="btn btn--ghost"
-            onClick={() => setShowStaticForm((prev) => !prev)}
-          >
+          <ModernButton variant="ghost" onClick={() => setShowStaticForm((prev) => !prev)}>
             {showStaticForm ? t("widget.preview.toggleHide") : t("widget.preview.toggleShow")}
-          </button>
+          </ModernButton>
         </div>
         {showStaticForm && (
           <div className="kyradi-reserve" style={{ maxWidth: 420 }}>
@@ -169,19 +189,35 @@ export function WidgetPreviewPage() {
             </form>
           </div>
         )}
-      </div>
+      </ModernCard>
 
-      <div className="panel">
-        <h3 className="panel__title">{t("widget.preview.embedTitle")}</h3>
-        <p className="panel__subtitle">{t("widget.preview.embedSubtitle")}</p>
+      <ModernCard variant="glass" padding="lg">
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+            {t("widget.preview.embedTitle")}
+          </h3>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("widget.preview.embedSubtitle")}
+          </p>
+        </div>
         <textarea
           readOnly
           value={snippet}
           rows={8}
-          className="code-snippet"
+          style={{
+            width: '100%',
+            padding: 'var(--space-3)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-primary)',
+            background: 'var(--bg-tertiary)',
+            color: 'var(--text-primary)',
+            fontFamily: 'monospace',
+            fontSize: 'var(--text-sm)',
+            resize: 'vertical',
+          }}
           onFocus={(event) => event.currentTarget.select()}
         />
-      </div>
-    </section>
+      </ModernCard>
+    </div>
   );
 }

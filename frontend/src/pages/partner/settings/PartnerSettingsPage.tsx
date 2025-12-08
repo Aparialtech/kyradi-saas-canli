@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
-import { AlertCircle } from "../../../lib/lucide";
+import { motion } from "framer-motion";
+import { Settings, AlertCircle, Loader2, Edit, Save, X } from "../../../lib/lucide";
 
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -12,6 +13,10 @@ import {
   type PartnerSettings,
   type PartnerSettingsUpdatePayload,
 } from "../../../services/partner/settings";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernButton } from "../../../components/ui/ModernButton";
+import { ModernInput } from "../../../components/ui/ModernInput";
+import { Badge } from "../../../components/ui/Badge";
 
 type FormValues = {
   tenant_name: string;
@@ -149,195 +154,182 @@ export function PartnerSettingsPage() {
   };
 
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
-      <div className="page-header">
+      
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+      >
         <div>
-          <h1 className="page-title">{t("settings.title")}</h1>
-          <p className="page-subtitle">{t("settings.subtitle")}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+            <Settings className="h-8 w-8" style={{ color: 'var(--primary)' }} />
+            <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: 0 }}>
+              {t("settings.title")}
+            </h1>
+          </div>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("settings.subtitle")}
+          </p>
         </div>
-        <div className="page-actions">
-          {!isEditing && (
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={() => setIsEditing(true)}
-              disabled={settingsQuery.isLoading}
-            >
-              {t("common.edit")}
-            </button>
-          )}
-        </div>
-      </div>
+        {!isEditing && (
+          <ModernButton
+            variant="primary"
+            onClick={() => setIsEditing(true)}
+            disabled={settingsQuery.isLoading}
+            leftIcon={<Edit className="h-4 w-4" />}
+          >
+            {t("common.edit")}
+          </ModernButton>
+        )}
+      </motion.div>
 
       {settingsQuery.isLoading && !settingsQuery.data ? (
-        <div className="panel">
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-            <h3 className="empty-state__title">{t("common.loading")}</h3>
-            <p>{t("settings.loading")}</p>
+        <ModernCard variant="glass" padding="lg">
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>{t("common.loading")}</h3>
+            <p style={{ margin: 'var(--space-2) 0 0 0' }}>{t("settings.loading")}</p>
           </div>
-        </div>
+        </ModernCard>
       ) : settingsQuery.isError ? (
-        <div className="panel">
-          <div className="empty-state">
-            <AlertCircle className="h-12 w-12" style={{ margin: "0 auto 1rem auto", color: "#dc2626" }} />
-            <h3 className="empty-state__title">{t("common.error")}</h3>
-            <p>{getErrorMessage(settingsQuery.error)}</p>
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={() => settingsQuery.refetch()}
-              style={{ marginTop: "1rem" }}
-            >
+        <ModernCard variant="glass" padding="lg">
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--danger-500)' }}>
+            <AlertCircle className="h-12 w-12" style={{ margin: "0 auto var(--space-4) auto" }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>{t("common.error")}</h3>
+            <p style={{ margin: 'var(--space-2) 0 var(--space-4) 0' }}>{getErrorMessage(settingsQuery.error)}</p>
+            <ModernButton variant="primary" onClick={() => settingsQuery.refetch()}>
               {t("common.retry")}
-            </button>
+            </ModernButton>
           </div>
-        </div>
+        </ModernCard>
       ) : (
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
           {/* Genel Bilgiler */}
-          <div className="panel">
-            <div className="panel__header">
-              <div>
-                <h2 className="panel__title">{t("settings.generalInfoTitle")}</h2>
-                <p className="panel__subtitle">{t("settings.generalInfoSubtitle")}</p>
-              </div>
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                {t("settings.generalInfoTitle")}
+              </h2>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                {t("settings.generalInfoSubtitle")}
+              </p>
             </div>
-            <div className="form-grid">
-              <label className="form-field">
-                <span className="form-field__label">
-                  {t("settings.hotelName")} <span style={{ color: "var(--color-danger)" }}>*</span>
-                </span>
-                <input
-                  type="text"
-                  {...register("tenant_name", { required: t("settings.hotelNameRequired") })}
-                  disabled={!isEditing}
-                  placeholder={t("settings.hotelNamePlaceholder")}
-                />
-                {errors.tenant_name && (
-                  <span className="field-error">{errors.tenant_name.message}</span>
-                )}
-                <small className="form-field__hint">{t("settings.hotelNameHint")}</small>
-              </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-4)' }}>
+              <ModernInput
+                label={t("settings.hotelName")}
+                {...register("tenant_name", { required: t("settings.hotelNameRequired") })}
+                disabled={!isEditing}
+                placeholder={t("settings.hotelNamePlaceholder")}
+                error={errors.tenant_name?.message}
+                helperText={t("settings.hotelNameHint")}
+                required
+                fullWidth
+              />
 
-              <label className="form-field">
-                <span className="form-field__label">{t("settings.shortName")}</span>
-                <input
-                  type="text"
-                  value={settingsQuery.data?.tenant_slug ?? ""}
-                  disabled
-                  style={{ opacity: 0.6, cursor: "not-allowed" }}
-                />
-                <small className="form-field__hint">{t("settings.shortNameHint")}</small>
-              </label>
+              <ModernInput
+                label={t("settings.shortName")}
+                value={settingsQuery.data?.tenant_slug ?? ""}
+                disabled
+                helperText={t("settings.shortNameHint")}
+                fullWidth
+              />
 
-              <label className="form-field">
-                <span className="form-field__label">Yasal Ünvan</span>
-                <input
-                  type="text"
-                  {...register("legal_name")}
-                  disabled={!isEditing}
-                  placeholder="Şirket Yasal Ünvanı"
-                />
-                <small className="form-field__hint">Fatura ve resmi belgelerde kullanılacak yasal ünvan</small>
-              </label>
+              <ModernInput
+                label="Yasal Ünvan"
+                {...register("legal_name")}
+                disabled={!isEditing}
+                placeholder="Şirket Yasal Ünvanı"
+                helperText="Fatura ve resmi belgelerde kullanılacak yasal ünvan"
+                fullWidth
+              />
 
-              <label className="form-field">
-                <span className="form-field__label">Vergi Numarası</span>
-                <input
-                  type="text"
-                  {...register("tax_id")}
-                  disabled={!isEditing}
-                  placeholder="1234567890"
-                />
-                <small className="form-field__hint">10 haneli vergi numarası</small>
-              </label>
+              <ModernInput
+                label="Vergi Numarası"
+                {...register("tax_id")}
+                disabled={!isEditing}
+                placeholder="1234567890"
+                helperText="10 haneli vergi numarası"
+                fullWidth
+              />
 
-              <label className="form-field">
-                <span className="form-field__label">Vergi Dairesi</span>
-                <input
-                  type="text"
-                  {...register("tax_office")}
-                  disabled={!isEditing}
-                  placeholder="Kadıköy Vergi Dairesi"
-                />
-                <small className="form-field__hint">Bağlı bulunulan vergi dairesi</small>
-              </label>
+              <ModernInput
+                label="Vergi Dairesi"
+                {...register("tax_office")}
+                disabled={!isEditing}
+                placeholder="Kadıköy Vergi Dairesi"
+                helperText="Bağlı bulunulan vergi dairesi"
+                fullWidth
+              />
 
-              <label className="form-field">
-                <span className="form-field__label">{t("settings.contactEmail")}</span>
-                <input
-                  type="email"
-                  {...register("contact_email")}
-                  disabled={!isEditing}
-                  placeholder="iletisim@otel.com"
-                />
-                <small className="form-field__hint">{t("settings.contactEmailHint")}</small>
-              </label>
+              <ModernInput
+                label={t("settings.contactEmail")}
+                type="email"
+                {...register("contact_email")}
+                disabled={!isEditing}
+                placeholder="iletisim@otel.com"
+                helperText={t("settings.contactEmailHint")}
+                fullWidth
+              />
 
-              <label className="form-field">
-                <span className="form-field__label">İletişim Telefonu</span>
-                <input
-                  type="tel"
-                  {...register("contact_phone")}
-                  disabled={!isEditing}
-                  placeholder="+90 555 123 45 67"
-                />
-              </label>
+              <ModernInput
+                label="İletişim Telefonu"
+                type="tel"
+                {...register("contact_phone")}
+                disabled={!isEditing}
+                placeholder="+90 555 123 45 67"
+                fullWidth
+              />
 
-              <label className="form-field">
-                <span className="form-field__label">Marka Rengi</span>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Marka Rengi
+                </label>
+                <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
                   <input
                     type="color"
                     {...register("brand_color")}
                     disabled={!isEditing}
-                    style={{ width: "50px", height: "38px", padding: "0.25rem", cursor: isEditing ? "pointer" : "not-allowed" }}
+                    style={{ width: "50px", height: "38px", padding: "0.25rem", borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', cursor: isEditing ? "pointer" : "not-allowed" }}
                   />
-                  <input
-                    type="text"
+                  <ModernInput
                     {...register("brand_color")}
                     disabled={!isEditing}
                     placeholder="#0F172A"
-                    style={{ flex: 1 }}
+                    helperText="Widget ve e-postalarda kullanılacak marka rengi"
+                    fullWidth
                   />
                 </div>
-                <small className="form-field__hint">
-                  Widget ve e-postalarda kullanılacak marka rengi
-                </small>
-              </label>
+              </div>
 
-              <label className="form-field">
-                <span className="form-field__label">Logo URL</span>
-                <input
-                  type="url"
-                  {...register("logo_url")}
-                  disabled={!isEditing}
-                  placeholder="https://example.com/logo.png"
-                  onChange={(e) => {
-                    setLogoError(false);
-                    register("logo_url").onChange(e);
-                  }}
-                />
-                <small className="form-field__hint">
-                  Widget ve e-postalarda görüntülenecek logo
-                </small>
-              </label>
+              <ModernInput
+                label="Logo URL"
+                type="url"
+                {...register("logo_url")}
+                disabled={!isEditing}
+                placeholder="https://example.com/logo.png"
+                helperText="Widget ve e-postalarda görüntülenecek logo"
+                onChange={(e) => {
+                  setLogoError(false);
+                  register("logo_url").onChange(e);
+                }}
+                fullWidth
+              />
             </div>
-          </div>
+          </ModernCard>
 
           {/* Marka Önizleme */}
-          <div className="panel">
-            <div className="panel__header">
-              <div>
-                <h2 className="panel__title">Marka Önizleme</h2>
-                <p className="panel__subtitle">
-                  Logo ve renk ayarlarınızın canlı önizlemesi
-                </p>
-              </div>
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                Marka Önizleme
+              </h2>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Logo ve renk ayarlarınızın canlı önizlemesi
+              </p>
             </div>
-            <div className="panel__body">
+            <div>
               <div
                 style={{
                   display: "flex",
@@ -428,148 +420,141 @@ export function PartnerSettingsPage() {
           </div>
 
           {/* Bildirim Ayarları */}
-          <div className="panel">
-            <div className="panel__header">
-              <div>
-                <h2 className="panel__title">Bildirim Ayarları</h2>
-                <p className="panel__subtitle">
-                  E-posta ve SMS bildirim tercihlerinizi yönetin
-                </p>
-              </div>
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                Bildirim Ayarları
+              </h2>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                E-posta ve SMS bildirim tercihlerinizi yönetin
+              </p>
             </div>
-            <div className="form-grid">
-              <label className="form-field">
-                <span className="form-field__label">Bildirim E-postası</span>
-                <input
-                  type="email"
-                  {...register("notification_email")}
-                  disabled={!isEditing}
-                  placeholder="bildirim@otel.com"
-                />
-                <small className="form-field__hint">
-                  Rezervasyon ve ödeme bildirimleri bu adrese gönderilir
-                </small>
-              </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <ModernInput
+                label="Bildirim E-postası"
+                type="email"
+                {...register("notification_email")}
+                disabled={!isEditing}
+                placeholder="bildirim@otel.com"
+                helperText="Rezervasyon ve ödeme bildirimleri bu adrese gönderilir"
+                fullWidth
+              />
 
-              <label className="form-field form-field--inline" style={{ alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: 'var(--space-3)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
                 <input
                   type="checkbox"
                   {...register("notification_sms")}
                   disabled={!isEditing}
+                  style={{ width: "20px", height: "20px", cursor: isEditing ? "pointer" : "not-allowed" }}
                 />
-                <span className="form-field__label" style={{ marginBottom: 0 }}>
+                <label style={{ margin: 0, cursor: isEditing ? "pointer" : "default", fontWeight: 500 }}>
                   SMS Bildirimleri
-                </span>
-              </label>
+                </label>
+              </div>
             </div>
-          </div>
+          </ModernCard>
 
           {/* Form Actions */}
           {isEditing && (
-            <div className="panel">
-              <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
-                <button
+            <ModernCard variant="glass" padding="lg">
+              <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end" }}>
+                <ModernButton
                   type="button"
-                  className="btn btn--ghost-dark"
+                  variant="ghost"
                   onClick={handleCancel}
                   disabled={updateMutation.isPending}
+                  leftIcon={<X className="h-4 w-4" />}
                 >
                   {t("common.cancel")}
-                </button>
-                <button
+                </ModernButton>
+                <ModernButton
                   type="submit"
-                  className="btn btn--primary"
+                  variant="primary"
                   disabled={updateMutation.isPending || !isDirty}
+                  isLoading={updateMutation.isPending}
+                  loadingText="Kaydediliyor..."
+                  leftIcon={!updateMutation.isPending && <Save className="h-4 w-4" />}
                 >
-                  {updateMutation.isPending ? "Kaydediliyor..." : t("common.save")}
-                </button>
+                  {t("common.save")}
+                </ModernButton>
               </div>
-            </div>
+            </ModernCard>
           )}
 
           {/* Widget Ayarları (Read-only) */}
-          <div className="panel">
-            <div className="panel__header">
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                Widget Ayarları
+              </h2>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Rezervasyon widget'ı ve entegrasyon ayarları
+              </p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
               <div>
-                <h2 className="panel__title">Widget Ayarları</h2>
-                <p className="panel__subtitle">
-                  Rezervasyon widget'ı ve entegrasyon ayarları
-                </p>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Widget Durumu:</strong>{" "}
+                <Badge variant={settingsQuery.data?.widget_enabled ? "success" : "neutral"}>
+                  {settingsQuery.data?.widget_enabled ? "Aktif" : "Pasif"}
+                </Badge>
               </div>
-            </div>
-            <div className="panel__body">
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {settingsQuery.data?.widget_public_key && (
                 <div>
-                  <strong>Widget Durumu:</strong>{" "}
-                  <span
-                    className={
-                      settingsQuery.data?.widget_enabled
-                        ? "badge badge--success"
-                        : "badge badge--muted"
-                    }
+                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Widget Public Key:</strong>{" "}
+                  <code
+                    style={{
+                      background: "var(--bg-tertiary)",
+                      padding: "var(--space-2) var(--space-3)",
+                      borderRadius: "var(--radius-sm)",
+                      fontFamily: "monospace",
+                      fontSize: "var(--text-sm)",
+                      color: 'var(--text-primary)',
+                    }}
                   >
-                    {settingsQuery.data?.widget_enabled ? "Aktif" : "Pasif"}
-                  </span>
+                    {settingsQuery.data.widget_public_key}
+                  </code>
                 </div>
-                {settingsQuery.data?.widget_public_key && (
-                  <div>
-                    <strong>Widget Public Key:</strong>{" "}
-                    <code
-                      style={{
-                        background: "var(--color-surface)",
-                        padding: "0.25rem 0.5rem",
-                        borderRadius: "var(--radius-sm)",
-                        fontFamily: "monospace",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      {settingsQuery.data.widget_public_key}
-                    </code>
-                  </div>
-                )}
-                <div>
-                  <a href="/partner/widget-preview" className="action-link">
-                    Widget Önizleme ve Embed Kodları →
-                  </a>
-                </div>
+              )}
+              <div>
+                <a href="/app/widget-preview" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>
+                  Widget Önizleme ve Embed Kodları →
+                </a>
               </div>
             </div>
-          </div>
+          </ModernCard>
 
           {/* Ödeme Ayarları (Read-only) */}
-          <div className="panel">
-            <div className="panel__header">
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                Ödeme Ayarları
+              </h2>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Ödeme modu ve komisyon oranı bilgileri (salt okunur)
+              </p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
               <div>
-                <h2 className="panel__title">Ödeme Ayarları</h2>
-                <p className="panel__subtitle">
-                  Ödeme modu ve komisyon oranı bilgileri (salt okunur)
-                </p>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Ödeme Modu:</strong>{" "}
+                <Badge>
+                  {settingsQuery.data?.payment_mode === "GATEWAY_DEMO"
+                    ? "Gateway Demo"
+                    : settingsQuery.data?.payment_mode === "POS"
+                      ? "POS"
+                      : settingsQuery.data?.payment_mode ?? "-"}
+                </Badge>
               </div>
-            </div>
-            <div className="panel__body">
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div>
-                  <strong>Ödeme Modu:</strong>{" "}
-                  <span className="badge">
-                    {settingsQuery.data?.payment_mode === "GATEWAY_DEMO"
-                      ? "Gateway Demo"
-                      : settingsQuery.data?.payment_mode === "POS"
-                        ? "POS"
-                        : settingsQuery.data?.payment_mode ?? "-"}
-                  </span>
-                </div>
-                <div>
-                  <strong>Komisyon Oranı:</strong> %{settingsQuery.data?.commission_rate ?? 5.0}
-                </div>
-                <p className="table-cell-muted">
-                  Bu ayarlar sistem yöneticisi tarafından yönetilmektedir. Değişiklik için destek
-                  ekibi ile iletişime geçin.
-                </p>
+              <div>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Komisyon Oranı:</strong> %{settingsQuery.data?.commission_rate ?? 5.0}
               </div>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Bu ayarlar sistem yöneticisi tarafından yönetilmektedir. Değişiklik için destek
+                ekibi ile iletişime geçin.
+              </p>
             </div>
-          </div>
+          </ModernCard>
         </form>
       )}
-    </section>
+    </div>
   );
 }

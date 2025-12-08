@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Users, Package, MapPin, Loader2, AlertCircle, UserPlus, Edit, Trash2, Eye } from "../../../lib/lucide";
 import { staffService, type Staff, type StaffPayload } from "../../../services/partner/staff";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
@@ -9,6 +11,11 @@ import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
 import { http } from "../../../lib/http";
+import { ModernCard } from "../../../components/ui/ModernCard";
+import { ModernButton } from "../../../components/ui/ModernButton";
+import { ModernInput } from "../../../components/ui/ModernInput";
+import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { Badge } from "../../../components/ui/Badge";
 
 interface User {
   id: string;
@@ -216,40 +223,65 @@ export function StaffPage() {
   };
 
   return (
-    <section className="page">
+    <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
-      <div className="page-header">
+      
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+      >
         <div>
-          <h1 className="page-title">{t("staff.title")}</h1>
-          <p className="page-subtitle">{t("staff.subtitle")}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+            <Users className="h-8 w-8" style={{ color: 'var(--primary)' }} />
+            <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: 0 }}>
+              {t("staff.title")}
+            </h1>
+          </div>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("staff.subtitle")}
+          </p>
         </div>
-        <div className="page-actions">
-          <button type="button" className="btn btn--primary" onClick={handleNew}>
-            {t("staff.newAssignment")}
-          </button>
-        </div>
-      </div>
+        <ModernButton variant="primary" onClick={handleNew} leftIcon={<UserPlus className="h-4 w-4" />}>
+          {t("staff.newAssignment")}
+        </ModernButton>
+      </motion.div>
 
       {/* Form */}
-      <div className="panel">
-        <div className="panel__header">
-          <div>
-            <h2 className="panel__title">
-              {editingStaff ? t("staff.editAssignment") : t("staff.newAssignment")}
-            </h2>
-            <p className="panel__subtitle">{t("staff.formSubtitle")}</p>
-          </div>
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+            {editingStaff ? t("staff.editAssignment") : t("staff.newAssignment")}
+          </h2>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("staff.formSubtitle")}
+          </p>
         </div>
 
-        <form className="form-grid" onSubmit={submit}>
-          <label className="form-field">
-            <span className="form-field__label">
-              {t("staff.personnel")} <span style={{ color: "var(--color-danger)" }}>*</span>
-            </span>
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {t("staff.personnel")} <span style={{ color: 'var(--danger-500)' }}>*</span>
+            </label>
             {assignableUsersQuery.isLoading ? (
-              <div className="form-field__hint">{t("staff.loadingUsers")}</div>
+              <div style={{ padding: 'var(--space-3)', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
+                {t("staff.loadingUsers")}
+              </div>
             ) : assignableUsersQuery.data && assignableUsersQuery.data.length > 0 ? (
-              <select {...register("user_id", { required: t("staff.userRequired") })} disabled={Boolean(editingStaff)}>
+              <select 
+                {...register("user_id", { required: t("staff.userRequired") })} 
+                disabled={Boolean(editingStaff)}
+                style={{
+                  width: '100%',
+                  padding: 'var(--space-3)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border-primary)',
+                  background: editingStaff ? 'var(--bg-tertiary)' : 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  fontSize: 'var(--text-sm)',
+                  cursor: editingStaff ? 'not-allowed' : 'pointer',
+                }}
+              >
                 <option value="">{t("staff.selectPlaceholder")}</option>
                 {assignableUsersQuery.data.map((user) => (
                   <option key={user.id} value={user.id}>
@@ -258,90 +290,126 @@ export function StaffPage() {
                 ))}
               </select>
             ) : (
-              <div
-                style={{
-                  padding: "1rem",
-                  background: "#fef3c7",
-                  borderRadius: "8px",
-                  border: "1px solid #fcd34d",
-                }}
-              >
-                <p style={{ fontWeight: 600, color: "#92400e", marginBottom: "0.5rem" }}>
+              <ModernCard variant="glass" padding="md" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                <p style={{ fontWeight: 600, color: '#92400e', marginBottom: 'var(--space-2)' }}>
                   ⚠️ {t("staff.noAssignableStaff")}
                 </p>
-                <p style={{ color: "#a16207", marginBottom: "0.75rem", fontSize: "0.875rem" }}>
+                <p style={{ color: '#a16207', marginBottom: 'var(--space-3)', fontSize: 'var(--text-sm)' }}>
                   {t("staff.noAssignableStaffDesc")}
                 </p>
-                <a href="/partner/users" className="btn btn--primary" style={{ fontSize: "0.875rem" }}>
+                <ModernButton 
+                  variant="primary" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.href = "/app/users";
+                  }}
+                >
                   {t("staff.addPersonnel")}
-                </a>
-              </div>
+                </ModernButton>
+              </ModernCard>
             )}
-            {errors.user_id && <span className="field-error">{errors.user_id.message}</span>}
-          </label>
+            {errors.user_id && (
+              <span style={{ color: 'var(--danger-500)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)', display: 'block' }}>
+                {errors.user_id.message}
+              </span>
+            )}
+          </div>
 
-          <label className="form-field">
-            <span className="form-field__label">{t("staff.storages")}</span>
-            <select multiple {...register("storage_ids")} style={{ minHeight: "100px" }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {t("staff.storages")}
+            </label>
+            <select 
+              multiple 
+              {...register("storage_ids")} 
+              style={{
+                width: '100%',
+                minHeight: '120px',
+                padding: 'var(--space-2)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-primary)',
+                background: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+              }}
+            >
               {storagesQuery.data?.map((storage) => (
                 <option key={storage.id} value={storage.id}>
                   {storage.code}
                 </option>
               ))}
             </select>
-            <small className="form-field__hint">{t("staff.multiSelectHint")}</small>
-          </label>
+            <small style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'block' }}>
+              {t("staff.multiSelectHint")}
+            </small>
+          </div>
 
-          <label className="form-field">
-            <span className="form-field__label">{t("staff.locations")}</span>
-            <select multiple {...register("location_ids")} style={{ minHeight: "100px" }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {t("staff.locations")}
+            </label>
+            <select 
+              multiple 
+              {...register("location_ids")} 
+              style={{
+                width: '100%',
+                minHeight: '120px',
+                padding: 'var(--space-2)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-primary)',
+                background: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+              }}
+            >
               {locationsQuery.data?.map((location) => (
                 <option key={location.id} value={location.id}>
                   {location.name}
                 </option>
               ))}
             </select>
-            <small className="form-field__hint">{t("staff.multiSelectHint")}</small>
-          </label>
+            <small style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'block' }}>
+              {t("staff.multiSelectHint")}
+            </small>
+          </div>
 
-          <div className="form-actions form-grid__field--full">
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-2)' }}>
             {editingStaff && (
-              <button
+              <ModernButton
                 type="button"
-                className="btn btn--ghost-dark"
+                variant="ghost"
                 onClick={handleNew}
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
                 {t("common.cancel")}
-              </button>
+              </ModernButton>
             )}
-            <button
+            <ModernButton
               type="submit"
-              className="btn btn--primary"
+              variant="primary"
               disabled={createMutation.isPending || updateMutation.isPending}
+              isLoading={editingStaff ? updateMutation.isPending : createMutation.isPending}
+              loadingText={editingStaff ? "Güncelleniyor..." : "Kaydediliyor..."}
             >
-              {editingStaff
-                ? updateMutation.isPending
-                  ? "Güncelleniyor..."
-                  : "Güncelle"
-                : createMutation.isPending
-                  ? "Kaydediliyor..."
-                  : t("common.save")}
-            </button>
+              {editingStaff ? "Güncelle" : t("common.save")}
+            </ModernButton>
           </div>
         </form>
-      </div>
+      </ModernCard>
 
       {/* Staff list */}
-      <div className="panel">
-        <div className="panel__header">
+      <ModernCard variant="glass" padding="lg">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div>
-            <h2 className="panel__title">{t("staff.listTitle")}</h2>
-            <p className="panel__subtitle">
+            <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-1) 0' }}>
+              {t("staff.listTitle")}
+            </h2>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
               {filteredStaff.length} / {staffQuery.data?.length ?? 0} {t("common.records")}
             </p>
           </div>
-          <div style={{ minWidth: "250px" }}>
+          <div style={{ minWidth: "250px", flex: '1', maxWidth: '400px' }}>
             <SearchInput
               value={searchTerm}
               onChange={handleSearchChange}
@@ -351,137 +419,148 @@ export function StaffPage() {
         </div>
 
         {staffQuery.isLoading ? (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-            <h3 className="empty-state__title">{t("common.loading")}</h3>
-            <p>{t("staff.loadingUsers")}</p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>{t("common.loading")}</h3>
+            <p style={{ margin: 'var(--space-2) 0 0 0' }}>{t("staff.loadingUsers")}</p>
           </div>
         ) : staffQuery.isError ? (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-            <h3 className="empty-state__title">{t("common.error")}</h3>
-            <p style={{ color: "#dc2626" }}>{t("common.loadError")}</p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--danger-500)' }}>
+            <AlertCircle className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>{t("common.error")}</h3>
+            <p style={{ margin: 'var(--space-2) 0 0 0' }}>{t("common.loadError")}</p>
           </div>
         ) : filteredStaff.length > 0 ? (
-          <div className="data-table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>{t("staff.table.personnel")}</th>
-                  <th>{t("staff.table.role")}</th>
-                  <th>{t("staff.table.storages")}</th>
-                  <th>{t("staff.table.locations")}</th>
-                  <th>{t("staff.table.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredStaff.map((staff) => {
-                  const user = usersById.get(staff.user_id);
+          <ModernTable
+            columns={[
+              {
+                key: 'user_id',
+                label: t("staff.table.personnel"),
+                render: (_, row) => {
+                  const user = usersById.get(row.user_id);
                   return (
-                    <tr key={staff.id}>
-                      <td>
-                        <strong>{user?.email ?? staff.user_id}</strong>
-                        {user?.is_active === false && (
-                          <span className="badge badge--danger" style={{ marginLeft: "0.5rem" }}>
-                            {t("common.passive")}
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="badge">{getRoleLabel(user?.role ?? "")}</span>
-                      </td>
-                      <td>
-                        {staff.assigned_storage_ids.length > 0 ? (
-                          <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-                            {staff.assigned_storage_ids.map((id) => {
-                              const storage = storagesById.get(id);
-                              return (
-                                <span
-                                  key={id}
-                                  className="badge badge--info"
-                                  style={{ fontSize: "0.75rem" }}
-                                  title={`Depo ID: ${id}`}
-                                >
-                                  📦 {storage?.code ?? id.slice(0, 8)}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <span className="table-cell-muted">—</span>
-                        )}
-                      </td>
-                      <td>
-                        {staff.assigned_location_ids.length > 0 ? (
-                          <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-                            {staff.assigned_location_ids.map((id) => {
-                              const location = locationsById.get(id);
-                              return (
-                                <span
-                                  key={id}
-                                  className="badge badge--success"
-                                  style={{ fontSize: "0.75rem" }}
-                                  title={`Lokasyon ID: ${id}`}
-                                >
-                                  📍 {location?.name ?? id.slice(0, 8)}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <span className="table-cell-muted">—</span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            type="button"
-                            className="action-link action-link--primary"
-                            onClick={() => setViewingStaff(staff)}
-                          >
-                            {t("common.details")}
-                          </button>
-                          <button
-                            type="button"
-                            className="action-link"
-                            onClick={() => {
-                              setEditingStaff(staff);
-                              reset({
-                                user_id: staff.user_id,
-                                storage_ids: staff.assigned_storage_ids,
-                                location_ids: staff.assigned_location_ids,
-                              });
-                            }}
-                          >
-                            {t("common.edit")}
-                          </button>
-                          <button
-                            type="button"
-                            className="action-link action-link--danger"
-                            onClick={() => {
-                              if (confirm(t("common.confirmDelete") || "Bu kaydı silmek istediğinize emin misiniz?")) {
-                                deleteMutation.mutate(staff.id);
-                              }
-                            }}
-                          >
-                            {t("common.delete")}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      <strong>{user?.email ?? row.user_id}</strong>
+                      {user?.is_active === false && (
+                        <Badge variant="danger">{t("common.passive")}</Badge>
+                      )}
+                    </div>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
+                },
+              },
+              {
+                key: 'role',
+                label: t("staff.table.role"),
+                render: (_, row) => {
+                  const user = usersById.get(row.user_id);
+                  return <Badge>{getRoleLabel(user?.role ?? "")}</Badge>;
+                },
+              },
+              {
+                key: 'storages',
+                label: t("staff.table.storages"),
+                render: (_, row) => {
+                  if (row.assigned_storage_ids.length === 0) {
+                    return <span style={{ color: 'var(--text-tertiary)' }}>—</span>;
+                  }
+                  return (
+                    <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap' }}>
+                      {row.assigned_storage_ids.map((id: string) => {
+                        const storage = storagesById.get(id);
+                        return (
+                          <Badge key={id} variant="info" style={{ fontSize: 'var(--text-xs)' }}>
+                            <Package className="h-3 w-3" style={{ marginRight: 'var(--space-1)' }} />
+                            {storage?.code ?? id.slice(0, 8)}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  );
+                },
+              },
+              {
+                key: 'locations',
+                label: t("staff.table.locations"),
+                render: (_, row) => {
+                  if (row.assigned_location_ids.length === 0) {
+                    return <span style={{ color: 'var(--text-tertiary)' }}>—</span>;
+                  }
+                  return (
+                    <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap' }}>
+                      {row.assigned_location_ids.map((id: string) => {
+                        const location = locationsById.get(id);
+                        return (
+                          <Badge key={id} variant="success" style={{ fontSize: 'var(--text-xs)' }}>
+                            <MapPin className="h-3 w-3" style={{ marginRight: 'var(--space-1)' }} />
+                            {location?.name ?? id.slice(0, 8)}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  );
+                },
+              },
+              {
+                key: 'actions',
+                label: t("staff.table.actions"),
+                render: (_, row) => (
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <ModernButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewingStaff(row)}
+                      leftIcon={<Eye className="h-3 w-3" />}
+                    >
+                      {t("common.details")}
+                    </ModernButton>
+                    <ModernButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingStaff(row);
+                        reset({
+                          user_id: row.user_id,
+                          storage_ids: row.assigned_storage_ids,
+                          location_ids: row.assigned_location_ids,
+                        });
+                      }}
+                      leftIcon={<Edit className="h-3 w-3" />}
+                    >
+                      {t("common.edit")}
+                    </ModernButton>
+                    <ModernButton
+                      variant="danger"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(t("common.confirmDelete") || "Bu kaydı silmek istediğinize emin misiniz?")) {
+                          deleteMutation.mutate(row.id);
+                        }
+                      }}
+                      leftIcon={<Trash2 className="h-3 w-3" />}
+                    >
+                      {t("common.delete")}
+                    </ModernButton>
+                  </div>
+                ),
+                align: 'right',
+              },
+            ] as ModernTableColumn<Staff>[]}
+            data={filteredStaff}
+            loading={staffQuery.isLoading}
+            striped
+            hoverable
+            stickyHeader
+          />
         ) : (
-          <div className="empty-state">
-            <div className="empty-state__icon" style={{ fontSize: "3rem", marginBottom: "1rem" }}>👥</div>
-            <h3 className="empty-state__title">{t("staff.emptyTitle")}</h3>
-            <p>{t("staff.emptyHint")}</p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Users className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--text-muted)' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
+              {t("staff.emptyTitle")}
+            </h3>
+            <p style={{ margin: 0 }}>{t("staff.emptyHint")}</p>
           </div>
         )}
-      </div>
+      </ModernCard>
 
       {/* Staff Detail Modal */}
       <StaffDetailModal
@@ -492,6 +571,6 @@ export function StaffPage() {
         storages={storagesById}
         locations={locationsById}
       />
-    </section>
+    </div>
   );
 }
