@@ -21,8 +21,18 @@ class Tenant(IdentifiedMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     brand_color: Mapped[Optional[str]] = mapped_column(String(16), default=None)
     logo_url: Mapped[Optional[str]] = mapped_column(String(512), default=None)
+    legal_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     metadata_: Mapped[Optional[dict]] = mapped_column("metadata", JSON, default=None)
     default_hourly_rate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=1500, comment="Default hourly rate in minor currency units (e.g., 1500 = 15.00 TRY)")
+    
+    @property
+    def safe_legal_name(self) -> Optional[str]:
+        """Safe accessor for legal_name with fallback to metadata or name."""
+        if hasattr(self, 'legal_name') and self.legal_name:
+            return self.legal_name
+        if self.metadata_ and isinstance(self.metadata_, dict):
+            return self.metadata_.get("legal_name") or self.name
+        return self.name
 
     locations: Mapped[List["Location"]] = relationship(
         "Location",

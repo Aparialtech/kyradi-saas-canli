@@ -13,6 +13,7 @@ class TenantBase(BaseModel):
     is_active: bool = True
     brand_color: Optional[str] = Field(default=None, max_length=16)
     logo_url: Optional[str] = Field(default=None, max_length=512)
+    legal_name: Optional[str] = Field(default=None, max_length=255)
 
 
 class TenantCreate(TenantBase):
@@ -25,6 +26,7 @@ class TenantUpdate(BaseModel):
     is_active: Optional[bool] = None
     brand_color: Optional[str] = Field(default=None, max_length=16)
     logo_url: Optional[str] = Field(default=None, max_length=512)
+    legal_name: Optional[str] = Field(default=None, max_length=255)
 
 
 class TenantRead(IdentifiedModel):
@@ -34,6 +36,7 @@ class TenantRead(IdentifiedModel):
     is_active: bool
     brand_color: Optional[str]
     logo_url: Optional[str]
+    legal_name: Optional[str] = None
 
 
 class TenantPlanLimits(BaseModel):

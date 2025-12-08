@@ -98,6 +98,7 @@ async def ensure_critical_schema() -> None:
         "ALTER TABLE storages ADD COLUMN IF NOT EXISTS capacity INTEGER NOT NULL DEFAULT 1",
         # Tenant columns
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS legal_name VARCHAR(255)",
         # User columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
         # Location columns

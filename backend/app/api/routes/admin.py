@@ -956,7 +956,9 @@ async def admin_generate_invoice(
         invoice_date_escaped = escape_html(payload.invoice_date)
         due_date_escaped = escape_html(payload.due_date)
         tenant_name_escaped = escape_html(tenant.name)
-        legal_name_escaped = escape_html(tenant.legal_name) if tenant.legal_name else ""
+        # Safe access to legal_name with fallback
+        legal_name_value = getattr(tenant, "legal_name", None) or (tenant.metadata_ or {}).get("legal_name") if tenant.metadata_ else None
+        legal_name_escaped = escape_html(legal_name_value) if legal_name_value else ""
         
         # Generate HTML invoice
         html_content = f"""
