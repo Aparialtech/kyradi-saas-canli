@@ -160,31 +160,38 @@ export function AdminReportsAnalyticsPage() {
         notes: `Seçilen tarih aralığı için Kyradi komisyon ücreti`,
       };
 
-      const response = await http.post(`/admin/invoices/generate?format=pdf`, payload, {
-        responseType: "blob",
-        validateStatus: (status) => status < 500, // Don't throw on 4xx
-      });
+      let response;
+      try {
+        response = await http.post(`/admin/invoices/generate?format=pdf`, payload, {
+          responseType: "blob",
+        });
+      } catch (error: any) {
+        // If axios throws an error, check if it's a blob response with error
+        if (error?.response?.data instanceof Blob) {
+          try {
+            const text = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsText(error.response.data);
+            });
+            const errorData = JSON.parse(text);
+            throw new Error(errorData.detail || `HTTP ${error.response.status}: Fatura oluşturulamadı`);
+          } catch (parseError) {
+            throw new Error(`HTTP ${error.response?.status || 500}: Fatura oluşturulamadı`);
+          }
+        }
+        throw error;
+      }
 
-      // Check if response is an error (status >= 400)
-      if (response.status >= 400) {
-        // Try to parse error message from blob
+      // Check content type - if JSON, it's an error
+      const contentType = response.headers["content-type"] || "";
+      if (contentType.includes("application/json")) {
+        // Response is JSON error
         const text = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
           reader.onerror = reject;
-          reader.readAsText(response.data);
-        });
-        const errorData = JSON.parse(text);
-        throw new Error(errorData.detail || `HTTP ${response.status}: Fatura oluşturulamadı`);
-      }
-
-      // Check content type
-      const contentType = response.headers["content-type"] || "";
-      if (contentType.includes("application/json")) {
-        // Response is JSON error
-        const text = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
           reader.readAsText(response.data);
         });
         const errorData = JSON.parse(text);
@@ -273,31 +280,38 @@ export function AdminReportsAnalyticsPage() {
         notes: `Seçilen tarih aralığı için genel gelir faturası`,
       };
 
-      const response = await http.post(`/admin/invoices/generate?format=pdf`, payload, {
-        responseType: "blob",
-        validateStatus: (status) => status < 500, // Don't throw on 4xx
-      });
+      let response;
+      try {
+        response = await http.post(`/admin/invoices/generate?format=pdf`, payload, {
+          responseType: "blob",
+        });
+      } catch (error: any) {
+        // If axios throws an error, check if it's a blob response with error
+        if (error?.response?.data instanceof Blob) {
+          try {
+            const text = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsText(error.response.data);
+            });
+            const errorData = JSON.parse(text);
+            throw new Error(errorData.detail || `HTTP ${error.response.status}: Fatura oluşturulamadı`);
+          } catch (parseError) {
+            throw new Error(`HTTP ${error.response?.status || 500}: Fatura oluşturulamadı`);
+          }
+        }
+        throw error;
+      }
 
-      // Check if response is an error (status >= 400)
-      if (response.status >= 400) {
-        // Try to parse error message from blob
+      // Check content type - if JSON, it's an error
+      const contentType = response.headers["content-type"] || "";
+      if (contentType.includes("application/json")) {
+        // Response is JSON error
         const text = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
           reader.onerror = reject;
-          reader.readAsText(response.data);
-        });
-        const errorData = JSON.parse(text);
-        throw new Error(errorData.detail || `HTTP ${response.status}: Fatura oluşturulamadı`);
-      }
-
-      // Check content type
-      const contentType = response.headers["content-type"] || "";
-      if (contentType.includes("application/json")) {
-        // Response is JSON error
-        const text = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
           reader.readAsText(response.data);
         });
         const errorData = JSON.parse(text);
