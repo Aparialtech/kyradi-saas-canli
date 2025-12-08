@@ -184,7 +184,7 @@ async def get_reservation(
     else:
         reservation_obj.payment = None
     
-    return ReservationRead.model_validate(reservation_dict)
+    return reservation_obj
 
 
 @router.get("/{reservation_id}/payment", response_model=ReservationPaymentInfo)
