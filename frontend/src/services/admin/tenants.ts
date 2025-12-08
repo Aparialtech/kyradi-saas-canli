@@ -8,6 +8,7 @@ export interface Tenant {
   is_active: boolean;
   brand_color?: string | null;
   logo_url?: string | null;
+  legal_name?: string | null;
   created_at: string;
 }
 

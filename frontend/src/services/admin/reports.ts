@@ -40,6 +40,7 @@ export interface AdminSummaryResponse {
   total_storages: number;
   reservations_24h: number;
   reservations_7d: number;
+  total_reservations: number;
   total_revenue_minor: number;
   total_commission_minor: number;
   tenants: AdminTenantSummary[];

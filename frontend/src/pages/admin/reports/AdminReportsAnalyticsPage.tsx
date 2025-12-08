@@ -1,13 +1,12 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Download, FileText, FileSpreadsheet, FileJson, Calendar, Filter, TrendingUp, Users, Building2, DollarSign, Package } from "../../../lib/lucide";
+import { Download, Users, Building2, DollarSign, Package } from "../../../lib/lucide";
 
 import { adminReportService } from "../../../services/admin/reports";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
-import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ReservationTrendChart } from "../../../components/charts/ReservationTrendChart";
@@ -15,12 +14,11 @@ import { OccupancyBarChart } from "../../../components/charts/OccupancyBarChart"
 import { http } from "../../../lib/http";
 
 export function AdminReportsAnalyticsPage() {
-  const { t } = useTranslation();
   const { messages, push } = useToast();
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
-  const [reportFormat, setReportFormat] = useState<"csv" | "json">("csv");
+  const [reportFormat, setReportFormat] = useState<"csv" | "json" | "pdf" | "excel">("csv");
 
   const tenantsQuery = useQuery({
     queryKey: ["admin", "tenants"],
@@ -85,20 +83,22 @@ export function AdminReportsAnalyticsPage() {
       if (selectedTenantId) params.append("tenant_id", selectedTenantId);
       if (dateFrom) params.append("from", dateFrom);
       if (dateTo) params.append("to", dateTo);
-      params.append("format", reportFormat === "pdf" ? "csv" : reportFormat); // PDF için şimdilik CSV kullan
+      // PDF ve Excel için şimdilik CSV kullan
+      const exportFormat = reportFormat === "pdf" || reportFormat === "excel" ? "csv" : reportFormat;
+      params.append("format", exportFormat);
 
       const response = await http.get(`/admin/reports/export?${params.toString()}`, {
         responseType: "blob",
       });
 
       const blob = new Blob([response.data], {
-        type: reportFormat === "csv" ? "text/csv" : reportFormat === "json" ? "application/json" : "text/csv",
+        type: exportFormat === "csv" ? "text/csv" : exportFormat === "json" ? "application/json" : "text/csv",
       });
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const extension = reportFormat === "excel" ? "csv" : reportFormat; // Excel için şimdilik CSV
+      const extension = reportFormat === "excel" || reportFormat === "pdf" ? "csv" : reportFormat;
       link.download = `kyradi-rapor-${new Date().toISOString().split("T")[0]}.${extension}`;
       document.body.appendChild(link);
       link.click();
@@ -132,7 +132,7 @@ export function AdminReportsAnalyticsPage() {
           <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
             <select
               value={reportFormat}
-              onChange={(e) => setReportFormat(e.target.value as "csv" | "json")}
+              onChange={(e) => setReportFormat(e.target.value as "csv" | "json" | "pdf" | "excel")}
               style={{
                 padding: 'var(--space-2) var(--space-3)',
                 borderRadius: 'var(--radius-lg)',

@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Download, FileText, Building2, Calendar, DollarSign, Plus, X } from "../../../lib/lucide";
+import { Download, Plus, X } from "../../../lib/lucide";
 
 import { adminTenantService } from "../../../services/admin/tenants";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
-import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
@@ -20,7 +19,6 @@ interface InvoiceItem {
 }
 
 export function AdminInvoicePage() {
-  const { t } = useTranslation();
   const { messages, push } = useToast();
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [invoiceNumber, setInvoiceNumber] = useState<string>("");
