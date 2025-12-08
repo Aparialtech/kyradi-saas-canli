@@ -417,7 +417,7 @@ export function PartnerSettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </ModernCard>
 
           {/* Bildirim Ayarları */}
           <ModernCard variant="glass" padding="lg">
