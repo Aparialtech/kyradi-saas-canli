@@ -198,22 +198,33 @@ export function AdminReportsAnalyticsPage() {
         throw new Error(errorData.detail || "Fatura oluşturulamadı");
       }
 
+      // Determine file extension and MIME type based on content type
+      let extension = "pdf";
+      let mimeType = "application/pdf";
+      if (contentType.includes("vnd.openxmlformats-officedocument.wordprocessingml.document") || contentType.includes("application/msword")) {
+        extension = "docx";
+        mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      } else if (contentType.includes("text/html") || contentType.includes("html")) {
+        extension = "html";
+        mimeType = "text/html";
+      }
+
       const blob = new Blob([response.data], {
-        type: contentType || "application/pdf",
+        type: mimeType,
       });
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const extension = contentType.includes("html") ? "html" : "pdf";
       link.download = `${invoiceNumber}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
+      const formatName = extension === "docx" ? "Word" : extension === "html" ? "HTML" : "PDF";
       push({ 
-        title: contentType.includes("html") ? "Fatura HTML olarak oluşturuldu" : "Komisyon faturası oluşturuldu", 
+        title: `Komisyon faturası ${formatName} olarak oluşturuldu`, 
         type: "success" 
       });
     } catch (error: any) {
@@ -318,22 +329,33 @@ export function AdminReportsAnalyticsPage() {
         throw new Error(errorData.detail || "Fatura oluşturulamadı");
       }
 
+      // Determine file extension and MIME type based on content type
+      let extension = "pdf";
+      let mimeType = "application/pdf";
+      if (contentType.includes("vnd.openxmlformats-officedocument.wordprocessingml.document") || contentType.includes("application/msword")) {
+        extension = "docx";
+        mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      } else if (contentType.includes("text/html") || contentType.includes("html")) {
+        extension = "html";
+        mimeType = "text/html";
+      }
+
       const blob = new Blob([response.data], {
-        type: contentType || "application/pdf",
+        type: mimeType,
       });
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const extension = contentType.includes("html") ? "html" : "pdf";
       link.download = `${invoiceNumber}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
+      const formatName = extension === "docx" ? "Word" : extension === "html" ? "HTML" : "PDF";
       push({ 
-        title: contentType.includes("html") ? "Fatura HTML olarak oluşturuldu" : "Gelir faturası oluşturuldu", 
+        title: `Gelir faturası ${formatName} olarak oluşturuldu`, 
         type: "success" 
       });
     } catch (error: any) {
