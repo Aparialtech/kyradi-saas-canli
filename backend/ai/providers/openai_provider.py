@@ -146,12 +146,22 @@ class OpenAIChatProvider:
                 message="AI servisi şu anda yapılandırılmamış. Lütfen yöneticinizle iletişime geçin.",
             )
         
+        # Import system prompt
+        try:
+            from ai.prompts import SYSTEM_PROMPT
+        except ImportError:
+            logger.warning("Could not import SYSTEM_PROMPT, using default")
+            SYSTEM_PROMPT = "Sen Kyradi AI Asistanısın. Kyradi platformu hakkında yardımcı ol."
+        
         try:
             completion = await self.client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
                 max_tokens=1000,
-                temperature=0.2,
+                temperature=0.7,  # Daha doğal konuşma için artırıldı
             )
             
             answer = completion.choices[0].message.content if completion.choices else ""
