@@ -162,24 +162,78 @@ export function AdminReportsAnalyticsPage() {
 
       const response = await http.post(`/admin/invoices/generate?format=pdf`, payload, {
         responseType: "blob",
+        validateStatus: (status) => status < 500, // Don't throw on 4xx
       });
 
+      // Check if response is an error (status >= 400)
+      if (response.status >= 400) {
+        // Try to parse error message from blob
+        const text = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsText(response.data);
+        });
+        const errorData = JSON.parse(text);
+        throw new Error(errorData.detail || `HTTP ${response.status}: Fatura oluşturulamadı`);
+      }
+
+      // Check content type
+      const contentType = response.headers["content-type"] || "";
+      if (contentType.includes("application/json")) {
+        // Response is JSON error
+        const text = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsText(response.data);
+        });
+        const errorData = JSON.parse(text);
+        throw new Error(errorData.detail || "Fatura oluşturulamadı");
+      }
+
       const blob = new Blob([response.data], {
-        type: response.headers["content-type"] || "application/pdf",
+        type: contentType || "application/pdf",
       });
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${invoiceNumber}.pdf`;
+      const extension = contentType.includes("html") ? "html" : "pdf";
+      link.download = `${invoiceNumber}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      push({ title: "Komisyon faturası oluşturuldu", type: "success" });
+      push({ 
+        title: contentType.includes("html") ? "Fatura HTML olarak oluşturuldu" : "Komisyon faturası oluşturuldu", 
+        type: "success" 
+      });
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || error?.message || String(error);
+      let errorMessage = "Fatura oluşturulamadı";
+      
+      if (error?.response?.data) {
+        // Try to read blob as text if it's an error
+        if (error.response.data instanceof Blob) {
+          try {
+            const text = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsText(error.response.data);
+            });
+            const errorData = JSON.parse(text);
+            errorMessage = errorData.detail || errorMessage;
+          } catch {
+            // Ignore parsing errors
+          }
+        } else if (typeof error.response.data === 'object') {
+          errorMessage = error.response.data.detail || errorMessage;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       push({ 
         title: "Fatura oluşturulamadı", 
         description: errorMessage,
@@ -221,24 +275,78 @@ export function AdminReportsAnalyticsPage() {
 
       const response = await http.post(`/admin/invoices/generate?format=pdf`, payload, {
         responseType: "blob",
+        validateStatus: (status) => status < 500, // Don't throw on 4xx
       });
 
+      // Check if response is an error (status >= 400)
+      if (response.status >= 400) {
+        // Try to parse error message from blob
+        const text = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsText(response.data);
+        });
+        const errorData = JSON.parse(text);
+        throw new Error(errorData.detail || `HTTP ${response.status}: Fatura oluşturulamadı`);
+      }
+
+      // Check content type
+      const contentType = response.headers["content-type"] || "";
+      if (contentType.includes("application/json")) {
+        // Response is JSON error
+        const text = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsText(response.data);
+        });
+        const errorData = JSON.parse(text);
+        throw new Error(errorData.detail || "Fatura oluşturulamadı");
+      }
+
       const blob = new Blob([response.data], {
-        type: response.headers["content-type"] || "application/pdf",
+        type: contentType || "application/pdf",
       });
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${invoiceNumber}.pdf`;
+      const extension = contentType.includes("html") ? "html" : "pdf";
+      link.download = `${invoiceNumber}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      push({ title: "Gelir faturası oluşturuldu", type: "success" });
+      push({ 
+        title: contentType.includes("html") ? "Fatura HTML olarak oluşturuldu" : "Gelir faturası oluşturuldu", 
+        type: "success" 
+      });
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || error?.message || String(error);
+      let errorMessage = "Fatura oluşturulamadı";
+      
+      if (error?.response?.data) {
+        // Try to read blob as text if it's an error
+        if (error.response.data instanceof Blob) {
+          try {
+            const text = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsText(error.response.data);
+            });
+            const errorData = JSON.parse(text);
+            errorMessage = errorData.detail || errorMessage;
+          } catch {
+            // Ignore parsing errors
+          }
+        } else if (typeof error.response.data === 'object') {
+          errorMessage = error.response.data.detail || errorMessage;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       push({ 
         title: "Fatura oluşturulamadı", 
         description: errorMessage,
