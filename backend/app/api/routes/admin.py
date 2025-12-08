@@ -966,11 +966,15 @@ async def admin_generate_invoice(
         import os
         import base64
         # Try multiple paths for logo
+        # admin.py is at: backend/app/api/routes/admin.py
+        # We need to go: .. -> backend/app/api, .. -> backend/app, then static/logo.png
         current_file_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(current_file_dir, "..", "..", "..", ".."))
+        
         logo_paths = [
-            os.path.join(current_file_dir, "..", "static", "logo.png"),  # backend/app/static/logo.png
-            os.path.join(current_file_dir, "..", "..", "..", "..", "image1.png"),  # project root
-            os.path.join(os.path.dirname(current_file_dir), "static", "logo.png"),  # alternative path
+            os.path.join(current_file_dir, "..", "..", "static", "logo.png"),  # backend/app/static/logo.png
+            os.path.join(project_root, "image1.png"),  # project root image1.png
+            os.path.join(project_root, "backend", "app", "static", "logo.png"),  # absolute path
         ]
         logo_png_base64 = ""
         logo_loaded = False
