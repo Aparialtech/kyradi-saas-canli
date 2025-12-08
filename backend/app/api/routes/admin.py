@@ -940,18 +940,31 @@ async def admin_generate_invoice(
     _: None = Depends(require_admin_user),
 ):
     """Generate invoice HTML/PDF for a tenant."""
-    # Get tenant
-    tenant = await session.get(Tenant, payload.tenant_id)
-    if tenant is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
-    
-    # Generate HTML invoice
-    html_content = f"""
+    try:
+        # Get tenant
+        tenant = await session.get(Tenant, payload.tenant_id)
+        if tenant is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+        
+        # Escape HTML content to prevent XSS
+        def escape_html(text: str) -> str:
+            if text is None:
+                return ""
+            return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#x27;")
+        
+        invoice_number_escaped = escape_html(payload.invoice_number)
+        invoice_date_escaped = escape_html(payload.invoice_date)
+        due_date_escaped = escape_html(payload.due_date)
+        tenant_name_escaped = escape_html(tenant.name)
+        legal_name_escaped = escape_html(tenant.legal_name) if tenant.legal_name else ""
+        
+        # Generate HTML invoice
+        html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>Fatura - {payload.invoice_number}</title>
+        <title>Fatura - {invoice_number_escaped}</title>
         <style>
             @page {{
                 size: A4;
@@ -977,16 +990,16 @@ async def admin_generate_invoice(
             </div>
             <div class="invoice-info">
                 <h2>FATURA</h2>
-                <p>Fatura No: {payload.invoice_number}</p>
-                <p>Tarih: {payload.invoice_date}</p>
-                <p>Vade: {payload.due_date}</p>
+                <p>Fatura No: {invoice_number_escaped}</p>
+                <p>Tarih: {invoice_date_escaped}</p>
+                <p>Vade: {due_date_escaped}</p>
             </div>
         </div>
         
         <div class="section">
             <h3>Fatura Edilecek:</h3>
-            <p><strong>{tenant.name}</strong></p>
-            {f'<p>{tenant.legal_name}</p>' if tenant.legal_name else ''}
+            <p><strong>{tenant_name_escaped}</strong></p>
+            {f'<p>{legal_name_escaped}</p>' if legal_name_escaped else ''}
         </div>
         
         <table>
@@ -1000,18 +1013,20 @@ async def admin_generate_invoice(
             </thead>
             <tbody>
     """
-    
-    for item in payload.items:
-        html_content += f"""
+        
+        for item in payload.items:
+            description_escaped = escape_html(item.description)
+            html_content += f"""
                 <tr>
-                    <td>{item.description}</td>
+                    <td>{description_escaped}</td>
                     <td>{item.quantity}</td>
                     <td>{item.unit_price_minor / 100:.2f} ₺</td>
                     <td>{item.total_minor / 100:.2f} ₺</td>
                 </tr>
         """
-    
-    html_content += f"""
+        
+        notes_escaped = escape_html(payload.notes) if payload.notes else ""
+        html_content += f"""
             </tbody>
         </table>
         
@@ -1021,10 +1036,16 @@ async def admin_generate_invoice(
             <p class="total-row">TOPLAM: {payload.total_minor / 100:.2f} ₺</p>
         </div>
         
-        {f'<div class="section"><p><strong>Notlar:</strong> {payload.notes}</p></div>' if payload.notes else ''}
+        {f'<div class="section"><p><strong>Notlar:</strong> {notes_escaped}</p></div>' if notes_escaped else ''}
     </body>
     </html>
     """
+    except Exception as e:
+        logger.error(f"Error preparing invoice HTML: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Fatura hazırlanırken hata oluştu: {str(e)}"
+        )
     
     # Convert to PDF if requested
     if format == "pdf":
@@ -1046,6 +1067,12 @@ async def admin_generate_invoice(
                 headers={
                     "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html"
                 }
+            )
+        except Exception as e:
+            logger.error(f"Error generating PDF invoice: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"PDF oluşturulurken hata oluştu: {str(e)}"
             )
     
     # Return as downloadable HTML file
