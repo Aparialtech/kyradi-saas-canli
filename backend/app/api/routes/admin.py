@@ -1072,9 +1072,15 @@ async def admin_generate_invoice(
             )
         except Exception as e:
             logger.error(f"Error generating PDF invoice: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"PDF oluşturulurken hata oluştu: {str(e)}"
+            # Fallback to HTML instead of raising exception
+            logger.warning(f"PDF generation failed, returning HTML instead: {e}")
+            return Response(
+                content=html_content,
+                media_type="text/html; charset=utf-8",
+                headers={
+                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html",
+                    "X-PDF-Error": "PDF generation failed, HTML returned"
+                }
             )
     
     # Return as downloadable HTML file
