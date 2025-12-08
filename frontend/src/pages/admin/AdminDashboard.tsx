@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { useTranslation } from "../../hooks/useTranslation";
+import { FloatingChatWidget } from "../../components/FloatingChatWidget";
 
 // Modern UI Components (same as Partner Panel)
 import { ModernSidebar, type ModernSidebarNavItem } from "../../components/layout/ModernSidebar";
@@ -89,6 +90,8 @@ export function AdminDashboard() {
           </div>
         </div>
       </div>
+      
+      <FloatingChatWidget />
     </>
   );
 }

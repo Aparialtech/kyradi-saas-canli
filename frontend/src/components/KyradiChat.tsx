@@ -20,7 +20,7 @@ type ChatTheme = "light" | "dark";
 
 interface KyradiChatProps {
   apiBase: string;
-  tenantId: string;
+  tenantId?: string;
   userId: string;
   locale?: string;
   theme?: ChatTheme;
@@ -378,7 +378,7 @@ export function KyradiChat({
     useAssistantEndpoint,
   });
   const copy = chatCopy[locale] ?? chatCopy["tr-TR"];
-  const historyKey = useMemo(() => `kyradi.chat.history.${tenantId}.${userId}`, [tenantId, userId]);
+  const historyKey = useMemo(() => `kyradi.chat.history.${tenantId || 'admin'}.${userId}`, [tenantId, userId]);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ConversationMessage[]>(() => readHistory(historyKey));
   const [cooldown, setCooldown] = useState<number>(0);

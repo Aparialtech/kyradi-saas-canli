@@ -175,7 +175,8 @@ export function FloatingChatWidget() {
   // Compute derived values AFTER all hooks
   const tenantId = user?.tenant_id;
   const userId = user?.id;
-  const isEligible = Boolean(tenantId && userId);
+  // Show widget if user is logged in (admin users may not have tenant_id)
+  const isEligible = Boolean(userId);
 
   const ariaLabel = useMemo(() => (open ? t("chat.close") : t("chat.open")), [open, t]);
 
@@ -197,7 +198,7 @@ export function FloatingChatWidget() {
         {open && (
           <KyradiChat
             apiBase={env.API_URL}
-            tenantId={tenantId!}
+            tenantId={tenantId || undefined}
             userId={userId!}
             locale={locale}
             theme="light"
