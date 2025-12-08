@@ -67,8 +67,20 @@ export interface AdminStorageUsage {
 }
 
 export const adminReportService = {
-  async summary(): Promise<AdminSummaryResponse> {
-    const response = await http.get<AdminSummaryResponse>("/admin/reports/summary");
+  async summary(params?: {
+    tenant_id?: string;
+    date_from?: string;
+    date_to?: string;
+  }): Promise<AdminSummaryResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.tenant_id) queryParams.append("tenant_id", params.tenant_id);
+    if (params?.date_from) queryParams.append("from", params.date_from);
+    if (params?.date_to) queryParams.append("to", params.date_to);
+    
+    const url = queryParams.toString() 
+      ? `/admin/reports/summary?${queryParams.toString()}`
+      : "/admin/reports/summary";
+    const response = await http.get<AdminSummaryResponse>(url);
     return response.data;
   },
   

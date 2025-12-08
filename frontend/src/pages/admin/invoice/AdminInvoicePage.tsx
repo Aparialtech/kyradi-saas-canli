@@ -86,6 +86,12 @@ export function AdminInvoicePage() {
       push({ title: "Fatura numarası giriniz", type: "error" });
       return;
     }
+    // Validate that at least one item has a description
+    const hasValidItems = items.some(item => item.description.trim() !== "");
+    if (!hasValidItems) {
+      push({ title: "En az bir fatura kalemi ekleyiniz ve açıklama giriniz", type: "error" });
+      return;
+    }
 
     try {
       const payload = {

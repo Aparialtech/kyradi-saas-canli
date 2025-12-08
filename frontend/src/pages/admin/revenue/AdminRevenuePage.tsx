@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp, BarChart3, Building2, FileText, AlertCircle } from "../../../lib/lucide";
+import { DollarSign, TrendingUp, BarChart3, Building2, FileText, AlertCircle, Loader2 } from "../../../lib/lucide";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
@@ -9,12 +9,28 @@ import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernInput } from "../../../components/ui/ModernInput";
+import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 
 interface RevenueSummary {
   total_revenue_minor: number;
   tenant_settlement_minor: number;
   kyradi_commission_minor: number;
   transaction_count: number;
+}
+
+interface Settlement {
+  id: string;
+  tenant_id: string;
+  payment_id: string;
+  reservation_id: string;
+  total_amount_minor: number;
+  tenant_settlement_minor: number;
+  kyradi_commission_minor: number;
+  currency: string;
+  status: string;
+  commission_rate: number;
+  created_at: string;
+  settled_at?: string;
 }
 
 export function AdminRevenuePage() {
@@ -39,7 +55,27 @@ export function AdminRevenuePage() {
       const response = await http.get<RevenueSummary>("/admin/revenue/summary", { params });
       return response.data;
     },
+    enabled: true, // Always enabled
   });
+
+  // Fetch settlement details for the list
+  const settlementsQuery = useQuery({
+    queryKey: ["admin", "settlements", selectedTenantId, dateFrom, dateTo],
+    queryFn: async (): Promise<Settlement[]> => {
+      const params: Record<string, string> = {};
+      if (selectedTenantId) params.tenant_id = selectedTenantId;
+      if (dateFrom) params.from = dateFrom;
+      if (dateTo) params.to = dateTo;
+      params.status = "settled"; // Only show settled payments
+      const response = await http.get<Settlement[]>("/admin/settlements", { params });
+      return response.data;
+    },
+    enabled: true, // Always enabled
+  });
+
+  const tenantsById = new Map(
+    tenantsQuery.data?.map((tenant) => [tenant.id, tenant]) ?? []
+  );
 
   const formatCurrency = (minor: number) => {
     return new Intl.NumberFormat("tr-TR", {
@@ -246,6 +282,84 @@ export function AdminRevenuePage() {
             </h3>
             <p style={{ margin: 0 }}>Seçili tarih aralığında henüz ödeme işlemi gerçekleşmemiş.</p>
           </div>
+        </ModernCard>
+      )}
+
+      {/* Detaylı İşlem Listesi */}
+      {!revenueQuery.isLoading && !revenueQuery.isError && revenueQuery.data && revenueQuery.data.transaction_count > 0 && (
+        <ModernCard variant="glass" padding="lg" style={{ marginTop: 'var(--space-6)' }}>
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+              İşlem Detayları
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              {settlementsQuery.data?.length ?? 0} işlem gösteriliyor
+            </p>
+          </div>
+          {settlementsQuery.isLoading ? (
+            <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+              <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+              <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>İşlemler yükleniyor...</p>
+            </div>
+          ) : settlementsQuery.data && settlementsQuery.data.length > 0 ? (
+            <ModernTable
+              columns={[
+                {
+                  key: 'created_at',
+                  label: 'Tarih',
+                  render: (value) => new Date(value).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }),
+                },
+                {
+                  key: 'tenant_id',
+                  label: t("common.hotel"),
+                  render: (_, row) => {
+                    const tenant = tenantsById.get(row.tenant_id);
+                    return tenant?.name ?? `Bilinmeyen ${t("common.hotel")}`;
+                  },
+                },
+                {
+                  key: 'payment_id',
+                  label: 'Payment ID',
+                  render: (value) => (
+                    <code style={{ fontSize: "var(--text-xs)", background: "var(--bg-tertiary)", padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)", fontFamily: 'monospace' }}>
+                      {value.slice(0, 8)}...
+                    </code>
+                  ),
+                },
+                {
+                  key: 'total_amount_minor',
+                  label: 'Toplam Tutar',
+                  render: (value) => <strong>{formatCurrency(value)}</strong>,
+                  align: 'right',
+                },
+                {
+                  key: 'tenant_settlement_minor',
+                  label: 'Otel Payı',
+                  render: (value) => <span style={{ color: "#1d4ed8", fontWeight: 'var(--font-semibold)' }}>{formatCurrency(value)}</span>,
+                  align: 'right',
+                },
+                {
+                  key: 'kyradi_commission_minor',
+                  label: 'Kyradi Komisyonu',
+                  render: (value) => <span style={{ color: "#dc2626", fontWeight: 'var(--font-semibold)' }}>{formatCurrency(value)}</span>,
+                  align: 'right',
+                },
+              ] as ModernTableColumn<Settlement>[]}
+              data={settlementsQuery.data}
+              loading={settlementsQuery.isLoading}
+              striped
+              hoverable
+              stickyHeader
+            />
+          ) : (
+            <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+              <FileText className="h-16 w-16" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--text-muted)' }} />
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
+                İşlem bulunamadı
+              </h3>
+              <p style={{ margin: 0 }}>Seçili filtrelerle eşleşen işlem bulunamadı.</p>
+            </div>
+          )}
         </ModernCard>
       )}
     </div>

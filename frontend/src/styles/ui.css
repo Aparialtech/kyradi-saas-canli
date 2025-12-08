@@ -1243,7 +1243,7 @@ textarea {
   justify-content: center;
   align-items: center;
   padding: 2rem;
-  z-index: 1000;
+  z-index: 10000; /* Higher than sidebar (1000) to ensure modals appear above */
   animation: fadeIn 0.15s ease-out;
 }
 

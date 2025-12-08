@@ -30,7 +30,12 @@ export function AdminReportsAnalyticsPage() {
 
   const summaryQuery = useQuery({
     queryKey: ["admin", "summary", selectedTenantId, dateFrom, dateTo],
-    queryFn: () => adminReportService.summary(),
+    queryFn: () => adminReportService.summary({
+      tenant_id: selectedTenantId || undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    }),
+    enabled: true, // Always enabled, but will use filters if provided
   });
 
   const trendsQuery = useQuery({
@@ -41,6 +46,7 @@ export function AdminReportsAnalyticsPage() {
       date_to: dateTo || undefined,
       granularity: "daily",
     }),
+    enabled: true, // Always enabled
   });
 
   const storageUsageQuery = useQuery({
@@ -50,6 +56,7 @@ export function AdminReportsAnalyticsPage() {
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
     }),
+    enabled: true, // Always enabled
   });
 
   // Transform trend data for chart
