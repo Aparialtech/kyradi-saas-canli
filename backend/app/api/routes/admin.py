@@ -940,6 +940,8 @@ async def admin_generate_invoice(
     _: None = Depends(require_admin_user),
 ):
     """Generate invoice HTML/PDF for a tenant."""
+    html_content = ""
+    
     try:
         # Get tenant
         tenant = await session.get(Tenant, payload.tenant_id)
@@ -1042,12 +1044,27 @@ async def admin_generate_invoice(
     </body>
     </html>
     """
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404)
+        raise
     except Exception as e:
         logger.error(f"Error preparing invoice HTML: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Fatura hazırlanırken hata oluştu: {str(e)}"
-        )
+        # Return a basic error HTML instead of raising exception
+        error_msg = str(e).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+        html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Fatura Hatası</title>
+    </head>
+    <body>
+        <h1>Fatura Oluşturma Hatası</h1>
+        <p>Fatura oluşturulurken bir hata oluştu: {error_msg}</p>
+        <p>Lütfen sistem yöneticisine başvurun.</p>
+    </body>
+    </html>
+    """
     
     # Convert to PDF if requested
     if format == "pdf":
