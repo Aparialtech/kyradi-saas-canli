@@ -9,9 +9,7 @@ import { useToast } from "../../hooks/useToast";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
-import { FloatingChatWidget } from "../../components/FloatingChatWidget";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
-import { KyradiChat } from "../../components/KyradiChat";
 import { env } from "../../config/env";
 import type { TranslationKey } from "../../i18n/translations";
 
@@ -658,8 +656,6 @@ export function PartnerDashboard() {
           </div>
         </div>
       </div>
-      
-      <FloatingChatWidget />
     </>
   );
 }
