@@ -628,6 +628,7 @@ export function PartnerDashboard() {
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
           brandName="KYRADI"
+          brandLogo="/logo-black.svg"
         />
 
         {/* Main Content */}
