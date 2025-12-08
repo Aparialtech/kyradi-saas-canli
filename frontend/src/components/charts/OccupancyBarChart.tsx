@@ -4,14 +4,22 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 interface OccupancyData {
   label: string;
   occupancy_rate: number;
+  storage_id?: string;
+  storage_code?: string;
+  location_name?: string;
+  tenant_name?: string;
+  reservations?: number;
+  total_revenue_minor?: number;
 }
 
 interface OccupancyBarChartProps {
   data?: OccupancyData[];
+  onBarClick?: (data: OccupancyData) => void;
 }
 
 export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({ 
-  data = [] 
+  data = [],
+  onBarClick
 }) => {
   const getColor = (percent: number) => {
     // Dolu depolar kırmızı, boş depolar yeşil
@@ -68,6 +76,13 @@ export const OccupancyBarChart: React.FC<OccupancyBarChartProps> = ({
           radius={[8, 8, 0, 0]}
           animationDuration={1500}
           animationEasing="ease-out"
+          onClick={onBarClick ? (data: any) => {
+            if (data && data.activePayload && data.activePayload[0]) {
+              const payload = data.activePayload[0].payload as OccupancyData;
+              onBarClick(payload);
+            }
+          } : undefined}
+          style={onBarClick ? { cursor: 'pointer' } : undefined}
         >
           {data.map((entry, index) => (
             <Cell 

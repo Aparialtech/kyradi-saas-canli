@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Download, Users, Building2, DollarSign, Package } from "../../../lib/lucide";
+import { Download, Users, Building2, DollarSign, Package, Receipt, X } from "../../../lib/lucide";
 
-import { adminReportService } from "../../../services/admin/reports";
+import { adminReportService, AdminStorageUsage } from "../../../services/admin/reports";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -12,6 +12,7 @@ import { ModernButton } from "../../../components/ui/ModernButton";
 import { ReservationTrendChart } from "../../../components/charts/ReservationTrendChart";
 import { OccupancyBarChart } from "../../../components/charts/OccupancyBarChart";
 import { http } from "../../../lib/http";
+import { Modal } from "../../../components/common/Modal";
 
 export function AdminReportsAnalyticsPage() {
   const { messages, push } = useToast();
@@ -19,6 +20,7 @@ export function AdminReportsAnalyticsPage() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [reportFormat, setReportFormat] = useState<"csv" | "json" | "pdf" | "excel">("csv");
+  const [selectedStorage, setSelectedStorage] = useState<AdminStorageUsage | null>(null);
 
   const tenantsQuery = useQuery({
     queryKey: ["admin", "tenants"],
@@ -66,8 +68,28 @@ export function AdminReportsAnalyticsPage() {
     return storageUsageQuery.data.slice(0, 10).map((storage) => ({
       label: `${storage.storage_code} (${storage.tenant_name})`,
       occupancy_rate: storage.occupancy_rate,
+      storage_id: storage.storage_id,
+      storage_code: storage.storage_code,
+      location_name: storage.location_name,
+      tenant_name: storage.tenant_name,
+      reservations: storage.reservations,
+      total_revenue_minor: storage.total_revenue_minor,
     }));
   }, [storageUsageQuery.data]);
+
+  const selectedTenant = useMemo(() => {
+    return tenantsQuery.data?.find((t) => t.id === selectedTenantId);
+  }, [tenantsQuery.data, selectedTenantId]);
+
+  // Calculate totals from trends data
+  const totals = useMemo(() => {
+    if (!trendsQuery.data || trendsQuery.data.length === 0) {
+      return { totalRevenue: 0, totalCommission: 0 };
+    }
+    const totalRevenue = trendsQuery.data.reduce((sum, point) => sum + point.revenue_minor, 0);
+    const totalCommission = trendsQuery.data.reduce((sum, point) => sum + point.commission_minor, 0);
+    return { totalRevenue, totalCommission };
+  }, [trendsQuery.data]);
 
   const formatCurrency = (minor: number) => {
     return new Intl.NumberFormat("tr-TR", {
@@ -111,6 +133,112 @@ export function AdminReportsAnalyticsPage() {
     }
   };
 
+  const handleGenerateCommissionInvoice = async () => {
+    if (!selectedTenantId) {
+      push({ title: "Lütfen bir tenant seçin", type: "error" });
+      return;
+    }
+    if (!dateFrom || !dateTo) {
+      push({ title: "Lütfen tarih aralığı seçin", type: "error" });
+      return;
+    }
+
+    try {
+      const invoiceNumber = `KYRADI-KOM-${new Date().toISOString().split("T")[0].replace(/-/g, "")}-${selectedTenantId.slice(0, 8).toUpperCase()}`;
+      const payload = {
+        tenant_id: selectedTenantId,
+        invoice_number: invoiceNumber,
+        invoice_date: dateFrom,
+        due_date: dateTo,
+        items: [{
+          description: `Kyradi Komisyon Ücreti (${dateFrom} - ${dateTo})`,
+          quantity: 1,
+          unit_price_minor: totals.totalCommission,
+          total_minor: totals.totalCommission,
+        }],
+        subtotal_minor: totals.totalCommission,
+        tax_rate: 0.20,
+        tax_amount_minor: Math.round(totals.totalCommission * 0.20),
+        total_minor: Math.round(totals.totalCommission * 1.20),
+        notes: `Seçilen tarih aralığı için Kyradi komisyon ücreti`,
+      };
+
+      const response = await http.post(`/admin/invoices/generate?format=pdf`, payload, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], {
+        type: response.headers["content-type"] || "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      push({ title: "Komisyon faturası oluşturuldu", type: "success" });
+    } catch (error) {
+      push({ title: "Fatura oluşturulamadı", description: String(error), type: "error" });
+    }
+  };
+
+  const handleGenerateRevenueInvoice = async () => {
+    if (!selectedTenantId) {
+      push({ title: "Lütfen bir tenant seçin", type: "error" });
+      return;
+    }
+    if (!dateFrom || !dateTo) {
+      push({ title: "Lütfen tarih aralığı seçin", type: "error" });
+      return;
+    }
+
+    try {
+      const invoiceNumber = `KYRADI-GEL-${new Date().toISOString().split("T")[0].replace(/-/g, "")}-${selectedTenantId.slice(0, 8).toUpperCase()}`;
+      const payload = {
+        tenant_id: selectedTenantId,
+        invoice_number: invoiceNumber,
+        invoice_date: dateFrom,
+        due_date: dateTo,
+        items: [{
+          description: `Genel Gelir Faturası (${dateFrom} - ${dateTo})`,
+          quantity: 1,
+          unit_price_minor: totals.totalRevenue,
+          total_minor: totals.totalRevenue,
+        }],
+        subtotal_minor: totals.totalRevenue,
+        tax_rate: 0.20,
+        tax_amount_minor: Math.round(totals.totalRevenue * 0.20),
+        total_minor: Math.round(totals.totalRevenue * 1.20),
+        notes: `Seçilen tarih aralığı için genel gelir faturası`,
+      };
+
+      const response = await http.post(`/admin/invoices/generate?format=pdf`, payload, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], {
+        type: response.headers["content-type"] || "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      push({ title: "Gelir faturası oluşturuldu", type: "success" });
+    } catch (error) {
+      push({ title: "Fatura oluşturulamadı", description: String(error), type: "error" });
+    }
+  };
+
   return (
     <div style={{ padding: 'var(--space-8)', maxWidth: '1800px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
@@ -129,7 +257,25 @@ export function AdminReportsAnalyticsPage() {
               Detaylı raporlar, grafikler ve analitik veriler
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+            {selectedTenantId && dateFrom && dateTo && (
+              <>
+                <ModernButton
+                  variant="primary"
+                  onClick={handleGenerateCommissionInvoice}
+                  leftIcon={<Receipt className="h-4 w-4" />}
+                >
+                  Komisyon Faturası
+                </ModernButton>
+                <ModernButton
+                  variant="primary"
+                  onClick={handleGenerateRevenueInvoice}
+                  leftIcon={<Receipt className="h-4 w-4" />}
+                >
+                  Gelir Faturası
+                </ModernButton>
+              </>
+            )}
             <select
               value={reportFormat}
               onChange={(e) => setReportFormat(e.target.value as "csv" | "json" | "pdf" | "excel")}
@@ -311,11 +457,67 @@ export function AdminReportsAnalyticsPage() {
                 <p style={{ color: 'var(--text-tertiary)' }}>Yükleniyor...</p>
               </div>
             ) : (
-              <OccupancyBarChart data={occupancyData} />
+              <OccupancyBarChart 
+                data={occupancyData} 
+                onBarClick={(data) => {
+                  const storage = storageUsageQuery.data?.find(s => s.storage_id === data.storage_id);
+                  if (storage) {
+                    setSelectedStorage(storage);
+                  }
+                }}
+              />
             )}
           </div>
         </ModernCard>
       </div>
+
+      {/* Depo Detay Modal */}
+      {selectedStorage && (
+        <Modal
+          isOpen={!!selectedStorage}
+          onClose={() => setSelectedStorage(null)}
+          title="Depo Detayları"
+        >
+          <div style={{ padding: 'var(--space-4)' }}>
+            <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+              <div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0' }}>Depo Kodu</p>
+                <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, margin: 0 }}>{selectedStorage.storage_code}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0' }}>Lokasyon</p>
+                <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, margin: 0 }}>{selectedStorage.location_name}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0' }}>Tenant</p>
+                <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, margin: 0 }}>{selectedStorage.tenant_name}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0' }}>Doluluk Oranı</p>
+                <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, margin: 0, color: selectedStorage.occupancy_rate >= 50 ? '#EF4444' : '#10B981' }}>
+                  %{selectedStorage.occupancy_rate.toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0' }}>Rezervasyon Sayısı</p>
+                <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, margin: 0 }}>{selectedStorage.reservations}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0' }}>Toplam Gelir</p>
+                <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, margin: 0 }}>{formatCurrency(selectedStorage.total_revenue_minor)}</p>
+              </div>
+            </div>
+            <div style={{ marginTop: 'var(--space-4)', display: 'flex', justifyContent: 'flex-end' }}>
+              <ModernButton
+                variant="secondary"
+                onClick={() => setSelectedStorage(null)}
+              >
+                Kapat
+              </ModernButton>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
