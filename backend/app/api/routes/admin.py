@@ -935,7 +935,7 @@ class InvoiceCreate(BaseModel):
 @router.post("/invoices/generate")
 async def admin_generate_invoice(
     payload: InvoiceCreate,
-    format: str = Query(default="pdf", description="Export format: pdf or html"),
+    format: str = Query(default="pdf", description="Export format: pdf, html, or docx"),
     session: AsyncSession = Depends(get_session),
     _: None = Depends(require_admin_user),
 ):
@@ -1066,16 +1066,20 @@ async def admin_generate_invoice(
     </html>
     """
     
-    # Convert to PDF if requested
+    # Convert to requested format
     if format == "pdf":
         try:
             from weasyprint import HTML
             pdf_bytes = HTML(string=html_content).write_pdf()
+            # Validate PDF bytes
+            if not pdf_bytes or len(pdf_bytes) < 100:
+                raise ValueError("Generated PDF is too small or empty")
             return Response(
                 content=pdf_bytes,
                 media_type="application/pdf",
                 headers={
-                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.pdf"
+                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.pdf",
+                    "Content-Length": str(len(pdf_bytes))
                 }
             )
         except ImportError:
@@ -1097,6 +1101,129 @@ async def admin_generate_invoice(
                 headers={
                     "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html",
                     "X-PDF-Error": "PDF generation failed, HTML returned"
+                }
+            )
+    
+    elif format == "docx":
+        try:
+            from docx import Document
+            from docx.shared import Inches, Pt, RGBColor
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            import io
+            
+            doc = Document()
+            
+            # Set document margins
+            sections = doc.sections
+            for section in sections:
+                section.top_margin = Inches(0.8)
+                section.bottom_margin = Inches(0.8)
+                section.left_margin = Inches(0.8)
+                section.right_margin = Inches(0.8)
+            
+            # Header
+            header_para = doc.add_paragraph()
+            header_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            header_run = header_para.add_run("KYRADİ")
+            header_run.bold = True
+            header_run.font.size = Pt(24)
+            header_para.add_run("\nDepolama ve Rezervasyon Yönetim Sistemi").font.size = Pt(12)
+            
+            # Invoice info (right aligned)
+            invoice_para = doc.add_paragraph()
+            invoice_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            invoice_run = invoice_para.add_run("FATURA\n")
+            invoice_run.bold = True
+            invoice_run.font.size = Pt(18)
+            invoice_para.add_run(f"Fatura No: {payload.invoice_number}\n")
+            invoice_para.add_run(f"Tarih: {payload.invoice_date}\n")
+            invoice_para.add_run(f"Vade: {payload.due_date}")
+            
+            doc.add_paragraph()  # Spacing
+            
+            # Bill to section
+            doc.add_paragraph("Fatura Edilecek:", style="Heading 3")
+            bill_para = doc.add_paragraph()
+            bill_run = bill_para.add_run(tenant.name)
+            bill_run.bold = True
+            if legal_name_value:
+                doc.add_paragraph(legal_name_value)
+            
+            doc.add_paragraph()  # Spacing
+            
+            # Table for items
+            table = doc.add_table(rows=1, cols=4)
+            table.style = "Light Grid Accent 1"
+            
+            # Header row
+            header_cells = table.rows[0].cells
+            header_cells[0].text = "Açıklama"
+            header_cells[1].text = "Adet"
+            header_cells[2].text = "Birim Fiyat"
+            header_cells[3].text = "Toplam"
+            for cell in header_cells:
+                cell.paragraphs[0].runs[0].bold = True
+            
+            # Add items
+            for item in payload.items:
+                row_cells = table.add_row().cells
+                row_cells[0].text = item.description
+                row_cells[1].text = str(item.quantity)
+                row_cells[2].text = f"{item.unit_price_minor / 100:.2f} ₺"
+                row_cells[3].text = f"{item.total_minor / 100:.2f} ₺"
+            
+            doc.add_paragraph()  # Spacing
+            
+            # Totals (right aligned)
+            totals_para = doc.add_paragraph()
+            totals_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            totals_para.add_run(f"Ara Toplam: {payload.subtotal_minor / 100:.2f} ₺\n")
+            totals_para.add_run(f"KDV (%{payload.tax_rate * 100:.0f}): {payload.tax_amount_minor / 100:.2f} ₺\n")
+            total_run = totals_para.add_run(f"TOPLAM: {payload.total_minor / 100:.2f} ₺")
+            total_run.bold = True
+            total_run.font.size = Pt(14)
+            
+            # Notes
+            if payload.notes:
+                doc.add_paragraph()
+                notes_para = doc.add_paragraph()
+                notes_run = notes_para.add_run("Notlar: ")
+                notes_run.bold = True
+                notes_para.add_run(payload.notes)
+            
+            # Save to bytes
+            docx_bytes = io.BytesIO()
+            doc.save(docx_bytes)
+            docx_bytes.seek(0)
+            docx_content = docx_bytes.read()
+            
+            return Response(
+                content=docx_content,
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                headers={
+                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.docx",
+                    "Content-Length": str(len(docx_content))
+                }
+            )
+        except ImportError:
+            logger.warning("python-docx not installed, falling back to HTML")
+            return Response(
+                content=html_content,
+                media_type="text/html; charset=utf-8",
+                headers={
+                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html"
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error generating DOCX invoice: {e}", exc_info=True)
+            # Fallback to HTML
+            logger.warning(f"DOCX generation failed, returning HTML instead: {e}")
+            return Response(
+                content=html_content,
+                media_type="text/html; charset=utf-8",
+                headers={
+                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html",
+                    "X-DOCX-Error": "DOCX generation failed, HTML returned"
                 }
             )
     
