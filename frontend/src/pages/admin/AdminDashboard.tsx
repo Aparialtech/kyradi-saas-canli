@@ -17,7 +17,6 @@ import {
   FileText,
   CreditCard,
   TrendingUp,
-  Receipt,
 } from "../../lib/lucide";
 
 export { AdminReportsOverview } from "./reports/AdminReportsOverview";
