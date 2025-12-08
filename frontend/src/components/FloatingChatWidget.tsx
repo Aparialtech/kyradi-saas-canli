@@ -210,7 +210,7 @@ export function FloatingChatWidget() {
         className={`kyradi-chat-widget__toggle ${open ? "kyradi-chat-widget__toggle--close" : ""}`}
         aria-label={ariaLabel}
         onMouseDown={handleMouseDown}
-        onClick={(e) => {
+        onClick={() => {
           // Only toggle if not dragging
           if (!isDragging && dragStartPos.current === null) {
             setOpen((prev) => !prev);
