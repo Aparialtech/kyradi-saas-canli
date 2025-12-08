@@ -8,12 +8,14 @@ import { MessageSquare, X } from "../lib/lucide";
 
 const floatingStyles = `
 .kyradi-chat-widget {
-  position: fixed;
-  z-index: 999;
-  display: flex;
+  position: fixed !important;
+  z-index: 9999 !important;
+  display: flex !important;
   flex-direction: column;
   align-items: flex-end;
   user-select: none;
+  right: 24px;
+  bottom: 24px;
 }
 .kyradi-chat-widget__toggle {
   width: 56px;
@@ -76,6 +78,12 @@ const floatingStyles = `
     max-width: 380px;
   }
 }
+@media (min-width: 641px) {
+  .kyradi-chat-widget[style*="left: auto"] {
+    right: 24px !important;
+    bottom: 24px !important;
+  }
+}
 `;
 
 const STORAGE_KEY = "kyradi-chat-widget-position";
@@ -92,13 +100,19 @@ export function FloatingChatWidget() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          return { x: parsed.x ?? window.innerWidth - 80, y: parsed.y ?? window.innerHeight - 80 };
+          // Validate saved position
+          if (parsed.x != null && parsed.y != null && parsed.x >= 0 && parsed.y >= 0) {
+            return { x: parsed.x, y: parsed.y };
+          }
         } catch {
           // Invalid JSON, use defaults
         }
       }
+      // Default to bottom-right corner
+      return { x: window.innerWidth - 80, y: window.innerHeight - 80 };
     }
-    return { x: typeof window !== "undefined" ? window.innerWidth - 80 : 0, y: typeof window !== "undefined" ? window.innerHeight - 80 : 0 };
+    // Server-side rendering fallback
+    return { x: -1, y: -1 };
   });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
@@ -138,6 +152,8 @@ export function FloatingChatWidget() {
       if (!isDragging || !dragStartPos.current) return;
       e.preventDefault();
 
+      if (!dragStartPos.current || !widgetRef.current) return;
+      
       const newX = e.clientX - dragStartPos.current.x;
       const newY = e.clientY - dragStartPos.current.y;
 
@@ -185,12 +201,15 @@ export function FloatingChatWidget() {
     return null;
   }
 
-  const widgetStyle: React.CSSProperties = {
-    right: "auto",
-    bottom: "auto",
-    left: `${position.x}px`,
-    top: `${position.y}px`,
-  };
+  // Use fixed positioning if position is valid (>= 0)
+  const widgetStyle: React.CSSProperties = position.x >= 0 && position.y >= 0
+    ? {
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        right: "auto",
+        bottom: "auto",
+      }
+    : {}; // Use CSS defaults
 
   return (
     <div ref={widgetRef} className="kyradi-chat-widget" style={widgetStyle}>
