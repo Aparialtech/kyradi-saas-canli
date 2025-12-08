@@ -82,6 +82,13 @@
       kvkkConsentRequired: "Devam edebilmek için KVKK onayını vermelisiniz.",
       disclosureConsentRequired: "Devam edebilmek için Aydınlatma Metni'ni okuduğunuzu onaylamalısınız.",
       hours: "saat",
+      step1: "Kişisel Bilgiler",
+      step2: "Konaklama Bilgileri",
+      step3: "Bavul Bilgileri",
+      next: "İleri",
+      back: "Geri",
+      step: "Adım",
+      of: "/",
     },
     "en-us": {
       title: "Reservation Form",
@@ -148,6 +155,13 @@
       kvkkConsentRequired: "You must provide KVKK consent to continue.",
       disclosureConsentRequired: "You must confirm that you have read the Disclosure Text to continue.",
       hours: "hours",
+      step1: "Personal Information",
+      step2: "Accommodation Information",
+      step3: "Luggage Information",
+      next: "Next",
+      back: "Back",
+      step: "Step",
+      of: "/",
     },
   };
 
@@ -163,10 +177,11 @@
   class KyradiReserveElement extends HTMLElement {
     constructor() {
       super();
-      this.state = { loading: true, error: null, successRef: null };
+      this.state = { loading: true, error: null, successRef: null, currentStep: 1 };
       this.options = {};
       this.accessToken = null;
       this.captchaToken = null;
+      this.formData = {}; // Store form data across steps
     }
 
     connectedCallback() {

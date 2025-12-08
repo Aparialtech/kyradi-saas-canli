@@ -48,9 +48,56 @@ export interface AdminSummaryResponse {
   system_health: SystemHealth;
 }
 
+export interface AdminTrendDataPoint {
+  date: string;
+  revenue_minor: number;
+  reservations: number;
+  commission_minor: number;
+}
+
+export interface AdminStorageUsage {
+  storage_id: string;
+  storage_code: string;
+  location_name: string;
+  tenant_name: string;
+  reservations: number;
+  occupancy_rate: number;
+  total_revenue_minor: number;
+}
+
 export const adminReportService = {
   async summary(): Promise<AdminSummaryResponse> {
     const response = await http.get<AdminSummaryResponse>("/admin/reports/summary");
+    return response.data;
+  },
+  
+  async getTrends(params?: {
+    tenant_id?: string;
+    date_from?: string;
+    date_to?: string;
+    granularity?: "daily" | "weekly" | "monthly";
+  }): Promise<AdminTrendDataPoint[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.tenant_id) queryParams.append("tenant_id", params.tenant_id);
+    if (params?.date_from) queryParams.append("from", params.date_from);
+    if (params?.date_to) queryParams.append("to", params.date_to);
+    if (params?.granularity) queryParams.append("granularity", params.granularity);
+    
+    const response = await http.get<AdminTrendDataPoint[]>(`/admin/reports/trends?${queryParams.toString()}`);
+    return response.data;
+  },
+  
+  async getStorageUsage(params?: {
+    tenant_id?: string;
+    date_from?: string;
+    date_to?: string;
+  }): Promise<AdminStorageUsage[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.tenant_id) queryParams.append("tenant_id", params.tenant_id);
+    if (params?.date_from) queryParams.append("from", params.date_from);
+    if (params?.date_to) queryParams.append("to", params.date_to);
+    
+    const response = await http.get<AdminStorageUsage[]>(`/admin/reports/storage-usage?${queryParams.toString()}`);
     return response.data;
   },
 };

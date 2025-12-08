@@ -16,9 +16,13 @@ import {
   Settings,
   FileText,
   CreditCard,
+  TrendingUp,
+  FileInvoice,
 } from "../../lib/lucide";
 
 export { AdminReportsOverview } from "./reports/AdminReportsOverview";
+export { AdminReportsAnalyticsPage } from "./reports/AdminReportsAnalyticsPage";
+export { AdminInvoicePage } from "./invoice/AdminInvoicePage";
 export { TenantsPage as AdminTenantsPage } from "./tenants/TenantsPage";
 export { AdminAuditLogsPage as AdminAuditPage } from "./audit/AdminAuditLogsPage";
 export { AdminRevenuePage } from "./revenue/AdminRevenuePage";
@@ -34,6 +38,8 @@ export function AdminDashboard() {
   const modernNavigation = useMemo((): ModernSidebarNavItem[] => {
     const items: ModernSidebarNavItem[] = [
       { to: ".", label: t("nav.overview"), end: true, icon: <BarChart3 className="h-5 w-5" /> },
+      { to: "reports", label: "Raporlar ve Analiz", icon: <TrendingUp className="h-5 w-5" /> },
+      { to: "invoice", label: "Fatura Oluştur", icon: <FileInvoice className="h-5 w-5" /> },
       { to: "tenants", label: t("nav.tenants"), icon: <Building2 className="h-5 w-5" /> },
       { to: "revenue", label: t("nav.globalRevenue"), icon: <Receipt className="h-5 w-5" /> },
       { to: "settlements", label: t("nav.globalSettlements"), icon: <CreditCard className="h-5 w-5" /> },

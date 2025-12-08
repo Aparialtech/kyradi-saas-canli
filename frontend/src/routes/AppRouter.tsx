@@ -5,6 +5,8 @@ import {
   AdminDashboard,
   AdminTenantsPage,
   AdminReportsOverview,
+  AdminReportsAnalyticsPage,
+  AdminInvoicePage,
   AdminAuditPage,
   AdminRevenuePage,
   AdminSettlementsPage,
@@ -50,6 +52,8 @@ export function AppRouter() {
         <Route path="/admin" element={<AdminDashboard />}>
           <Route index element={<AdminReportsOverview />} />
           <Route path="overview" element={<AdminReportsOverview />} />
+          <Route path="reports" element={<AdminReportsAnalyticsPage />} />
+          <Route path="invoice" element={<AdminInvoicePage />} />
           <Route path="tenants" element={<AdminTenantsPage />} />
           <Route path="revenue" element={<AdminRevenuePage />} />
           <Route path="settlements" element={<AdminSettlementsPage />} />
