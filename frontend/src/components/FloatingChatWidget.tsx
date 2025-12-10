@@ -11,9 +11,9 @@ const floatingStyles = `
   position: fixed !important;
   z-index: 99999 !important;
   display: flex !important;
-  flex-direction: column;
-  align-items: flex-end;
-  user-select: none;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  user-select: none !important;
   pointer-events: auto !important;
   visibility: visible !important;
   opacity: 1 !important;
@@ -202,9 +202,9 @@ export function FloatingChatWidget() {
     return null;
   }
 
-  // Use fixed positioning if position is valid (>= 0)
-  // Otherwise use CSS defaults (right: 24px, bottom: 24px)
-  const widgetStyle: React.CSSProperties = position.x >= 0 && position.y >= 0
+  // Calculate position: use saved position if valid, otherwise use default bottom-right
+  const hasValidPosition = position.x >= 0 && position.y >= 0;
+  const widgetStyle: React.CSSProperties = hasValidPosition
     ? {
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -219,7 +219,11 @@ export function FloatingChatWidget() {
       };
 
   return (
-    <div ref={widgetRef} className="kyradi-chat-widget" style={widgetStyle}>
+    <div 
+      ref={widgetRef} 
+      className="kyradi-chat-widget" 
+      style={widgetStyle}
+    >
       <div className={`kyradi-chat-widget__panel ${open ? "" : "kyradi-chat-widget__panel--hidden"}`}>
         {open && (
           <KyradiChat
