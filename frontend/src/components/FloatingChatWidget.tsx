@@ -105,16 +105,23 @@ export function FloatingChatWidget() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Validate saved position
+          // Validate saved position - ensure it's within viewport
           if (parsed.x != null && parsed.y != null && parsed.x >= 0 && parsed.y >= 0) {
-            return { x: parsed.x, y: parsed.y };
+            const maxX = window.innerWidth - 80;
+            const maxY = window.innerHeight - 80;
+            // Constrain to viewport
+            const constrainedX = Math.max(0, Math.min(parsed.x, maxX));
+            const constrainedY = Math.max(0, Math.min(parsed.y, maxY));
+            return { x: constrainedX, y: constrainedY };
           }
         } catch {
           // Invalid JSON, use defaults
         }
       }
       // Default to bottom-right corner
-      return { x: window.innerWidth - 80, y: window.innerHeight - 80 };
+      const defaultX = Math.max(0, window.innerWidth - 80);
+      const defaultY = Math.max(0, window.innerHeight - 80);
+      return { x: defaultX, y: defaultY };
     }
     // Server-side rendering fallback
     return { x: -1, y: -1 };
@@ -219,11 +226,23 @@ export function FloatingChatWidget() {
   console.log("[FloatingChatWidget] Rendering widget!", { isEligible, isLoading, userId });
 
   // Calculate position: use saved position if valid, otherwise use default bottom-right
+  // Constrain position to viewport to prevent widget from being off-screen
   const hasValidPosition = position.x >= 0 && position.y >= 0;
+  
+  let constrainedPosition = position;
+  if (typeof window !== "undefined" && hasValidPosition) {
+    const maxX = Math.max(0, window.innerWidth - 80);
+    const maxY = Math.max(0, window.innerHeight - 80);
+    constrainedPosition = {
+      x: Math.max(0, Math.min(position.x, maxX)),
+      y: Math.max(0, Math.min(position.y, maxY)),
+    };
+  }
+  
   const widgetStyle: React.CSSProperties = hasValidPosition
     ? {
-        left: `${position.x}px`,
-        top: `${position.y}px`,
+        left: `${constrainedPosition.x}px`,
+        top: `${constrainedPosition.y}px`,
         right: "auto",
         bottom: "auto",
       }
