@@ -88,26 +88,37 @@ async def list_settlements(
     if location_id or storage_id:
         from sqlalchemy import and_
         # Build subquery with proper JOINs to avoid cartesian product
-        payment_subquery = (
-            select(Payment.id)
-            .select_from(Payment)
-            .join(Reservation, Payment.reservation_id == Reservation.id)
-            .where(
+        # Use explicit select_from to make JOIN conditions clear
+        payment_subquery = select(Payment.id)
+        
+        # Build the FROM clause explicitly with JOINs
+        if location_id:
+            # Need to join Storage to access location_id
+            payment_subquery = payment_subquery.select_from(
+                Payment.join(Reservation, Payment.reservation_id == Reservation.id)
+                       .join(Storage, Reservation.storage_id == Storage.id)
+            ).where(
+                Payment.tenant_id == current_user.tenant_id,
+                Reservation.tenant_id == current_user.tenant_id,
+                Storage.location_id == location_id,
+            )
+        elif storage_id:
+            # Only need Reservation for storage_id filter
+            payment_subquery = payment_subquery.select_from(
+                Payment.join(Reservation, Payment.reservation_id == Reservation.id)
+            ).where(
+                Payment.tenant_id == current_user.tenant_id,
+                Reservation.tenant_id == current_user.tenant_id,
+                Reservation.storage_id == storage_id,
+            )
+        else:
+            # Just join Payment and Reservation
+            payment_subquery = payment_subquery.select_from(
+                Payment.join(Reservation, Payment.reservation_id == Reservation.id)
+            ).where(
                 Payment.tenant_id == current_user.tenant_id,
                 Reservation.tenant_id == current_user.tenant_id,
             )
-        )
-        
-        if location_id:
-            # Need to join Storage to access location_id
-            payment_subquery = (
-                payment_subquery
-                .join(Storage, Reservation.storage_id == Storage.id)
-                .where(Storage.location_id == location_id)
-            )
-        
-        if storage_id:
-            payment_subquery = payment_subquery.where(Reservation.storage_id == storage_id)
         
         stmt = stmt.where(Settlement.payment_id.in_(payment_subquery))
     
