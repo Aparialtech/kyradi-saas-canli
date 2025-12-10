@@ -91,7 +91,7 @@ const STORAGE_KEY = "kyradi-chat-widget-position";
 
 export function FloatingChatWidget() {
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ x: number; y: number }>(() => {
@@ -126,6 +126,7 @@ export function FloatingChatWidget() {
     }
   }, [position]);
 
+  // Inject CSS styles
   useEffect(() => {
     if (document.getElementById("kyradi-chat-widget-style")) return;
     const style = document.createElement("style");
@@ -192,12 +193,13 @@ export function FloatingChatWidget() {
   // Compute derived values AFTER all hooks
   const tenantId = user?.tenant_id;
   const userId = user?.id;
-  // Show widget if user is logged in (admin users may not have tenant_id)
-  const isEligible = Boolean(userId);
+  // Show widget if user is logged in (wait for auth to finish loading)
+  const isEligible = !isLoading && Boolean(userId);
 
   const ariaLabel = useMemo(() => (open ? t("chat.close") : t("chat.open")), [open, t]);
 
   // Early return AFTER all hooks (this is safe)
+  // Only hide if auth is loaded and user is not logged in
   if (!isEligible) {
     return null;
   }
@@ -222,7 +224,18 @@ export function FloatingChatWidget() {
     <div 
       ref={widgetRef} 
       className="kyradi-chat-widget" 
-      style={widgetStyle}
+      style={{
+        ...widgetStyle,
+        position: "fixed",
+        zIndex: 99999,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-end",
+        visibility: "visible",
+        opacity: 1,
+        pointerEvents: "auto",
+      }}
+      data-testid="floating-chat-widget"
     >
       <div className={`kyradi-chat-widget__panel ${open ? "" : "kyradi-chat-widget__panel--hidden"}`}>
         {open && (
@@ -246,6 +259,19 @@ export function FloatingChatWidget() {
           if (!isDragging && dragStartPos.current === null) {
             setOpen((prev) => !prev);
           }
+        }}
+        style={{
+          width: "56px",
+          height: "56px",
+          borderRadius: "50%",
+          border: "none",
+          background: "linear-gradient(135deg, #00a389 0%, #0066ff 100%)",
+          color: "white",
+          cursor: "grab",
+          boxShadow: "0 8px 24px rgba(0, 163, 137, 0.3)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         {open ? <X /> : <MessageSquare />}
