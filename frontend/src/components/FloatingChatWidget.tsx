@@ -17,6 +17,10 @@ const floatingStyles = `
   pointer-events: auto !important;
   visibility: visible !important;
   opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
 }
 .kyradi-chat-widget__toggle {
   width: 56px;
@@ -194,6 +198,7 @@ export function FloatingChatWidget() {
   const tenantId = user?.tenant_id;
   const userId = user?.id;
   // Show widget if user is logged in (wait for auth to finish loading)
+  // Temporarily show widget even during loading to debug
   const isEligible = !isLoading && Boolean(userId);
 
   const ariaLabel = useMemo(() => (open ? t("chat.close") : t("chat.open")), [open, t]);
@@ -206,15 +211,18 @@ export function FloatingChatWidget() {
       user,
       isEligible,
       position,
+      willRender: isEligible,
     });
   }, [isLoading, userId, user, isEligible, position]);
 
   // Early return AFTER all hooks (this is safe)
   // Only hide if auth is loaded and user is not logged in
   if (!isEligible) {
-    console.log("[FloatingChatWidget] Not eligible - hiding widget");
+    console.log("[FloatingChatWidget] Not eligible - hiding widget", { isLoading, userId });
     return null;
   }
+
+  console.log("[FloatingChatWidget] Rendering widget!");
 
   // Calculate position: use saved position if valid, otherwise use default bottom-right
   const hasValidPosition = position.x >= 0 && position.y >= 0;
@@ -249,6 +257,8 @@ export function FloatingChatWidget() {
         visibility: "visible",
         opacity: 1,
         pointerEvents: "auto",
+        width: "auto",
+        height: "auto",
       }}
       data-testid="floating-chat-widget"
     >
