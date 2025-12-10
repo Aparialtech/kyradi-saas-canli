@@ -23,7 +23,7 @@ export const ReservationTrendChart: React.FC<ReservationTrendChartProps> = ({
   }
 
   return (
-    <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+    <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0}>
       <AreaChart
         data={data}
         margin={{ top: 10, right: 30, left: 0, bottom: 0 }}

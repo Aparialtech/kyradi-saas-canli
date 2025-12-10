@@ -198,9 +198,21 @@ export function FloatingChatWidget() {
 
   const ariaLabel = useMemo(() => (open ? t("chat.close") : t("chat.open")), [open, t]);
 
+  // Debug: Log widget state
+  useEffect(() => {
+    console.log("[FloatingChatWidget] State:", {
+      isLoading,
+      userId,
+      user,
+      isEligible,
+      position,
+    });
+  }, [isLoading, userId, user, isEligible, position]);
+
   // Early return AFTER all hooks (this is safe)
   // Only hide if auth is loaded and user is not logged in
   if (!isEligible) {
+    console.log("[FloatingChatWidget] Not eligible - hiding widget");
     return null;
   }
 
@@ -219,6 +231,9 @@ export function FloatingChatWidget() {
         left: "auto",
         top: "auto",
       };
+
+  // Log when widget is rendering
+  console.log("[FloatingChatWidget] Rendering widget with style:", widgetStyle);
 
   return (
     <div 

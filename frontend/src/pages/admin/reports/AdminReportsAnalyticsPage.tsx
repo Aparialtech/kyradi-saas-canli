@@ -596,7 +596,7 @@ export function AdminReportsAnalyticsPage() {
           <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-4) 0' }}>
             Rezervasyon Trendi
           </h3>
-          <div style={{ height: '300px' }}>
+          <div style={{ height: '300px', minHeight: '300px', minWidth: 0 }}>
             {trendsQuery.isLoading ? (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <p style={{ color: 'var(--text-tertiary)' }}>Yükleniyor...</p>
@@ -611,7 +611,7 @@ export function AdminReportsAnalyticsPage() {
           <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-4) 0' }}>
             Depo Doluluk Oranları
           </h3>
-          <div style={{ height: '300px' }}>
+          <div style={{ height: '300px', minHeight: '300px', minWidth: 0 }}>
             {storageUsageQuery.isLoading ? (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <p style={{ color: 'var(--text-tertiary)' }}>Yükleniyor...</p>

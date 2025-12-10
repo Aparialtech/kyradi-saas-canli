@@ -405,7 +405,7 @@ export function PartnerOverview() {
           <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
             Rezervasyon Trendi
           </h3>
-          <div style={{ height: '300px' }}>
+          <div style={{ height: '300px', minHeight: '300px', minWidth: 0 }}>
             {trendQuery.isLoading ? (
               <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
             ) : (
@@ -418,7 +418,7 @@ export function PartnerOverview() {
           <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
             Gelir Dağılımı
           </h3>
-          <div style={{ height: '300px' }}>
+          <div style={{ height: '300px', minHeight: '300px', minWidth: 0 }}>
             <RevenueDonutChart />
           </div>
         </ModernCard>
@@ -427,7 +427,7 @@ export function PartnerOverview() {
           <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
             Depo Doluluk Oranları
           </h3>
-          <div style={{ height: '300px' }}>
+          <div style={{ height: '300px', minHeight: '300px', minWidth: 0 }}>
             {storageUsageQuery.isLoading ? (
               <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
             ) : (

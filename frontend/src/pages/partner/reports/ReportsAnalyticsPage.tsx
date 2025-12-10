@@ -415,7 +415,7 @@ export function ReportsAnalyticsPage() {
               <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
                 Rezervasyon Trendi
               </h3>
-              <div style={{ height: '350px' }}>
+              <div style={{ height: '350px', minHeight: '350px', minWidth: 0 }}>
                 {trendQuery.isLoading ? (
                   <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
                 ) : (
@@ -428,7 +428,7 @@ export function ReportsAnalyticsPage() {
               <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
                 Gelir Dağılımı (Ödeme Yöntemi)
               </h3>
-              <div style={{ height: '350px' }}>
+              <div style={{ height: '350px', minHeight: '350px', minWidth: 0 }}>
                 <RevenueDonutChart />
               </div>
             </ModernCard>
@@ -437,7 +437,7 @@ export function ReportsAnalyticsPage() {
               <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
                 Lokasyon Doluluk Oranları
               </h3>
-              <div style={{ height: '350px' }}>
+              <div style={{ height: '350px', minHeight: '350px', minWidth: 0 }}>
                 {storageUsageQuery.isLoading ? (
                   <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
                 ) : (
