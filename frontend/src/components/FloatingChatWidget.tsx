@@ -243,23 +243,30 @@ export function FloatingChatWidget() {
   // Log when widget is rendering
   console.log("[FloatingChatWidget] Rendering widget with style:", widgetStyle);
 
+  // Always render widget, control visibility with style
+  const widgetDisplayStyle = isEligible ? {
+    ...widgetStyle,
+    position: "fixed" as const,
+    zIndex: 99999,
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "flex-end" as const,
+    visibility: "visible" as const,
+    opacity: 1,
+    pointerEvents: "auto" as const,
+    width: "auto",
+    height: "auto",
+  } : {
+    display: "none",
+  };
+
+  console.log("[FloatingChatWidget] Rendering widget!", { isEligible, widgetDisplayStyle });
+
   return (
     <div 
       ref={widgetRef} 
       className="kyradi-chat-widget" 
-      style={{
-        ...widgetStyle,
-        position: "fixed",
-        zIndex: 99999,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "flex-end",
-        visibility: "visible",
-        opacity: 1,
-        pointerEvents: "auto",
-        width: "auto",
-        height: "auto",
-      }}
+      style={widgetDisplayStyle}
       data-testid="floating-chat-widget"
     >
       <div className={`kyradi-chat-widget__panel ${open ? "" : "kyradi-chat-widget__panel--hidden"}`}>
