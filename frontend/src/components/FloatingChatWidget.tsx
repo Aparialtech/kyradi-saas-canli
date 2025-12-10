@@ -11,7 +11,7 @@ const floatingStyles = `
   position: fixed !important;
   z-index: 99999 !important;
   display: flex !important;
-  flex-direction: column !important;
+  flex-direction: column-reverse !important;
   align-items: flex-end !important;
   user-select: none !important;
   pointer-events: auto !important;
@@ -36,8 +36,9 @@ const floatingStyles = `
   justify-content: center;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
-  z-index: 2;
+  z-index: 3 !important;
   flex-shrink: 0;
+  order: 1;
 }
 .kyradi-chat-widget__toggle:hover {
   transform: scale(1.05);
@@ -69,6 +70,7 @@ const floatingStyles = `
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
   position: relative;
   z-index: 1;
+  order: 2;
 }
 .kyradi-chat-widget__panel--hidden {
   transform: scale(0.85) translateY(10px);
@@ -267,7 +269,7 @@ export function FloatingChatWidget() {
     position: "fixed" as const,
     zIndex: 99999,
     display: "flex",
-    flexDirection: "column" as const,
+    flexDirection: "column-reverse" as const,
     alignItems: "flex-end" as const,
     visibility: "visible" as const,
     opacity: 1,
@@ -323,7 +325,7 @@ export function FloatingChatWidget() {
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
-          zIndex: 2,
+          zIndex: 3,
           flexShrink: 0,
         }}
       >
