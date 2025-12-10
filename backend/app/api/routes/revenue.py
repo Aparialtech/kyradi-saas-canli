@@ -84,24 +84,30 @@ async def list_settlements(
     if date_to:
         stmt = stmt.where(Settlement.created_at <= date_to)
     
-    # Filter by location or storage via payment -> reservation
+    # Filter by location or storage via payment -> reservation -> storage -> location
     if location_id or storage_id:
-        payment_subquery = select(Payment.id).where(Payment.tenant_id == current_user.tenant_id)
-        
-        if location_id or storage_id:
-            from sqlalchemy import and_
-            reservation_filters = [Reservation.tenant_id == current_user.tenant_id]
-            if location_id:
-                reservation_filters.append(Reservation.location_id == location_id)
-            if storage_id:
-                reservation_filters.append(Reservation.storage_id == storage_id)
-            
-            payment_subquery = payment_subquery.join(
-                Reservation, and_(
-                    Payment.reservation_id == Reservation.id,
-                    *reservation_filters
-                )
+        from sqlalchemy import and_
+        # Build subquery with proper JOINs to avoid cartesian product
+        payment_subquery = (
+            select(Payment.id)
+            .select_from(Payment)
+            .join(Reservation, Payment.reservation_id == Reservation.id)
+            .where(
+                Payment.tenant_id == current_user.tenant_id,
+                Reservation.tenant_id == current_user.tenant_id,
             )
+        )
+        
+        if location_id:
+            # Need to join Storage to access location_id
+            payment_subquery = (
+                payment_subquery
+                .join(Storage, Reservation.storage_id == Storage.id)
+                .where(Storage.location_id == location_id)
+            )
+        
+        if storage_id:
+            payment_subquery = payment_subquery.where(Reservation.storage_id == storage_id)
         
         stmt = stmt.where(Settlement.payment_id.in_(payment_subquery))
     
