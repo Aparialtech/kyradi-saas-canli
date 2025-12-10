@@ -9,13 +9,14 @@ import { MessageSquare, X } from "../lib/lucide";
 const floatingStyles = `
 .kyradi-chat-widget {
   position: fixed !important;
-  z-index: 9999 !important;
+  z-index: 99999 !important;
   display: flex !important;
   flex-direction: column;
   align-items: flex-end;
   user-select: none;
-  right: 24px;
-  bottom: 24px;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 .kyradi-chat-widget__toggle {
   width: 56px;
@@ -202,6 +203,7 @@ export function FloatingChatWidget() {
   }
 
   // Use fixed positioning if position is valid (>= 0)
+  // Otherwise use CSS defaults (right: 24px, bottom: 24px)
   const widgetStyle: React.CSSProperties = position.x >= 0 && position.y >= 0
     ? {
         left: `${position.x}px`,
@@ -209,7 +211,12 @@ export function FloatingChatWidget() {
         right: "auto",
         bottom: "auto",
       }
-    : {}; // Use CSS defaults
+    : {
+        right: "24px",
+        bottom: "24px",
+        left: "auto",
+        top: "auto",
+      };
 
   return (
     <div ref={widgetRef} className="kyradi-chat-widget" style={widgetStyle}>
