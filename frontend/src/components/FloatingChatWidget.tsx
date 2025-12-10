@@ -36,6 +36,8 @@ const floatingStyles = `
   justify-content: center;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
+  z-index: 2;
+  flex-shrink: 0;
 }
 .kyradi-chat-widget__toggle:hover {
   transform: scale(1.05);
@@ -56,7 +58,7 @@ const floatingStyles = `
 }
 .kyradi-chat-widget__panel {
   width: 380px;
-  max-height: 600px;
+  max-height: calc(100vh - 100px);
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
@@ -65,6 +67,8 @@ const floatingStyles = `
   border: 1px solid rgba(15, 23, 42, 0.08);
   transform-origin: bottom right;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 .kyradi-chat-widget__panel--hidden {
   transform: scale(0.85) translateY(10px);
@@ -81,6 +85,7 @@ const floatingStyles = `
   .kyradi-chat-widget__panel {
     width: calc(100vw - 32px);
     max-width: 380px;
+    max-height: calc(100vh - 100px);
   }
 }
 @media (min-width: 641px) {
@@ -317,6 +322,9 @@ export function FloatingChatWidget() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          position: "relative",
+          zIndex: 2,
+          flexShrink: 0,
         }}
       >
         {open ? <X /> : <MessageSquare />}

@@ -100,9 +100,12 @@ const baseStyles = `
   padding: 16px;
   width: 100%;
   max-width: 480px;
+  max-height: calc(100vh - 100px);
+  height: 100%;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background-color: #ffffff;
   position: relative;
+  overflow: hidden;
 }
 .kyradi-chat--dark {
   background-color: #101828;
@@ -147,7 +150,8 @@ const baseStyles = `
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 360px;
+  max-height: calc(100vh - 250px);
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
   scroll-behavior: smooth;
