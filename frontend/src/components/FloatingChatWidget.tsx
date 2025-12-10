@@ -197,9 +197,9 @@ export function FloatingChatWidget() {
   // Compute derived values AFTER all hooks
   const tenantId = user?.tenant_id;
   const userId = user?.id;
-  // Show widget if user is logged in (wait for auth to finish loading)
-  // Temporarily show widget even during loading to debug
-  const isEligible = !isLoading && Boolean(userId);
+  // TEMPORARY: Always show widget for debugging
+  // TODO: Change back to: const isEligible = !isLoading && Boolean(userId);
+  const isEligible = true; // TEMPORARY: Always visible for debugging
 
   const ariaLabel = useMemo(() => (open ? t("chat.close") : t("chat.open")), [open, t]);
 
@@ -215,14 +215,8 @@ export function FloatingChatWidget() {
     });
   }, [isLoading, userId, user, isEligible, position]);
 
-  // Early return AFTER all hooks (this is safe)
-  // Only hide if auth is loaded and user is not logged in
-  if (!isEligible) {
-    console.log("[FloatingChatWidget] Not eligible - hiding widget", { isLoading, userId });
-    return null;
-  }
-
-  console.log("[FloatingChatWidget] Rendering widget!");
+  // Widget is always rendered now (isEligible = true for debugging)
+  console.log("[FloatingChatWidget] Rendering widget!", { isEligible, isLoading, userId });
 
   // Calculate position: use saved position if valid, otherwise use default bottom-right
   const hasValidPosition = position.x >= 0 && position.y >= 0;
@@ -270,11 +264,11 @@ export function FloatingChatWidget() {
       data-testid="floating-chat-widget"
     >
       <div className={`kyradi-chat-widget__panel ${open ? "" : "kyradi-chat-widget__panel--hidden"}`}>
-        {open && (
+        {open && userId && (
           <KyradiChat
             apiBase={env.API_URL}
             tenantId={tenantId || undefined}
-            userId={userId!}
+            userId={userId}
             locale={locale}
             theme="light"
             useAssistantEndpoint={true}
