@@ -98,25 +98,36 @@ export function AdminDashboard() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    minWidth: '180px',
                     background: 'var(--bg-tertiary)',
                     border: '1px solid var(--border-primary)',
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: 'var(--radius-lg)',
                     cursor: 'pointer',
-                    fontSize: '0.8rem',
+                    fontSize: '0.875rem',
                     color: 'var(--text-secondary)',
+                    transition: 'all 0.2s ease',
                   }}
                   title="Hızlı Arama (⌘K)"
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-secondary)';
+                    e.currentTarget.style.borderColor = 'var(--primary)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-tertiary)';
+                    e.currentTarget.style.borderColor = 'var(--border-primary)';
+                  }}
                 >
                   <span>🔍</span>
-                  <span style={{ opacity: 0.6 }}>Ara...</span>
+                  <span style={{ opacity: 0.7, flex: 1, textAlign: 'left' }}>Ara...</span>
                   <kbd style={{ 
-                    padding: '2px 4px', 
+                    padding: '3px 6px', 
                     background: 'var(--bg-primary)', 
                     borderRadius: '4px', 
-                    fontSize: '0.65rem',
+                    fontSize: '0.7rem',
                     border: '1px solid var(--border-primary)',
+                    fontWeight: 500,
                   }}>⌘K</kbd>
                 </button>
                 <LanguageSwitcher />
