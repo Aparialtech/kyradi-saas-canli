@@ -80,7 +80,7 @@ export const translations = {
     "login.resetTenantLabel": "Otel",
     "login.resetTenantPlaceholder": "demo-hotel veya admin",
     "login.resetEmailLabel": "E-posta",
-    "login.resetButton": "Geçici Şifre Oluştur",
+    "login.resetButton": "Şifremi Sıfırla",
     "login.resetSubmitting": "Gönderiliyor...",
     "login.footerNote": "Demo tenant bilgileri otomatik olarak doldurulmuştur.",
     "login.error.generic": "Giriş başarısız. Lütfen tekrar deneyin.",
