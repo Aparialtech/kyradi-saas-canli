@@ -110,6 +110,23 @@ async def _apply_critical_ddl(conn) -> None:
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS location_id VARCHAR(36)",
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS storage_id VARCHAR(36)",
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS name VARCHAR(100)",
+        # Widget reservations pricing fields (required for widget submissions)
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS amount_minor INTEGER",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS pricing_rule_id VARCHAR(36)",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS pricing_type VARCHAR(32)",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS currency VARCHAR(3) NOT NULL DEFAULT 'TRY'",
+        # Widget reservations additional fields
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS phone_number VARCHAR(32)",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS tc_identity_number VARCHAR(11)",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS passport_number VARCHAR(32)",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS hotel_room_number VARCHAR(32)",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS luggage_count INTEGER",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS luggage_type VARCHAR(32)",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS luggage_description TEXT",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS kvkk_consent BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS terms_consent BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS disclosure_consent BOOLEAN DEFAULT FALSE",
     ]
 
     for statement in statements:
