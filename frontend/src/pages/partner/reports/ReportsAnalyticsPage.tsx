@@ -429,7 +429,36 @@ export function ReportsAnalyticsPage() {
                 Gelir Dağılımı (Ödeme Yöntemi)
               </h3>
               <div style={{ height: '350px', minHeight: '350px', minWidth: 0 }}>
-                <RevenueDonutChart />
+                {overviewQuery.data?.by_payment_method && overviewQuery.data.by_payment_method.length > 0 ? (
+                  <RevenueDonutChart 
+                    data={overviewQuery.data.by_payment_method.map((item, idx) => {
+                      const methodColors: Record<string, string> = {
+                        "GATEWAY_DEMO": "#6366f1",
+                        "GATEWAY_LIVE": "#3B82F6",
+                        "POS": "#0ea5e9",
+                        "CASH": "#22c55e",
+                        "BANK_TRANSFER": "#f59e0b",
+                      };
+                      return {
+                        name: item.method_name || item.method,
+                        value: Math.round(item.revenue_minor / 100),
+                        color: methodColors[item.method] || ["#6366f1", "#0ea5e9", "#22c55e", "#f59e0b", "#ef4444"][idx % 5],
+                      };
+                    })}
+                  />
+                ) : (
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    height: '100%',
+                    color: 'var(--text-tertiary)'
+                  }}>
+                    <PiggyBank className="h-12 w-12" style={{ opacity: 0.3, marginBottom: 'var(--space-3)' }} />
+                    <p style={{ fontSize: 'var(--text-sm)' }}>Henüz ödeme verisi yok</p>
+                  </div>
+                )}
               </div>
             </ModernCard>
 
@@ -509,6 +538,59 @@ export function ReportsAnalyticsPage() {
                     </motion.div>
                   );
                 })}
+              </div>
+            </ModernCard>
+          )}
+
+          {/* Payment Method Revenue Table */}
+          {overviewQuery.data.by_payment_method && overviewQuery.data.by_payment_method.length > 0 && (
+            <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+              <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                💳 Ödeme Yöntemi Dağılımı
+              </h3>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: 'var(--space-3)', borderBottom: '2px solid var(--border-primary)' }}>Ödeme Yöntemi</th>
+                      <th style={{ textAlign: "right", padding: 'var(--space-3)', borderBottom: '2px solid var(--border-primary)' }}>İşlem Sayısı</th>
+                      <th style={{ textAlign: "right", padding: 'var(--space-3)', borderBottom: '2px solid var(--border-primary)' }}>Gelir</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overviewQuery.data.by_payment_method.map((method, index) => {
+                      const methodColors: Record<string, string> = {
+                        "GATEWAY_DEMO": "#6366f1",
+                        "GATEWAY_LIVE": "#3B82F6",
+                        "POS": "#0ea5e9",
+                        "CASH": "#22c55e",
+                        "BANK_TRANSFER": "#f59e0b",
+                      };
+                      const color = methodColors[method.method] || "#6b7280";
+                      return (
+                        <tr key={index}>
+                          <td style={{ padding: 'var(--space-3)', borderBottom: '1px solid var(--border-secondary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                              <div style={{ 
+                                width: '12px', 
+                                height: '12px', 
+                                borderRadius: '50%', 
+                                backgroundColor: color 
+                              }} />
+                              <strong>{method.method_name}</strong>
+                            </div>
+                          </td>
+                          <td style={{ textAlign: "right", padding: 'var(--space-3)', borderBottom: '1px solid var(--border-secondary)' }}>
+                            {numberFormatter.format(method.count)}
+                          </td>
+                          <td style={{ textAlign: "right", padding: 'var(--space-3)', borderBottom: '1px solid var(--border-secondary)', fontWeight: 'var(--font-semibold)' }}>
+                            {currencyFormatter.format(method.revenue_minor / 100)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </ModernCard>
           )}

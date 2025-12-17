@@ -5,6 +5,7 @@ from typing import List, Optional
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -398,6 +399,12 @@ async def complete_reservation(
     return ReservationStatusResponse(id=reservation.id, status=ReservationStatus.COMPLETED)
 
 
+class RecordPaymentRequest(BaseModel):
+    """Request to record a manual payment."""
+    method: str = Field(default="cash", description="Payment method: cash, pos, bank_transfer, magicpay")
+    notes: Optional[str] = Field(default=None, description="Optional notes about the payment")
+
+
 @router.post("/{reservation_id}/ensure-payment", response_model=PaymentRead)
 async def ensure_payment(
     reservation_id: str,
@@ -438,6 +445,93 @@ async def ensure_payment(
         tenant_id=current_user.tenant_id,
         actor_user_id=current_user.id,
         action="reservation.ensure_payment",
+        entity="payments",
+        entity_id=payment.id,
+    )
+    
+    return PaymentRead.model_validate(payment)
+
+
+@router.post("/{reservation_id}/payments", response_model=PaymentRead)
+async def record_payment(
+    reservation_id: str,
+    payload: RecordPaymentRequest,
+    current_user: User = Depends(require_tenant_staff),
+    session: AsyncSession = Depends(get_session),
+) -> PaymentRead:
+    """Record a manual payment for a reservation.
+    
+    This endpoint is used to record payments made via:
+    - cash: Nakit ödeme
+    - pos: Otelin kendi POS cihazı
+    - bank_transfer: Havale/EFT
+    - magicpay: Online ödeme (will redirect to MagicPay)
+    
+    For cash/pos/bank_transfer, the payment is immediately marked as PAID.
+    For magicpay, use the /ensure-payment endpoint instead.
+    """
+    from ...models import PaymentProvider, PaymentMode
+    
+    reservation = await _get_reservation_for_tenant(reservation_id, current_user.tenant_id, session)
+    
+    # Map method string to PaymentMode
+    method_to_mode = {
+        "cash": PaymentMode.CASH.value,
+        "pos": PaymentMode.POS.value,
+        "bank_transfer": PaymentMode.POS.value,  # Use POS mode for bank transfers too
+        "magicpay": PaymentMode.GATEWAY_DEMO.value,
+    }
+    
+    method_to_provider = {
+        "cash": "CASH",
+        "pos": "POS",
+        "bank_transfer": "BANK_TRANSFER",
+        "magicpay": PaymentProvider.MAGIC_PAY.value,
+    }
+    
+    mode = method_to_mode.get(payload.method.lower(), PaymentMode.CASH.value)
+    provider = method_to_provider.get(payload.method.lower(), "CASH")
+    
+    # Get or create payment
+    payment, created = await get_or_create_payment(
+        session,
+        reservation_id=reservation.id,
+        tenant_id=reservation.tenant_id,
+        amount_minor=reservation.amount_minor or reservation.estimated_total_price or 0,
+        currency=reservation.currency or "TRY",
+        provider=provider,
+        mode=mode,
+        storage_id=reservation.storage_id,
+        reservation=reservation,
+        metadata={
+            "method": payload.method,
+            "notes": payload.notes,
+            "recorded_by": current_user.email,
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    
+    # For manual payments (cash, pos, bank_transfer), mark as PAID immediately
+    if payload.method.lower() in ["cash", "pos", "bank_transfer"]:
+        payment.status = PaymentStatus.PAID.value
+        payment.paid_at = datetime.now(timezone.utc)
+        
+        # Also update reservation status to ACTIVE if it was RESERVED
+        if reservation.status == ReservationStatus.RESERVED.value:
+            reservation.status = ReservationStatus.ACTIVE.value
+    
+    await session.commit()
+    
+    logger.info(
+        f"Recorded {payload.method} payment {payment.id} for reservation {reservation_id}, "
+        f"amount={payment.amount_minor}, status={payment.status}"
+    )
+    
+    await record_audit(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        action=f"reservation.record_payment.{payload.method}",
         entity="payments",
         entity_id=payment.id,
     )

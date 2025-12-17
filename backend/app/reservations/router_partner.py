@@ -315,6 +315,92 @@ async def ensure_widget_reservation_payment(
     }
 
 
+from pydantic import BaseModel, Field
+from typing import Optional as Opt
+
+class RecordPaymentRequest(BaseModel):
+    """Request to record a manual payment."""
+    method: str = Field(default="cash", description="Payment method: cash, pos, bank_transfer, magicpay")
+    notes: Opt[str] = Field(default=None, description="Optional notes about the payment")
+
+
+@reservations_router.post("/{reservation_id}/payments", response_model=ReservationPaymentInfo)
+async def record_widget_reservation_payment(
+    reservation_id: int,
+    payload: RecordPaymentRequest,
+    current_user: User = Depends(require_tenant_staff),
+    session: AsyncSession = Depends(get_session),
+) -> ReservationPaymentInfo:
+    """Record a manual payment for a widget reservation.
+    
+    This endpoint is used to record payments made via:
+    - cash: Nakit ödeme
+    - pos: Otelin kendi POS cihazı
+    - bank_transfer: Havale/EFT
+    - magicpay: Online ödeme (will redirect to MagicPay)
+    """
+    from app.models import PaymentProvider, PaymentMode
+    import uuid
+    
+    reservation = await _get_reservation(session, reservation_id, current_user.tenant_id)
+    
+    # Map method string to PaymentMode
+    method_to_mode = {
+        "cash": PaymentMode.CASH.value,
+        "pos": PaymentMode.POS.value,
+        "bank_transfer": PaymentMode.POS.value,
+        "magicpay": PaymentMode.GATEWAY_DEMO.value,
+    }
+    
+    method_to_provider = {
+        "cash": "CASH",
+        "pos": "POS",
+        "bank_transfer": "BANK_TRANSFER",
+        "magicpay": PaymentProvider.MAGIC_PAY.value,
+    }
+    
+    mode = method_to_mode.get(payload.method.lower(), PaymentMode.CASH.value)
+    provider = method_to_provider.get(payload.method.lower(), "CASH")
+    
+    # Calculate amount from reservation
+    amount = reservation.amount_minor or getattr(reservation, 'estimated_total_price', 0) or 0
+    
+    # Create payment record
+    payment = Payment(
+        id=str(uuid.uuid4()),
+        tenant_id=current_user.tenant_id,
+        status=PaymentStatus.PAID.value if payload.method.lower() in ["cash", "pos", "bank_transfer"] else PaymentStatus.PENDING.value,
+        amount_minor=amount,
+        currency="TRY",
+        provider=provider,
+        mode=mode,
+        paid_at=datetime.now(timezone.utc) if payload.method.lower() in ["cash", "pos", "bank_transfer"] else None,
+        created_at=datetime.now(timezone.utc),
+        meta={
+            "widget_reservation_id": reservation.id,
+            "method": payload.method,
+            "notes": payload.notes,
+            "recorded_by": current_user.email,
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    session.add(payment)
+    
+    # Update reservation status to confirmed for manual payments
+    if payload.method.lower() in ["cash", "pos", "bank_transfer"]:
+        reservation.status = "confirmed"
+    
+    await session.commit()
+    await session.refresh(payment)
+    
+    logger.info(
+        f"Recorded {payload.method} payment {payment.id} for widget reservation {reservation_id}, "
+        f"amount={payment.amount_minor}, status={payment.status}"
+    )
+    
+    return _payment_to_response(payment)
+
+
 async def _get_reservation(session: AsyncSession, reservation_id: int, tenant_id: str) -> WidgetReservation:
     stmt = select(WidgetReservation).where(
         WidgetReservation.id == reservation_id,

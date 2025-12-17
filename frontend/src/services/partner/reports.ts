@@ -53,10 +53,18 @@ export interface PartnerOverviewByStorageItem {
   reservations: number;
 }
 
+export interface PartnerOverviewByPaymentMethodItem {
+  method: string;
+  method_name: string;
+  revenue_minor: number;
+  count: number;
+}
+
 export interface PartnerOverviewResponse {
   summary: PartnerOverviewSummary;
   daily: PartnerOverviewDailyItem[];
   by_location: PartnerOverviewByLocationItem[];
+  by_payment_method?: PartnerOverviewByPaymentMethodItem[];
   by_storage: PartnerOverviewByStorageItem[];
 }
 

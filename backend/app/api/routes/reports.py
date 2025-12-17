@@ -574,6 +574,51 @@ async def get_partner_overview(
     except Exception as exc:
         logger.warning("Failed to get revenue by location: %s", exc, exc_info=True)
     
+    # Revenue by payment method
+    by_payment_method = []
+    
+    try:
+        method_filters = payment_filters.copy()
+        if date_from:
+            method_filters.append(Payment.created_at >= date_from)
+        if date_to:
+            method_filters.append(Payment.created_at <= date_to)
+        method_filters.append(Payment.status == PaymentStatus.PAID.value)
+        
+        method_stmt = select(
+            Payment.mode.label('method'),
+            func.coalesce(func.sum(Payment.amount_minor), 0).label('revenue_minor'),
+            func.count(Payment.id).label('count')
+        ).where(
+            *method_filters
+        ).group_by(
+            Payment.mode
+        ).order_by(
+            func.sum(Payment.amount_minor).desc()
+        )
+        
+        result = await session.execute(method_stmt)
+        method_data = result.fetchall()
+        
+        # Method display names
+        method_names = {
+            "CASH": "Nakit",
+            "POS": "POS / Kart",
+            "GATEWAY_DEMO": "Online (MagicPay Demo)",
+            "GATEWAY_LIVE": "Online (MagicPay)",
+        }
+        
+        for row in method_data:
+            method_name = method_names.get(row.method, row.method or "Diğer")
+            by_payment_method.append({
+                "method": row.method or "unknown",
+                "method_name": method_name,
+                "revenue_minor": int(row.revenue_minor or 0),
+                "count": int(row.count or 0)
+            })
+    except Exception as exc:
+        logger.warning("Failed to get revenue by payment method: %s", exc, exc_info=True)
+    
     # Most used storages
     by_storage = []
     
@@ -632,6 +677,7 @@ async def get_partner_overview(
         },
         "daily": daily_revenue,
         "by_location": by_location,
+        "by_payment_method": by_payment_method,
         "by_storage": by_storage
     }
 
