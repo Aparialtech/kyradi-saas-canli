@@ -3,6 +3,8 @@
 from datetime import datetime, time, timedelta, timezone, date
 from typing import List, Optional
 import logging
+import unicodedata
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from fastapi.responses import StreamingResponse
@@ -12,6 +14,36 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import csv
 import io
 import json
+
+
+def make_ascii_safe_filename(filename: str) -> str:
+    """Convert a filename to ASCII-safe format for HTTP headers.
+    
+    Replaces Turkish and other non-ASCII characters with ASCII equivalents.
+    """
+    # Turkish character mapping
+    tr_map = {
+        'ı': 'i', 'İ': 'I',
+        'ğ': 'g', 'Ğ': 'G',
+        'ü': 'u', 'Ü': 'U',
+        'ş': 's', 'Ş': 'S',
+        'ö': 'o', 'Ö': 'O',
+        'ç': 'c', 'Ç': 'C',
+    }
+    
+    # Replace Turkish characters
+    for tr_char, ascii_char in tr_map.items():
+        filename = filename.replace(tr_char, ascii_char)
+    
+    # Normalize unicode and remove any remaining non-ASCII
+    filename = unicodedata.normalize('NFKD', filename)
+    filename = filename.encode('ascii', 'ignore').decode('ascii')
+    
+    # Replace spaces with underscores and remove unsafe characters
+    filename = re.sub(r'[^\w\-.]', '_', filename)
+    filename = re.sub(r'_+', '_', filename)  # Remove multiple underscores
+    
+    return filename
 
 from ...core.security import get_password_hash
 from ...db.session import get_session
@@ -1111,32 +1143,35 @@ async def admin_generate_invoice(
             # Validate PDF bytes
             if not pdf_bytes or len(pdf_bytes) < 100:
                 raise ValueError("Generated PDF is too small or empty")
+            safe_filename = make_ascii_safe_filename(f"kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.pdf")
             return Response(
                 content=pdf_bytes,
                 media_type="application/pdf",
                 headers={
-                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.pdf",
+                    "Content-Disposition": f"attachment; filename={safe_filename}",
                     "Content-Length": str(len(pdf_bytes))
                 }
             )
         except ImportError:
             logger.warning("weasyprint not installed, falling back to HTML")
+            safe_filename = make_ascii_safe_filename(f"kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html")
             return Response(
                 content=html_content,
                 media_type="text/html; charset=utf-8",
                 headers={
-                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html"
+                    "Content-Disposition": f"attachment; filename={safe_filename}"
                 }
             )
         except Exception as e:
             logger.error(f"Error generating PDF invoice: {e}", exc_info=True)
             # Fallback to HTML instead of raising exception
             logger.warning(f"PDF generation failed, returning HTML instead: {e}")
+            safe_filename = make_ascii_safe_filename(f"kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html")
             return Response(
                 content=html_content,
                 media_type="text/html; charset=utf-8",
                 headers={
-                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html",
+                    "Content-Disposition": f"attachment; filename={safe_filename}",
                     "X-PDF-Error": "PDF generation failed, HTML returned"
                 }
             )
@@ -1246,42 +1281,46 @@ async def admin_generate_invoice(
             docx_bytes.seek(0)
             docx_content = docx_bytes.read()
             
+            safe_filename = make_ascii_safe_filename(f"kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.docx")
             return Response(
                 content=docx_content,
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 headers={
-                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.docx",
+                    "Content-Disposition": f"attachment; filename={safe_filename}",
                     "Content-Length": str(len(docx_content))
                 }
             )
         except ImportError:
             logger.warning("python-docx not installed, falling back to HTML")
+            safe_filename = make_ascii_safe_filename(f"kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html")
             return Response(
                 content=html_content,
                 media_type="text/html; charset=utf-8",
                 headers={
-                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html"
+                    "Content-Disposition": f"attachment; filename={safe_filename}"
                 }
             )
         except Exception as e:
             logger.error(f"Error generating DOCX invoice: {e}", exc_info=True)
             # Fallback to HTML
             logger.warning(f"DOCX generation failed, returning HTML instead: {e}")
+            safe_filename = make_ascii_safe_filename(f"kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html")
             return Response(
                 content=html_content,
                 media_type="text/html; charset=utf-8",
                 headers={
-                    "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html",
+                    "Content-Disposition": f"attachment; filename={safe_filename}",
                     "X-DOCX-Error": "DOCX generation failed, HTML returned"
                 }
             )
     
     # Return as downloadable HTML file
+    safe_filename = make_ascii_safe_filename(f"kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html")
     return Response(
         content=html_content,
         media_type="text/html; charset=utf-8",
         headers={
-            "Content-Disposition": f"attachment; filename=kyradi-fatura-{payload.invoice_number}-{payload.invoice_date}.html"
+            "Content-Disposition": f"attachment; filename={safe_filename}"
         }
     )
 
