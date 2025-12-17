@@ -342,15 +342,40 @@
                 <span>${this.t("checkoutDateTime")} <span class="kyradi-reserve__required">*</span></span>
                 <input type="datetime-local" name="end_datetime" required min="${minDateTime}" />
               </label>
-              <label>
-                <span>${this.t("durationHours")}</span>
-                <input type="text" name="duration_hours" readonly class="kyradi-reserve__readonly" />
-              </label>
-              <label>
-                <span>${this.t("amount")}</span>
-                <input type="text" name="estimated_price" readonly class="kyradi-reserve__readonly" />
-              </label>
             </fieldset>
+            
+            <!-- Fiyat Kartı -->
+            <div class="kyradi-reserve__price-card kyradi-reserve__price-card--empty" id="price-card">
+              <div class="kyradi-reserve__price-header">
+                <svg class="kyradi-reserve__price-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                <span>${this.t("estimatedPrice")}</span>
+              </div>
+              <div class="kyradi-reserve__price-amount" id="price-amount">
+                Tarih seçin
+              </div>
+              <div class="kyradi-reserve__price-details" id="price-details" style="display: none;">
+                <div class="kyradi-reserve__price-detail">
+                  <svg class="kyradi-reserve__price-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  <span id="price-duration">-</span>
+                </div>
+                <div class="kyradi-reserve__price-detail">
+                  <svg class="kyradi-reserve__price-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                  </svg>
+                  <span id="price-baggage">-</span>
+                </div>
+                <div class="kyradi-reserve__price-detail">
+                  <svg class="kyradi-reserve__price-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  <span id="price-type">-</span>
+                </div>
+              </div>
+            </div>
             
             <!-- Bavul Bilgileri -->
             <fieldset class="kyradi-reserve__fieldset">
@@ -487,8 +512,12 @@
       // Real-time validation and price calculation: set checkout min datetime based on checkin
       const startInput = this.querySelector('input[name="start_datetime"]');
       const endInput = this.querySelector('input[name="end_datetime"]');
-      const durationInput = this.querySelector('input[name="duration_hours"]');
-      const priceInput = this.querySelector('input[name="estimated_price"]');
+      const priceCard = this.querySelector('#price-card');
+      const priceAmount = this.querySelector('#price-amount');
+      const priceDetails = this.querySelector('#price-details');
+      const priceDuration = this.querySelector('#price-duration');
+      const priceBaggage = this.querySelector('#price-baggage');
+      const priceType = this.querySelector('#price-type');
       
       const updateDurationAndPrice = async () => {
         if (startInput && endInput && startInput.value && endInput.value) {
@@ -496,50 +525,119 @@
           const end = new Date(endInput.value);
           if (end > start) {
             const hours = (end - start) / (1000 * 60 * 60);
-            if (durationInput) {
-              durationInput.value = hours.toFixed(2) + ' ' + this.t("hours");
-            }
             
             // Get luggage count for pricing
             const luggageInput = this.querySelector('input[name="luggage_count"]');
             const luggageCount = luggageInput ? parseInt(luggageInput.value) || 1 : 1;
             
-            // Call backend pricing estimate endpoint
-            if (priceInput) {
-              priceInput.value = "...";  // Show loading indicator
+            // Show loading state
+            if (priceCard) {
+              priceCard.classList.remove('kyradi-reserve__price-card--empty');
+              priceCard.classList.add('kyradi-reserve__price-card--loading');
+            }
+            if (priceAmount) {
+              priceAmount.textContent = "Hesaplanıyor...";
+            }
+            if (priceDetails) {
+              priceDetails.style.display = 'none';
+            }
+            
+            try {
+              const estimateUrl = new URL("/demo/public/price-estimate", this.options.apiBase);
+              const response = await fetch(estimateUrl.toString(), {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  tenant_id: this.options.tenantId,
+                  start_datetime: start.toISOString(),
+                  end_datetime: end.toISOString(),
+                  baggage_count: luggageCount,
+                }),
+              });
               
-              try {
-                const estimateUrl = new URL("/demo/public/price-estimate", this.options.apiBase);
-                const response = await fetch(estimateUrl.toString(), {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    tenant_id: this.options.tenantId,
-                    start_datetime: start.toISOString(),
-                    end_datetime: end.toISOString(),
-                    baggage_count: luggageCount,
-                  }),
-                });
+              if (response.ok) {
+                const data = await response.json();
+                // Store the estimate for later use
+                this.lastPriceEstimate = data;
                 
-                if (response.ok) {
-                  const data = await response.json();
-                  priceInput.value = data.total_formatted;
-                  // Store the estimate for later use
-                  this.lastPriceEstimate = data;
-                } else {
-                  // Fallback to local calculation if API fails
-              const estimatedPrice = (hours * 15).toFixed(2);
-                  priceInput.value = estimatedPrice + ' ₺ (tahmini)';
+                // Update price card
+                if (priceCard) {
+                  priceCard.classList.remove('kyradi-reserve__price-card--loading', 'kyradi-reserve__price-card--empty');
                 }
-              } catch (err) {
-                console.warn("Price estimate API call failed:", err);
-                // Fallback to local calculation
-                const estimatedPrice = (hours * 15).toFixed(2);
-                priceInput.value = estimatedPrice + ' ₺ (tahmini)';
+                if (priceAmount) {
+                  priceAmount.textContent = data.total_formatted;
+                }
+                if (priceDetails) {
+                  priceDetails.style.display = 'flex';
+                }
+                if (priceDuration) {
+                  priceDuration.textContent = hours.toFixed(1) + ' ' + this.t("hours");
+                }
+                if (priceBaggage) {
+                  priceBaggage.textContent = luggageCount + ' bavul';
+                }
+                if (priceType) {
+                  const typeLabel = data.pricing_type === 'hourly' ? 'Saatlik' : 
+                                   data.pricing_type === 'daily' ? 'Günlük' : 
+                                   data.pricing_type || 'Standart';
+                  priceType.textContent = typeLabel;
+                }
+              } else {
+                // Fallback to local calculation if API fails
+                const estimatedPrice = (hours * 15 * luggageCount).toFixed(2);
+                if (priceCard) {
+                  priceCard.classList.remove('kyradi-reserve__price-card--loading');
+                }
+                if (priceAmount) {
+                  priceAmount.textContent = '₺' + estimatedPrice + ' (tahmini)';
+                }
+                if (priceDetails) {
+                  priceDetails.style.display = 'flex';
+                }
+                if (priceDuration) {
+                  priceDuration.textContent = hours.toFixed(1) + ' ' + this.t("hours");
+                }
+                if (priceBaggage) {
+                  priceBaggage.textContent = luggageCount + ' bavul';
+                }
+                if (priceType) {
+                  priceType.textContent = 'Tahmini';
+                }
+              }
+            } catch (err) {
+              console.warn("Price estimate API call failed:", err);
+              // Fallback to local calculation
+              const estimatedPrice = (hours * 15 * luggageCount).toFixed(2);
+              if (priceCard) {
+                priceCard.classList.remove('kyradi-reserve__price-card--loading');
+              }
+              if (priceAmount) {
+                priceAmount.textContent = '₺' + estimatedPrice + ' (tahmini)';
+              }
+              if (priceDetails) {
+                priceDetails.style.display = 'flex';
+              }
+              if (priceDuration) {
+                priceDuration.textContent = hours.toFixed(1) + ' ' + this.t("hours");
+              }
+              if (priceBaggage) {
+                priceBaggage.textContent = luggageCount + ' bavul';
               }
             }
+          }
+        } else {
+          // Reset to empty state
+          if (priceCard) {
+            priceCard.classList.add('kyradi-reserve__price-card--empty');
+            priceCard.classList.remove('kyradi-reserve__price-card--loading');
+          }
+          if (priceAmount) {
+            priceAmount.textContent = 'Tarih seçin';
+          }
+          if (priceDetails) {
+            priceDetails.style.display = 'none';
           }
         }
       };
@@ -548,6 +646,7 @@
       const luggageCountInput = this.querySelector('input[name="luggage_count"]');
       if (luggageCountInput) {
         luggageCountInput.addEventListener('change', updateDurationAndPrice);
+        luggageCountInput.addEventListener('input', updateDurationAndPrice);
       }
       
       if (startInput && endInput) {
@@ -969,6 +1068,14 @@
             end_datetime: endDtISO,
             checkin_date: checkinDate || (startDtISO ? new Date(startDtISO).toISOString().split('T')[0] : null), // Legacy compatibility
             checkout_date: checkoutDate || (endDtISO ? new Date(endDtISO).toISOString().split('T')[0] : null), // Legacy compatibility
+            // Include pricing information
+            price_estimate: priceEstimate || null,
+            amount_minor: amountMinor,
+            amount_formatted: priceEstimate?.total_formatted || null,
+            duration_hours: priceEstimate?.duration_hours || null,
+            pricing_type: pricingType,
+            currency: currency,
+            luggage_count: luggageCount,
           },
           bubbles: true,
         }));

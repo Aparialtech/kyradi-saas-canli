@@ -35,6 +35,15 @@ export function DemoFlowPage() {
   const [showStorageModal, setShowStorageModal] = useState(false);
   const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
   const [widgetReservationDates, setWidgetReservationDates] = useState<{ checkin_date?: string; checkout_date?: string } | null>(null);
+  // Price information from widget
+  const [widgetPriceInfo, setWidgetPriceInfo] = useState<{
+    amount_minor: number | null;
+    amount_formatted: string | null;
+    duration_hours: number | null;
+    pricing_type: string | null;
+    currency: string;
+    luggage_count: number;
+  } | null>(null);
 
   const tenantQuery = useQuery({
     queryKey: ["partner", "widget-config"],
@@ -146,6 +155,21 @@ export function DemoFlowPage() {
           checkin_date: data.checkin_date,
           checkout_date: data.checkout_date,
         });
+      }
+      // Store price information from widget
+      if (data.amount_minor || data.amount_formatted) {
+        setWidgetPriceInfo({
+          amount_minor: data.amount_minor || null,
+          amount_formatted: data.amount_formatted || null,
+          duration_hours: data.duration_hours || null,
+          pricing_type: data.pricing_type || null,
+          currency: data.currency || 'TRY',
+          luggage_count: data.luggage_count || 1,
+        });
+        // Also set payment amount if available
+        if (data.amount_minor) {
+          setPaymentAmount(data.amount_minor);
+        }
       }
       push({
         title: t("demo.flow.reservationCreated"),
@@ -615,6 +639,43 @@ export function DemoFlowPage() {
             <h2 className="panel__title">{t("demo.flow.step2Title")}</h2>
             <p className="panel__subtitle">{t("demo.flow.step2Desc")}</p>
           </div>
+          
+          {/* Show price info from widget */}
+          {widgetPriceInfo && widgetPriceInfo.amount_formatted && (
+            <div
+              style={{
+                padding: "1rem",
+                background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+                borderRadius: "8px",
+                marginBottom: "1rem",
+                border: "1px solid #86efac",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div>
+                  <span style={{ fontSize: "0.875rem", color: "#166534", fontWeight: 500 }}>
+                    💰 Hesaplanan Ücret
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+                  {widgetPriceInfo.duration_hours && (
+                    <span style={{ fontSize: "0.875rem", color: "#166534" }}>
+                      🕐 {widgetPriceInfo.duration_hours.toFixed(1)} saat
+                    </span>
+                  )}
+                  {widgetPriceInfo.luggage_count && (
+                    <span style={{ fontSize: "0.875rem", color: "#166534" }}>
+                      🧳 {widgetPriceInfo.luggage_count} bavul
+                    </span>
+                  )}
+                  <span style={{ fontSize: "1.5rem", fontWeight: 700, color: "#16a34a" }}>
+                    {widgetPriceInfo.amount_formatted}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
             <button
               type="button"
@@ -664,21 +725,95 @@ export function DemoFlowPage() {
               MagicPay hosted ödeme sayfasına yönlendirileceksiniz. Kart bilgileri MagicPay tarafından güvenli şekilde alınacaktır.
             </p>
           </div>
+          
+          {/* Price Details Card */}
           <div
             style={{
               padding: "1.5rem",
-              background: "linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)",
-              borderRadius: "8px",
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              borderRadius: "12px",
               marginBottom: "1rem",
+              color: "white",
+              boxShadow: "0 8px 24px rgba(16, 185, 129, 0.3)",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "1rem", color: "#64748b" }}>Toplam Tutar</span>
-              <span style={{ fontSize: "2rem", fontWeight: 700, color: "#0f172a" }}>
-                {(paymentAmount / 100).toFixed(2)} ₺
-              </span>
+            <div style={{ marginBottom: "1rem" }}>
+              <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.5rem" }}>
+                💳 Ödenecek Tutar
+              </div>
+              <div style={{ fontSize: "2.5rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
+                {widgetPriceInfo?.amount_formatted || `₺${(paymentAmount / 100).toFixed(2)}`}
+              </div>
+            </div>
+            
+            {/* Price Details */}
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.75rem",
+                paddingTop: "1rem",
+                borderTop: "1px solid rgba(255, 255, 255, 0.2)",
+              }}
+            >
+              {widgetPriceInfo?.duration_hours && (
+                <div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.15)",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <span>🕐</span>
+                  <span>{widgetPriceInfo.duration_hours.toFixed(1)} saat</span>
+                </div>
+              )}
+              {widgetPriceInfo?.luggage_count && (
+                <div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.15)",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <span>🧳</span>
+                  <span>{widgetPriceInfo.luggage_count} bavul</span>
+                </div>
+              )}
+              {widgetPriceInfo?.pricing_type && (
+                <div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.15)",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <span>📋</span>
+                  <span>
+                    {widgetPriceInfo.pricing_type === 'hourly' ? 'Saatlik' : 
+                     widgetPriceInfo.pricing_type === 'daily' ? 'Günlük' : 
+                     widgetPriceInfo.pricing_type}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
+
           <button
             type="button"
             className="btn btn--primary"

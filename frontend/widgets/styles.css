@@ -419,6 +419,116 @@
   border-color: rgba(248, 250, 252, 0.1);
 }
 
+/* Price Display Card */
+.kyradi-reserve__price-card {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 16px;
+  padding: 20px;
+  margin: 16px 0;
+  color: white;
+  box-shadow: 
+    0 8px 24px rgba(16, 185, 129, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.kyradi-reserve__price-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.kyradi-reserve__price-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 32px rgba(16, 185, 129, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.kyradi-reserve__price-card--loading {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.kyradi-reserve__price-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.kyradi-reserve__price-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.kyradi-reserve__price-amount {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.kyradi-reserve__price-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.8125rem;
+}
+
+.kyradi-reserve__price-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.kyradi-reserve__price-detail-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.9;
+}
+
+.kyradi-reserve__price-card--empty {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.08) 0%, rgba(15, 23, 42, 0.05) 100%);
+  color: rgba(15, 23, 42, 0.6);
+  border: 2px dashed rgba(15, 23, 42, 0.15);
+  box-shadow: none;
+  text-align: center;
+}
+
+.kyradi-reserve__price-card--empty::before {
+  display: none;
+}
+
+.kyradi-reserve--dark .kyradi-reserve__price-card--empty {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.08) 0%, rgba(248, 250, 252, 0.05) 100%);
+  color: rgba(248, 250, 252, 0.6);
+  border-color: rgba(248, 250, 252, 0.15);
+}
+
 .kyradi-reserve__helper {
   display: block;
   font-size: 0.75rem;
