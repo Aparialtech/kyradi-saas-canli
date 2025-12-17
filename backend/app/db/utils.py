@@ -39,6 +39,10 @@ async def init_db(db_engine: AsyncEngine | None = None) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.error("init_db: failed to ensure widget tables: %s", exc)
 
+    # Apply widget-specific DDL AFTER widget tables are created
+    async with engine_to_use.begin() as conn:
+        await _apply_widget_ddl(conn)
+
     await _seed_defaults()
 
 
@@ -110,6 +114,23 @@ async def _apply_critical_ddl(conn) -> None:
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS location_id VARCHAR(36)",
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS storage_id VARCHAR(36)",
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS name VARCHAR(100)",
+    ]
+
+    for statement in statements:
+        try:
+            await conn.execute(text(statement))
+            logger.info(f"Applied critical DDL: {statement}")
+        except Exception as exc:  # noqa: BLE001
+            # Log but don't fail - column might already exist or table might not exist yet
+            logger.warning(f"DDL statement skipped: {statement[:60]}... - {exc}")
+
+
+async def _apply_widget_ddl(conn) -> None:
+    """Apply widget_reservations schema migrations after widget tables exist.
+    
+    This runs AFTER ensure_widget_tables_exist() to ensure the table exists.
+    """
+    statements = [
         # Widget reservations pricing fields (required for widget submissions)
         "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS amount_minor INTEGER",
         "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS pricing_rule_id VARCHAR(36)",
@@ -132,10 +153,9 @@ async def _apply_critical_ddl(conn) -> None:
     for statement in statements:
         try:
             await conn.execute(text(statement))
-            logger.info(f"Applied critical DDL: {statement}")
+            logger.info(f"Applied widget DDL: {statement}")
         except Exception as exc:  # noqa: BLE001
-            # Log but don't fail - column might already exist or table might not exist yet
-            logger.warning(f"DDL statement skipped: {statement[:60]}... - {exc}")
+            logger.warning(f"Widget DDL skipped: {statement[:60]}... - {exc}")
 
 
 async def _ensure_ai_documents_table(conn) -> None:
