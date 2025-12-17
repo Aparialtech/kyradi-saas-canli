@@ -174,8 +174,13 @@ class Settings(BaseSettings):
     
     # Email service configuration
     email_provider: str = Field(
-        default="log",  # Default to log mode for development
+        default="log",  # Options: resend, sendgrid, mailgun, smtp, log
         validation_alias=AliasChoices("EMAIL_PROVIDER", "KYRADI_EMAIL_PROVIDER"),
+    )
+    resend_api_key: Optional[str] = Field(
+        default=None,
+        description="Resend API key for email sending (free: 3000/month)",
+        validation_alias=AliasChoices("RESEND_API_KEY", "KYRADI_RESEND_API_KEY"),
     )
     sendgrid_api_key: Optional[str] = Field(
         default=None,

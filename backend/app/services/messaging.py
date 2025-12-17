@@ -60,7 +60,11 @@ class EmailService:
             body_text = f"Password reset link: {reset_url}\n\nThis link is valid for 30 minutes."
         
         try:
-            if provider == "sendgrid":
+            if provider == "resend":
+                result = await EmailService._send_via_resend(to_email, subject, body_html, body_text)
+                logger.info(f"✅ Password reset email sent via Resend to {to_email}")
+                return result
+            elif provider == "sendgrid":
                 result = await EmailService._send_via_sendgrid(to_email, subject, body_html, body_text)
                 logger.info(f"Password reset email sent via SendGrid to {to_email}")
                 return result
@@ -83,7 +87,7 @@ class EmailService:
             else:
                 # Default: log mode for development
                 logger.warning(f"⚠️ EMAIL NOT SENT - Email provider '{provider}' not configured")
-                logger.warning(f"   To fix: Set EMAIL_PROVIDER=smtp (or sendgrid/mailgun) in .env")
+                logger.warning(f"   To fix: Set EMAIL_PROVIDER=resend and RESEND_API_KEY in Railway")
                 logger.info(f"[EMAIL LOG] Password reset for {to_email}: {reset_url}")
                 logger.info(f"[EMAIL LOG] Token: {reset_token}")
                 return True
@@ -97,6 +101,38 @@ class EmailService:
             else:
                 # In production, re-raise the error
                 raise
+
+    @staticmethod
+    async def _send_via_resend(to_email: str, subject: str, body_html: str, body_text: str) -> bool:
+        """Send email via Resend API (Free: 3000 emails/month)."""
+        if not settings.resend_api_key:
+            raise ValueError("Resend API key not configured. Set RESEND_API_KEY in environment variables.")
+        
+        from_email = settings.smtp_from_email or "noreply@kyradi.com"
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.resend_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": from_email,
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": body_html,
+                    "text": body_text,
+                },
+            )
+            if response.status_code not in (200, 201):
+                error_detail = response.text
+                logger.error(f"Resend API error: {response.status_code} - {error_detail}")
+                raise ValueError(f"Resend API error: {response.status_code}")
+            
+            result = response.json()
+            logger.info(f"✅ Email sent via Resend, id: {result.get('id', 'unknown')}")
+            return True
 
     @staticmethod
     async def _send_via_sendgrid(to_email: str, subject: str, body_html: str, body_text: str) -> bool:
@@ -264,7 +300,11 @@ class EmailService:
                 )
         
         try:
-            if provider == "sendgrid":
+            if provider == "resend":
+                result = await EmailService._send_via_resend(to_email, subject, body_html, body_text)
+                logger.info(f"✅ Welcome email sent via Resend to {to_email}")
+                return result
+            elif provider == "sendgrid":
                 return await EmailService._send_via_sendgrid(to_email, subject, body_html, body_text)
             elif provider == "mailgun":
                 return await EmailService._send_via_mailgun(to_email, subject, body_html, body_text)
