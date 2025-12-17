@@ -216,25 +216,41 @@ export function SettlementsPage() {
       {/* Filters */}
       <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
         <div style={{ marginBottom: 'var(--space-4)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <Filter className="h-5 w-5" style={{ color: 'var(--text-tertiary)' }} />
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: 0 }}>
               Filtreler
             </h3>
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-4)" }}>
-          <div style={{ minWidth: "250px" }}>
-            <ModernInput
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="ID veya tutar ile ara..."
-              leftIcon={<Search className="h-4 w-4" />}
-              fullWidth
-            />
-          </div>
+        
+        {/* Search Row */}
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <ModernInput
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="ID veya tutar ile ara..."
+            leftIcon={<Search className="h-4 w-4" />}
+            fullWidth
+          />
+        </div>
+
+        {/* Filter Grid */}
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", 
+          gap: "var(--space-4)",
+          alignItems: "end"
+        }}>
+          {/* Status Filter */}
           <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+            <label style={{ 
+              display: "block", 
+              marginBottom: "var(--space-2)", 
+              fontWeight: 500, 
+              fontSize: "var(--text-sm)", 
+              color: 'var(--text-secondary)' 
+            }}>
               {t("common.status")}
             </label>
             <select
@@ -242,12 +258,14 @@ export function SettlementsPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{
                 width: "100%",
-                padding: "var(--space-3)",
+                padding: "10px 12px",
+                height: "42px",
                 borderRadius: "var(--radius-lg)",
                 border: "1px solid var(--border-primary)",
                 background: "var(--bg-tertiary)",
                 color: "var(--text-primary)",
                 fontSize: "var(--text-sm)",
+                cursor: "pointer",
               }}
             >
               <option value="">{t("common.all")}</option>
@@ -256,8 +274,16 @@ export function SettlementsPage() {
               <option value="cancelled">İptal</option>
             </select>
           </div>
+
+          {/* Location Filter */}
           <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+            <label style={{ 
+              display: "block", 
+              marginBottom: "var(--space-2)", 
+              fontWeight: 500, 
+              fontSize: "var(--text-sm)", 
+              color: 'var(--text-secondary)' 
+            }}>
               Lokasyon
             </label>
             <select
@@ -268,12 +294,14 @@ export function SettlementsPage() {
               }}
               style={{
                 width: "100%",
-                padding: "var(--space-3)",
+                padding: "10px 12px",
+                height: "42px",
                 borderRadius: "var(--radius-lg)",
                 border: "1px solid var(--border-primary)",
                 background: "var(--bg-tertiary)",
                 color: "var(--text-primary)",
                 fontSize: "var(--text-sm)",
+                cursor: "pointer",
               }}
             >
               <option value="">Tümü</option>
@@ -284,8 +312,16 @@ export function SettlementsPage() {
               ))}
             </select>
           </div>
+
+          {/* Storage Filter */}
           <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "var(--text-sm)", color: 'var(--text-primary)' }}>
+            <label style={{ 
+              display: "block", 
+              marginBottom: "var(--space-2)", 
+              fontWeight: 500, 
+              fontSize: "var(--text-sm)", 
+              color: 'var(--text-secondary)' 
+            }}>
               Depo
             </label>
             <select
@@ -294,13 +330,14 @@ export function SettlementsPage() {
               disabled={!locationId}
               style={{
                 width: "100%",
-                padding: "var(--space-3)",
+                padding: "10px 12px",
+                height: "42px",
                 borderRadius: "var(--radius-lg)",
                 border: "1px solid var(--border-primary)",
-                background: "var(--bg-tertiary)",
+                background: locationId ? "var(--bg-tertiary)" : "var(--bg-secondary)",
                 color: "var(--text-primary)",
                 fontSize: "var(--text-sm)",
-                opacity: locationId ? 1 : 0.6,
+                opacity: locationId ? 1 : 0.5,
                 cursor: locationId ? "pointer" : "not-allowed",
               }}
             >
@@ -312,22 +349,64 @@ export function SettlementsPage() {
               ))}
             </select>
           </div>
-          <ModernInput
-            type="date"
-            label={t("common.from")}
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            leftIcon={<FileText className="h-4 w-4" />}
-            fullWidth
-          />
-          <ModernInput
-            type="date"
-            label={t("common.to")}
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            leftIcon={<FileText className="h-4 w-4" />}
-            fullWidth
-          />
+
+          {/* Date From */}
+          <div>
+            <label style={{ 
+              display: "block", 
+              marginBottom: "var(--space-2)", 
+              fontWeight: 500, 
+              fontSize: "var(--text-sm)", 
+              color: 'var(--text-secondary)' 
+            }}>
+              {t("common.from")}
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                height: "42px",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+                cursor: "pointer",
+              }}
+            />
+          </div>
+
+          {/* Date To */}
+          <div>
+            <label style={{ 
+              display: "block", 
+              marginBottom: "var(--space-2)", 
+              fontWeight: 500, 
+              fontSize: "var(--text-sm)", 
+              color: 'var(--text-secondary)' 
+            }}>
+              {t("common.to")}
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                height: "42px",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "var(--text-sm)",
+                cursor: "pointer",
+              }}
+            />
+          </div>
         </div>
       </ModernCard>
 
