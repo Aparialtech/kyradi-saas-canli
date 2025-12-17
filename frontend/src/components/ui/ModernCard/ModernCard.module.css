@@ -1,0 +1,312 @@
+/* Premium 3D Card Component */
+
+.card {
+  position: relative;
+  border-radius: var(--radius-2xl);
+  transition: all var(--transition-base);
+  overflow: hidden;
+}
+
+/* ==================== VARIANTS ==================== */
+
+/* Default - Clean white/dark card */
+.card--default {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.card--default:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Glass - Glassmorphism effect */
+.card--glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-xl));
+  -webkit-backdrop-filter: blur(var(--blur-xl));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+[data-theme="dark"] .card--glass {
+  background: rgba(17, 17, 17, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-xl), inset 0 0 0 1px rgba(56, 189, 248, 0.05);
+}
+
+/* Elevated - 3D depth effect */
+.card--elevated {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.card--elevated:hover {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Gradient - Premium gradient background */
+.card--gradient {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: var(--shadow-lg), var(--shadow-primary);
+}
+
+[data-theme="dark"] .card--gradient {
+  box-shadow: var(--shadow-xl), var(--neon-glow-primary);
+}
+
+/* Bordered - Subtle border emphasis */
+.card--bordered {
+  background: var(--bg-primary);
+  border: 2px solid var(--primary-500);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==================== PADDING ==================== */
+
+.card--padding-none {
+  padding: 0;
+}
+
+.card--padding-sm {
+  padding: var(--space-4);
+}
+
+.card--padding-md {
+  padding: var(--space-6);
+}
+
+.card--padding-lg {
+  padding: var(--space-8);
+}
+
+/* ==================== HOVERABLE ==================== */
+
+.card--hoverable {
+  cursor: pointer;
+}
+
+.card--hoverable:hover {
+  box-shadow: var(--shadow-xl);
+}
+
+[data-theme="dark"] .card--hoverable:hover {
+  box-shadow: var(--shadow-2xl), 0 0 30px rgba(56, 189, 248, 0.15);
+}
+
+/* ==================== STAT CARD ==================== */
+
+.statCard {
+  position: relative;
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.statCard:hover {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Background Gradient Orb */
+.statCardOrb {
+  position: absolute;
+  top: -50%;
+  right: -30%;
+  width: 200px;
+  height: 200px;
+  border-radius: var(--radius-full);
+  opacity: 0.1;
+  filter: blur(40px);
+  pointer-events: none;
+  transition: all var(--transition-slow);
+}
+
+.statCard:hover .statCardOrb {
+  opacity: 0.2;
+  transform: scale(1.2);
+}
+
+/* Stat Card Variants */
+.statCard--primary .statCardOrb {
+  background: var(--gradient-primary);
+}
+
+.statCard--secondary .statCardOrb {
+  background: var(--gradient-secondary);
+}
+
+.statCard--success .statCardOrb {
+  background: var(--gradient-success);
+}
+
+.statCard--warning .statCardOrb {
+  background: var(--gradient-warning);
+}
+
+[data-theme="dark"] .statCard {
+  background: rgba(17, 17, 17, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(var(--blur-lg));
+}
+
+[data-theme="dark"] .statCard:hover {
+  box-shadow: var(--shadow-xl), 0 0 40px rgba(56, 189, 248, 0.1);
+}
+
+/* Content */
+.statCardContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.statCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.statCardLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statCardIcon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xl);
+  background: var(--gradient-primary);
+  box-shadow: var(--shadow-md), var(--shadow-primary);
+  color: white;
+  transition: all var(--transition-base);
+}
+
+.statCard--secondary .statCardIcon {
+  background: var(--gradient-secondary);
+  box-shadow: var(--shadow-md), var(--shadow-secondary);
+}
+
+.statCard--success .statCardIcon {
+  background: var(--gradient-success);
+  box-shadow: var(--shadow-md), var(--shadow-success);
+}
+
+.statCard--warning .statCardIcon {
+  background: var(--gradient-warning);
+  box-shadow: var(--shadow-md), var(--shadow-warning);
+}
+
+.statCard:hover .statCardIcon {
+  transform: scale(1.05) rotate(5deg);
+  box-shadow: var(--shadow-lg), var(--shadow-primary);
+}
+
+.statCardValue {
+  font-size: var(--text-4xl);
+  font-weight: var(--font-black);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.statCardFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.statCardTrend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  line-height: 1;
+}
+
+.statCardTrend--positive {
+  background: var(--success-50);
+  color: var(--success-700);
+}
+
+.statCardTrend--negative {
+  background: var(--danger-50);
+  color: var(--danger-700);
+}
+
+[data-theme="dark"] .statCardTrend--positive {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success-400);
+}
+
+[data-theme="dark"] .statCardTrend--negative {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger-400);
+}
+
+.statCardSubtitle {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ==================== ANIMATIONS ==================== */
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.card--hoverable::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.card--hoverable:hover::after {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+[data-theme="dark"] .card--hoverable::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(56, 189, 248, 0.1),
+    transparent
+  );
+}
+

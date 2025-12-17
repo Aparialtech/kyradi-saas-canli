@@ -1,0 +1,81 @@
+═══════════════════════════════════════════════════════════════
+  EMAIL ve SMS SERVİSİ KURULUM TALİMATLARI
+═══════════════════════════════════════════════════════════════
+
+Backend klasöründeki .env dosyanıza aşağıdaki satırları ekleyin:
+
+───────────────────────────────────────────────────────────────
+1. EMAIL SERVİSİ (Gmail SMTP - Önerilen)
+───────────────────────────────────────────────────────────────
+
+Gmail için:
+1. Gmail hesabınızda "2 Adımlı Doğrulama" açın
+2. "Uygulama Şifreleri" bölümünden yeni şifre oluşturun
+3. .env dosyasına ekleyin:
+
+EMAIL_PROVIDER=smtp
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-16-digit-app-password
+SMTP_FROM_EMAIL=noreply@kyradi.com
+
+───────────────────────────────────────────────────────────────
+2. SMS SERVİSİ (İleti Merkezi - Önerilen)
+───────────────────────────────────────────────────────────────
+
+1. https://www.iletimerkezi.com adresinden hesap oluşturun
+2. API kullanıcı adı ve şifrenizi alın
+3. .env dosyasına ekleyin:
+
+SMS_PROVIDER=iletimerkezi
+ILETIMERKEZI_USERNAME=your-username
+ILETIMERKEZI_PASSWORD=your-password
+
+───────────────────────────────────────────────────────────────
+3. KULLANICI TELEFON NUMARASI
+───────────────────────────────────────────────────────────────
+
+Test için kullanıcıya telefon numarası eklendi:
+- Email: doguncu13@gmail.com
+- Telefon: 905551234567 (TEST - Gerçek numara ile değiştirin)
+
+Gerçek telefon numarası eklemek için:
+cd backend
+poetry run python -c "
+import asyncio
+from app.db.session import get_session
+from app.models import User
+from sqlalchemy import select
+
+async def update_phone():
+    async for session in get_session():
+        stmt = select(User).where(User.email == 'doguncu13@gmail.com')
+        user = (await session.execute(stmt)).scalar_one_or_none()
+        if user:
+            user.phone_number = '905551234567'  # Gerçek numara
+            await session.commit()
+            print('Telefon numarası güncellendi')
+        break
+
+asyncio.run(update_phone())
+"
+
+───────────────────────────────────────────────────────────────
+4. TEST ETME
+───────────────────────────────────────────────────────────────
+
+Backend'i yeniden başlatın:
+cd backend
+poetry run uvicorn app.main:app --reload
+
+Sonra şifre sıfırlama işlemini test edin:
+1. Login sayfasında "Şifremi Unuttum"
+2. Email: doguncu13@gmail.com
+3. Email adresinize link gelecek
+4. Linke tıklayıp şifre değiştirin
+5. Yeni şifre ile giriş yapın
+6. Telefonunuza SMS kodu gelecek
+
+═══════════════════════════════════════════════════════════════
+
