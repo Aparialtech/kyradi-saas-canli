@@ -11,7 +11,6 @@ import { getErrorMessage } from "../../lib/httpError";
 
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "../ui/Modal";
 import { Button } from "../ui/Button";
-import { Badge } from "../ui/Badge";
 import { Card } from "../ui/Card";
 
 type PaymentMethodType = "magicpay" | "pos" | "cash" | "bank_transfer";
@@ -358,7 +357,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
         )}
       </ModalBody>
       
-      <ModalFooter justify="space-between">
+      <ModalFooter justify="between">
         <Button variant="ghost" onClick={onClose} disabled={isLoading}>
           İptal
         </Button>
