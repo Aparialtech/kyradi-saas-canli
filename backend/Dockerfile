@@ -5,10 +5,20 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Install system dependencies including WeasyPrint requirements
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
     libpq-dev \
+    # WeasyPrint dependencies for PDF generation
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    libcairo2 \
+    libglib2.0-0 \
+    fonts-liberation \
   && rm -rf /var/lib/apt/lists/*
 
 # Proje dosyalarını kopyala
