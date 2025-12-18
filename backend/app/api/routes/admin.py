@@ -1749,50 +1749,100 @@ async def admin_reset_user_password(
     import secrets
     import string
     
-    user = await session.get(User, user_id)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    # Initialize variables outside try block
+    user = None
+    new_password = None
     
-    # Generate password if auto_generate is enabled or password not provided
-    new_password = payload.password
-    if payload.auto_generate or not new_password:
-        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-        new_password = ''.join(secrets.choice(alphabet) for _ in range(16))
-    
-    if not new_password or len(new_password) < 8:
+    try:
+        user = await session.get(User, user_id)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        # Generate password if auto_generate is enabled or password not provided
+        new_password = payload.password
+        if payload.auto_generate or not new_password:
+            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+            new_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+        
+        if not new_password or len(new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be at least 8 characters long"
+            )
+        
+        # Hash the password
+        try:
+            user.password_hash = get_password_hash(new_password)
+        except Exception as hash_exc:
+            logger.error(f"Failed to hash password: {hash_exc}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Şifre hash'lenemedi. Lütfen tekrar deneyin."
+            ) from hash_exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Unexpected error in password reset (pre-commit): {exc}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters long"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Şifre sıfırlama işlemi başarısız oldu. Lütfen tekrar deneyin."
+        ) from exc
+    
+    # Ensure we have user and password before proceeding
+    if user is None or new_password is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Kullanıcı veya şifre bilgisi eksik."
         )
     
-    user.password_hash = get_password_hash(new_password)
-    
-    await record_audit(
-        session,
-        tenant_id=user.tenant_id,
-        actor_user_id=current_user.id,
-        action="admin.user.reset_password",
-        entity="users",
-        entity_id=user.id,
-        meta={"email": user.email},
-    )
+    # Try to record audit, but don't fail if it fails
+    try:
+        await record_audit(
+            session,
+            tenant_id=user.tenant_id,
+            actor_user_id=current_user.id,
+            action="admin.user.reset_password",
+            entity="users",
+            entity_id=user.id,
+            meta={"email": user.email},
+        )
+    except Exception as audit_exc:
+        logger.warning(f"Failed to record audit log (non-critical): {audit_exc}")
+        # Continue with password reset even if audit fails
     
     # Commit password_hash update first
-    await session.commit()
-    await session.refresh(user)
+    try:
+        await session.commit()
+        await session.refresh(user)
+    except Exception as commit_exc:
+        await session.rollback()
+        logger.error(f"Failed to commit password reset: {commit_exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Şifre sıfırlama işlemi başarısız oldu. Lütfen tekrar deneyin."
+        ) from commit_exc
     
     # Then update password_encrypted column manually (separate transaction)
     # This way if it fails, it doesn't affect the main password update
     try:
-        encrypted_pwd = encrypt_password(new_password)
-        await session.execute(
-            text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
-            {"encrypted": encrypted_pwd, "user_id": user_id}
-        )
-        await session.commit()
+        try:
+            encrypted_pwd = encrypt_password(new_password)
+        except Exception as encrypt_exc:
+            logger.warning(f"Failed to encrypt password (non-critical): {encrypt_exc}")
+            encrypted_pwd = None
+        
+        if encrypted_pwd:
+            await session.execute(
+                text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+                {"encrypted": encrypted_pwd, "user_id": user_id}
+            )
+            await session.commit()
     except Exception as exc:
         # Rollback the encrypted password update if it fails
-        await session.rollback()
+        try:
+            await session.rollback()
+        except Exception:
+            pass
         logger.warning(f"Failed to update password_encrypted column (non-critical): {exc}")
         # Don't fail the whole request - password_hash was already updated successfully
     
