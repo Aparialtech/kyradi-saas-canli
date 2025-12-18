@@ -915,42 +915,42 @@ async def admin_global_revenue_summary(
 ) -> RevenueSummary:
     """Get global revenue summary (all tenants or filtered by tenant_id)."""
     try:
-    from ...services.revenue import get_tenant_revenue_summary
-    
-    if tenant_id:
-        # Single tenant summary
-        summary = await get_tenant_revenue_summary(
-            session,
-            tenant_id=tenant_id,
-            date_from=date_from,
-            date_to=date_to,
-        )
-    else:
-        # Global summary across all tenants
-        stmt = (
-            select(
-                func.coalesce(func.sum(Settlement.total_amount_minor), 0),
-                func.coalesce(func.sum(Settlement.tenant_settlement_minor), 0),
-                func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0),
-                func.count(Settlement.id),
-            )
-            .where(Settlement.status == "settled")
-        )
-        if date_from:
-            stmt = stmt.where(Settlement.created_at >= date_from)
-        if date_to:
-            stmt = stmt.where(Settlement.created_at <= date_to)
+        from ...services.revenue import get_tenant_revenue_summary
         
-        result = await session.execute(stmt)
-        row = result.first()
-        summary = {
-            "total_revenue_minor": int(row[0] or 0),
-            "tenant_settlement_minor": int(row[1] or 0),
-            "kyradi_commission_minor": int(row[2] or 0),
-            "transaction_count": int(row[3] or 0),
-        }
-    
-    return RevenueSummary(**summary)
+        if tenant_id:
+            # Single tenant summary
+            summary = await get_tenant_revenue_summary(
+                session,
+                tenant_id=tenant_id,
+                date_from=date_from,
+                date_to=date_to,
+            )
+        else:
+            # Global summary across all tenants
+            stmt = (
+                select(
+                    func.coalesce(func.sum(Settlement.total_amount_minor), 0),
+                    func.coalesce(func.sum(Settlement.tenant_settlement_minor), 0),
+                    func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0),
+                    func.count(Settlement.id),
+                )
+                .where(Settlement.status == "settled")
+            )
+            if date_from:
+                stmt = stmt.where(Settlement.created_at >= date_from)
+            if date_to:
+                stmt = stmt.where(Settlement.created_at <= date_to)
+            
+            result = await session.execute(stmt)
+            row = result.first()
+            summary = {
+                "total_revenue_minor": int(row[0] or 0),
+                "tenant_settlement_minor": int(row[1] or 0),
+                "kyradi_commission_minor": int(row[2] or 0),
+                "transaction_count": int(row[3] or 0),
+            }
+        
+        return RevenueSummary(**summary)
     except Exception as exc:
         logger.exception(f"Error fetching revenue summary (tenant_id={tenant_id})")
         # Return default values on error
