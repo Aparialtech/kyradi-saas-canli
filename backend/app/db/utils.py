@@ -109,6 +109,7 @@ async def _apply_critical_ddl(conn) -> None:
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS legal_name VARCHAR(255)",
         # User columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_encrypted VARCHAR(500)",
         # Pricing rules hierarchical columns
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS scope VARCHAR(16) NOT NULL DEFAULT 'TENANT'",
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS location_id VARCHAR(36)",

@@ -16,13 +16,28 @@ pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
 # Password encryption key (for admin viewing - WARNING: Security risk!)
 def _get_encryption_key() -> bytes:
     """Get or generate encryption key for password storage."""
+    # Try to get from settings first
+    if settings.password_encryption_key:
+        try:
+            return base64.urlsafe_b64decode(settings.password_encryption_key.encode())
+        except Exception:
+            pass
+    
+    # Fallback to environment variable
     key_env = os.getenv("PASSWORD_ENCRYPTION_KEY")
     if key_env:
-        return base64.urlsafe_b64decode(key_env.encode())
-    # Generate a key if not set (for development)
+        try:
+            return base64.urlsafe_b64decode(key_env.encode())
+        except Exception:
+            pass
+    
+    # Generate a default key if not set (for development only - WARNING!)
     # In production, set PASSWORD_ENCRYPTION_KEY environment variable
-    key = Fernet.generate_key()
-    return key
+    # Using a fixed default key so decryption works across restarts
+    default_key = "KyradiDefaultPasswordEncryptionKey2025!ChangeInProduction"
+    # Pad to 32 bytes and encode to base64
+    key_bytes = default_key.encode()[:32].ljust(32, b'0')
+    return base64.urlsafe_b64encode(key_bytes)
 
 
 _fernet = Fernet(_get_encryption_key())

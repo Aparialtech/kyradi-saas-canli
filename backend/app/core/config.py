@@ -214,6 +214,11 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("SMTP_FROM_EMAIL", "KYRADI_SMTP_FROM_EMAIL"),
     )
+    password_encryption_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("PASSWORD_ENCRYPTION_KEY", "KYRADI_PASSWORD_ENCRYPTION_KEY"),
+        description="Fernet encryption key for password storage (base64 encoded). If not set, a default key will be used (WARNING: Security risk!)",
+    )
     kvkk_text: str = Field(
         default=(
             "1. KVKK AÇIK RIZA METNİ (Kişisel Verilerin İşlenmesi Onayı)\n\n"
