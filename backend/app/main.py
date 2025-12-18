@@ -28,6 +28,12 @@ logging.basicConfig(
 
 logger = logging.getLogger("kyradi")
 
+# Configure database error logger with more detail
+db_error_logger = logging.getLogger("kyradi.db_errors")
+db_error_logger.setLevel(logging.ERROR)
+db_session_logger = logging.getLogger("kyradi.db_session")
+db_session_logger.setLevel(logging.WARNING)
+
 app = FastAPI(
     title="KYRADİ API",
     version="0.1.0",
