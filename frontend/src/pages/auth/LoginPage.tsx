@@ -61,7 +61,7 @@ export function LoginPage() {
       const response = await authService.login({
         email,
         password,
-        tenant_slug: mode === "partner" && tenantSlug?.trim() ? tenantSlug.trim() : undefined,
+        tenant_slug: mode === "partner" && tenantSlug?.trim() ? tenantSlug.trim().toLowerCase() : mode === "admin" ? undefined : tenantSlug?.trim() || undefined,
       });
       
       if (response.status === "phone_verification_required" && response.verification_id) {
