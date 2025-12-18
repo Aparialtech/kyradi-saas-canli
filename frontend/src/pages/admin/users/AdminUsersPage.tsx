@@ -156,7 +156,7 @@ export function AdminUsersPage() {
       });
       return response.data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       if (data.new_password) {
         // Show new password in modal
