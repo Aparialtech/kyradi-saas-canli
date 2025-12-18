@@ -516,45 +516,42 @@ async def get_partner_overview(
         if location_id:
             location_filters.append(Location.id == location_id)
         
-        # Build reservation join filters
-        reservation_join_filters = [Reservation.storage_id == Storage.id]
-        if status:
-            reservation_join_filters.append(Reservation.status == status)
-        
-        # Build payment join filters
-        payment_join_filters = [
-            Payment.reservation_id == Reservation.id,
-            Payment.status == PaymentStatus.PAID.value
-        ]
-        
-        # Build date filters for payments
-        payment_date_filters = []
-        if date_from:
-            payment_date_filters.append(Payment.created_at >= date_from)
-        if date_to:
-            payment_date_filters.append(Payment.created_at <= date_to)
-        
         # Join reservations with payments and locations
+        # Use explicit JOIN conditions to avoid cartesian product
         location_stmt = select(
             Location.id.label('location_id'),
             Location.name.label('location_name'),
             func.coalesce(func.sum(Payment.amount_minor), 0).label('revenue_minor'),
-            func.count(Reservation.id).label('reservations')
-        ).select_from(Location).outerjoin(
-            Storage, Storage.location_id == Location.id
+            func.count(func.distinct(Reservation.id)).label('reservations')
+        ).select_from(
+            Location
         ).outerjoin(
-            Reservation, and_(*reservation_join_filters)
+            Storage, 
+            and_(
+                Storage.location_id == Location.id,
+                Storage.tenant_id == tenant_id
+            )
         ).outerjoin(
-            Payment, and_(*payment_join_filters)
+            Reservation, 
+            and_(
+                Reservation.storage_id == Storage.id,
+                Reservation.tenant_id == tenant_id,
+                *([Reservation.status == status] if status else [])
+            )
+        ).outerjoin(
+            Payment, 
+            and_(
+                Payment.reservation_id == Reservation.id,
+                Payment.tenant_id == tenant_id,
+                Payment.status == PaymentStatus.PAID.value,
+                *([Payment.created_at >= date_from] if date_from else []),
+                *([Payment.created_at <= date_to] if date_to else [])
+            )
         )
         
         # Apply location filters
         if location_filters:
             location_stmt = location_stmt.where(and_(*location_filters))
-        
-        # Apply date filters to payments
-        if payment_date_filters:
-            location_stmt = location_stmt.where(and_(*payment_date_filters))
         
         location_stmt = location_stmt.group_by(
             Location.id, Location.name
