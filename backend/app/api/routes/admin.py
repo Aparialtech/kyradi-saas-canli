@@ -973,23 +973,23 @@ async def admin_global_settlements(
 ) -> List[SettlementRead]:
     """List all settlements (global or filtered by tenant)."""
     try:
-    stmt = select(Settlement)
-    
-    if tenant_id:
-        stmt = stmt.where(Settlement.tenant_id == tenant_id)
-    if status:
-        stmt = stmt.where(Settlement.status == status)
-    if date_from:
-        stmt = stmt.where(Settlement.created_at >= date_from)
-    if date_to:
-        stmt = stmt.where(Settlement.created_at <= date_to)
-    
-    stmt = stmt.order_by(Settlement.created_at.desc())
-    
-    result = await session.execute(stmt)
-    settlements = result.scalars().all()
-    
-    return [SettlementRead.model_validate(settlement) for settlement in settlements]
+        stmt = select(Settlement)
+        
+        if tenant_id:
+            stmt = stmt.where(Settlement.tenant_id == tenant_id)
+        if status:
+            stmt = stmt.where(Settlement.status == status)
+        if date_from:
+            stmt = stmt.where(Settlement.created_at >= date_from)
+        if date_to:
+            stmt = stmt.where(Settlement.created_at <= date_to)
+        
+        stmt = stmt.order_by(Settlement.created_at.desc())
+        
+        result = await session.execute(stmt)
+        settlements = result.scalars().all()
+        
+        return [SettlementRead.model_validate(settlement) for settlement in settlements]
     except Exception as exc:
         logger.exception(f"Error fetching settlements (tenant_id={tenant_id}, status={status})")
         # Return empty list on error
@@ -1988,25 +1988,25 @@ async def admin_reset_user_password(
     new_password = None
     
     try:
-    user = await session.get(User, user_id)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
-    # Generate password if auto_generate is enabled or password not provided
-    new_password = payload.password
-    if payload.auto_generate or not new_password:
-        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-        new_password = ''.join(secrets.choice(alphabet) for _ in range(16))
-    
-    if not new_password or len(new_password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters long"
-        )
-    
+        user = await session.get(User, user_id)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        # Generate password if auto_generate is enabled or password not provided
+        new_password = payload.password
+        if payload.auto_generate or not new_password:
+            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+            new_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+        
+        if not new_password or len(new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be at least 8 characters long"
+            )
+        
         # Hash the password
         try:
-    user.password_hash = get_password_hash(new_password)
+            user.password_hash = get_password_hash(new_password)
         except Exception as hash_exc:
             logger.error(f"Failed to hash password: {hash_exc}", exc_info=True)
             raise HTTPException(
@@ -2031,12 +2031,12 @@ async def admin_reset_user_password(
     
     # Try to record audit, but don't fail if it fails
     try:
-    await record_audit(
-        session,
-        tenant_id=user.tenant_id,
-        actor_user_id=current_user.id,
-        action="admin.user.reset_password",
-        entity="users",
+        await record_audit(
+            session,
+            tenant_id=user.tenant_id,
+            actor_user_id=current_user.id,
+            action="admin.user.reset_password",
+            entity="users",
         entity_id=user.id,
         meta={"email": user.email},
     )
@@ -2047,9 +2047,9 @@ async def admin_reset_user_password(
     # Commit password_hash update first
     try:
         logger.debug(f"Committing password reset for user {user_id}")
-    await session.commit()
+        await session.commit()
         logger.debug(f"Successfully committed password reset for user {user_id}")
-    await session.refresh(user)
+        await session.refresh(user)
         logger.debug(f"Successfully refreshed user {user_id}")
     except Exception as commit_exc:
         error_msg = str(commit_exc)
