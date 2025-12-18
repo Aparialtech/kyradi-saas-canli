@@ -915,42 +915,42 @@ async def admin_global_revenue_summary(
 ) -> RevenueSummary:
     """Get global revenue summary (all tenants or filtered by tenant_id)."""
     try:
-        from ...services.revenue import get_tenant_revenue_summary
-        
-        if tenant_id:
-            # Single tenant summary
-            summary = await get_tenant_revenue_summary(
-                session,
-                tenant_id=tenant_id,
-                date_from=date_from,
-                date_to=date_to,
+    from ...services.revenue import get_tenant_revenue_summary
+    
+    if tenant_id:
+        # Single tenant summary
+        summary = await get_tenant_revenue_summary(
+            session,
+            tenant_id=tenant_id,
+            date_from=date_from,
+            date_to=date_to,
+        )
+    else:
+        # Global summary across all tenants
+        stmt = (
+            select(
+                func.coalesce(func.sum(Settlement.total_amount_minor), 0),
+                func.coalesce(func.sum(Settlement.tenant_settlement_minor), 0),
+                func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0),
+                func.count(Settlement.id),
             )
-        else:
-            # Global summary across all tenants
-            stmt = (
-                select(
-                    func.coalesce(func.sum(Settlement.total_amount_minor), 0),
-                    func.coalesce(func.sum(Settlement.tenant_settlement_minor), 0),
-                    func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0),
-                    func.count(Settlement.id),
-                )
-                .where(Settlement.status == "settled")
-            )
-            if date_from:
-                stmt = stmt.where(Settlement.created_at >= date_from)
-            if date_to:
-                stmt = stmt.where(Settlement.created_at <= date_to)
-            
-            result = await session.execute(stmt)
-            row = result.first()
-            summary = {
-                "total_revenue_minor": int(row[0] or 0),
-                "tenant_settlement_minor": int(row[1] or 0),
-                "kyradi_commission_minor": int(row[2] or 0),
-                "transaction_count": int(row[3] or 0),
-            }
+            .where(Settlement.status == "settled")
+        )
+        if date_from:
+            stmt = stmt.where(Settlement.created_at >= date_from)
+        if date_to:
+            stmt = stmt.where(Settlement.created_at <= date_to)
         
-        return RevenueSummary(**summary)
+        result = await session.execute(stmt)
+        row = result.first()
+        summary = {
+            "total_revenue_minor": int(row[0] or 0),
+            "tenant_settlement_minor": int(row[1] or 0),
+            "kyradi_commission_minor": int(row[2] or 0),
+            "transaction_count": int(row[3] or 0),
+        }
+    
+    return RevenueSummary(**summary)
     except Exception as exc:
         logger.exception(f"Error fetching revenue summary (tenant_id={tenant_id})")
         # Return default values on error
@@ -973,23 +973,23 @@ async def admin_global_settlements(
 ) -> List[SettlementRead]:
     """List all settlements (global or filtered by tenant)."""
     try:
-        stmt = select(Settlement)
-        
-        if tenant_id:
-            stmt = stmt.where(Settlement.tenant_id == tenant_id)
-        if status:
-            stmt = stmt.where(Settlement.status == status)
-        if date_from:
-            stmt = stmt.where(Settlement.created_at >= date_from)
-        if date_to:
-            stmt = stmt.where(Settlement.created_at <= date_to)
-        
-        stmt = stmt.order_by(Settlement.created_at.desc())
-        
-        result = await session.execute(stmt)
-        settlements = result.scalars().all()
-        
-        return [SettlementRead.model_validate(settlement) for settlement in settlements]
+    stmt = select(Settlement)
+    
+    if tenant_id:
+        stmt = stmt.where(Settlement.tenant_id == tenant_id)
+    if status:
+        stmt = stmt.where(Settlement.status == status)
+    if date_from:
+        stmt = stmt.where(Settlement.created_at >= date_from)
+    if date_to:
+        stmt = stmt.where(Settlement.created_at <= date_to)
+    
+    stmt = stmt.order_by(Settlement.created_at.desc())
+    
+    result = await session.execute(stmt)
+    settlements = result.scalars().all()
+    
+    return [SettlementRead.model_validate(settlement) for settlement in settlements]
     except Exception as exc:
         logger.exception(f"Error fetching settlements (tenant_id={tenant_id}, status={status})")
         # Return empty list on error
@@ -1988,25 +1988,25 @@ async def admin_reset_user_password(
     new_password = None
     
     try:
-        user = await session.get(User, user_id)
-        if user is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-        
-        # Generate password if auto_generate is enabled or password not provided
-        new_password = payload.password
-        if payload.auto_generate or not new_password:
-            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-            new_password = ''.join(secrets.choice(alphabet) for _ in range(16))
-        
-        if not new_password or len(new_password) < 8:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password must be at least 8 characters long"
-            )
-        
+    user = await session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    # Generate password if auto_generate is enabled or password not provided
+    new_password = payload.password
+    if payload.auto_generate or not new_password:
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        new_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+    
+    if not new_password or len(new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long"
+        )
+    
         # Hash the password
         try:
-            user.password_hash = get_password_hash(new_password)
+    user.password_hash = get_password_hash(new_password)
         except Exception as hash_exc:
             logger.error(f"Failed to hash password: {hash_exc}", exc_info=True)
             raise HTTPException(
@@ -2031,15 +2031,15 @@ async def admin_reset_user_password(
     
     # Try to record audit, but don't fail if it fails
     try:
-        await record_audit(
-            session,
-            tenant_id=user.tenant_id,
-            actor_user_id=current_user.id,
-            action="admin.user.reset_password",
-            entity="users",
-            entity_id=user.id,
-            meta={"email": user.email},
-        )
+    await record_audit(
+        session,
+        tenant_id=user.tenant_id,
+        actor_user_id=current_user.id,
+        action="admin.user.reset_password",
+        entity="users",
+        entity_id=user.id,
+        meta={"email": user.email},
+    )
     except Exception as audit_exc:
         logger.warning(f"Failed to record audit log (non-critical): {audit_exc}")
         # Continue with password reset even if audit fails
@@ -2047,9 +2047,9 @@ async def admin_reset_user_password(
     # Commit password_hash update first
     try:
         logger.debug(f"Committing password reset for user {user_id}")
-        await session.commit()
+    await session.commit()
         logger.debug(f"Successfully committed password reset for user {user_id}")
-        await session.refresh(user)
+    await session.refresh(user)
         logger.debug(f"Successfully refreshed user {user_id}")
     except Exception as commit_exc:
         error_msg = str(commit_exc)
@@ -2264,7 +2264,7 @@ async def admin_get_user_password(
             "password": None,
             "has_password": False,
             "message": "Password column does not exist yet",
-        }
+    }
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -2478,6 +2478,7 @@ async def admin_send_bulk_email(
         )
     
     try:
+        logger.info(f"Admin {current_user.email} sending bulk email to {len(payload.recipients)} recipients")
         # Send emails
         result = await EmailService.send_bulk_email(
             recipients=payload.recipients,
@@ -2485,6 +2486,7 @@ async def admin_send_bulk_email(
             body=payload.body,
             is_html=payload.is_html,
         )
+        logger.info(f"Bulk email result: {result}")
     except Exception as exc:
         logger.exception(f"Error sending bulk email: {exc}")
         raise HTTPException(
