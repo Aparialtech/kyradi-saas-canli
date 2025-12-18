@@ -522,11 +522,26 @@ async def admin_summary(
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("reports/summary: error while building summary")
-        return {
-            "total_revenue": 0,
-            "total_reservations": 0,
-            "monthly_revenue": [],
-        }
+        # Return a valid AdminSummary with default values
+        return AdminSummary(
+            total_tenants=0,
+            active_tenants=0,
+            total_users=0,
+            total_storages=0,
+            reservations_24h=0,
+            reservations_7d=0,
+            total_reservations=0,
+            total_revenue_minor=0,
+            total_commission_minor=0,
+            tenants=[],
+            daily_revenue_30d=[],
+            top_tenants=[],
+            system_health=SystemHealth(
+                email_service_status="unknown",
+                sms_service_status="unknown",
+                payment_provider_status="unknown",
+            ),
+        )
 
 
 @router.get("/audit-logs", response_model=AuditLogList)
@@ -899,42 +914,52 @@ async def admin_global_revenue_summary(
     _: None = Depends(require_admin_user),
 ) -> RevenueSummary:
     """Get global revenue summary (all tenants or filtered by tenant_id)."""
-    from ...services.revenue import get_tenant_revenue_summary
-    
-    if tenant_id:
-        # Single tenant summary
-        summary = await get_tenant_revenue_summary(
-            session,
-            tenant_id=tenant_id,
-            date_from=date_from,
-            date_to=date_to,
-        )
-    else:
-        # Global summary across all tenants
-        stmt = (
-            select(
-                func.coalesce(func.sum(Settlement.total_amount_minor), 0),
-                func.coalesce(func.sum(Settlement.tenant_settlement_minor), 0),
-                func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0),
-                func.count(Settlement.id),
-            )
-            .where(Settlement.status == "settled")
-        )
-        if date_from:
-            stmt = stmt.where(Settlement.created_at >= date_from)
-        if date_to:
-            stmt = stmt.where(Settlement.created_at <= date_to)
+    try:
+        from ...services.revenue import get_tenant_revenue_summary
         
-        result = await session.execute(stmt)
-        row = result.first()
-        summary = {
-            "total_revenue_minor": int(row[0] or 0),
-            "tenant_settlement_minor": int(row[1] or 0),
-            "kyradi_commission_minor": int(row[2] or 0),
-            "transaction_count": int(row[3] or 0),
-        }
-    
-    return RevenueSummary(**summary)
+        if tenant_id:
+            # Single tenant summary
+            summary = await get_tenant_revenue_summary(
+                session,
+                tenant_id=tenant_id,
+                date_from=date_from,
+                date_to=date_to,
+            )
+        else:
+            # Global summary across all tenants
+            stmt = (
+                select(
+                    func.coalesce(func.sum(Settlement.total_amount_minor), 0),
+                    func.coalesce(func.sum(Settlement.tenant_settlement_minor), 0),
+                    func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0),
+                    func.count(Settlement.id),
+                )
+                .where(Settlement.status == "settled")
+            )
+            if date_from:
+                stmt = stmt.where(Settlement.created_at >= date_from)
+            if date_to:
+                stmt = stmt.where(Settlement.created_at <= date_to)
+            
+            result = await session.execute(stmt)
+            row = result.first()
+            summary = {
+                "total_revenue_minor": int(row[0] or 0),
+                "tenant_settlement_minor": int(row[1] or 0),
+                "kyradi_commission_minor": int(row[2] or 0),
+                "transaction_count": int(row[3] or 0),
+            }
+        
+        return RevenueSummary(**summary)
+    except Exception as exc:
+        logger.exception(f"Error fetching revenue summary (tenant_id={tenant_id})")
+        # Return default values on error
+        return RevenueSummary(
+            total_revenue_minor=0,
+            tenant_settlement_minor=0,
+            kyradi_commission_minor=0,
+            transaction_count=0,
+        )
 
 
 @router.get("/settlements", response_model=List[SettlementRead])
@@ -947,23 +972,28 @@ async def admin_global_settlements(
     _: None = Depends(require_admin_user),
 ) -> List[SettlementRead]:
     """List all settlements (global or filtered by tenant)."""
-    stmt = select(Settlement)
-    
-    if tenant_id:
-        stmt = stmt.where(Settlement.tenant_id == tenant_id)
-    if status:
-        stmt = stmt.where(Settlement.status == status)
-    if date_from:
-        stmt = stmt.where(Settlement.created_at >= date_from)
-    if date_to:
-        stmt = stmt.where(Settlement.created_at <= date_to)
-    
-    stmt = stmt.order_by(Settlement.created_at.desc())
-    
-    result = await session.execute(stmt)
-    settlements = result.scalars().all()
-    
-    return [SettlementRead.model_validate(settlement) for settlement in settlements]
+    try:
+        stmt = select(Settlement)
+        
+        if tenant_id:
+            stmt = stmt.where(Settlement.tenant_id == tenant_id)
+        if status:
+            stmt = stmt.where(Settlement.status == status)
+        if date_from:
+            stmt = stmt.where(Settlement.created_at >= date_from)
+        if date_to:
+            stmt = stmt.where(Settlement.created_at <= date_to)
+        
+        stmt = stmt.order_by(Settlement.created_at.desc())
+        
+        result = await session.execute(stmt)
+        settlements = result.scalars().all()
+        
+        return [SettlementRead.model_validate(settlement) for settlement in settlements]
+    except Exception as exc:
+        logger.exception(f"Error fetching settlements (tenant_id={tenant_id}, status={status})")
+        # Return empty list on error
+        return []
 
 
 @router.get("/reports/export")
