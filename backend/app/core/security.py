@@ -50,10 +50,15 @@ def encrypt_password(password: str) -> str:
 
 def decrypt_password(encrypted_password: str) -> str:
     """Decrypt password for admin viewing."""
+    import logging
+    logger = logging.getLogger(__name__)
     try:
-        return _fernet.decrypt(encrypted_password.encode()).decode()
-    except Exception:
-        return ""  # Return empty if decryption fails
+        decrypted = _fernet.decrypt(encrypted_password.encode()).decode()
+        logger.debug(f"Successfully decrypted password (length: {len(decrypted)})")
+        return decrypted
+    except Exception as exc:
+        logger.error(f"Failed to decrypt password: {exc}", exc_info=True)
+        raise  # Re-raise to let caller handle it
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

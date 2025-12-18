@@ -1903,9 +1903,11 @@ async def admin_reset_user_password(
         
         if column_exists:
             try:
+                logger.info(f"Encrypting password for user {user_id} (length: {len(new_password)})")
                 encrypted_pwd = encrypt_password(new_password)
+                logger.info(f"Successfully encrypted password for user {user_id} (encrypted length: {len(encrypted_pwd)})")
             except Exception as encrypt_exc:
-                logger.warning(f"Failed to encrypt password (non-critical): {encrypt_exc}")
+                logger.error(f"Failed to encrypt password (non-critical): {encrypt_exc}", exc_info=True)
                 encrypted_pwd = None
             
             if encrypted_pwd:
@@ -1915,7 +1917,24 @@ async def admin_reset_user_password(
                         {"encrypted": encrypted_pwd, "user_id": user_id}
                     )
                     await session.commit()
-                    logger.debug(f"Successfully updated password_encrypted for user {user_id}")
+                    logger.info(f"Successfully updated password_encrypted for user {user_id}")
+                    
+                    # Verify the saved password can be decrypted
+                    try:
+                        verify_result = await session.execute(
+                            text("SELECT password_encrypted FROM users WHERE id = :user_id"),
+                            {"user_id": user_id}
+                        )
+                        verify_row = verify_result.fetchone()
+                        if verify_row and verify_row[0]:
+                            from ...core.security import decrypt_password
+                            test_decrypt = decrypt_password(verify_row[0])
+                            if test_decrypt == new_password:
+                                logger.info(f"Password verification successful for user {user_id}")
+                            else:
+                                logger.error(f"Password verification FAILED for user {user_id}: decrypted password does not match!")
+                    except Exception as verify_exc:
+                        logger.warning(f"Failed to verify saved password: {verify_exc}")
                 except Exception as update_exc:
                     # Rollback the encrypted password update if it fails
                     try:
@@ -2019,15 +2038,24 @@ async def admin_get_user_password(
         if encrypted_password:
             try:
                 current_password = decrypt_password(encrypted_password)
+                if not current_password:
+                    logger.warning(f"Decrypted password is empty for user {user_id}")
+                    return {
+                        "password": None,
+                        "has_password": False,
+                        "message": "Password could not be decrypted (empty result)",
+                    }
+                logger.info(f"Successfully decrypted password for user {user_id} (length: {len(current_password)})")
                 return {
                     "password": current_password,
                     "has_password": True,
                 }
-            except Exception:
+            except Exception as decrypt_exc:
+                logger.error(f"Failed to decrypt password for user {user_id}: {decrypt_exc}", exc_info=True)
                 return {
                     "password": None,
                     "has_password": False,
-                    "message": "Password could not be decrypted",
+                    "message": f"Password could not be decrypted: {str(decrypt_exc)[:100]}",
                 }
         else:
             return {
