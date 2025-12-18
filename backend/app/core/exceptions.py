@@ -333,6 +333,20 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         if hasattr(exc, "orig"):
             error_msg = str(exc.orig)
         
+        # Check for InFailedSQLTransactionError first (transaction was aborted)
+        if "InFailedSQLTransactionError" in error_msg or "transaction is aborted" in error_msg.lower():
+            db_error_logger.error(
+                "Transaction was aborted - previous SQL error caused transaction failure"
+            )
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "detail": "Veritabanı işlemi başarısız oldu. Lütfen tekrar deneyin.",
+                    "error_code": "TRANSACTION_ABORTED"
+                },
+                headers=cors_headers,
+            )
+        
         # Check if it's an AsyncPG error
         if hasattr(exc, "orig") and "asyncpg" in str(type(exc.orig)).lower():
             # Extract AsyncPG error details

@@ -1622,7 +1622,7 @@ async def admin_create_user(
     user = User(
         email=payload.email,
         password_hash=get_password_hash(password),
-        # password_encrypted will be set manually after flush
+        # password_encrypted will be set manually after commit
         role=payload.role.value,
         is_active=payload.is_active,
         tenant_id=tenant_id,
@@ -1631,17 +1631,6 @@ async def admin_create_user(
     )
     session.add(user)
     await session.flush()
-    
-    # Store encrypted version for admin viewing (WARNING: Security risk!)
-    # Update password_encrypted column manually since it might not exist in model yet
-    try:
-        encrypted_pwd = encrypt_password(password)
-        await session.execute(
-            text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
-            {"encrypted": encrypted_pwd, "user_id": user.id}
-        )
-    except Exception as exc:
-        logger.warning(f"Failed to update password_encrypted column: {exc}")
     
     # Log password in development mode
     from ...core.config import settings
@@ -1662,8 +1651,24 @@ async def admin_create_user(
         meta={"email": user.email, "role": user.role, "full_name": user.full_name},
     )
     
+    # Commit user creation first
     await session.commit()
     await session.refresh(user)
+    
+    # Then update password_encrypted column manually (separate transaction)
+    # This way if it fails, it doesn't affect the main user creation
+    try:
+        encrypted_pwd = encrypt_password(password)
+        await session.execute(
+            text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+            {"encrypted": encrypted_pwd, "user_id": user.id}
+        )
+        await session.commit()
+    except Exception as exc:
+        # Rollback the encrypted password update if it fails
+        await session.rollback()
+        logger.warning(f"Failed to update password_encrypted column (non-critical): {exc}")
+        # Don't fail the whole request - user was already created successfully
     logger.info(f"User created successfully: {user.email} (ID: {user.id}) by admin {current_user.id}")
     return UserRead.model_validate(user)
 
@@ -1761,16 +1766,6 @@ async def admin_reset_user_password(
         )
     
     user.password_hash = get_password_hash(new_password)
-    # Also store encrypted version for admin viewing (WARNING: Security risk!)
-    # Update password_encrypted column manually since it might not exist in model yet
-    try:
-        encrypted_pwd = encrypt_password(new_password)
-        await session.execute(
-            text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
-            {"encrypted": encrypted_pwd, "user_id": user_id}
-        )
-    except Exception as exc:
-        logger.warning(f"Failed to update password_encrypted column: {exc}")
     
     await record_audit(
         session,
@@ -1782,8 +1777,24 @@ async def admin_reset_user_password(
         meta={"email": user.email},
     )
     
+    # Commit password_hash update first
     await session.commit()
     await session.refresh(user)
+    
+    # Then update password_encrypted column manually (separate transaction)
+    # This way if it fails, it doesn't affect the main password update
+    try:
+        encrypted_pwd = encrypt_password(new_password)
+        await session.execute(
+            text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+            {"encrypted": encrypted_pwd, "user_id": user_id}
+        )
+        await session.commit()
+    except Exception as exc:
+        # Rollback the encrypted password update if it fails
+        await session.rollback()
+        logger.warning(f"Failed to update password_encrypted column (non-critical): {exc}")
+        # Don't fail the whole request - password_hash was already updated successfully
     
     # Log password in development mode
     from ...core.config import settings

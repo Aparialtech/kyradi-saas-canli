@@ -41,15 +41,32 @@ async def get_session() -> AsyncIterator[AsyncSession]:
             try:
                 yield session
             except (SQLAlchemyError, DisconnectionError) as exc:
+                error_str = str(exc)
                 db_logger.error(
                     f"Database error in session: {type(exc).__name__}: {exc}",
                     exc_info=True
                 )
-                try:
-                    await session.rollback()
-                    db_logger.info("Session rolled back due to database error")
-                except Exception as rollback_exc:
-                    db_logger.error(f"Failed to rollback session: {rollback_exc}")
+                
+                # Check if transaction was aborted
+                if "InFailedSQLTransactionError" in error_str or "transaction is aborted" in error_str.lower():
+                    db_logger.warning("Transaction was aborted - forcing rollback")
+                    try:
+                        # Force rollback for aborted transactions
+                        await session.rollback()
+                        db_logger.info("Session rolled back due to aborted transaction")
+                    except Exception as rollback_exc:
+                        db_logger.error(f"Failed to rollback aborted transaction: {rollback_exc}")
+                        # Try to close the session
+                        try:
+                            await session.close()
+                        except Exception:
+                            pass
+                else:
+                    try:
+                        await session.rollback()
+                        db_logger.info("Session rolled back due to database error")
+                    except Exception as rollback_exc:
+                        db_logger.error(f"Failed to rollback session: {rollback_exc}")
                 raise
             except Exception as exc:
                 db_logger.error(
