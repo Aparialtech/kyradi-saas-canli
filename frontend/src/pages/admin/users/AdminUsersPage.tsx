@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key, Trash2, Copy, Eye } from "../../../lib/lucide";
@@ -50,7 +50,8 @@ export function AdminUsersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
-  const [resetPasswordResult, setResetPasswordResult] = useState<{ new_password?: string } | null>(null);
+  const [resetPasswordResult, setResetPasswordResult] = useState<{ new_password?: string; current_password?: string } | null>(null);
+  const [currentPasswordLoading, setCurrentPasswordLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   
   // Create user form state
@@ -109,13 +110,6 @@ export function AdminUsersPage() {
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
   }, []);
-
-  // Auto-generate password when modal opens
-  useEffect(() => {
-    if (showResetPasswordModal && resetPasswordUser && !resetPasswordResult && !resetPasswordMutation.isPending) {
-      resetPasswordMutation.mutate({ userId: resetPasswordUser.id, auto_generate: true });
-    }
-  }, [showResetPasswordModal, resetPasswordUser]);
 
   const createUserMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -268,6 +262,29 @@ export function AdminUsersPage() {
     navigator.clipboard.writeText(password).then(() => {
       push({ title: "Kopyalandı", description: "Parola panoya kopyalandı", type: "success" });
     });
+  };
+
+  const handleShowPassword = async (user: User) => {
+    setResetPasswordUser(user);
+    setResetPasswordResult(null);
+    setCurrentPasswordLoading(user.id);
+    setShowResetPasswordModal(true);
+    
+    // Try to get current password
+    try {
+      const response = await http.get<{ password: string | null; has_password: boolean; message?: string }>(`/admin/users/${user.id}/password`);
+      if (response.data.password) {
+        setResetPasswordResult({ current_password: response.data.password });
+      } else {
+        // If no current password, generate new one
+        resetPasswordMutation.mutate({ userId: user.id, auto_generate: true });
+      }
+    } catch (error) {
+      // If error, generate new password
+      resetPasswordMutation.mutate({ userId: user.id, auto_generate: true });
+    } finally {
+      setCurrentPasswordLoading(null);
+    }
   };
 
   return (
@@ -500,12 +517,9 @@ export function AdminUsersPage() {
                 align: 'center',
                 render: (_, row) => (
                   <button
-                    onClick={() => {
-                      setResetPasswordUser(row);
-                      setResetPasswordResult(null);
-                      setShowResetPasswordModal(true);
-                    }}
-                    title="Şifreyi göster (yeni şifre oluşturur)"
+                    onClick={() => handleShowPassword(row)}
+                    disabled={currentPasswordLoading === row.id}
+                    title="Şifreyi göster"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -515,17 +529,24 @@ export function AdminUsersPage() {
                       border: 'none',
                       background: 'rgba(99, 102, 241, 0.1)',
                       color: '#6366f1',
-                      cursor: 'pointer',
+                      cursor: currentPasswordLoading === row.id ? 'wait' : 'pointer',
                       transition: 'all 0.2s',
+                      opacity: currentPasswordLoading === row.id ? 0.6 : 1,
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+                      if (currentPasswordLoading !== row.id) {
+                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+                      }
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
                     }}
                   >
-                    <Eye className="h-4 w-4" />
+                    {currentPasswordLoading === row.id ? (
+                      <Loader2 className="h-4 w-4" style={{ animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 ),
               },
@@ -859,14 +880,53 @@ export function AdminUsersPage() {
             <p style={{ margin: 0, color: "var(--text-tertiary)" }}>
               <strong>{resetPasswordUser.email}</strong> kullanıcısının şifresi.
             </p>
-            {resetPasswordMutation.isPending ? (
+            {currentPasswordLoading === resetPasswordUser?.id ? (
               <div style={{ textAlign: "center", padding: "2rem" }}>
                 <Loader2 className="h-8 w-8" style={{ margin: "0 auto", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
-                <p style={{ marginTop: "1rem", color: "var(--text-tertiary)" }}>Şifre oluşturuluyor...</p>
+                <p style={{ marginTop: "1rem", color: "var(--text-tertiary)" }}>Şifre yükleniyor...</p>
+              </div>
+            ) : resetPasswordMutation.isPending ? (
+              <div style={{ textAlign: "center", padding: "2rem" }}>
+                <Loader2 className="h-8 w-8" style={{ margin: "0 auto", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
+                <p style={{ marginTop: "1rem", color: "var(--text-tertiary)" }}>Yeni şifre oluşturuluyor...</p>
+              </div>
+            ) : resetPasswordResult?.current_password ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
+                  <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Mevcut Şifre:</p>
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                    <code style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", fontFamily: "monospace" }}>
+                      {resetPasswordResult.current_password}
+                    </code>
+                    <ModernButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyPassword(resetPasswordResult.current_password!)}
+                      leftIcon={<Copy className="h-4 w-4" />}
+                    >
+                      Kopyala
+                    </ModernButton>
+                  </div>
+                </div>
+                <div style={{ padding: "1rem", background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--radius-lg)", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
+                  <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600, color: "#b45309" }}>Yeni Şifre Oluştur</p>
+                  <p style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "#b45309" }}>
+                    Kullanıcının şifresini değiştirmek istiyorsanız yeni şifre oluşturabilirsiniz.
+                  </p>
+                  <ModernButton
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleResetPassword(true)}
+                    disabled={resetPasswordMutation.isPending}
+                    leftIcon={<Key className="h-4 w-4" />}
+                  >
+                    Yeni Şifre Oluştur
+                  </ModernButton>
+                </div>
               </div>
             ) : resetPasswordResult?.new_password ? (
               <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
-                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Kullanıcı Şifresi:</p>
+                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Yeni Şifre Oluşturuldu:</p>
                 <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                   <code style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", fontFamily: "monospace" }}>
                     {resetPasswordResult.new_password}
@@ -881,7 +941,7 @@ export function AdminUsersPage() {
                   </ModernButton>
                 </div>
                 <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem", color: "var(--text-tertiary)" }}>
-                  ⚠️ Bu şifre otomatik olarak oluşturuldu. Kullanıcının eski şifresi hash'li olduğu için gösterilemez.
+                  ✅ Yeni şifre başarıyla oluşturuldu ve kullanıcının şifresi güncellendi.
                 </p>
               </div>
             ) : null}

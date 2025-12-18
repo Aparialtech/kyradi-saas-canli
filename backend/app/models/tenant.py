@@ -106,6 +106,7 @@ class User(IdentifiedMixin, TimestampMixin, Base):
     )
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_encrypted: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # Encrypted password for admin viewing (WARNING: Security risk!)
     role: Mapped[str] = mapped_column(String(32), nullable=False, default=UserRole.TENANT_ADMIN.value)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), default=None)

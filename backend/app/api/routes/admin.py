@@ -45,7 +45,7 @@ def make_ascii_safe_filename(filename: str) -> str:
     
     return filename
 
-from ...core.security import get_password_hash
+from ...core.security import get_password_hash, encrypt_password, decrypt_password
 from ...db.session import get_session
 from ...dependencies import require_admin_user
 from ...models import AuditLog, Location, Locker, Payment, PaymentStatus, Reservation, ReservationStatus, Settlement, Storage, Tenant, User, UserRole
@@ -1622,6 +1622,7 @@ async def admin_create_user(
     user = User(
         email=payload.email,
         password_hash=get_password_hash(password),
+        password_encrypted=encrypt_password(password),  # Store encrypted version for admin viewing
         role=payload.role.value,
         is_active=payload.is_active,
         tenant_id=tenant_id,
@@ -1749,6 +1750,8 @@ async def admin_reset_user_password(
         )
     
     user.password_hash = get_password_hash(new_password)
+    # Also store encrypted version for admin viewing (WARNING: Security risk!)
+    user.password_encrypted = encrypt_password(new_password)
     
     await record_audit(
         session,
@@ -1776,6 +1779,42 @@ async def admin_reset_user_password(
         "new_password": new_password if payload.auto_generate else None,
         "message": "Password reset successfully" if payload.auto_generate else "Password updated successfully"
     }
+
+
+@router.get("/users/{user_id}/password")
+async def admin_get_user_password(
+    user_id: str,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_admin_user),
+) -> dict:
+    """Get user's current password (decrypted).
+    
+    WARNING: This is a security risk - passwords should not be stored in reversible format.
+    Only available for admin users.
+    """
+    user = await session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    if user.password_encrypted:
+        try:
+            current_password = decrypt_password(user.password_encrypted)
+            return {
+                "password": current_password,
+                "has_password": True,
+            }
+        except Exception:
+            return {
+                "password": None,
+                "has_password": False,
+                "message": "Password could not be decrypted",
+            }
+    else:
+        return {
+            "password": None,
+            "has_password": False,
+            "message": "Password not stored in encrypted format",
+        }
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

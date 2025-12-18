@@ -2,13 +2,43 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
+import base64
+import os
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from cryptography.fernet import Fernet
 
 from .config import settings
 
 pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
+
+# Password encryption key (for admin viewing - WARNING: Security risk!)
+def _get_encryption_key() -> bytes:
+    """Get or generate encryption key for password storage."""
+    key_env = os.getenv("PASSWORD_ENCRYPTION_KEY")
+    if key_env:
+        return base64.urlsafe_b64decode(key_env.encode())
+    # Generate a key if not set (for development)
+    # In production, set PASSWORD_ENCRYPTION_KEY environment variable
+    key = Fernet.generate_key()
+    return key
+
+
+_fernet = Fernet(_get_encryption_key())
+
+
+def encrypt_password(password: str) -> str:
+    """Encrypt password for admin viewing (WARNING: Security risk!)."""
+    return _fernet.encrypt(password.encode()).decode()
+
+
+def decrypt_password(encrypted_password: str) -> str:
+    """Decrypt password for admin viewing."""
+    try:
+        return _fernet.decrypt(encrypted_password.encode()).decode()
+    except Exception:
+        return ""  # Return empty if decryption fails
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
