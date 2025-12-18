@@ -1657,17 +1657,56 @@ async def admin_create_user(
     
     # Then update password_encrypted column manually (separate transaction)
     # This way if it fails, it doesn't affect the main user creation
+    # First check if column exists to avoid errors
     try:
-        encrypted_pwd = encrypt_password(password)
-        await session.execute(
-            text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
-            {"encrypted": encrypted_pwd, "user_id": user.id}
-        )
-        await session.commit()
+        # Check if password_encrypted column exists
+        column_exists = False
+        try:
+            result = await session.execute(
+                text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'users' AND column_name = 'password_encrypted'
+                """)
+            )
+            column_exists = result.scalar() is not None
+        except Exception as check_exc:
+            logger.warning(f"Failed to check password_encrypted column existence: {check_exc}")
+            # Assume column doesn't exist if check fails
+            column_exists = False
+        
+        if column_exists:
+            try:
+                encrypted_pwd = encrypt_password(password)
+            except Exception as encrypt_exc:
+                logger.warning(f"Failed to encrypt password (non-critical): {encrypt_exc}")
+                encrypted_pwd = None
+            
+            if encrypted_pwd:
+                try:
+                    await session.execute(
+                        text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+                        {"encrypted": encrypted_pwd, "user_id": user.id}
+                    )
+                    await session.commit()
+                    logger.debug(f"Successfully updated password_encrypted for user {user.id}")
+                except Exception as update_exc:
+                    # Rollback the encrypted password update if it fails
+                    try:
+                        await session.rollback()
+                    except Exception:
+                        pass
+                    logger.warning(f"Failed to update password_encrypted column (non-critical): {update_exc}")
+                    # Don't fail the whole request - user was already created successfully
+        else:
+            logger.debug("password_encrypted column does not exist, skipping update")
     except Exception as exc:
-        # Rollback the encrypted password update if it fails
-        await session.rollback()
-        logger.warning(f"Failed to update password_encrypted column (non-critical): {exc}")
+        # Catch any unexpected errors in the entire password_encrypted update block
+        try:
+            await session.rollback()
+        except Exception:
+            pass
+        logger.warning(f"Unexpected error in password_encrypted update (non-critical): {exc}")
         # Don't fail the whole request - user was already created successfully
     logger.info(f"User created successfully: {user.email} (ID: {user.id}) by admin {current_user.id}")
     return UserRead.model_validate(user)
@@ -1824,26 +1863,56 @@ async def admin_reset_user_password(
     
     # Then update password_encrypted column manually (separate transaction)
     # This way if it fails, it doesn't affect the main password update
+    # First check if column exists to avoid errors
     try:
+        # Check if password_encrypted column exists
+        column_exists = False
         try:
-            encrypted_pwd = encrypt_password(new_password)
-        except Exception as encrypt_exc:
-            logger.warning(f"Failed to encrypt password (non-critical): {encrypt_exc}")
-            encrypted_pwd = None
-        
-        if encrypted_pwd:
-            await session.execute(
-                text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
-                {"encrypted": encrypted_pwd, "user_id": user_id}
+            result = await session.execute(
+                text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'users' AND column_name = 'password_encrypted'
+                """)
             )
-            await session.commit()
+            column_exists = result.scalar() is not None
+        except Exception as check_exc:
+            logger.warning(f"Failed to check password_encrypted column existence: {check_exc}")
+            # Assume column doesn't exist if check fails
+            column_exists = False
+        
+        if column_exists:
+            try:
+                encrypted_pwd = encrypt_password(new_password)
+            except Exception as encrypt_exc:
+                logger.warning(f"Failed to encrypt password (non-critical): {encrypt_exc}")
+                encrypted_pwd = None
+            
+            if encrypted_pwd:
+                try:
+                    await session.execute(
+                        text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+                        {"encrypted": encrypted_pwd, "user_id": user_id}
+                    )
+                    await session.commit()
+                    logger.debug(f"Successfully updated password_encrypted for user {user_id}")
+                except Exception as update_exc:
+                    # Rollback the encrypted password update if it fails
+                    try:
+                        await session.rollback()
+                    except Exception:
+                        pass
+                    logger.warning(f"Failed to update password_encrypted column (non-critical): {update_exc}")
+                    # Don't fail the whole request - password_hash was already updated successfully
+        else:
+            logger.debug("password_encrypted column does not exist, skipping update")
     except Exception as exc:
-        # Rollback the encrypted password update if it fails
+        # Catch any unexpected errors in the entire password_encrypted update block
         try:
             await session.rollback()
         except Exception:
             pass
-        logger.warning(f"Failed to update password_encrypted column (non-critical): {exc}")
+        logger.warning(f"Unexpected error in password_encrypted update (non-critical): {exc}")
         # Don't fail the whole request - password_hash was already updated successfully
     
     # Log password in development mode
@@ -1875,6 +1944,29 @@ async def admin_get_user_password(
     user = await session.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    # First check if password_encrypted column exists
+    column_exists = False
+    try:
+        result = await session.execute(
+            text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'users' AND column_name = 'password_encrypted'
+            """)
+        )
+        column_exists = result.scalar() is not None
+    except Exception as check_exc:
+        logger.warning(f"Failed to check password_encrypted column existence: {check_exc}")
+        # Assume column doesn't exist if check fails
+        column_exists = False
+    
+    if not column_exists:
+        return {
+            "password": None,
+            "has_password": False,
+            "message": "Password column does not exist yet",
+        }
     
     # Get password_encrypted column manually since it might not exist in model yet
     try:
