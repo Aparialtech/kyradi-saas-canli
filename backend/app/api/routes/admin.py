@@ -2477,27 +2477,38 @@ async def admin_send_bulk_email(
             detail=f"Invalid email addresses: {', '.join(invalid_emails[:5])}"
         )
     
-    # Send emails
-    result = await EmailService.send_bulk_email(
-        recipients=payload.recipients,
-        subject=payload.subject,
-        body=payload.body,
-        is_html=payload.is_html,
-    )
+    try:
+        # Send emails
+        result = await EmailService.send_bulk_email(
+            recipients=payload.recipients,
+            subject=payload.subject,
+            body=payload.body,
+            is_html=payload.is_html,
+        )
+    except Exception as exc:
+        logger.exception(f"Error sending bulk email: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"E-posta gönderilirken hata oluştu: {str(exc)}"
+        )
     
     # Determine tenant_id from recipients (if all recipients belong to same tenant)
     tenant_id = None
-    if payload.recipients:
-        # Get users by email to find tenant_id
-        users_stmt = select(User).where(User.email.in_(payload.recipients))
-        users_result = await session.execute(users_stmt)
-        users = users_result.scalars().all()
-        
-        # If all recipients belong to same tenant, set tenant_id
-        if users:
-            tenant_ids = {user.tenant_id for user in users if user.tenant_id}
-            if len(tenant_ids) == 1:
-                tenant_id = list(tenant_ids)[0]
+    try:
+        if payload.recipients:
+            # Get users by email to find tenant_id
+            users_stmt = select(User).where(User.email.in_(payload.recipients))
+            users_result = await session.execute(users_stmt)
+            users = users_result.scalars().all()
+            
+            # If all recipients belong to same tenant, set tenant_id
+            if users:
+                tenant_ids = {user.tenant_id for user in users if user.tenant_id}
+                if len(tenant_ids) == 1:
+                    tenant_id = list(tenant_ids)[0]
+    except Exception as exc:
+        logger.warning(f"Error determining tenant_id from recipients: {exc}")
+        # Continue without tenant_id
     
     # Audit log - create one log per tenant if multiple tenants
     tenant_ids_to_log = {tenant_id} if tenant_id else set()
@@ -2506,27 +2517,35 @@ async def admin_send_bulk_email(
     if not tenant_ids_to_log:
         tenant_ids_to_log.add(None)
     
-    for tid in tenant_ids_to_log:
-        await record_audit(
-            session,
-            tenant_id=tid,
-            actor_user_id=current_user.id,
-            action="admin.email.bulk_send",
-            entity="email",
-            entity_id=None,
-            meta={
-                "recipient_count": len(payload.recipients),
-                "subject": payload.subject[:100],
-                "success_count": result["success_count"],
-                "failed_count": result["failed_count"],
-                "recipients": payload.recipients[:10],  # Store first 10 recipients
-            },
-        )
-    await session.commit()
+    try:
+        for tid in tenant_ids_to_log:
+            await record_audit(
+                session,
+                tenant_id=tid,
+                actor_user_id=current_user.id,
+                action="admin.email.bulk_send",
+                entity="email",
+                entity_id=None,
+                meta={
+                    "recipient_count": len(payload.recipients),
+                    "subject": payload.subject[:100],
+                    "success_count": result.get("success_count", 0),
+                    "failed_count": result.get("failed_count", 0),
+                    "recipients": payload.recipients[:10],  # Store first 10 recipients
+                },
+            )
+        await session.commit()
+    except Exception as exc:
+        logger.warning(f"Error recording audit log: {exc}")
+        # Continue even if audit log fails
+        try:
+            await session.rollback()
+        except Exception:
+            pass
     
     return BulkEmailResponse(
-        success_count=result["success_count"],
-        failed_count=result["failed_count"],
-        failed_emails=result["failed_emails"],
-        message=f"{result['success_count']} e-posta başarıyla gönderildi, {result['failed_count']} başarısız."
+        success_count=result.get("success_count", 0),
+        failed_count=result.get("failed_count", 0),
+        failed_emails=result.get("failed_emails", []),
+        message=f"{result.get('success_count', 0)} e-posta başarıyla gönderildi, {result.get('failed_count', 0)} başarısız."
     )
