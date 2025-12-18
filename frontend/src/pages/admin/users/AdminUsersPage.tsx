@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key, Trash2, Copy } from "../../../lib/lucide";
+import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key, Trash2, Copy, Eye } from "../../../lib/lucide";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
@@ -158,6 +158,7 @@ export function AdminUsersPage() {
     onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       setResetPasswordResult(data);
+      setShowResetPasswordModal(true); // Show modal with new password
       if (data.new_password) {
         // Copy to clipboard
         navigator.clipboard.writeText(data.new_password).then(() => {
@@ -485,6 +486,47 @@ export function AdminUsersPage() {
                 key: 'created_at',
                 label: 'Oluşturulma',
                 render: (value) => new Date(value).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }),
+              },
+              {
+                key: 'password',
+                label: 'Şifre',
+                align: 'center',
+                render: (_, row) => (
+                  <button
+                    onClick={() => {
+                      setResetPasswordUser(row);
+                      setResetPasswordResult(null);
+                      // Auto-trigger password reset
+                      resetPasswordMutation.mutate({ userId: row.id, auto_generate: true });
+                    }}
+                    disabled={resetPasswordMutation.isPending && resetPasswordUser?.id === row.id}
+                    title="Şifreyi göster (yeni şifre oluşturur)"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 'var(--space-2)',
+                      borderRadius: 'var(--radius-md)',
+                      border: 'none',
+                      background: 'rgba(99, 102, 241, 0.1)',
+                      color: '#6366f1',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                    }}
+                  >
+                    {resetPasswordMutation.isPending && resetPasswordUser?.id === row.id ? (
+                      <Loader2 className="h-4 w-4" style={{ animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                ),
               },
               {
                 key: 'actions',
