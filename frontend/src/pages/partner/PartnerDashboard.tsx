@@ -4,7 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 
 import { useAuth } from "../../context/AuthContext";
-import { partnerReportService, type PartnerSummary } from "../../services/partner/reports";
+import {
+  partnerReportService,
+  type PartnerOverviewByPaymentMethodItem,
+  type PartnerSummary,
+} from "../../services/partner/reports";
 import { useToast } from "../../hooks/useToast";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ToastContainer } from "../../components/common/ToastContainer";
@@ -51,7 +55,13 @@ import {
 
 const warningActions: Record<
   string,
-  { labelKey: TranslationKey; descriptionKey: TranslationKey; href: string; variant?: "primary" | "secondary" }
+  {
+    labelKey: TranslationKey;
+    descriptionKey: TranslationKey;
+    href?: string;
+    hrefKey?: TranslationKey;
+    variant?: "primary" | "secondary";
+  }
 > = {
   "aktif rezervasyon": {
     labelKey: "partner.warning.planUpgrade.label",
@@ -67,7 +77,7 @@ const warningActions: Record<
   "rapor export": {
     labelKey: "partner.warning.export.label",
     descriptionKey: "partner.warning.export.desc",
-    href: "https://docs.kyradi.com/guide/report-export",
+    hrefKey: "partner.warning.export.href",
   },
   "self-service rezervasyon": {
     labelKey: "partner.warning.selfService.label",
@@ -90,6 +100,10 @@ export function PartnerOverview() {
   const [supportTopic, setSupportTopic] = useState("plan_upgrade");
   const [supportMessage, setSupportMessage] = useState("");
   const [supportContact, setSupportContact] = useState(user?.email ?? "");
+  const exportGuideUrl = t("partner.warning.export.href");
+  const exportGuideHref = exportGuideUrl?.startsWith("http")
+    ? exportGuideUrl
+    : "https://docs.kyradi.com/guide/report-export";
   
   const summaryQuery = useQuery<PartnerSummary, Error>({
     queryKey: ["partner", "summary"],
@@ -110,6 +124,15 @@ export function PartnerOverview() {
     queryFn: () => partnerReportService.getStorageUsage(),
   });
 
+  const paymentMethodQuery = useQuery<PartnerOverviewByPaymentMethodItem[], Error>({
+    queryKey: ["partner", "overview", "payment-methods"],
+    queryFn: async () => {
+      const response = await partnerReportService.getPartnerOverview();
+      return response.by_payment_method ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   useEffect(() => {
     if (summaryQuery.error) {
       push({
@@ -119,6 +142,16 @@ export function PartnerOverview() {
       });
     }
   }, [summaryQuery.error, push, t]);
+
+  useEffect(() => {
+    if (paymentMethodQuery.error) {
+      push({
+        title: "Gelir dağılımı yüklenemedi",
+        description: getErrorMessage(paymentMethodQuery.error),
+        type: "error",
+      });
+    }
+  }, [paymentMethodQuery.error, push]);
   
   useEffect(() => {
     setSupportContact(user?.email ?? "");
@@ -162,6 +195,27 @@ export function PartnerOverview() {
       occupancy_rate: item.occupancy_rate ?? 0,
     }));
   }, [storageUsageQuery.data]);
+
+  const revenueDistributionData = useMemo(() => {
+    if (!paymentMethodQuery.data) return [];
+    const fallbackColors = ["#6366f1", "#0ea5e9", "#22c55e", "#f59e0b", "#ef4444", "#14b8a6"];
+    const methodColors: Record<string, string> = {
+      GATEWAY_DEMO: "#6366f1",
+      GATEWAY_LIVE: "#3B82F6",
+      POS: "#0ea5e9",
+      CASH: "#22c55e",
+      BANK_TRANSFER: "#f59e0b",
+    };
+
+    return paymentMethodQuery.data.map((item, index) => {
+      const amount = Math.max(0, (item.revenue_minor ?? 0) / 100);
+      return {
+        name: item.method_name || item.method || `Yöntem ${index + 1}`,
+        value: Number(amount.toFixed(2)),
+        color: methodColors[item.method ?? ""] || fallbackColors[index % fallbackColors.length],
+      };
+    });
+  }, [paymentMethodQuery.data]);
 
   const statItems = useMemo(() => {
     const totalLimit =
@@ -246,7 +300,7 @@ export function PartnerOverview() {
               node: (
                 <Button
                   variant="ghost"
-                  onClick={() => window.open("https://docs.kyradi.com", "_blank", "noopener")}
+                  onClick={() => window.open(exportGuideHref, "_blank", "noopener,noreferrer")}
                 >
                   {t("partner.warning.export.label")}
                 </Button>
@@ -328,13 +382,14 @@ export function PartnerOverview() {
                       {(() => {
                         const action = warningActions[warning.type.toLowerCase()];
                         if (!action) return null;
+                        const href = action.hrefKey ? t(action.hrefKey) : action.href;
                         return (
                           <div style={{ marginTop: 'var(--space-2)' }}>
                             <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                               {t(action.descriptionKey)}
                             </p>
                             <a
-                              href={action.href}
+                              href={href}
                               target="_blank"
                               rel="noreferrer"
                               style={{ 
@@ -424,7 +479,31 @@ export function PartnerOverview() {
             Gelir Dağılımı
           </h3>
           <div style={{ height: '300px', minHeight: '300px', minWidth: 0 }}>
-            <RevenueDonutChart />
+            {paymentMethodQuery.isLoading ? (
+              <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
+            ) : paymentMethodQuery.error ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "var(--space-2)",
+                  height: "100%",
+                  color: "var(--text-tertiary)",
+                }}
+              >
+                <PiggyBank className="h-10 w-10" style={{ opacity: 0.35 }} />
+                <span style={{ fontSize: "var(--text-sm)", textAlign: "center" }}>
+                  Gelir dağılımı yüklenemedi
+                </span>
+                <span style={{ fontSize: "var(--text-xs)", maxWidth: 260, textAlign: "center" }}>
+                  {getErrorMessage(paymentMethodQuery.error)}
+                </span>
+              </div>
+            ) : (
+              <RevenueDonutChart data={revenueDistributionData} />
+            )}
           </div>
         </ModernCard>
 

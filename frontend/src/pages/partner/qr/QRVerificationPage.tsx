@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useId } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { QrCode, CheckCircle2, XCircle } from "../../../lib/lucide";
@@ -16,8 +16,12 @@ import { Badge } from "../../../components/ui/Badge";
 
 const statusLabels: Record<string, string> = {
   active: "Aktif",
+  reserved: "Rezerve",
   completed: "Tamamlandı",
   cancelled: "İptal",
+  expired: "Süresi Doldu",
+  no_show: "Gelmedi",
+  lost: "Kayıp",
 };
 
 const formatDateTime = (value?: string | null) => {
@@ -40,6 +44,9 @@ export function QRVerificationPage() {
     evidence: string;
   } | null>(null);
   const { messages, push } = useToast();
+  const inputId = useId();
+  const actionNoteId = useId();
+  const actionEvidenceId = useId();
 
   const handoverMutation = useMutation({
     mutationFn: ({
@@ -61,6 +68,30 @@ export function QRVerificationPage() {
     }) => reservationService.markReturned(id, payload),
   });
 
+  const getVerificationErrorMessage = useCallback((verification: QRVerifyResult): string => {
+    const statusKey = (verification.status_override || verification.status || "").toLowerCase();
+
+    if (!verification.reservation_id) {
+      return "Bu QR kodu bu otele ait aktif bir rezervasyonla eşleşmiyor.";
+    }
+
+    const friendlyMessages: Record<string, string> = {
+      not_found: "Bu QR kodu ile eşleşen aktif rezervasyon bulunamadı.",
+      cancelled: "Rezervasyon iptal edildiği için QR kodu geçersiz.",
+      completed: "Rezervasyon tamamlandığı için QR kodu kullanılamıyor.",
+      expired: "Rezervasyon süresi dolduğu için QR kodu pasif.",
+      reserved: "Rezervasyon henüz depoya teslim alınmadı; teslim alındığında QR kodu aktif olacak.",
+      no_show: "Misafir randevusuna gelmediği için QR kodu kullanılamıyor.",
+      lost: "Rezervasyon kayıp olarak işaretlenmiş, QR kodu devre dışı.",
+    };
+
+    if (statusKey && friendlyMessages[statusKey]) {
+      return friendlyMessages[statusKey];
+    }
+
+    return "Rezervasyon bulundu ancak QR kodu şu anda kullanılamıyor.";
+  }, []);
+
   const handleVerify = useCallback(async () => {
     if (!code.trim()) {
       push({ title: "QR kodu girin", type: "error" });
@@ -74,13 +105,7 @@ export function QRVerificationPage() {
       if (response.valid) {
         push({ title: "QR doğrulandı", description: "Rezervasyon aktif ve geçerli", type: "success" });
       } else {
-        const statusMessages: Record<string, string> = {
-          not_found: "Bu QR kod ile eşleşen aktif rezervasyon bulunamadı.",
-          cancelled: "Bu rezervasyon iptal edilmiş.",
-          completed: "Bu rezervasyon tamamlanmış.",
-          expired: "Bu rezervasyonun süresi dolmuş.",
-        };
-        const errorMessage = statusMessages[response.status || ""] || response.status || "Geçersiz QR kodu";
+        const errorMessage = getVerificationErrorMessage(response);
         push({ title: "QR doğrulama başarısız", description: errorMessage, type: "error" });
       }
     } catch (error) {
@@ -89,7 +114,7 @@ export function QRVerificationPage() {
     } finally {
       setLoading(false);
     }
-  }, [code, push]);
+  }, [code, getVerificationErrorMessage, push]);
 
   const handleVerifySubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -175,23 +200,14 @@ export function QRVerificationPage() {
 
   const invalidMessage = useMemo(() => {
     if (!result || result.valid) return null;
-    if (!result.reservation_id) {
-      return "QR kodu geçersiz veya rezervasyon bulunamadı. Detaylar için yöneticinizle iletişime geçin.";
-    }
-    if (result.status === "expired") {
-      return "Rezervasyon süresi dolduğu için QR kodu pasif durumda.";
-    }
-    if (result.status) {
-      const label = statusLabels[result.status] ?? result.status;
-      return `Rezervasyon ${label.toLowerCase()} durumunda olduğu için QR kodu kullanılamıyor.`;
-    }
-    return "Rezervasyon bulundu ancak QR kodu şu anda kullanılamıyor.";
-  }, [result]);
+    return getVerificationErrorMessage(result);
+  }, [getVerificationErrorMessage, result]);
 
   const getStatusBadgeVariant = (status?: string) => {
     if (status === "active") return "success";
     if (status === "completed") return "info";
-    if (status === "cancelled") return "danger";
+    if (status === "cancelled" || status === "lost") return "danger";
+    if (status === "expired" || status === "reserved" || status === "no_show") return "warning";
     return "neutral";
   };
 
@@ -227,6 +243,7 @@ export function QRVerificationPage() {
 
         <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <ModernInput
+            id={inputId}
             label="QR Kodu"
             value={code}
             onChange={(e) => setCode(e.target.value)}
@@ -453,6 +470,7 @@ export function QRVerificationPage() {
               </div>
             </div>
             <ModernInput
+              id={actionNoteId}
               label="Not"
               value={actionModal.notes}
               onChange={(e) => handleActionFieldChange("notes", e.target.value)}
@@ -460,6 +478,7 @@ export function QRVerificationPage() {
               fullWidth
             />
             <ModernInput
+              id={actionEvidenceId}
               label="Fotoğraf / Tutanak URL"
               value={actionModal.evidence}
               onChange={(e) => handleActionFieldChange("evidence", e.target.value)}

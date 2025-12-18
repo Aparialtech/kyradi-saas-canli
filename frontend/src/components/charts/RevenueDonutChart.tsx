@@ -10,22 +10,20 @@ interface RevenueData {
 
 interface RevenueDonutChartProps {
   data?: RevenueData[];
+  currencySymbol?: string;
 }
 
-const defaultData: RevenueData[] = [
-  { name: 'MagicPay', value: 4500, color: '#3B82F6' },
-  { name: 'Nakit', value: 2800, color: '#10B981' },
-  { name: 'Kredi Kartı', value: 1900, color: '#8B5CF6' },
-  { name: 'Havale', value: 800, color: '#F59E0B' },
-];
-
 export const RevenueDonutChart: React.FC<RevenueDonutChartProps> = ({ 
-  data = defaultData 
+  data = [],
+  currencySymbol = "₺",
 }) => {
-  if (!data || data.length === 0) {
+  const chartData = (data || []).filter((item) => item.value !== undefined);
+  const hasData = chartData.some((item) => item.value > 0);
+
+  if (!hasData) {
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
-        <p style={{ color: '#9ca3af', fontSize: '14px' }}>No data available</p>
+        <p style={{ color: '#9ca3af', fontSize: '14px' }}>Veri bulunamadı</p>
       </div>
     );
   }
@@ -34,7 +32,7 @@ export const RevenueDonutChart: React.FC<RevenueDonutChartProps> = ({
     <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0}>
       <PieChart>
         <Pie
-          data={data}
+          data={chartData}
           cx="50%"
           cy="50%"
           innerRadius={80}
@@ -45,7 +43,7 @@ export const RevenueDonutChart: React.FC<RevenueDonutChartProps> = ({
           animationDuration={1500}
           animationEasing="ease-out"
         >
-          {data.map((entry, index) => (
+          {chartData.map((entry, index) => (
             <Cell 
               key={`cell-${index}`} 
               fill={entry.color}
@@ -63,7 +61,7 @@ export const RevenueDonutChart: React.FC<RevenueDonutChartProps> = ({
             fontFamily: 'Satoshi',
             fontSize: '14px',
           }}
-          formatter={(value: number) => [`₺${value.toLocaleString()}`, 'Gelir']}
+          formatter={(value: number) => [`${currencySymbol}${value.toLocaleString()}`, 'Gelir']}
         />
         <Legend 
           verticalAlign="bottom"
@@ -79,4 +77,3 @@ export const RevenueDonutChart: React.FC<RevenueDonutChartProps> = ({
     </ResponsiveContainer>
   );
 };
-
