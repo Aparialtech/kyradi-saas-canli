@@ -1982,11 +1982,27 @@ async def admin_get_user_password(
         column_exists = False
     
     if not column_exists:
-        return {
-            "password": None,
-            "has_password": False,
-            "message": "Password column does not exist yet",
-        }
+        # Try to add the column automatically
+        try:
+            logger.info("password_encrypted column does not exist, attempting to add it")
+            await session.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_encrypted VARCHAR(500)")
+            )
+            await session.commit()
+            logger.info("Successfully added password_encrypted column")
+            # Column was just added, so no password exists yet
+            return {
+                "password": None,
+                "has_password": False,
+                "message": "Password column was just created. Please reset the user's password to store it.",
+            }
+        except Exception as add_exc:
+            logger.error(f"Failed to add password_encrypted column: {add_exc}")
+            return {
+                "password": None,
+                "has_password": False,
+                "message": "Password column does not exist yet. Please contact administrator.",
+            }
     
     # Get password_encrypted column manually since it might not exist in model yet
     try:
