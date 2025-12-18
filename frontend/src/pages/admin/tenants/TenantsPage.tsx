@@ -155,6 +155,7 @@ export function TenantsPage() {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<TenantCreatePayload>({
     defaultValues: {
@@ -168,13 +169,26 @@ export function TenantsPage() {
   });
 
   const submit = handleSubmit(async (values) => {
+    const slugPattern = /^[a-z0-9][a-z0-9_-]*$/;
+    const normalizedSlug = values.slug?.trim().toLowerCase() || "";
+
+    if (!slugPattern.test(normalizedSlug)) {
+      setError("slug", {
+        type: "pattern",
+        message: "Sadece küçük harf, rakam, tire (-) ve alt çizgi (_) kullanılabilir.",
+      });
+      return;
+    }
+
+    const payload = { ...values, slug: normalizedSlug };
+
     if (editingTenant) {
-      const { slug, ...payload } = values;
-      await updateMutation.mutateAsync({ id: editingTenant.id, payload });
+      const { slug, ...updatePayload } = payload;
+      await updateMutation.mutateAsync({ id: editingTenant.id, payload: updatePayload });
       setEditingTenant(null);
       reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
     } else {
-      await createMutation.mutateAsync(values);
+      await createMutation.mutateAsync(payload);
       // Form reset is handled in createMutation.onSuccess
     }
   });
@@ -231,9 +245,16 @@ export function TenantsPage() {
                   <ModernInput
                     label={t("common.shortName")}
                     placeholder="demo-hotel"
-                    {...register("slug", { required: `${t("common.shortName")}` })}
+                    {...register("slug", {
+                      required: `${t("common.shortName")}`,
+                      pattern: {
+                        value: /^[a-z0-9][a-z0-9_-]*$/,
+                        message: "Küçük harf, rakam, tire (-) ve alt çizgi (_) kullanın.",
+                      },
+                      setValueAs: (value: string) => (value ? value.trim().toLowerCase() : ""),
+                    })}
                     error={errors.slug?.message}
-                    helperText={t("common.shortNameHint")}
+                    helperText={`${t("common.shortNameHint")} (küçük harf, rakam, - , _)`}
                     fullWidth
                     required
                   />

@@ -88,6 +88,8 @@ const errorTranslations: Record<string, string> = {
   "Location not found": "Lokasyon bulunamadı.",
   "Storage not found": "Depo bulunamadı.",
   "Storage code already exists": "Bu depo kodu zaten kullanılıyor.",
+  "Slug must be lowercase and contain only alphanumeric characters, hyphens, and underscores":
+    "Slug yalnızca küçük harf, rakam, tire (-) ve alt çizgi (_) içerebilir.",
   
   // Reservation errors
   "Reservation not found": "Rezervasyon bulunamadı.",
