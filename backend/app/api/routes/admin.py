@@ -88,6 +88,7 @@ from ...services.limits import (
     report_exports_last24h,
     get_storage_usage_mb,
 )
+from ...services.messaging import EmailService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
@@ -1921,3 +1922,100 @@ async def update_tenant_metadata(
     
     # Return updated metadata
     return await get_tenant_metadata(tenant_id, session, current_user)
+
+
+# ────────────────────────────────────────────────────────────────────────────────
+# EMAIL ENDPOINTS
+# ────────────────────────────────────────────────────────────────────────────────
+
+class BulkEmailRequest(BaseModel):
+    """Request model for sending bulk emails."""
+    recipients: List[str]
+    subject: str
+    body: str
+    is_html: bool = False
+
+
+class BulkEmailResponse(BaseModel):
+    """Response model for bulk email results."""
+    success_count: int
+    failed_count: int
+    failed_emails: List[str]
+    message: str
+
+
+@router.post("/email/send", response_model=BulkEmailResponse)
+async def admin_send_bulk_email(
+    payload: BulkEmailRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_admin_user),
+) -> BulkEmailResponse:
+    """Send bulk email to specified recipients.
+    
+    Only super_admin and support roles can send bulk emails.
+    """
+    if current_user.role not in {UserRole.SUPER_ADMIN, UserRole.SUPPORT}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super admin or support can send bulk emails"
+        )
+    
+    if not payload.recipients:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one recipient is required"
+        )
+    
+    if not payload.subject.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Subject is required"
+        )
+    
+    if not payload.body.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Body is required"
+        )
+    
+    # Validate email addresses (basic check)
+    import re
+    email_pattern = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
+    invalid_emails = [e for e in payload.recipients if not email_pattern.match(e)]
+    if invalid_emails:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid email addresses: {', '.join(invalid_emails[:5])}"
+        )
+    
+    # Send emails
+    result = await EmailService.send_bulk_email(
+        recipients=payload.recipients,
+        subject=payload.subject,
+        body=payload.body,
+        is_html=payload.is_html,
+    )
+    
+    # Audit log
+    await record_audit(
+        session,
+        tenant_id=None,
+        actor_user_id=current_user.id,
+        action="admin.email.bulk_send",
+        entity="email",
+        entity_id=None,
+        meta={
+            "recipient_count": len(payload.recipients),
+            "subject": payload.subject[:100],
+            "success_count": result["success_count"],
+            "failed_count": result["failed_count"],
+        },
+    )
+    await session.commit()
+    
+    return BulkEmailResponse(
+        success_count=result["success_count"],
+        failed_count=result["failed_count"],
+        failed_emails=result["failed_emails"],
+        message=f"{result['success_count']} e-posta başarıyla gönderildi, {result['failed_count']} başarısız."
+    )

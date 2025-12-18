@@ -636,6 +636,55 @@ class SMSService:
             return False
 
 
+    @staticmethod
+    async def send_bulk_email(
+        recipients: list[str],
+        subject: str,
+        body: str,
+        is_html: bool = False,
+    ) -> dict:
+        """Send bulk email to multiple recipients.
+        
+        Returns dict with success count, failed count, and failed emails.
+        """
+        provider = settings.email_provider.lower()
+        success_count = 0
+        failed_count = 0
+        failed_emails = []
+        
+        body_html = body if is_html else f"<pre style='font-family: inherit; white-space: pre-wrap;'>{body}</pre>"
+        body_text = body if not is_html else body.replace("<br>", "\n").replace("</p>", "\n")
+        
+        for email in recipients:
+            try:
+                if provider == "resend":
+                    await EmailService._send_via_resend(email, subject, body_html, body_text)
+                elif provider == "sendgrid":
+                    await EmailService._send_via_sendgrid(email, subject, body_html, body_text)
+                elif provider == "mailgun":
+                    await EmailService._send_via_mailgun(email, subject, body_html, body_text)
+                elif provider == "smtp":
+                    if settings.smtp_host and settings.smtp_user:
+                        await EmailService._send_via_smtp(email, subject, body_html, body_text)
+                    else:
+                        logger.info(f"[EMAIL LOG] Bulk email to {email}: {subject}")
+                else:
+                    logger.info(f"[EMAIL LOG] Bulk email to {email}: {subject}")
+                
+                success_count += 1
+                logger.info(f"✅ Email sent to {email}")
+            except Exception as e:
+                failed_count += 1
+                failed_emails.append(email)
+                logger.error(f"❌ Failed to send email to {email}: {e}")
+        
+        return {
+            "success_count": success_count,
+            "failed_count": failed_count,
+            "failed_emails": failed_emails,
+        }
+
+
 # Global instances
 email_service = EmailService()
 sms_service = SMSService()

@@ -987,7 +987,7 @@ export const translations = {
     "login.resetTenantLabel": "Hotel",
     "login.resetTenantPlaceholder": "demo-hotel or admin",
     "login.resetEmailLabel": "Email",
-    "login.resetButton": "Generate Temporary Password",
+    "login.resetButton": "Reset Password",
     "login.resetSubmitting": "Sending...",
     "login.footerNote": "Demo tenant credentials are pre-filled.",
     "login.error.generic": "Login failed. Please try again.",

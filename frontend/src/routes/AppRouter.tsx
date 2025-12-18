@@ -11,6 +11,7 @@ import {
   AdminRevenuePage,
   AdminSettlementsPage,
   AdminUsersPage,
+  AdminEmailPage,
   AdminSettingsPage,
 } from "../pages/admin/AdminDashboard";
 import { LoginPage } from "../pages/auth/LoginPage";
@@ -58,6 +59,7 @@ export function AppRouter() {
           <Route path="revenue" element={<AdminRevenuePage />} />
           <Route path="settlements" element={<AdminSettlementsPage />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="email" element={<AdminEmailPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
           <Route path="*" element={<Navigate to="/admin/overview" replace />} />
