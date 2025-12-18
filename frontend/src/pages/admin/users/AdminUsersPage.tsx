@@ -148,33 +148,6 @@ export function AdminUsersPage() {
     },
   });
 
-  const resetPasswordMutation = useMutation({
-    mutationFn: async ({ userId, auto_generate }: { userId: string; auto_generate: boolean }) => {
-      const response = await http.post<{ new_password?: string; message: string }>(`/admin/users/${userId}/reset-password`, { 
-        auto_generate,
-        password: undefined 
-      });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      setResetPasswordResult(data);
-      setShowResetPasswordModal(true); // Show modal with new password
-      if (data.new_password) {
-        // Copy to clipboard
-        navigator.clipboard.writeText(data.new_password).then(() => {
-          push({ title: "Parola sıfırlandı", description: "Yeni parola panoya kopyalandı", type: "success" });
-        }).catch(() => {
-          push({ title: "Parola sıfırlandı", description: `Yeni parola: ${data.new_password}`, type: "success" });
-        });
-      } else {
-        push({ title: "Parola sıfırlandı", type: "success" });
-      }
-    },
-    onError: (error: unknown) => {
-      push({ title: "Parola sıfırlanamadı", description: getErrorMessage(error), type: "error" });
-    },
-  });
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -241,14 +214,6 @@ export function AdminUsersPage() {
     updateUserMutation.mutate({
       userId: editingUser.id,
       payload,
-    });
-  };
-
-  const handleResetPassword = (autoGenerate: boolean = true) => {
-    if (!resetPasswordUser) return;
-    resetPasswordMutation.mutate({
-      userId: resetPasswordUser.id,
-      auto_generate: autoGenerate,
     });
   };
 
@@ -892,11 +857,6 @@ export function AdminUsersPage() {
                 <Loader2 className="h-8 w-8" style={{ margin: "0 auto", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
                 <p style={{ marginTop: "1rem", color: "var(--text-tertiary)" }}>Şifre yükleniyor...</p>
               </div>
-            ) : resetPasswordMutation.isPending ? (
-              <div style={{ textAlign: "center", padding: "2rem" }}>
-                <Loader2 className="h-8 w-8" style={{ margin: "0 auto", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
-                <p style={{ marginTop: "1rem", color: "var(--text-tertiary)" }}>Yeni şifre oluşturuluyor...</p>
-              </div>
             ) : resetPasswordResult?.current_password ? (
               <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
                 <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Mevcut Şifre:</p>
@@ -922,26 +882,6 @@ export function AdminUsersPage() {
                 </p>
                 <p style={{ margin: "1rem 0 0 0", fontSize: "0.875rem", color: "var(--text-tertiary)" }}>
                   Bu kullanıcının şifresi şifrelenmiş formatta saklanmamış. Şifreyi görmek için kullanıcıya yeni şifre oluşturmasını söyleyin.
-                </p>
-              </div>
-            ) : resetPasswordResult?.new_password ? (
-              <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
-                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Yeni Şifre Oluşturuldu:</p>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                  <code style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", fontFamily: "monospace" }}>
-                    {resetPasswordResult.new_password}
-                  </code>
-                  <ModernButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyPassword(resetPasswordResult.new_password!)}
-                    leftIcon={<Copy className="h-4 w-4" />}
-                  >
-                    Kopyala
-                  </ModernButton>
-                </div>
-                <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem", color: "var(--text-tertiary)" }}>
-                  ✅ Yeni şifre başarıyla oluşturuldu ve kullanıcının şifresi güncellendi.
                 </p>
               </div>
             ) : null}
