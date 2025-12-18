@@ -9,7 +9,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import Select, case, func, select, cast, String, Date
+from sqlalchemy import Select, case, func, select, cast, String, Date, text
 from sqlalchemy.ext.asyncio import AsyncSession
 import csv
 import io
@@ -1622,7 +1622,7 @@ async def admin_create_user(
     user = User(
         email=payload.email,
         password_hash=get_password_hash(password),
-        password_encrypted=encrypt_password(password),  # Store encrypted version for admin viewing
+        # password_encrypted will be set manually after flush
         role=payload.role.value,
         is_active=payload.is_active,
         tenant_id=tenant_id,
@@ -1631,6 +1631,17 @@ async def admin_create_user(
     )
     session.add(user)
     await session.flush()
+    
+    # Store encrypted version for admin viewing (WARNING: Security risk!)
+    # Update password_encrypted column manually since it might not exist in model yet
+    try:
+        encrypted_pwd = encrypt_password(password)
+        await session.execute(
+            text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+            {"encrypted": encrypted_pwd, "user_id": user.id}
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to update password_encrypted column: {exc}")
     
     # Log password in development mode
     from ...core.config import settings
@@ -1751,7 +1762,15 @@ async def admin_reset_user_password(
     
     user.password_hash = get_password_hash(new_password)
     # Also store encrypted version for admin viewing (WARNING: Security risk!)
-    user.password_encrypted = encrypt_password(new_password)
+    # Update password_encrypted column manually since it might not exist in model yet
+    try:
+        encrypted_pwd = encrypt_password(new_password)
+        await session.execute(
+            text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+            {"encrypted": encrypted_pwd, "user_id": user_id}
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to update password_encrypted column: {exc}")
     
     await record_audit(
         session,
@@ -1796,24 +1815,40 @@ async def admin_get_user_password(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
-    if user.password_encrypted:
-        try:
-            current_password = decrypt_password(user.password_encrypted)
-            return {
-                "password": current_password,
-                "has_password": True,
-            }
-        except Exception:
+    # Get password_encrypted column manually since it might not exist in model yet
+    try:
+        result = await session.execute(
+            text("SELECT password_encrypted FROM users WHERE id = :user_id"),
+            {"user_id": user_id}
+        )
+        row = result.fetchone()
+        encrypted_password = row[0] if row else None
+        
+        if encrypted_password:
+            try:
+                current_password = decrypt_password(encrypted_password)
+                return {
+                    "password": current_password,
+                    "has_password": True,
+                }
+            except Exception:
+                return {
+                    "password": None,
+                    "has_password": False,
+                    "message": "Password could not be decrypted",
+                }
+        else:
             return {
                 "password": None,
                 "has_password": False,
-                "message": "Password could not be decrypted",
+                "message": "Password not stored in encrypted format",
             }
-    else:
+    except Exception as exc:
+        logger.warning(f"Failed to get password_encrypted column: {exc}")
         return {
             "password": None,
             "has_password": False,
-            "message": "Password not stored in encrypted format",
+            "message": "Password column does not exist yet",
         }
 
 
