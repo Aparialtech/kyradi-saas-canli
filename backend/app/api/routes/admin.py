@@ -213,19 +213,57 @@ async def create_tenant(
             detail="Tenant creation is disabled in the demo environment. Please contact your system administrator or disable DEMO_MODE to enable tenant creation."
         )
     
-    # Validate slug format (lowercase, URL-safe)
-    if not payload.slug.islower() or not payload.slug.replace("-", "").replace("_", "").isalnum():
+    # Normalize slug: lowercase, replace spaces with hyphens, remove special chars
+    import re
+    import unicodedata
+    
+    # Normalize slug
+    normalized_slug = payload.slug.strip().lower()
+    
+    # Replace Turkish characters with English equivalents
+    turkish_to_english = {
+        'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
+        'Ç': 'c', 'Ğ': 'g', 'İ': 'i', 'Ö': 'o', 'Ş': 's', 'Ü': 'u'
+    }
+    for turkish, english in turkish_to_english.items():
+        normalized_slug = normalized_slug.replace(turkish, english)
+    
+    # Remove accents and diacritics
+    normalized_slug = unicodedata.normalize('NFKD', normalized_slug)
+    normalized_slug = ''.join(c for c in normalized_slug if not unicodedata.combining(c))
+    
+    # Replace spaces and multiple hyphens/underscores with single hyphen
+    normalized_slug = re.sub(r'[\s_]+', '-', normalized_slug)
+    normalized_slug = re.sub(r'-+', '-', normalized_slug)
+    
+    # Remove all characters except alphanumeric, hyphens, and underscores
+    normalized_slug = re.sub(r'[^a-z0-9_-]', '', normalized_slug)
+    
+    # Remove leading/trailing hyphens and underscores
+    normalized_slug = normalized_slug.strip('-_')
+    
+    # Validate final slug format
+    if not normalized_slug or len(normalized_slug) < 3:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Slug must be lowercase and contain only alphanumeric characters, hyphens, and underscores"
+            detail="Slug must be at least 3 characters long after normalization"
         )
     
-    exists = await session.execute(select(Tenant).where(Tenant.slug == payload.slug))
+    if not re.match(r'^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$', normalized_slug):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Slug must start and end with alphanumeric characters"
+        )
+    
+    # Use normalized slug
+    final_slug = normalized_slug
+    
+    exists = await session.execute(select(Tenant).where(Tenant.slug == final_slug))
     if exists.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant slug already in use")
 
     tenant = Tenant(
-        slug=payload.slug,
+        slug=final_slug,  # Use normalized slug
         name=payload.name,
         plan=payload.plan,
         is_active=payload.is_active,
