@@ -50,7 +50,7 @@ export function AdminUsersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
-  const [resetPasswordResult, setResetPasswordResult] = useState<{ new_password?: string; current_password?: string } | null>(null);
+  const [resetPasswordResult, setResetPasswordResult] = useState<{ new_password?: string; current_password?: string; message?: string } | null>(null);
   const [currentPasswordLoading, setCurrentPasswordLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   
@@ -270,18 +270,25 @@ export function AdminUsersPage() {
     setCurrentPasswordLoading(user.id);
     setShowResetPasswordModal(true);
     
-    // Try to get current password
+    // Try to get current password only - don't generate new one
     try {
       const response = await http.get<{ password: string | null; has_password: boolean; message?: string }>(`/admin/users/${user.id}/password`);
       if (response.data.password) {
         setResetPasswordResult({ current_password: response.data.password });
       } else {
-        // If no current password, generate new one
-        resetPasswordMutation.mutate({ userId: user.id, auto_generate: true });
+        // If no current password, just show message - don't generate new one
+        setResetPasswordResult({ 
+          current_password: undefined,
+          message: response.data.message || "Şifre bulunamadı"
+        });
       }
     } catch (error) {
-      // If error, generate new password
-      resetPasswordMutation.mutate({ userId: user.id, auto_generate: true });
+      // If error, just show error message - don't generate new password
+      const errorMessage = getErrorMessage(error);
+      setResetPasswordResult({ 
+        current_password: undefined,
+        message: errorMessage || "Şifre alınamadı"
+      });
     } finally {
       setCurrentPasswordLoading(null);
     }
@@ -891,38 +898,31 @@ export function AdminUsersPage() {
                 <p style={{ marginTop: "1rem", color: "var(--text-tertiary)" }}>Yeni şifre oluşturuluyor...</p>
               </div>
             ) : resetPasswordResult?.current_password ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
-                  <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Mevcut Şifre:</p>
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <code style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", fontFamily: "monospace" }}>
-                      {resetPasswordResult.current_password}
-                    </code>
-                    <ModernButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyPassword(resetPasswordResult.current_password!)}
-                      leftIcon={<Copy className="h-4 w-4" />}
-                    >
-                      Kopyala
-                    </ModernButton>
-                  </div>
-                </div>
-                <div style={{ padding: "1rem", background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--radius-lg)", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
-                  <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600, color: "#b45309" }}>Yeni Şifre Oluştur</p>
-                  <p style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "#b45309" }}>
-                    Kullanıcının şifresini değiştirmek istiyorsanız yeni şifre oluşturabilirsiniz.
-                  </p>
+              <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
+                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Mevcut Şifre:</p>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <code style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", fontFamily: "monospace" }}>
+                    {resetPasswordResult.current_password}
+                  </code>
                   <ModernButton
-                    variant="primary"
+                    variant="ghost"
                     size="sm"
-                    onClick={() => handleResetPassword(true)}
-                    disabled={resetPasswordMutation.isPending}
-                    leftIcon={<Key className="h-4 w-4" />}
+                    onClick={() => copyPassword(resetPasswordResult.current_password!)}
+                    leftIcon={<Copy className="h-4 w-4" />}
                   >
-                    Yeni Şifre Oluştur
+                    Kopyala
                   </ModernButton>
                 </div>
+              </div>
+            ) : resetPasswordResult?.message ? (
+              <div style={{ padding: "1rem", background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--radius-lg)", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
+                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600, color: "#b45309" }}>Şifre Bulunamadı</p>
+                <p style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "#b45309" }}>
+                  {resetPasswordResult.message}
+                </p>
+                <p style={{ margin: "1rem 0 0 0", fontSize: "0.875rem", color: "var(--text-tertiary)" }}>
+                  Bu kullanıcının şifresi şifrelenmiş formatta saklanmamış. Şifreyi görmek için kullanıcıya yeni şifre oluşturmasını söyleyin.
+                </p>
               </div>
             ) : resetPasswordResult?.new_password ? (
               <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
