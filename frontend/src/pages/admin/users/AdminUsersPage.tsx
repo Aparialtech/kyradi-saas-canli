@@ -264,6 +264,7 @@ export function AdminUsersPage() {
     // Try to get current password only - don't generate new one
     try {
       const response = await http.get<{ password: string | null; has_password: boolean; message?: string }>(`/admin/users/${user.id}/password`);
+      console.log("Password response:", response.data); // Debug log
       if (response.data.password) {
         setResetPasswordResult({ current_password: response.data.password });
       } else {
@@ -276,6 +277,7 @@ export function AdminUsersPage() {
     } catch (error) {
       // If error, just show error message - don't generate new password
       const errorMessage = getErrorMessage(error);
+      console.error("Password fetch error:", error); // Debug log
       setResetPasswordResult({ 
         current_password: undefined,
         message: errorMessage || "Şifre alınamadı"
@@ -908,15 +910,16 @@ export function AdminUsersPage() {
                 <p style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "#b45309" }}>
                   {resetPasswordResult.message.includes("Password column was just created") 
                     ? "Şifre kolonu yeni oluşturuldu. Şifreyi görmek için kullanıcının şifresini sıfırlamanız gerekiyor."
-                    : resetPasswordResult.message.includes("Password not stored") || resetPasswordResult.message.includes("not stored")
+                    : resetPasswordResult.message.includes("Password not stored") || 
+                      resetPasswordResult.message.includes("not stored") ||
+                      resetPasswordResult.message.includes("encrypted format") ||
+                      resetPasswordResult.message.toLowerCase().includes("password not")
                     ? "Bu kullanıcının şifresi şifrelenmiş formatta saklanmamış. Şifreyi görmek için kullanıcının şifresini sıfırlamanız gerekiyor."
                     : resetPasswordResult.message.includes("does not exist")
                     ? "Şifre kolonu henüz oluşturulmamış. Lütfen sistem yöneticisine başvurun."
                     : resetPasswordResult.message}
                 </p>
-                {(resetPasswordResult.message.includes("Password column was just created") || 
-                  resetPasswordResult.message.includes("Password not stored") ||
-                  resetPasswordResult.message.includes("not stored")) && resetPasswordUser && (
+                {resetPasswordUser && !resetPasswordResult.current_password && (
                   <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid rgba(245, 158, 11, 0.3)" }}>
                     <ModernButton
                       variant="primary"
