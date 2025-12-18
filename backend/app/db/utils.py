@@ -124,6 +124,22 @@ async def _apply_critical_ddl(conn) -> None:
         except Exception as exc:  # noqa: BLE001
             # Log but don't fail - column might already exist or table might not exist yet
             logger.warning(f"DDL statement skipped: {statement[:60]}... - {exc}")
+            # For password_encrypted, try alternative approach
+            if "password_encrypted" in statement:
+                logger.error(f"CRITICAL: Failed to add password_encrypted column: {exc}")
+                logger.error(f"Full statement: {statement}")
+                # Try to check if column exists and add it manually
+                try:
+                    check_result = await conn.execute(text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name = 'users' AND column_name = 'password_encrypted'"
+                    ))
+                    if not check_result.fetchone():
+                        logger.info("password_encrypted column does not exist, attempting direct add...")
+                        await conn.execute(text("ALTER TABLE users ADD COLUMN password_encrypted VARCHAR(500)"))
+                        logger.info("Successfully added password_encrypted column via direct method")
+                except Exception as exc2:  # noqa: BLE001
+                    logger.error(f"Failed to add password_encrypted column via direct method: {exc2}")
 
 
 async def _apply_widget_ddl(conn) -> None:
