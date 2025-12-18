@@ -2485,21 +2485,43 @@ async def admin_send_bulk_email(
         is_html=payload.is_html,
     )
     
-    # Audit log
-    await record_audit(
-        session,
-        tenant_id=None,
-        actor_user_id=current_user.id,
-        action="admin.email.bulk_send",
-        entity="email",
-        entity_id=None,
-        meta={
-            "recipient_count": len(payload.recipients),
-            "subject": payload.subject[:100],
-            "success_count": result["success_count"],
-            "failed_count": result["failed_count"],
-        },
-    )
+    # Determine tenant_id from recipients (if all recipients belong to same tenant)
+    tenant_id = None
+    if payload.recipients:
+        # Get users by email to find tenant_id
+        users_stmt = select(User).where(User.email.in_(payload.recipients))
+        users_result = await session.execute(users_stmt)
+        users = users_result.scalars().all()
+        
+        # If all recipients belong to same tenant, set tenant_id
+        if users:
+            tenant_ids = {user.tenant_id for user in users if user.tenant_id}
+            if len(tenant_ids) == 1:
+                tenant_id = list(tenant_ids)[0]
+    
+    # Audit log - create one log per tenant if multiple tenants
+    tenant_ids_to_log = {tenant_id} if tenant_id else set()
+    
+    # If no tenant_id found, still log with None
+    if not tenant_ids_to_log:
+        tenant_ids_to_log.add(None)
+    
+    for tid in tenant_ids_to_log:
+        await record_audit(
+            session,
+            tenant_id=tid,
+            actor_user_id=current_user.id,
+            action="admin.email.bulk_send",
+            entity="email",
+            entity_id=None,
+            meta={
+                "recipient_count": len(payload.recipients),
+                "subject": payload.subject[:100],
+                "success_count": result["success_count"],
+                "failed_count": result["failed_count"],
+                "recipients": payload.recipients[:10],  # Store first 10 recipients
+            },
+        )
     await session.commit()
     
     return BulkEmailResponse(

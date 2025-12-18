@@ -29,6 +29,7 @@ from .routes import (
     partner_settings,
     partner_storages,
     partner_reports,
+    partner_mail,
     audit,
     auth,
     demo,
@@ -62,6 +63,7 @@ api_router.include_router(admin_users.router)
 api_router.include_router(partner_reservations.router)
 api_router.include_router(partner_settings.router)
 api_router.include_router(partner_storages.router)
+api_router.include_router(partner_mail.router)
 api_router.include_router(audit.router)
 api_router.include_router(demo.router)
 api_router.include_router(locations.router)

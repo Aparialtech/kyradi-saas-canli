@@ -51,6 +51,7 @@ import {
   UserCog,
   BadgePercent,
   Settings2,
+  Mail,
 } from "../../lib/lucide";
 
 const warningActions: Record<
@@ -699,6 +700,7 @@ export function PartnerDashboard() {
       items.push({ to: "staff", label: t("nav.staff"), icon: <UserCog className="h-5 w-5" /> });
       items.push({ to: "pricing", label: t("nav.pricing"), icon: <BadgePercent className="h-5 w-5" /> });
       items.push({ to: "demo-flow", label: t("nav.demoFlow"), icon: <LineChart className="h-5 w-5" /> });
+      items.push({ to: "mail", label: "E-posta", icon: <Mail className="h-5 w-5" /> });
     }
     
     // All authenticated users can access settings
@@ -821,4 +823,5 @@ export { PricingPage as PartnerPricingPage } from "./pricing/PricingPage";
 export { UsersPage as PartnerUsersPage } from "./users/UsersPage";
 export { DemoFlowPage } from "./DemoFlowPage";
 export { DemoPaymentFlowPage } from "./DemoPaymentFlowPage";
+export { PartnerMailPage } from "./mail/PartnerMailPage";
 export { PartnerSettingsPage } from "./settings/PartnerSettingsPage";

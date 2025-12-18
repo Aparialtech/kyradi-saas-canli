@@ -32,6 +32,7 @@ import {
   PartnerPricingPage,
   DemoFlowPage,
   DemoPaymentFlowPage,
+  PartnerMailPage,
   PartnerSettingsPage,
 } from "../pages/partner/PartnerDashboard";
 import { WidgetPreviewPage } from "../pages/partner/WidgetPreviewPage";
@@ -93,6 +94,7 @@ export function AppRouter() {
             <Route path="pricing" element={<PartnerPricingPage />} />
             <Route path="demo-flow" element={<DemoFlowPage />} />
             <Route path="demo-payment-flow" element={<DemoPaymentFlowPage />} />
+            <Route path="mail" element={<PartnerMailPage />} />
           </Route>
           <Route path="settings" element={<PartnerSettingsPage />} />
           <Route path="*" element={<Navigate to="/app" replace />} />
