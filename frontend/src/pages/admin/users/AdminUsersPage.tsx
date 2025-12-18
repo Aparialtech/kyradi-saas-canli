@@ -268,29 +268,30 @@ export function AdminUsersPage() {
     setCurrentPasswordLoading(user.id);
     setShowResetPasswordModal(true);
     
-    // Try to get current password only - don't generate new one
+    // Try to get current password
     try {
       const response = await http.get<{ password: string | null; has_password: boolean; message?: string }>(`/admin/users/${user.id}/password`);
       console.log("Password response:", response.data); // Debug log
       if (response.data.password) {
+        // Password exists, show it
         setResetPasswordResult({ current_password: response.data.password });
+        setCurrentPasswordLoading(null);
       } else {
-        // If no current password, just show message - don't generate new one
-        setResetPasswordResult({ 
-          current_password: undefined,
-          message: response.data.message || "Şifre bulunamadı"
+        // No password found, automatically reset and show new password
+        setCurrentPasswordLoading(null);
+        resetPasswordMutation.mutate({ 
+          userId: user.id, 
+          auto_generate: true 
         });
       }
     } catch (error) {
-      // If error, just show error message - don't generate new password
-      const errorMessage = getErrorMessage(error);
+      // If error, try to reset password automatically
       console.error("Password fetch error:", error); // Debug log
-      setResetPasswordResult({ 
-        current_password: undefined,
-        message: errorMessage || "Şifre alınamadı"
-      });
-    } finally {
       setCurrentPasswordLoading(null);
+      resetPasswordMutation.mutate({ 
+        userId: user.id, 
+        auto_generate: true 
+      });
     }
   };
 
