@@ -702,8 +702,10 @@ async def admin_update_tenant_user(
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
 
+    new_password = None
     if "password" in update_data and update_data["password"]:
-        update_data["password_hash"] = get_password_hash(update_data.pop("password"))
+        new_password = update_data.pop("password")
+        update_data["password_hash"] = get_password_hash(new_password)
     elif "password" in update_data:
         update_data.pop("password")
 
@@ -722,6 +724,47 @@ async def admin_update_tenant_user(
 
     await session.commit()
     await session.refresh(user)
+    
+    # Update password_encrypted column if password was changed
+    if new_password:
+        try:
+            # Check if password_encrypted column exists
+            column_exists = False
+            try:
+                result = await session.execute(
+                    text("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'users' AND column_name = 'password_encrypted'
+                    """)
+                )
+                column_exists = result.scalar() is not None
+            except Exception as check_exc:
+                logger.warning(f"Failed to check password_encrypted column existence: {check_exc}")
+                column_exists = False
+            
+            if column_exists:
+                try:
+                    encrypted_pwd = encrypt_password(new_password)
+                    await session.execute(
+                        text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+                        {"encrypted": encrypted_pwd, "user_id": user.id}
+                    )
+                    await session.commit()
+                    logger.info(f"Successfully updated password_encrypted for tenant user {user.id}")
+                except Exception as update_exc:
+                    try:
+                        await session.rollback()
+                    except Exception:
+                        pass
+                    logger.warning(f"Failed to update password_encrypted column (non-critical): {update_exc}")
+        except Exception as exc:
+            try:
+                await session.rollback()
+            except Exception:
+                pass
+            logger.warning(f"Unexpected error updating password_encrypted (non-critical): {exc}")
+    
     return UserRead.model_validate(user)
 
 
@@ -743,7 +786,8 @@ async def admin_reset_tenant_user_password(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    user.password_hash = get_password_hash(payload.password)
+    new_password = payload.password
+    user.password_hash = get_password_hash(new_password)
     
     # Log password in development mode
     from ...core.config import settings
@@ -752,7 +796,7 @@ async def admin_reset_tenant_user_password(
     is_development = settings.environment.lower() in {"local", "dev", "development"}
     if is_development:
         logger.info(f"[ADMIN PASSWORD RESET] User: {user.email}")
-        logger.info(f"[ADMIN PASSWORD RESET] New Password: {payload.password}")
+        logger.info(f"[ADMIN PASSWORD RESET] New Password: {new_password}")
 
     await record_audit(
         session,
@@ -765,6 +809,46 @@ async def admin_reset_tenant_user_password(
 
     await session.commit()
     await session.refresh(user)
+    
+    # Update password_encrypted column
+    try:
+        # Check if password_encrypted column exists
+        column_exists = False
+        try:
+            result = await session.execute(
+                text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'users' AND column_name = 'password_encrypted'
+                """)
+            )
+            column_exists = result.scalar() is not None
+        except Exception as check_exc:
+            logger.warning(f"Failed to check password_encrypted column existence: {check_exc}")
+            column_exists = False
+        
+        if column_exists:
+            try:
+                encrypted_pwd = encrypt_password(new_password)
+                await session.execute(
+                    text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+                    {"encrypted": encrypted_pwd, "user_id": user.id}
+                )
+                await session.commit()
+                logger.info(f"Successfully updated password_encrypted for tenant user {user.id}")
+            except Exception as update_exc:
+                try:
+                    await session.rollback()
+                except Exception:
+                    pass
+                logger.warning(f"Failed to update password_encrypted column (non-critical): {update_exc}")
+    except Exception as exc:
+        try:
+            await session.rollback()
+        except Exception:
+            pass
+        logger.warning(f"Unexpected error updating password_encrypted (non-critical): {exc}")
+    
     return UserRead.model_validate(user)
 
 
@@ -1735,8 +1819,10 @@ async def admin_update_user(
     if "role" in update_data and update_data["role"] is not None:
         update_data["role"] = update_data["role"].value
     
+    new_password = None
     if "password" in update_data and update_data["password"]:
-        update_data["password_hash"] = get_password_hash(update_data.pop("password"))
+        new_password = update_data.pop("password")
+        update_data["password_hash"] = get_password_hash(new_password)
     elif "password" in update_data:
         update_data.pop("password")
     
@@ -1773,6 +1859,47 @@ async def admin_update_user(
     
     await session.commit()
     await session.refresh(user)
+    
+    # Update password_encrypted column if password was changed
+    if new_password:
+        try:
+            # Check if password_encrypted column exists
+            column_exists = False
+            try:
+                result = await session.execute(
+                    text("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'users' AND column_name = 'password_encrypted'
+                    """)
+                )
+                column_exists = result.scalar() is not None
+            except Exception as check_exc:
+                logger.warning(f"Failed to check password_encrypted column existence: {check_exc}")
+                column_exists = False
+            
+            if column_exists:
+                try:
+                    encrypted_pwd = encrypt_password(new_password)
+                    await session.execute(
+                        text("UPDATE users SET password_encrypted = :encrypted WHERE id = :user_id"),
+                        {"encrypted": encrypted_pwd, "user_id": user.id}
+                    )
+                    await session.commit()
+                    logger.info(f"Successfully updated password_encrypted for user {user.id}")
+                except Exception as update_exc:
+                    try:
+                        await session.rollback()
+                    except Exception:
+                        pass
+                    logger.warning(f"Failed to update password_encrypted column (non-critical): {update_exc}")
+        except Exception as exc:
+            try:
+                await session.rollback()
+            except Exception:
+                pass
+            logger.warning(f"Unexpected error updating password_encrypted (non-critical): {exc}")
+    
     logger.info(f"User updated successfully: {user.email} (ID: {user.id}) by admin {current_user.id}")
     return UserRead.model_validate(user)
 
