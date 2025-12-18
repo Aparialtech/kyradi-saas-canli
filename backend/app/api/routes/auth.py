@@ -41,10 +41,22 @@ async def login(
     """Authenticate user with email/password + tenant slug. Returns SMS verification requirement if needed."""
     tenant: Tenant | None = None
     if credentials.tenant_slug and credentials.tenant_slug.lower() not in {"admin", "__admin__"}:
-        stmt = select(Tenant).where(Tenant.slug == credentials.tenant_slug)
+        # Normalize tenant slug (lowercase, trim)
+        normalized_slug = credentials.tenant_slug.strip().lower()
+        stmt = select(Tenant).where(Tenant.slug == normalized_slug)
         tenant = (await session.execute(stmt)).scalar_one_or_none()
-        if tenant is None or not tenant.is_active:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid tenant")
+        if tenant is None:
+            logger.warning(f"Login attempt with non-existent tenant slug: {normalized_slug}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail=f"Geçersiz otel slug: {normalized_slug}"
+            )
+        if not tenant.is_active:
+            logger.warning(f"Login attempt with inactive tenant: {tenant.id} ({tenant.slug})")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="Bu otel hesabı aktif değil. Lütfen yöneticinizle iletişime geçin."
+            )
 
     stmt = select(User).where(User.email == credentials.email)
     user = (await session.execute(stmt)).scalar_one_or_none()
