@@ -1851,14 +1851,34 @@ async def admin_reset_user_password(
     
     # Commit password_hash update first
     try:
+        logger.debug(f"Committing password reset for user {user_id}")
         await session.commit()
+        logger.debug(f"Successfully committed password reset for user {user_id}")
         await session.refresh(user)
+        logger.debug(f"Successfully refreshed user {user_id}")
     except Exception as commit_exc:
-        await session.rollback()
-        logger.error(f"Failed to commit password reset: {commit_exc}", exc_info=True)
+        error_msg = str(commit_exc)
+        error_type = type(commit_exc).__name__
+        logger.error(
+            f"Failed to commit password reset: {error_type}: {error_msg}",
+            exc_info=True
+        )
+        try:
+            await session.rollback()
+            logger.debug(f"Rolled back session after commit failure")
+        except Exception as rollback_exc:
+            logger.error(f"Failed to rollback after commit failure: {rollback_exc}")
+        
+        # Check for specific error types
+        if "InFailedSQLTransactionError" in error_msg or "transaction is aborted" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Veritabanı işlemi başarısız oldu. Lütfen tekrar deneyin.",
+            ) from commit_exc
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Şifre sıfırlama işlemi başarısız oldu. Lütfen tekrar deneyin."
+            detail=f"Şifre sıfırlama işlemi başarısız oldu: {error_type}. Lütfen tekrar deneyin."
         ) from commit_exc
     
     # Then update password_encrypted column manually (separate transaction)

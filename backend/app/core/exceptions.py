@@ -372,6 +372,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
                     headers=cors_headers,
                 )
         
+        error_type = type(exc).__name__
         logger.error(
             "SQLAlchemyError: %s (tenant=%s, path=%s)",
             error_msg[:200],
@@ -379,9 +380,20 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             request.url.path,
             exc_info=True,
         )
+        
+        # In development, return more detailed error messages
+        is_development = settings.environment.lower() in {"local", "dev", "development"}
+        error_detail = "Veritabanı hatası. Lütfen daha sonra tekrar deneyin."
+        if is_development:
+            error_detail = f"Veritabanı hatası: {error_msg[:500]}"
+        
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": "Veritabanı hatası. Lütfen daha sonra tekrar deneyin."},
+            content={
+                "detail": error_detail,
+                "error_type": error_type if is_development else None,
+                "error_code": "DATABASE_ERROR"
+            },
             headers=cors_headers,
         )
     
