@@ -148,40 +148,6 @@ export function AdminUsersPage() {
     },
   });
 
-  const resetPasswordMutation = useMutation({
-    mutationFn: async ({ userId, auto_generate }: { userId: string; auto_generate: boolean }) => {
-      const response = await http.post<{ new_password?: string; message: string }>(`/admin/users/${userId}/reset-password`, { 
-        auto_generate,
-        password: undefined 
-      });
-      console.log("Reset password response:", response.data); // Debug log
-      return response.data;
-    },
-    onSuccess: (data) => {
-      console.log("Reset password success:", data); // Debug log
-      void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      if (data.new_password) {
-        // Show new password in modal
-        console.log("Setting new password:", data.new_password); // Debug log
-        setResetPasswordResult({ current_password: data.new_password });
-        push({ title: "Şifre Sıfırlandı", description: "Yeni şifre oluşturuldu ve kaydedildi", type: "success" });
-      } else {
-        console.log("No new_password in response, refreshing password view"); // Debug log
-        push({ title: "Şifre Güncellendi", description: data.message || "Şifre başarıyla güncellendi", type: "success" });
-        // Refresh password view after a short delay to allow backend to save
-        setTimeout(() => {
-          if (resetPasswordUser) {
-            handleShowPassword(resetPasswordUser);
-          }
-        }, 500);
-      }
-    },
-    onError: (error: unknown) => {
-      console.error("Reset password error:", error); // Debug log
-      push({ title: "Şifre Sıfırlama Hatası", description: getErrorMessage(error), type: "error" });
-    },
-  });
-
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       await http.delete(`/admin/users/${userId}`);
@@ -268,30 +234,30 @@ export function AdminUsersPage() {
     setCurrentPasswordLoading(user.id);
     setShowResetPasswordModal(true);
     
-    // Try to get current password
+    // Try to get current password - DO NOT reset automatically
     try {
       const response = await http.get<{ password: string | null; has_password: boolean; message?: string }>(`/admin/users/${user.id}/password`);
       console.log("Password response:", response.data); // Debug log
       if (response.data.password) {
         // Password exists, show it
         setResetPasswordResult({ current_password: response.data.password });
-        setCurrentPasswordLoading(null);
       } else {
-        // No password found, automatically reset and show new password
-        setCurrentPasswordLoading(null);
-        resetPasswordMutation.mutate({ 
-          userId: user.id, 
-          auto_generate: true 
+        // No password found, just show message - DO NOT reset
+        setResetPasswordResult({ 
+          current_password: undefined,
+          message: response.data.message || "Şifre bulunamadı"
         });
       }
     } catch (error) {
-      // If error, try to reset password automatically
+      // If error, just show error message - DO NOT reset
+      const errorMessage = getErrorMessage(error);
       console.error("Password fetch error:", error); // Debug log
-      setCurrentPasswordLoading(null);
-      resetPasswordMutation.mutate({ 
-        userId: user.id, 
-        auto_generate: true 
+      setResetPasswordResult({ 
+        current_password: undefined,
+        message: errorMessage || "Şifre alınamadı"
       });
+    } finally {
+      setCurrentPasswordLoading(null);
     }
   };
 
@@ -888,11 +854,11 @@ export function AdminUsersPage() {
             <p style={{ margin: 0, color: "var(--text-tertiary)" }}>
               <strong>{resetPasswordUser.email}</strong> kullanıcısının şifresi.
             </p>
-            {currentPasswordLoading === resetPasswordUser?.id || resetPasswordMutation.isPending ? (
+            {currentPasswordLoading === resetPasswordUser?.id ? (
               <div style={{ textAlign: "center", padding: "2rem" }}>
                 <Loader2 className="h-8 w-8" style={{ margin: "0 auto", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
                 <p style={{ marginTop: "1rem", color: "var(--text-tertiary)" }}>
-                  {resetPasswordMutation.isPending ? "Şifre oluşturuluyor..." : "Şifre yükleniyor..."}
+                  Şifre yükleniyor...
                 </p>
               </div>
             ) : resetPasswordResult?.current_password ? (
@@ -917,36 +883,16 @@ export function AdminUsersPage() {
                 <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600, color: "#b45309" }}>Şifre Bulunamadı</p>
                 <p style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "#b45309" }}>
                   {resetPasswordResult.message.includes("Password column was just created") 
-                    ? "Şifre kolonu yeni oluşturuldu. Şifreyi görmek için kullanıcının şifresini sıfırlamanız gerekiyor."
+                    ? "Şifre kolonu yeni oluşturuldu. Bu kullanıcının şifresi henüz kaydedilmemiş."
                     : resetPasswordResult.message.includes("Password not stored") || 
                       resetPasswordResult.message.includes("not stored") ||
                       resetPasswordResult.message.includes("encrypted format") ||
                       resetPasswordResult.message.toLowerCase().includes("password not")
-                    ? "Bu kullanıcının şifresi şifrelenmiş formatta saklanmamış. Şifreyi görmek için kullanıcının şifresini sıfırlamanız gerekiyor."
+                    ? "Bu kullanıcının şifresi şifrelenmiş formatta saklanmamış."
                     : resetPasswordResult.message.includes("does not exist")
                     ? "Şifre kolonu henüz oluşturulmamış. Lütfen sistem yöneticisine başvurun."
                     : resetPasswordResult.message}
                 </p>
-                {resetPasswordUser && !resetPasswordResult.current_password && (
-                  <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid rgba(245, 158, 11, 0.3)" }}>
-                    <ModernButton
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        if (resetPasswordUser) {
-                          resetPasswordMutation.mutate({ 
-                            userId: resetPasswordUser.id, 
-                            auto_generate: true 
-                          });
-                        }
-                      }}
-                      disabled={resetPasswordMutation.isPending}
-                      leftIcon={<Key className="h-4 w-4" />}
-                    >
-                      {resetPasswordMutation.isPending ? "Şifre Oluşturuluyor..." : "Şifreyi Sıfırla"}
-                    </ModernButton>
-                  </div>
-                )}
               </div>
             ) : null}
           </div>
