@@ -154,23 +154,30 @@ export function AdminUsersPage() {
         auto_generate,
         password: undefined 
       });
+      console.log("Reset password response:", response.data); // Debug log
       return response.data;
     },
     onSuccess: (data) => {
+      console.log("Reset password success:", data); // Debug log
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       if (data.new_password) {
         // Show new password in modal
+        console.log("Setting new password:", data.new_password); // Debug log
         setResetPasswordResult({ current_password: data.new_password });
         push({ title: "Şifre Sıfırlandı", description: "Yeni şifre oluşturuldu ve kaydedildi", type: "success" });
       } else {
+        console.log("No new_password in response, refreshing password view"); // Debug log
         push({ title: "Şifre Güncellendi", description: data.message || "Şifre başarıyla güncellendi", type: "success" });
-        // Refresh password view
-        if (resetPasswordUser) {
-          handleShowPassword(resetPasswordUser);
-        }
+        // Refresh password view after a short delay to allow backend to save
+        setTimeout(() => {
+          if (resetPasswordUser) {
+            handleShowPassword(resetPasswordUser);
+          }
+        }, 500);
       }
     },
     onError: (error: unknown) => {
+      console.error("Reset password error:", error); // Debug log
       push({ title: "Şifre Sıfırlama Hatası", description: getErrorMessage(error), type: "error" });
     },
   });

@@ -1943,10 +1943,13 @@ async def admin_reset_user_password(
         logger.info(f"[ADMIN PASSWORD RESET] New Password: {new_password}")
     
     logger.info(f"Password reset for user: {user.email} (ID: {user.id}) by admin {current_user.id}")
+    logger.info(f"Password reset - auto_generate: {payload.auto_generate}, new_password length: {len(new_password) if new_password else 0}")
     
+    # Always return new_password if it was generated (auto_generate or no password provided)
+    password_was_generated = payload.auto_generate or not payload.password
     return {
-        "new_password": new_password if payload.auto_generate else None,
-        "message": "Password reset successfully" if payload.auto_generate else "Password updated successfully"
+        "new_password": new_password if password_was_generated else None,
+        "message": "Password reset successfully" if password_was_generated else "Password updated successfully"
     }
 
 
