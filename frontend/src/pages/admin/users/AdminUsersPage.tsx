@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key, Trash2, Copy, Eye } from "../../../lib/lucide";
@@ -109,6 +109,13 @@ export function AdminUsersPage() {
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
   }, []);
+
+  // Auto-generate password when modal opens
+  useEffect(() => {
+    if (showResetPasswordModal && resetPasswordUser && !resetPasswordResult && !resetPasswordMutation.isPending) {
+      resetPasswordMutation.mutate({ userId: resetPasswordUser.id, auto_generate: true });
+    }
+  }, [showResetPasswordModal, resetPasswordUser]);
 
   const createUserMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -496,10 +503,8 @@ export function AdminUsersPage() {
                     onClick={() => {
                       setResetPasswordUser(row);
                       setResetPasswordResult(null);
-                      // Auto-trigger password reset
-                      resetPasswordMutation.mutate({ userId: row.id, auto_generate: true });
+                      setShowResetPasswordModal(true);
                     }}
-                    disabled={resetPasswordMutation.isPending && resetPasswordUser?.id === row.id}
                     title="Şifreyi göster (yeni şifre oluşturur)"
                     style={{
                       display: 'inline-flex',
@@ -520,11 +525,7 @@ export function AdminUsersPage() {
                       e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
                     }}
                   >
-                    {resetPasswordMutation.isPending && resetPasswordUser?.id === row.id ? (
-                      <Loader2 className="h-4 w-4" style={{ animation: 'spin 1s linear infinite' }} />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    <Eye className="h-4 w-4" />
                   </button>
                 ),
               },
@@ -837,7 +838,7 @@ export function AdminUsersPage() {
             setResetPasswordUser(null);
             setResetPasswordResult(null);
           }}
-          title="Parola Sıfırla"
+          title="Şifre Göster"
           footer={
             <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
               <button
@@ -849,26 +850,23 @@ export function AdminUsersPage() {
                   setResetPasswordResult(null);
                 }}
               >
-                İptal
-              </button>
-              <button
-                type="button"
-                className="btn btn--primary"
-                onClick={() => handleResetPassword(true)}
-                disabled={resetPasswordMutation.isPending}
-              >
-                {resetPasswordMutation.isPending ? "Sıfırlanıyor..." : "Parolayı Sıfırla"}
+                Kapat
               </button>
             </div>
           }
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             <p style={{ margin: 0, color: "var(--text-tertiary)" }}>
-              <strong>{resetPasswordUser.email}</strong> kullanıcısı için parola sıfırlama.
+              <strong>{resetPasswordUser.email}</strong> kullanıcısının şifresi.
             </p>
-            {resetPasswordResult?.new_password ? (
+            {resetPasswordMutation.isPending ? (
+              <div style={{ textAlign: "center", padding: "2rem" }}>
+                <Loader2 className="h-8 w-8" style={{ margin: "0 auto", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
+                <p style={{ marginTop: "1rem", color: "var(--text-tertiary)" }}>Şifre oluşturuluyor...</p>
+              </div>
+            ) : resetPasswordResult?.new_password ? (
               <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
-                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Yeni Parola Oluşturuldu:</p>
+                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Kullanıcı Şifresi:</p>
                 <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                   <code style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", fontFamily: "monospace" }}>
                     {resetPasswordResult.new_password}
@@ -883,25 +881,10 @@ export function AdminUsersPage() {
                   </ModernButton>
                 </div>
                 <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem", color: "var(--text-tertiary)" }}>
-                  Bu parolayı güvenli bir yerde saklayın. Kullanıcıya iletebilirsiniz.
+                  ⚠️ Bu şifre otomatik olarak oluşturuldu. Kullanıcının eski şifresi hash'li olduğu için gösterilemez.
                 </p>
               </div>
-            ) : (
-              <div>
-                <p style={{ margin: "0 0 1rem 0", color: "var(--text-tertiary)" }}>
-                  Otomatik olarak güvenli bir parola oluşturulacak.
-                </p>
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  onClick={() => handleResetPassword(true)}
-                  disabled={resetPasswordMutation.isPending}
-                  style={{ width: "100%" }}
-                >
-                  {resetPasswordMutation.isPending ? "Sıfırlanıyor..." : "Otomatik Parola Oluştur"}
-                </button>
-              </div>
-            )}
+            ) : null}
           </div>
         </Modal>
       )}
@@ -920,4 +903,5 @@ export function AdminUsersPage() {
     </div>
   );
 }
+
 
