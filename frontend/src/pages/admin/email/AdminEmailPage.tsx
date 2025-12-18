@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Mail, Send, Users, Building2, Loader2, CheckCircle2, AlertCircle } from "../../../lib/lucide";
-import { useTranslation } from "../../../hooks/useTranslation";
+import { Mail, Send, Users, Building2, Loader2, CheckCircle2 } from "../../../lib/lucide";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
 import { useToast } from "../../../hooks/useToast";
@@ -21,7 +20,6 @@ interface User {
 }
 
 export function AdminEmailPage() {
-  const { t } = useTranslation();
   const { messages, push } = useToast();
   
   // Form state
