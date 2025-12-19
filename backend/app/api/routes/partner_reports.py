@@ -455,13 +455,13 @@ async def get_reports_storage_usage(
         revenue_stmt = select(
             func.coalesce(func.sum(Payment.amount_minor), 0)
         ).select_from(
-            Payment.join(
-                Reservation, 
-                and_(
-                    Reservation.id == Payment.reservation_id,
-                    Reservation.tenant_id == tenant_id,
-                    Reservation.storage_id == storage.id
-                )
+            Payment
+        ).join(
+            Reservation, 
+            and_(
+                Reservation.id == Payment.reservation_id,
+                Reservation.tenant_id == tenant_id,
+                Reservation.storage_id == storage.id
             )
         ).where(
             Payment.tenant_id == tenant_id,
