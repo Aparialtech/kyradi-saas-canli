@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
     libpq-dev \
+    coreutils \
     # WeasyPrint dependencies for PDF generation
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
@@ -30,8 +31,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 EXPOSE 8000
 
-# Copy and make startup script executable
-COPY backend/scripts/startup.sh /app/scripts/startup.sh
+# Make startup script executable (already copied via COPY backend/)
 RUN chmod +x /app/scripts/startup.sh
 
 # Use startup script with timeout for migrations
