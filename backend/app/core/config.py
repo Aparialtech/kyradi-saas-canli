@@ -61,8 +61,12 @@ class Settings(BaseSettings):
 
     cors_origins: List[str] = Field(
         default_factory=lambda: [
+            # Production Vercel
             "https://kyradi-saas-canli.vercel.app",
             "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
+            # Vercel preview deployments (wildcard pattern handled in middleware)
+            "https://kyradi-saas-canli-git-main-aparialtechs-projects.vercel.app",
+            # Local development
             "http://localhost:3000",
             "http://localhost:5173",
             "http://127.0.0.1:3000",

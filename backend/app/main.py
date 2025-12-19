@@ -47,21 +47,39 @@ app = FastAPI(
 # Access-Control-Allow-Origin CANNOT be "*". It must be the specific origin.
 
 # Get allowed origins from settings (which includes defaults from config.py)
-allowed_origins = settings.cors_origins
+allowed_origins = list(settings.cors_origins)
+
+# Add Vercel preview deployment pattern support
+def is_allowed_origin(origin: str) -> bool:
+    """Check if origin is allowed, including Vercel preview deployments."""
+    if not origin:
+        return False
+    # Check exact match
+    if origin in allowed_origins:
+        return True
+    # Check Vercel preview deployments pattern
+    if "vercel.app" in origin and ("kyradi" in origin.lower() or "aparialtechs" in origin.lower()):
+        return True
+    return False
+
+# Build final allowed origins list - include all Vercel patterns
+final_origins = allowed_origins.copy()
 
 logger.info("Starting Kyradi backend...")
-logger.info(f"CORS allowed origins: {allowed_origins}")
+logger.info(f"CORS allowed origins: {final_origins}")
 
 # Add CORS middleware BEFORE including routers
 # This ensures ALL routes (including /auth/*) get CORS headers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=final_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
     max_age=600,
+    # Allow origin callback for dynamic Vercel preview URLs
+    allow_origin_regex=r"https://kyradi.*\.vercel\.app|https://.*aparialtechs.*\.vercel\.app",
 )
 
 app.include_router(api_router)
