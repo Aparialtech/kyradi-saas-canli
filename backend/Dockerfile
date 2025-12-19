@@ -31,8 +31,5 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 EXPOSE 8000
 
-# Make startup script executable (already copied via COPY backend/)
-RUN chmod +x /app/scripts/startup.sh
-
-# Use startup script with timeout for migrations
-CMD ["/app/scripts/startup.sh"]
+# Direct startup - skip migrations, just start the server
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
