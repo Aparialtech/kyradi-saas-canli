@@ -2,7 +2,7 @@ import axios from "axios";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { useAuth } from "../../context/AuthContext";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
@@ -10,14 +10,17 @@ import type { AuthUser } from "../../types/auth";
 import { authService } from "../../services/auth";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tokenStorage } from "../../lib/tokenStorage";
-import { Lock, Mail, BarChart3, CreditCard, Eye, EyeOff, Database, Building2 } from "../../lib/lucide";
+import { Lock, Mail, BarChart3, CreditCard, Eye, EyeOff, Database, Building2, Shield, Hotel } from "../../lib/lucide";
 import styles from "./LoginPage.module.css";
+
+type LoginMode = "partner" | "admin";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const { t } = useTranslation();
 
+  const [loginMode, setLoginMode] = useState<LoginMode>("partner");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -175,85 +178,125 @@ export function LoginPage() {
           transition={{ duration: 0.5 }}
         >
           <div className={styles.formContent}>
-            <div className={styles.formHeader}>
-              <h2 className={styles.formTitle}>Kyradi Panel Girişi</h2>
-              <p className={styles.formSubtitle}>
-                Hesabınıza giriş yapın
-              </p>
-            </div>
-
-            {error && (
-              <motion.div
-                className={styles.errorMessage}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                {error}
-              </motion.div>
-            )}
-
-            <form className={styles.form} onSubmit={handleSubmit} autoComplete="off">
-              <div className={styles.formField}>
-                <label className={styles.label}>
-                  <Mail className={styles.labelIcon} />
-                  {t("login.emailLabel")}
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  className={styles.input}
-                  autoComplete="off"
-                  placeholder="ornek@email.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                />
-              </div>
-
-              <div className={styles.formField}>
-                <label className={styles.label}>
-                  <Lock className={styles.labelIcon} />
-                  {t("login.passwordLabel")}
-                </label>
-                <div className={styles.passwordInput}>
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    className={styles.input}
-                    autoComplete="off"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className={styles.passwordToggle}
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className={styles.submitButton}
-                disabled={submitting}
-              >
-                {submitting ? t("login.submitting") : t("login.submit")}
-              </button>
-            </form>
-
-            <div className={styles.formFooter}>
+            {/* Mode Toggle */}
+            <div className={styles.modeToggle}>
               <button
                 type="button"
-                className={styles.forgotButton}
-                onClick={handleForgotPassword}
+                className={`${styles.toggleButton} ${loginMode === "partner" ? styles.toggleButtonActive : ""}`}
+                onClick={() => {
+                  setLoginMode("partner");
+                  setError("");
+                }}
               >
-                {t("login.forgot")}
+                <Hotel className={styles.toggleIcon} />
+                Partner Girişi
+              </button>
+              <button
+                type="button"
+                className={`${styles.toggleButton} ${loginMode === "admin" ? styles.toggleButtonActive : ""}`}
+                onClick={() => {
+                  setLoginMode("admin");
+                  setError("");
+                }}
+              >
+                <Shield className={styles.toggleIcon} />
+                Admin Girişi
               </button>
             </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={loginMode}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className={styles.formHeader}>
+                  <h2 className={styles.formTitle}>
+                    {loginMode === "partner" ? "Otel Partner Girişi" : "Kyradi Admin Girişi"}
+                  </h2>
+                  <p className={styles.formSubtitle}>
+                    {loginMode === "partner" 
+                      ? "Otel yönetim panelinize giriş yapın" 
+                      : "Yönetici paneline giriş yapın"}
+                  </p>
+                </div>
+
+                {error && (
+                  <motion.div
+                    className={styles.errorMessage}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    {error}
+                  </motion.div>
+                )}
+
+                <form className={styles.form} onSubmit={handleSubmit} autoComplete="off">
+                  <div className={styles.formField}>
+                    <label className={styles.label}>
+                      <Mail className={styles.labelIcon} />
+                      {t("login.emailLabel")}
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      className={styles.input}
+                      autoComplete="off"
+                      placeholder={loginMode === "partner" ? "otel@email.com" : "admin@kyradi.com"}
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className={styles.formField}>
+                    <label className={styles.label}>
+                      <Lock className={styles.labelIcon} />
+                      {t("login.passwordLabel")}
+                    </label>
+                    <div className={styles.passwordInput}>
+                      <input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        className={styles.input}
+                        autoComplete="off"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className={styles.passwordToggle}
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className={`${styles.submitButton} ${loginMode === "admin" ? styles.adminButton : ""}`}
+                    disabled={submitting}
+                  >
+                    {submitting ? t("login.submitting") : (loginMode === "partner" ? "Partner Girişi Yap" : "Admin Girişi Yap")}
+                  </button>
+                </form>
+
+                <div className={styles.formFooter}>
+                  <button
+                    type="button"
+                    className={styles.forgotButton}
+                    onClick={handleForgotPassword}
+                  >
+                    {t("login.forgot")}
+                  </button>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </motion.div>
       </div>
