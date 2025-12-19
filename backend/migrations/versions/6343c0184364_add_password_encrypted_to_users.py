@@ -18,7 +18,14 @@ depends_on = None
 def upgrade() -> None:
     # Add password_encrypted column for admin password viewing
     # WARNING: This is a security risk - passwords should not be stored in reversible format
-    op.add_column('users', sa.Column('password_encrypted', sa.String(500), nullable=True))
+    # Check if column already exists before adding
+    conn = op.get_bind()
+    result = conn.execute(sa.text("""
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name='users' AND column_name='password_encrypted'
+    """))
+    if result.fetchone() is None:
+        op.add_column('users', sa.Column('password_encrypted', sa.String(500), nullable=True))
 
 
 def downgrade() -> None:
