@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 
@@ -11,9 +11,11 @@ import styles from "./ResetPasswordPage.module.css";
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   
-  const token = searchParams.get("token");
+  // Get token from state (after code verification)
+  const token = (location.state as { reset_token?: string })?.reset_token || "";
+  
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -44,9 +46,10 @@ export function ResetPasswordPage() {
 
   useEffect(() => {
     if (!token) {
-      setError("Geçersiz veya eksik token. Lütfen e-postanızdaki linki kullanın.");
+      // Redirect to forgot password if no token
+      navigate("/forgot-password", { replace: true });
     }
-  }, [token]);
+  }, [token, navigate]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();

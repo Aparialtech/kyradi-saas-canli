@@ -15,6 +15,8 @@ import {
   AdminSettingsPage,
 } from "../pages/admin/AdminDashboard";
 import { LoginPage } from "../pages/auth/LoginPage";
+import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
+import { VerifyResetCodePage } from "../pages/auth/VerifyResetCodePage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SMSVerificationPage } from "../pages/auth/SMSVerificationPage";
 import {
@@ -39,6 +41,7 @@ import { LocationEditPage } from "../pages/partner/locations/LocationEditPage";
 import { UserEditPage } from "../pages/partner/users/UserEditPage";
 import { StaffAssignPage } from "../pages/partner/staff/StaffAssignPage";
 import { TicketsPage } from "../pages/partner/tickets/TicketsPage";
+import { TransfersPage } from "../pages/partner/transfers/TransfersPage";
 import { WidgetPreviewPage } from "../pages/partner/WidgetPreviewPage";
 import { MagicPayDemoPage } from "../pages/partner/magicpay/MagicPayDemoPage";
 import { SelfServiceReservationPage } from "../pages/public/SelfServiceReservationPage";
@@ -48,6 +51,8 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/verify-reset-code" element={<VerifyResetCodePage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-sms" element={<SMSVerificationPage />} />
       <Route path="/self-service" element={<SelfServiceReservationPage />} />
@@ -91,6 +96,7 @@ export function AppRouter() {
             <Route path="reports" element={<PartnerReportsAnalyticsPage />} />
             <Route path="revenue" element={<PartnerRevenueDashboard />} />
             <Route path="settlements" element={<PartnerSettlementsPage />} />
+            <Route path="transfers" element={<TransfersPage />} />
           </Route>
           <Route
             element={<RequireAuth allowedRoles={["tenant_admin", "hotel_manager"]} redirectTo="/app" />}

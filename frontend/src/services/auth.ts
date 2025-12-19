@@ -5,6 +5,8 @@ import type {
   TokenResponse,
   ForgotPasswordPayload,
   ForgotPasswordResponse,
+  VerifyResetCodePayload,
+  VerifyResetCodeResponse,
   ResetPasswordPayload,
   ResetPasswordResponse,
   VerifyLoginSMSPayload,
@@ -22,6 +24,10 @@ export const authService = {
   },
   async requestPasswordReset(payload: ForgotPasswordPayload): Promise<ForgotPasswordResponse> {
     const response = await http.post<ForgotPasswordResponse>("/auth/forgot-password", payload);
+    return response.data;
+  },
+  async verifyResetCode(payload: VerifyResetCodePayload): Promise<VerifyResetCodeResponse> {
+    const response = await http.post<VerifyResetCodeResponse>("/auth/verify-reset-code", payload);
     return response.data;
   },
   async resetPassword(payload: ResetPasswordPayload): Promise<ResetPasswordResponse> {

@@ -32,12 +32,21 @@ export interface TokenResponse {
 
 export interface ForgotPasswordPayload {
   email: string;
-  tenant_slug?: string | null;
 }
 
 export interface ForgotPasswordResponse {
   message: string;
   reset_token?: string | null; // Only in development mode
+}
+
+export interface VerifyResetCodePayload {
+  email: string;
+  code: string;
+}
+
+export interface VerifyResetCodeResponse {
+  message: string;
+  reset_token: string;
 }
 
 export interface ResetPasswordPayload {
