@@ -17,7 +17,7 @@ import {
   FileText,
   CreditCard,
   TrendingUp,
-  Mail,
+  MessageSquare,
 } from "../../lib/lucide";
 
 // UX Enhancement Components
@@ -33,7 +33,6 @@ export { AdminAuditLogsPage as AdminAuditPage } from "./audit/AdminAuditLogsPage
 export { AdminRevenuePage } from "./revenue/AdminRevenuePage";
 export { AdminSettlementsPage } from "./settlements/AdminSettlementsPage";
 export { AdminUsersPage } from "./users/AdminUsersPage";
-export { AdminEmailPage } from "./email/AdminEmailPage";
 export { AdminSettingsPage } from "./settings/AdminSettingsPage";
 
 export function AdminDashboard() {
@@ -55,7 +54,7 @@ export function AdminDashboard() {
       { to: "revenue", label: t("nav.globalRevenue"), icon: <Receipt className="h-5 w-5" /> },
       { to: "settlements", label: t("nav.globalSettlements"), icon: <CreditCard className="h-5 w-5" /> },
       { to: "users", label: t("nav.globalUsers"), icon: <Users className="h-5 w-5" /> },
-      { to: "email", label: "E-posta Gönder", icon: <Mail className="h-5 w-5" /> },
+      { to: "tickets", label: "İletişim / Ticket", icon: <MessageSquare className="h-5 w-5" /> },
       { to: "settings", label: t("nav.systemSettings"), icon: <Settings className="h-5 w-5" /> },
       { to: "audit", label: t("nav.audit"), icon: <FileText className="h-5 w-5" /> },
     ];

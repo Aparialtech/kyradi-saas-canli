@@ -713,16 +713,6 @@ export function AdminUsersPage() {
                 </small>
               </label>
             )}
-            <label className="form-field">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <input
-                  type="checkbox"
-                  checked={newUser.is_active}
-                  onChange={(e) => setNewUser({ ...newUser, is_active: e.target.checked })}
-                />
-                <span className="form-field__label">Aktif</span>
-              </div>
-            </label>
           </div>
         </Modal>
       )}
@@ -812,18 +802,6 @@ export function AdminUsersPage() {
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="form-field">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <input
-                  type="checkbox"
-                  checked={editingUser.is_active}
-                  onChange={(e) =>
-                    setEditingUser({ ...editingUser, is_active: e.target.checked })
-                  }
-                />
-                <span className="form-field__label">Aktif</span>
-              </div>
             </label>
             <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border-primary)" }}>
               <ModernButton

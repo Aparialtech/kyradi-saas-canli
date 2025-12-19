@@ -11,9 +11,9 @@ import {
   AdminRevenuePage,
   AdminSettlementsPage,
   AdminUsersPage,
-  AdminEmailPage,
   AdminSettingsPage,
 } from "../pages/admin/AdminDashboard";
+import { AdminTicketsPage } from "../pages/admin/tickets/AdminTicketsPage";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
 import { VerifyResetCodePage } from "../pages/auth/VerifyResetCodePage";
@@ -34,7 +34,6 @@ import {
   PartnerPricingPage,
   DemoFlowPage,
   DemoPaymentFlowPage,
-  PartnerMailPage,
   PartnerSettingsPage,
 } from "../pages/partner/PartnerDashboard";
 import { LocationEditPage } from "../pages/partner/locations/LocationEditPage";
@@ -69,7 +68,7 @@ export function AppRouter() {
           <Route path="revenue" element={<AdminRevenuePage />} />
           <Route path="settlements" element={<AdminSettlementsPage />} />
           <Route path="users" element={<AdminUsersPage />} />
-          <Route path="email" element={<AdminEmailPage />} />
+          <Route path="tickets" element={<AdminTicketsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
           <Route path="*" element={<Navigate to="/admin/overview" replace />} />
@@ -110,7 +109,6 @@ export function AppRouter() {
             <Route path="pricing" element={<PartnerPricingPage />} />
             <Route path="demo-flow" element={<DemoFlowPage />} />
             <Route path="demo-payment-flow" element={<DemoPaymentFlowPage />} />
-            <Route path="mail" element={<PartnerMailPage />} />
           </Route>
           <Route path="settings" element={<PartnerSettingsPage />} />
           <Route path="*" element={<Navigate to="/app" replace />} />
