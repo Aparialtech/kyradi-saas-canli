@@ -40,46 +40,35 @@ async def login(
     credentials: LoginRequest,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
-    """Authenticate user with email/password + tenant slug. Returns SMS verification requirement if needed."""
-    tenant: Tenant | None = None
-    # Normalize and validate tenant_slug (handle empty strings, None, etc.)
-    tenant_slug = credentials.tenant_slug.strip() if credentials.tenant_slug else None
-    if tenant_slug and tenant_slug.lower() not in {"admin", "__admin__", ""}:
-        # Normalize tenant slug (lowercase, trim)
-        normalized_slug = tenant_slug.strip().lower()
-        if normalized_slug:  # Only query if slug is not empty after normalization
-            stmt = select(Tenant).where(Tenant.slug == normalized_slug)
-            tenant = (await session.execute(stmt)).scalar_one_or_none()
-            if tenant is None:
-                logger.warning(f"Login attempt with non-existent tenant slug: {normalized_slug}")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, 
-                    detail=f"Geçersiz otel slug: {normalized_slug}"
-                )
-            if not tenant.is_active:
-                logger.warning(f"Login attempt with inactive tenant: {tenant.id} ({tenant.slug})")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, 
-                    detail="Bu otel hesabı aktif değil. Lütfen yöneticinizle iletişime geçin."
-                )
-
+    """Authenticate user with email/password. Tenant is auto-detected from user's tenant_id."""
+    # Find user by email
     stmt = select(User).where(User.email == credentials.email)
     user = (await session.execute(stmt)).scalar_one_or_none()
 
     if user is None or not verify_password(credentials.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz e-posta veya şifre")
 
-    # Partner users must belong to the provided tenant.
-    if tenant:
-        if user.tenant_id != tenant.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch")
-        if not user.is_active:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
-        token_tenant_id = tenant.id
-    else:
-        if user.role not in {UserRole.SUPER_ADMIN.value, UserRole.SUPPORT.value}:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant slug required")
-        token_tenant_id = user.tenant_id
+    # Check if user is active
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu hesap aktif değil. Lütfen yöneticinizle iletişime geçin.")
+
+    # Determine token tenant_id based on user type
+    token_tenant_id = user.tenant_id
+    
+    # For partner/tenant users, validate their tenant is active
+    if user.role not in {UserRole.SUPER_ADMIN.value, UserRole.SUPPORT.value}:
+        if not user.tenant_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kullanıcı bir otele atanmamış")
+        
+        # Check tenant is active
+        stmt = select(Tenant).where(Tenant.id == user.tenant_id)
+        tenant = (await session.execute(stmt)).scalar_one_or_none()
+        if tenant is None:
+            logger.warning(f"User {user.email} has invalid tenant_id: {user.tenant_id}")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Geçersiz otel ataması")
+        if not tenant.is_active:
+            logger.warning(f"Login attempt for inactive tenant: {tenant.id} ({tenant.slug})")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu otel hesabı aktif değil. Lütfen yöneticinizle iletişime geçin.")
 
     # Check if phone verification is required (first login after password reset)
     if user.require_phone_verification_on_next_login:
