@@ -10,6 +10,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 
 interface Settlement {
   id: string;
@@ -34,6 +35,7 @@ export function AdminSettlementsPage() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
   const tenantsQuery = useQuery({
     queryKey: ["admin", "tenants"],
@@ -73,9 +75,21 @@ export function AdminSettlementsPage() {
     });
   }, [settlementsQuery.data, searchTerm, tenantsById]);
 
+  // Paginate filtered data
+  const paginatedSettlements = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredSettlements.slice(start, end);
+  }, [filteredSettlements, page, pageSize]);
+
+  const paginationMeta = useMemo(() => {
+    return calculatePaginationMeta(filteredSettlements.length, page, pageSize);
+  }, [filteredSettlements.length, page, pageSize]);
+
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
-  }, []);
+    setPage(1);
+  }, [setPage]);
 
   const formatCurrency = (minor: number) => {
     return new Intl.NumberFormat("tr-TR", {
@@ -287,11 +301,15 @@ export function AdminSettlementsPage() {
                 align: 'center',
               },
             ] as ModernTableColumn<Settlement>[]}
-            data={filteredSettlements}
+            data={paginatedSettlements}
             loading={settlementsQuery.isLoading}
             striped
             hoverable
             stickyHeader
+            showRowNumbers
+            pagination={paginationMeta}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
           />
         ) : (
           <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>

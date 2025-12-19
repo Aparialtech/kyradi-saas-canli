@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { DollarSign, TrendingUp, BarChart3, Building2, FileText, AlertCircle, Loader2 } from "../../../lib/lucide";
@@ -10,6 +10,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 
 interface RevenueSummary {
   total_revenue_minor: number;
@@ -39,6 +40,7 @@ export function AdminRevenuePage() {
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
   const tenantsQuery = useQuery({
     queryKey: ["admin", "tenants"],
@@ -76,6 +78,19 @@ export function AdminRevenuePage() {
   const tenantsById = new Map(
     tenantsQuery.data?.map((tenant) => [tenant.id, tenant]) ?? []
   );
+
+  // Paginate settlements data
+  const allSettlements = settlementsQuery.data ?? [];
+  
+  const paginatedSettlements = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return allSettlements.slice(start, end);
+  }, [allSettlements, page, pageSize]);
+
+  const paginationMeta = useMemo(() => {
+    return calculatePaginationMeta(allSettlements.length, page, pageSize);
+  }, [allSettlements.length, page, pageSize]);
 
   const formatCurrency = (minor: number) => {
     return new Intl.NumberFormat("tr-TR", {
@@ -345,11 +360,15 @@ export function AdminRevenuePage() {
                   align: 'right',
                 },
               ] as ModernTableColumn<Settlement>[]}
-              data={settlementsQuery.data}
+              data={paginatedSettlements}
               loading={settlementsQuery.isLoading}
               striped
               hoverable
               stickyHeader
+              showRowNumbers
+              pagination={paginationMeta}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
             />
           ) : (
             <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>

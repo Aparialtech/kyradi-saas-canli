@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,6 +7,7 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 import { ModernInput } from "../../../components/ui/ModernInput";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 
 import {
   adminTenantService,
@@ -76,6 +77,7 @@ export function TenantsPage() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [planFilter, setPlanFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
   const tenantsQuery = useQuery({ queryKey: ["admin", "tenants"], queryFn: adminTenantService.list });
   const tenantDetailQuery = useQuery({
@@ -107,6 +109,22 @@ export function TenantsPage() {
     
     return tenants;
   }, [tenantsQuery.data, searchTerm, planFilter, statusFilter]);
+
+  // Paginate filtered data
+  const paginatedTenants = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredTenants.slice(start, end);
+  }, [filteredTenants, page, pageSize]);
+
+  const paginationMeta = useMemo(() => {
+    return calculatePaginationMeta(filteredTenants.length, page, pageSize);
+  }, [filteredTenants.length, page, pageSize]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  }, [setPage]);
 
   const createMutation = useMutation({
     mutationFn: (payload: TenantCreatePayload) => adminTenantService.create(payload),
@@ -339,7 +357,7 @@ export function TenantsPage() {
         <div style={{ marginBottom: 'var(--space-4)' }}>
           <DataToolbar
             searchValue={searchTerm}
-            onSearchChange={setSearchTerm}
+            onSearchChange={handleSearchChange}
             placeholder={t("common.search") || "Search"}
             filters={
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -460,11 +478,15 @@ export function TenantsPage() {
                 align: 'right',
               },
             ] as ModernTableColumn<Tenant>[]}
-            data={filteredTenants}
+            data={paginatedTenants}
             loading={tenantsQuery.isLoading}
             striped
             hoverable
             stickyHeader
+            showRowNumbers
+            pagination={paginationMeta}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
           />
         ) : (
           <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>

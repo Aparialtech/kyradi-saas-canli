@@ -14,6 +14,7 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 
 interface User {
   id: string;
@@ -53,6 +54,7 @@ export function AdminUsersPage() {
   const [resetPasswordResult, setResetPasswordResult] = useState<{ new_password?: string; current_password?: string; message?: string } | null>(null);
   const [currentPasswordLoading, setCurrentPasswordLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
   
   // Create user form state
   const [newUser, setNewUser] = useState({
@@ -107,9 +109,21 @@ export function AdminUsersPage() {
     });
   }, [usersQuery.data, searchTerm, tenantsById]);
 
+  // Paginate filtered data
+  const paginatedUsers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredUsers.slice(start, end);
+  }, [filteredUsers, page, pageSize]);
+
+  const paginationMeta = useMemo(() => {
+    return calculatePaginationMeta(filteredUsers.length, page, pageSize);
+  }, [filteredUsers.length, page, pageSize]);
+
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
-  }, []);
+    setPage(1);
+  }, [setPage]);
 
   const createUserMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -564,11 +578,15 @@ export function AdminUsersPage() {
                 ),
               },
             ] as ModernTableColumn<User>[]}
-            data={filteredUsers}
+            data={paginatedUsers}
             loading={usersQuery.isLoading}
             striped
             hoverable
             stickyHeader
+            showRowNumbers
+            pagination={paginationMeta}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
           />
         ) : (
           <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>

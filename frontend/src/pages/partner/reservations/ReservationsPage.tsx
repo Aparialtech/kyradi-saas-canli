@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Eye, CheckCircle2, XOctagon, Search, FileText, Plus, X, Download } from "../../../lib/lucide";
+import { motion } from "framer-motion";
+import { Eye, CheckCircle2, XOctagon, Search, FileText, Download } from "../../../lib/lucide";
 
-import { reservationService, type Reservation, type ReservationPaymentInfo, type ManualReservationCreate } from "../../../services/partner/reservations";
+import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../../services/partner/reservations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
@@ -37,22 +37,6 @@ export function ReservationsPage() {
   const [paymentInfo, setPaymentInfo] = useState<ReservationPaymentInfo | null>(null);
   const [showPaymentActionModal, setShowPaymentActionModal] = useState(false);
 
-  // Manual reservation modal state
-  const [showManualReservationForm, setShowManualReservationForm] = useState(false);
-  const [manualFormData, setManualFormData] = useState<ManualReservationCreate>({
-    guest_name: "",
-    guest_phone: "",
-    guest_email: "",
-    tc_identity_number: "",
-    passport_number: "",
-    hotel_room_number: "",
-    baggage_count: 1,
-    luggage_type: "Medium",
-    notes: "",
-    amount_minor: 0,
-    payment_mode: "CASH",
-  });
-
   const reservationsQuery = useQuery({
     queryKey: ["widget-reservations", filterStatus, filterFrom, filterTo],
     queryFn: () =>
@@ -66,31 +50,6 @@ export function ReservationsPage() {
   // ===============================================
   // UNIFIED MUTATIONS - work for both widget and normal reservations
   // ===============================================
-
-  // Create manual reservation
-  const createManualReservationMutation = useMutation({
-    mutationFn: (payload: ManualReservationCreate) => reservationService.createManual(payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
-      push({ title: "Rezervasyon oluşturuldu", description: "Manuel rezervasyon başarıyla kaydedildi", type: "success" });
-      setShowManualReservationForm(false);
-      setManualFormData({
-        guest_name: "",
-        guest_phone: "",
-        guest_email: "",
-        tc_identity_number: "",
-        passport_number: "",
-        hotel_room_number: "",
-        baggage_count: 1,
-        luggage_type: "Medium",
-        notes: "",
-        amount_minor: 0,
-        payment_mode: "CASH",
-      });
-    },
-    onError: (error: unknown) =>
-      push({ title: "Rezervasyon oluşturulamadı", description: getErrorMessage(error), type: "error" }),
-  });
 
   // Complete reservation (deliver luggage) - works for both widget and normal reservations
   const completeReservationMutation = useMutation<{ id: string | number; status: string }, unknown, string | number>({
@@ -258,221 +217,14 @@ export function ReservationsPage() {
         </div>
       )}
 
-      {/* Manual Reservation Form */}
-      <AnimatePresence>
-        {showManualReservationForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-                <div>
-                  <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
-                    Yeni Manuel Rezervasyon
-                  </h2>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-                    Panel üzerinden manuel rezervasyon oluşturun
-                  </p>
-                </div>
-                <ModernButton
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowManualReservationForm(false)}
-                  leftIcon={<X className="h-4 w-4" />}
-                >
-                  Kapat
-                </ModernButton>
-              </div>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  createManualReservationMutation.mutate(manualFormData);
-                }}
-                style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--space-4)' }}
-              >
-                <ModernInput
-                  label="Misafir Adı Soyadı *"
-                  value={manualFormData.guest_name}
-                  onChange={(e) => setManualFormData(prev => ({ ...prev, guest_name: e.target.value }))}
-                  placeholder="Ahmet Yılmaz"
-                  required
-                  fullWidth
-                />
-                <ModernInput
-                  label="Telefon Numarası *"
-                  value={manualFormData.guest_phone}
-                  onChange={(e) => setManualFormData(prev => ({ ...prev, guest_phone: e.target.value }))}
-                  placeholder="+90 555 123 4567"
-                  required
-                  fullWidth
-                />
-                <ModernInput
-                  label="E-posta"
-                  type="email"
-                  value={manualFormData.guest_email || ""}
-                  onChange={(e) => setManualFormData(prev => ({ ...prev, guest_email: e.target.value }))}
-                  placeholder="ornek@email.com"
-                  fullWidth
-                />
-                <ModernInput
-                  label="TC Kimlik No"
-                  value={manualFormData.tc_identity_number || ""}
-                  onChange={(e) => setManualFormData(prev => ({ ...prev, tc_identity_number: e.target.value }))}
-                  placeholder="12345678901"
-                  maxLength={11}
-                  fullWidth
-                />
-                <ModernInput
-                  label="Pasaport No"
-                  value={manualFormData.passport_number || ""}
-                  onChange={(e) => setManualFormData(prev => ({ ...prev, passport_number: e.target.value }))}
-                  placeholder="AB1234567"
-                  fullWidth
-                />
-                <ModernInput
-                  label="Oda Numarası"
-                  value={manualFormData.hotel_room_number || ""}
-                  onChange={(e) => setManualFormData(prev => ({ ...prev, hotel_room_number: e.target.value }))}
-                  placeholder="101"
-                  fullWidth
-                />
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
-                    Bavul Sayısı
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={manualFormData.baggage_count || 1}
-                    onChange={(e) => setManualFormData(prev => ({ ...prev, baggage_count: parseInt(e.target.value) || 1 }))}
-                    style={{
-                      width: '100%',
-                      padding: 'var(--space-2) var(--space-3)',
-                      border: '1px solid var(--border-primary)',
-                      borderRadius: 'var(--radius-lg)',
-                      background: 'var(--bg-tertiary)',
-                      color: 'var(--text-primary)',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
-                    Bagaj Tipi
-                  </label>
-                  <select
-                    value={manualFormData.luggage_type || "Medium"}
-                    onChange={(e) => setManualFormData(prev => ({ ...prev, luggage_type: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: 'var(--space-2) var(--space-3)',
-                      border: '1px solid var(--border-primary)',
-                      borderRadius: 'var(--radius-lg)',
-                      background: 'var(--bg-tertiary)',
-                      color: 'var(--text-primary)',
-                    }}
-                  >
-                    <option value="Cabin">Kabin (Cabin)</option>
-                    <option value="Medium">Orta (Medium)</option>
-                    <option value="Large">Büyük (Large)</option>
-                    <option value="Backpack">Sırt Çantası</option>
-                    <option value="Other">Diğer</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
-                    Ödeme Tutarı (TL)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={(manualFormData.amount_minor || 0) / 100}
-                    onChange={(e) => setManualFormData(prev => ({ ...prev, amount_minor: Math.round(parseFloat(e.target.value || "0") * 100) }))}
-                    style={{
-                      width: '100%',
-                      padding: 'var(--space-2) var(--space-3)',
-                      border: '1px solid var(--border-primary)',
-                      borderRadius: 'var(--radius-lg)',
-                      background: 'var(--bg-tertiary)',
-                      color: 'var(--text-primary)',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
-                    Ödeme Yöntemi
-                  </label>
-                  <select
-                    value={manualFormData.payment_mode || "CASH"}
-                    onChange={(e) => setManualFormData(prev => ({ ...prev, payment_mode: e.target.value as ManualReservationCreate["payment_mode"] }))}
-                    style={{
-                      width: '100%',
-                      padding: 'var(--space-2) var(--space-3)',
-                      border: '1px solid var(--border-primary)',
-                      borderRadius: 'var(--radius-lg)',
-                      background: 'var(--bg-tertiary)',
-                      color: 'var(--text-primary)',
-                    }}
-                  >
-                    <option value="CASH">Nakit</option>
-                    <option value="POS">POS / Kart</option>
-                  </select>
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <ModernInput
-                    label="Notlar"
-                    value={manualFormData.notes || ""}
-                    onChange={(e) => setManualFormData(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Ek notlar..."
-                    fullWidth
-                  />
-                </div>
-                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
-                  <ModernButton
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setShowManualReservationForm(false)}
-                  >
-                    İptal
-                  </ModernButton>
-                  <ModernButton
-                    type="submit"
-                    variant="primary"
-                    disabled={createManualReservationMutation.isPending}
-                    isLoading={createManualReservationMutation.isPending}
-                    loadingText="Kaydediliyor..."
-                  >
-                    Rezervasyon Oluştur
-                  </ModernButton>
-                </div>
-              </form>
-            </ModernCard>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <ModernCard variant="glass" padding="lg">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}>
-          <div>
-            <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
-              {t("reservations.listTitle")}
-            </h2>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-              {t("reservations.listSubtitle")}
-            </p>
-          </div>
-          <ModernButton
-            variant="primary"
-            onClick={() => setShowManualReservationForm(true)}
-            leftIcon={<Plus className="h-4 w-4" />}
-          >
-            Yeni Rezervasyon
-          </ModernButton>
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+            {t("reservations.listTitle")}
+          </h2>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("reservations.listSubtitle")}
+          </p>
         </div>
 
         <div style={{ marginBottom: 'var(--space-6)' }}>
