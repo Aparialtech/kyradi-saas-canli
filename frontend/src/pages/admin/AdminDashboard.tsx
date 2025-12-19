@@ -75,16 +75,16 @@ export function AdminDashboard() {
         />
 
         {/* Main Content */}
-        <div style={{ 
+        <main style={{ 
           flex: 1, 
           display: 'flex', 
           flexDirection: 'column',
           width: '100%',
           minWidth: 0,
           marginLeft: sidebarOpen ? '280px' : '80px',
-          transition: 'margin-left 0.2s',
+          transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
-        className="main-content"
+        className="main-content-area"
         >
           {/* Modern Navbar (same as Partner Panel) */}
           <ModernNavbar
@@ -151,7 +151,7 @@ export function AdminDashboard() {
           <div style={{ flex: 1, overflow: 'auto', position: 'relative', padding: 'var(--space-8)' }}>
             <Outlet />
           </div>
-        </div>
+        </main>
 
         {/* Quick Actions Modal */}
         <QuickActions

@@ -409,3 +409,40 @@ a:focus-visible {
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
+
+/* ====================== MAIN CONTENT AREA RESPONSIVE ====================== */
+
+.main-content-area {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Mobile: Full width, no sidebar margin */
+@media (max-width: 1023px) {
+  .main-content-area {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+}
+
+/* Desktop: Respect sidebar width */
+@media (min-width: 1024px) {
+  .main-content-area {
+    width: calc(100% - 280px);
+  }
+  
+  .main-content-area[style*="margin-left: 80px"] {
+    width: calc(100% - 80px);
+  }
+}
+
+/* Data table wrapper responsive */
+.data-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.data-table-wrapper .data-table {
+  min-width: 600px;
+}

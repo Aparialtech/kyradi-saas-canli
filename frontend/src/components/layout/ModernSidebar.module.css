@@ -63,11 +63,6 @@
   .sidebar {
     transform: translateX(0);
   }
-  
-  /* Add margin to main content */
-  .sidebar ~ * {
-    margin-left: 280px;
-  }
 }
 
 /* Dark Mode Enhancements */

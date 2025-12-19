@@ -725,7 +725,7 @@ export function PartnerDashboard() {
         />
 
         {/* Main Content */}
-        <div style={{ 
+        <main style={{ 
           flex: 1, 
           display: 'flex', 
           flexDirection: 'column',
@@ -734,7 +734,7 @@ export function PartnerDashboard() {
           marginLeft: sidebarOpen ? '280px' : '80px',
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
-        className="main-content"
+        className="main-content-area"
         >
           {/* Modern Navbar */}
           <ModernNavbar
@@ -800,7 +800,7 @@ export function PartnerDashboard() {
           <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
             <Outlet />
           </div>
-        </div>
+        </main>
 
         {/* Quick Actions Modal */}
         <QuickActions

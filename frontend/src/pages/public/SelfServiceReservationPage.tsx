@@ -680,11 +680,7 @@ export function SelfServiceReservationPage() {
                   Rezervasyon Oluştur
                 </ModernButton>
               </div>
-              {priceError && !priceEstimate && (
-                <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: '#dc2626', textAlign: 'center' }}>
-                  Ücret hesaplanamadığı için rezervasyon oluşturulamaz. Lütfen tarihleri kontrol edin.
-                </p>
-              )}
+              {/* Price error message is shown inline in the price estimate section above */}
             </form>
 
             {/* Success Result */}

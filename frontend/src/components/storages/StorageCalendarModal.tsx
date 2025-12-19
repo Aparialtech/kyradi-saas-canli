@@ -2,11 +2,17 @@ import { useCallback, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "../../hooks/useTranslation";
 import { http } from "../../lib/http";
+import { motion, AnimatePresence } from "framer-motion";
+import { Clock, Calendar, X, AlertCircle } from "../../lib/lucide";
+
+type DayStatus = "free" | "occupied" | "partial";
 
 interface StorageCalendarDay {
   date: string;
-  status: "free" | "occupied";
+  status: DayStatus;
   reservation_ids: string[];
+  availability_windows?: { start: string; end: string }[];
+  occupied_slots?: { start: string; end: string; reservation_id?: string }[];
 }
 
 interface StorageCalendarResponse {
@@ -36,6 +42,10 @@ export function StorageCalendarModal({
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  
+  // Selected day state for detail view
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDayData, setSelectedDayData] = useState<StorageCalendarDay | null>(null);
   
   // Calculate date range for the query
   const { startDate, endDate } = useMemo(() => {
@@ -76,7 +86,7 @@ export function StorageCalendarModal({
     }
     
     // Build grid with empty cells for alignment
-    const grid: Array<{ day: number | null; date: string | null; status?: "free" | "occupied"; reservations?: string[] }> = [];
+    const grid: Array<{ day: number | null; date: string | null; status?: DayStatus; reservations?: string[] }> = [];
     
     // Add empty cells for days before the first of the month
     for (let i = 0; i < startDayOfWeek; i++) {
@@ -141,15 +151,17 @@ export function StorageCalendarModal({
     t("calendar.days.sat"),
   ];
   
-  // Count free/occupied days
-  const { freeDays, occupiedDays } = useMemo(() => {
+  // Count free/occupied/partial days
+  const { freeDays, occupiedDays, partialDays } = useMemo(() => {
     let free = 0;
     let occupied = 0;
+    let partial = 0;
     for (const day of calendarDays) {
       if (day.status === "free") free++;
       if (day.status === "occupied") occupied++;
+      if (day.status === "partial") partial++;
     }
-    return { freeDays: free, occupiedDays: occupied };
+    return { freeDays: free, occupiedDays: occupied, partialDays: partial };
   }, [calendarDays]);
   
   if (!isOpen) return null;
@@ -250,29 +262,41 @@ export function StorageCalendarModal({
         <div
           style={{
             display: "flex",
-            gap: "1rem",
+            gap: "0.75rem",
             marginBottom: "1rem",
-            fontSize: "0.875rem",
+            fontSize: "0.8rem",
+            flexWrap: "wrap",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
             <span
               style={{
-                width: "16px",
-                height: "16px",
+                width: "14px",
+                height: "14px",
                 borderRadius: "4px",
-                backgroundColor: "#22c55e",
+                backgroundColor: "#bbf7d0",
               }}
             />
             <span>{t("calendar.free")} ({freeDays})</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
             <span
               style={{
-                width: "16px",
-                height: "16px",
+                width: "14px",
+                height: "14px",
                 borderRadius: "4px",
-                backgroundColor: "#ef4444",
+                backgroundColor: "#fef3c7",
+              }}
+            />
+            <span>Kısmi ({partialDays})</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            <span
+              style={{
+                width: "14px",
+                height: "14px",
+                borderRadius: "4px",
+                backgroundColor: "#fecaca",
               }}
             />
             <span>{t("calendar.occupied")} ({occupiedDays})</span>
@@ -321,47 +345,280 @@ export function StorageCalendarModal({
             ))}
             
             {/* Calendar days */}
-            {calendarDays.map((cell, index) => (
-              <div
-                key={index}
-                style={{
-                  aspectRatio: "1",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem",
-                  fontWeight: 500,
-                  backgroundColor:
-                    cell.day === null
-                      ? "transparent"
-                      : cell.status === "occupied"
-                        ? "#fecaca"
-                        : cell.status === "free"
-                          ? "#bbf7d0"
-                          : "#f3f4f6",
-                  color:
-                    cell.status === "occupied"
-                      ? "#991b1b"
-                      : cell.status === "free"
-                        ? "#166534"
-                        : "#374151",
-                  cursor: cell.day !== null ? "default" : "auto",
-                }}
-                title={
-                  cell.reservations && cell.reservations.length > 0
-                    ? `${t("calendar.reservations")}: ${cell.reservations.length}`
-                    : undefined
-                }
-              >
-                {cell.day}
-              </div>
-            ))}
+            {calendarDays.map((cell, index) => {
+              const isSelected = cell.date === selectedDate;
+              const isClickable = cell.day !== null;
+              
+              return (
+                <motion.div
+                  key={index}
+                  whileHover={isClickable ? { scale: 1.05 } : undefined}
+                  whileTap={isClickable ? { scale: 0.95 } : undefined}
+                  onClick={() => {
+                    if (isClickable && cell.date) {
+                      setSelectedDate(cell.date);
+                      // Find day data from calendar response
+                      const dayData = calendarQuery.data?.days.find(d => d.date === cell.date);
+                      setSelectedDayData(dayData ? {
+                        ...dayData,
+                        status: cell.status as "free" | "occupied" | "partial",
+                      } : {
+                        date: cell.date,
+                        status: "free",
+                        reservation_ids: [],
+                        availability_windows: [],
+                      });
+                    }
+                  }}
+                  style={{
+                    aspectRatio: "1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    backgroundColor:
+                      cell.day === null
+                        ? "transparent"
+                        : isSelected
+                          ? "var(--primary)"
+                          : cell.status === "occupied"
+                            ? "#fecaca"
+                            : cell.status === "free"
+                              ? "#bbf7d0"
+                              : cell.status === "partial"
+                                ? "#fef3c7"
+                                : "#f3f4f6",
+                    color:
+                      isSelected
+                        ? "white"
+                        : cell.status === "occupied"
+                          ? "#991b1b"
+                          : cell.status === "free"
+                            ? "#166534"
+                            : cell.status === "partial"
+                              ? "#92400e"
+                              : "#374151",
+                    cursor: isClickable ? "pointer" : "auto",
+                    border: isSelected ? "2px solid var(--primary)" : "2px solid transparent",
+                    transition: "all 0.2s ease",
+                  }}
+                  title={
+                    cell.reservations && cell.reservations.length > 0
+                      ? `${t("calendar.reservations")}: ${cell.reservations.length}`
+                      : isClickable ? "Detay için tıklayın" : undefined
+                  }
+                >
+                  {cell.day}
+                </motion.div>
+              );
+            })}
           </div>
         )}
         
+        {/* Selected Day Detail */}
+        <AnimatePresence mode="wait">
+          {selectedDate && selectedDayData && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                marginTop: "1rem",
+                padding: "1rem",
+                backgroundColor: "var(--bg-secondary, #f9fafb)",
+                borderRadius: "12px",
+                border: "1px solid var(--border-primary, #e5e7eb)",
+              }}
+            >
+              {/* Day Detail Header */}
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "0.75rem",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Calendar style={{ width: "18px", height: "18px", color: "var(--primary)" }} />
+                  <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
+                    {new Date(selectedDate + "T00:00:00").toLocaleDateString("tr-TR", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(null);
+                    setSelectedDayData(null);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px",
+                    borderRadius: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  aria-label="Kapat"
+                >
+                  <X style={{ width: "16px", height: "16px", color: "var(--text-tertiary)" }} />
+                </button>
+              </div>
+
+              {/* Status Badge */}
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.375rem",
+                padding: "0.25rem 0.75rem",
+                borderRadius: "9999px",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                marginBottom: "0.75rem",
+                backgroundColor:
+                  selectedDayData.status === "occupied"
+                    ? "#fecaca"
+                    : selectedDayData.status === "free"
+                      ? "#bbf7d0"
+                      : selectedDayData.status === "partial"
+                        ? "#fef3c7"
+                        : "#f3f4f6",
+                color:
+                  selectedDayData.status === "occupied"
+                    ? "#991b1b"
+                    : selectedDayData.status === "free"
+                      ? "#166534"
+                      : selectedDayData.status === "partial"
+                        ? "#92400e"
+                        : "#374151",
+              }}>
+                {selectedDayData.status === "free" && "Müsait"}
+                {selectedDayData.status === "occupied" && "Dolu"}
+                {selectedDayData.status === "partial" && "Kısmi Müsait"}
+              </div>
+
+              {/* Availability Windows */}
+              <div style={{ marginTop: "0.5rem" }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                  marginBottom: "0.5rem",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  color: "var(--text-primary)",
+                }}>
+                  <Clock style={{ width: "14px", height: "14px" }} />
+                  <span>Müsaitlik Saatleri</span>
+                </div>
+
+                {selectedDayData.availability_windows && selectedDayData.availability_windows.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {selectedDayData.availability_windows.map((window, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          padding: "0.5rem 0.75rem",
+                          backgroundColor: "#dcfce7",
+                          borderRadius: "6px",
+                          fontSize: "0.875rem",
+                          color: "#166534",
+                        }}
+                      >
+                        <Clock style={{ width: "14px", height: "14px" }} />
+                        <span style={{ fontWeight: 500 }}>
+                          {window.start} - {window.end}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.75rem",
+                    backgroundColor: "#f3f4f6",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    color: "#6b7280",
+                  }}>
+                    <AlertCircle style={{ width: "14px", height: "14px" }} />
+                    <span>Bu gün için saat tanımı yok</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Occupied Slots (if any) */}
+              {selectedDayData.occupied_slots && selectedDayData.occupied_slots.length > 0 && (
+                <div style={{ marginTop: "0.75rem" }}>
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.375rem",
+                    marginBottom: "0.5rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    color: "var(--text-primary)",
+                  }}>
+                    <Clock style={{ width: "14px", height: "14px" }} />
+                    <span>Dolu Saatler</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {selectedDayData.occupied_slots.map((slot, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          padding: "0.5rem 0.75rem",
+                          backgroundColor: "#fecaca",
+                          borderRadius: "6px",
+                          fontSize: "0.875rem",
+                          color: "#991b1b",
+                        }}
+                      >
+                        <Clock style={{ width: "14px", height: "14px" }} />
+                        <span style={{ fontWeight: 500 }}>
+                          {slot.start} - {slot.end}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reservations Count */}
+              {selectedDayData.reservation_ids && selectedDayData.reservation_ids.length > 0 && (
+                <div style={{
+                  marginTop: "0.75rem",
+                  padding: "0.5rem 0.75rem",
+                  backgroundColor: "#dbeafe",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  color: "#1e40af",
+                }}>
+                  Bu gün için <strong>{selectedDayData.reservation_ids.length}</strong> rezervasyon mevcut
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Summary */}
-        {calendarQuery.data && (
+        {calendarQuery.data && !selectedDate && (
           <div
             style={{
               marginTop: "1rem",
@@ -373,6 +630,9 @@ export function StorageCalendarModal({
           >
             <p style={{ margin: 0 }}>
               {t("calendar.summaryText", { free: freeDays, occupied: occupiedDays })}
+            </p>
+            <p style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+              💡 Bir güne tıklayarak saat detaylarını görüntüleyebilirsiniz.
             </p>
           </div>
         )}
