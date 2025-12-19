@@ -91,6 +91,18 @@ class Tenant(IdentifiedMixin, TimestampMixin, Base):
         back_populates="tenant",
         cascade="all, delete-orphan",
     )
+    payment_schedule: Mapped[Optional["PaymentSchedule"]] = relationship(
+        "PaymentSchedule",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+        uselist=False,
+        single_parent=True,
+    )
+    payment_transfers: Mapped[List["PaymentTransfer"]] = relationship(
+        "PaymentTransfer",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
 
 
 class User(IdentifiedMixin, TimestampMixin, Base):

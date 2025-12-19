@@ -44,6 +44,7 @@ class PasswordResetToken(IdentifiedMixin, TimestampMixin, Base):
     )
     created_ip: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)  # IPv6 support
     user_agent: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    verification_code: Mapped[Optional[str]] = mapped_column(String(6), nullable=True)  # 6-digit verification code
 
     user: Mapped["User"] = relationship("User", back_populates="password_reset_tokens")
 

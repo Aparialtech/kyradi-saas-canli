@@ -41,7 +41,6 @@ class UserRead(IdentifiedModel):
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
-    tenant_slug: Optional[str] = None
 
 
 class ForgotPasswordResponse(BaseModel):
@@ -49,8 +48,18 @@ class ForgotPasswordResponse(BaseModel):
     reset_token: Optional[str] = None  # Only in development mode
 
 
+class VerifyResetCodeRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code from email")
+
+
+class VerifyResetCodeResponse(BaseModel):
+    message: str
+    reset_token: str
+
+
 class ResetPasswordRequest(BaseModel):
-    token: str = Field(..., description="Password reset token from email link")
+    token: str = Field(..., description="Password reset token from code verification")
     new_password: str = Field(min_length=8, description="Yeni şifre minimum 8 karakter olmalıdır.")
 
 

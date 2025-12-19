@@ -103,6 +103,95 @@ class EmailService:
                 raise
 
     @staticmethod
+    async def send_password_reset_code(
+        to_email: str,
+        code: str,
+        locale: str = "tr-TR",
+    ) -> bool:
+        """Send password reset email with 6-digit verification code."""
+        provider = settings.email_provider.lower()
+        
+        if locale.startswith("tr"):
+            subject = "Şifre Sıfırlama Doğrulama Kodu"
+            body_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #00a389; margin: 0;">KYRADİ</h1>
+                </div>
+                <h2 style="color: #333;">Şifre Sıfırlama</h2>
+                <p>Merhaba,</p>
+                <p>Şifrenizi sıfırlamak için aşağıdaki 6 haneli kodu kullanın:</p>
+                <div style="background: linear-gradient(135deg, #00a389 0%, #6366f1 100%); color: white; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                    {code}
+                </div>
+                <p style="color: #666;">Bu kod <strong>10 dakika</strong> geçerlidir.</p>
+                <p style="color: #666;">Eğer bu talebi siz yapmadıysanız, bu e-postayı görmezden gelebilirsiniz.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999;">Saygılarımızla,<br>KYRADİ Ekibi</p>
+            </body>
+            </html>
+            """
+            body_text = f"Şifre sıfırlama kodunuz: {code}\n\nBu kod 10 dakika geçerlidir."
+        else:
+            subject = "Password Reset Verification Code"
+            body_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #00a389; margin: 0;">KYRADİ</h1>
+                </div>
+                <h2 style="color: #333;">Password Reset</h2>
+                <p>Hello,</p>
+                <p>Use the following 6-digit code to reset your password:</p>
+                <div style="background: linear-gradient(135deg, #00a389 0%, #6366f1 100%); color: white; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                    {code}
+                </div>
+                <p style="color: #666;">This code is valid for <strong>10 minutes</strong>.</p>
+                <p style="color: #666;">If you did not request this, you can ignore this email.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999;">Best regards,<br>KYRADİ Team</p>
+            </body>
+            </html>
+            """
+            body_text = f"Your password reset code: {code}\n\nThis code is valid for 10 minutes."
+        
+        try:
+            if provider == "resend":
+                result = await EmailService._send_via_resend(to_email, subject, body_html, body_text)
+                logger.info(f"✅ Password reset code email sent via Resend to {to_email}")
+                return result
+            elif provider == "sendgrid":
+                result = await EmailService._send_via_sendgrid(to_email, subject, body_html, body_text)
+                logger.info(f"Password reset code email sent via SendGrid to {to_email}")
+                return result
+            elif provider == "mailgun":
+                result = await EmailService._send_via_mailgun(to_email, subject, body_html, body_text)
+                logger.info(f"Password reset code email sent via Mailgun to {to_email}")
+                return result
+            elif provider == "smtp":
+                if not settings.smtp_host or not settings.smtp_user:
+                    logger.warning("SMTP configuration incomplete, logging code instead")
+                    logger.info(f"[EMAIL LOG] Password reset code for {to_email}: {code}")
+                    return True
+                result = await EmailService._send_via_smtp(to_email, subject, body_html, body_text)
+                logger.info(f"✅ Password reset code email sent via SMTP to {to_email}")
+                return result
+            else:
+                # Default: log mode for development
+                logger.warning(f"⚠️ EMAIL NOT SENT - Email provider '{provider}' not configured")
+                logger.info(f"[EMAIL LOG] Password reset code for {to_email}: {code}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to send password reset code email to {to_email}: {e}", exc_info=True)
+            is_development = settings.environment.lower() in {"local", "dev", "development"}
+            if is_development:
+                logger.warning(f"Email sending failed, but continuing (development mode). Code: {code}")
+                return True
+            else:
+                raise
+
+    @staticmethod
     async def _send_via_resend(to_email: str, subject: str, body_html: str, body_text: str) -> bool:
         """Send email via Resend API (Free: 3000 emails/month)."""
         if not settings.resend_api_key:

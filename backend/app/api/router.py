@@ -36,6 +36,7 @@ from .routes import (
     locations,
     lockers,
     magicpay,
+    payment_schedules,
     pricing,
     public,
     payments,
@@ -81,6 +82,7 @@ api_router.include_router(pricing.router)
 api_router.include_router(users.router)
 api_router.include_router(staff.router)
 api_router.include_router(tickets.router)
+api_router.include_router(payment_schedules.router)
 api_router.include_router(qr.router)
 api_router.include_router(reports.router)
 api_router.include_router(revenue.router)

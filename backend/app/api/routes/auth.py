@@ -20,6 +20,8 @@ from ...schemas import (
     UserRead,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
+    VerifyResetCodeRequest,
+    VerifyResetCodeResponse,
     ResetPasswordRequest,
     ResetPasswordResponse,
     VerifyLoginSMSRequest,
@@ -319,89 +321,125 @@ async def forgot_password(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> ForgotPasswordResponse:
-    """Request password reset via email link (no temporary password)."""
-    tenant: Tenant | None = None
-    if payload.tenant_slug and payload.tenant_slug.lower() not in {"admin", "__admin__"}:
-        stmt = select(Tenant).where(Tenant.slug == payload.tenant_slug)
-        tenant = (await session.execute(stmt)).scalar_one_or_none()
-        if tenant is None or not tenant.is_active:
-            # Don't reveal tenant existence for security
-            return ForgotPasswordResponse(
-                message="Eğer bu e-posta adresi kayıtlıysa, şifre sıfırlama linki gönderilmiştir.",
-            )
-
+    """Request password reset via email with 6-digit verification code."""
     stmt = select(User).where(User.email == payload.email)
     user = (await session.execute(stmt)).scalar_one_or_none()
     if user is None:
         # Don't reveal if user exists for security
         return ForgotPasswordResponse(
-            message="Eğer bu e-posta adresi kayıtlıysa, şifre sıfırlama linki gönderilmiştir.",
-        )
-
-    if tenant and user.tenant_id != tenant.id:
-        # Don't reveal tenant mismatch for security
-        return ForgotPasswordResponse(
-            message="Eğer bu e-posta adresi kayıtlıysa, şifre sıfırlama linki gönderilmiştir.",
+            message="Eğer bu e-posta adresi kayıtlıysa, doğrulama kodu gönderilmiştir.",
         )
 
     # Get client IP and user agent
     client_ip = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent", None)
 
-    # Create password reset token
+    # Generate 6-digit verification code
+    verification_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
+
+    # Create password reset token with the code
     reset_token = PasswordResetToken.create_token(
         user_id=user.id,
         tenant_id=user.tenant_id,
-        expires_in_minutes=30,
+        expires_in_minutes=10,  # Code expires in 10 minutes
         method=PasswordResetMethod.EMAIL_LINK.value,
         created_ip=client_ip,
         user_agent=user_agent,
     )
+    # Store the 6-digit code in the token field temporarily (will be replaced after verification)
+    reset_token.verification_code = verification_code
     session.add(reset_token)
     await session.flush()
     
-    # Build reset URL
-    # Use FRONTEND_URL if set, otherwise try to derive from public_cdn_base, fallback to localhost
-    if settings.frontend_url:
-        frontend_base = settings.frontend_url
-    elif hasattr(settings, "public_cdn_base") and settings.public_cdn_base:
-        # Remove /cdn suffix if present
-        frontend_base = settings.public_cdn_base.replace("/cdn", "").rstrip("/")
-    else:
-        frontend_base = "http://localhost:5173"
-    
-    reset_url = f"{frontend_base}/reset-password?token={reset_token.token}"
-    logger.info(f"Password reset URL generated: {reset_url}")
-    
-    # Send email
+    # Send email with verification code
     try:
-        await email_service.send_password_reset(
+        await email_service.send_password_reset_code(
             to_email=user.email,
-            reset_token=reset_token.token,
-            reset_url=reset_url,
-            locale="tr-TR",  # TODO: Get from request headers
+            code=verification_code,
+            locale="tr-TR",
         )
+        logger.info(f"Password reset code sent to {user.email}")
     except Exception as e:
-        logger.error(f"Failed to send password reset email to {user.email}: {e}", exc_info=True)
+        logger.error(f"Failed to send password reset code to {user.email}: {e}", exc_info=True)
         # Don't fail the request, but log the error
     
     await record_audit(
         session,
         tenant_id=user.tenant_id,
         actor_user_id=user.id,
-        action="auth.password.reset.requested",
+        action="auth.password.reset.code_sent",
         entity="users",
         entity_id=user.id,
-        meta={"email": user.email, "method": "email_link"},
+        meta={"email": user.email, "method": "email_code"},
     )
     await session.commit()
     
-    # In development mode, return token in response for testing
+    # In development mode, return code in response for testing
     is_development = settings.environment.lower() in {"local", "dev", "development"}
     
     return ForgotPasswordResponse(
-        message="Eğer bu e-posta adresi kayıtlıysa, şifre sıfırlama linki gönderilmiştir.",
-        reset_token=reset_token.token if is_development else None,  # Only in dev mode
+        message="Doğrulama kodu e-posta adresinize gönderildi.",
+        reset_token=verification_code if is_development else None,  # Only in dev mode (for testing)
+    )
+
+
+@router.post("/verify-reset-code", response_model=VerifyResetCodeResponse)
+async def verify_reset_code(
+    payload: VerifyResetCodeRequest,
+    session: AsyncSession = Depends(get_session),
+) -> VerifyResetCodeResponse:
+    """Verify the 6-digit code sent to email and return reset token."""
+    # Find user by email
+    stmt = select(User).where(User.email == payload.email)
+    user = (await session.execute(stmt)).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz kod veya e-posta adresi.",
+        )
+    
+    # Find the most recent unused reset token for this user with matching code
+    stmt = select(PasswordResetToken).where(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.is_used == False,
+        PasswordResetToken.verification_code == payload.code,
+    ).order_by(PasswordResetToken.created_at.desc())
+    
+    reset_token = (await session.execute(stmt)).scalar_one_or_none()
+    
+    if reset_token is None or not reset_token.is_valid():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz veya süresi dolmuş kod.",
+        )
+    
+    # Code is valid - generate actual reset token
+    import hmac
+    code_valid = hmac.compare_digest(reset_token.verification_code or "", payload.code)
+    
+    if not code_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz kod.",
+        )
+    
+    # Clear the verification code and keep the token for password reset
+    reset_token.verification_code = None
+    
+    await record_audit(
+        session,
+        tenant_id=user.tenant_id,
+        actor_user_id=user.id,
+        action="auth.password.reset.code_verified",
+        entity="users",
+        entity_id=user.id,
+        meta={"email": user.email},
+    )
+    await session.commit()
+    
+    return VerifyResetCodeResponse(
+        message="Kod doğrulandı. Yeni şifrenizi belirleyebilirsiniz.",
+        reset_token=reset_token.token,
     )
 
 
