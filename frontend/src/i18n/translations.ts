@@ -935,9 +935,9 @@ export const translations = {
     "tickets.detail.resolvedAt": "Çözüm tarihi",
     "tickets.unread": "okunmamış",
 
-    // Common actions
-    "common.create": "Oluştur",
-    "common.update": "Güncelle",
+    // Calendar
+    "calendar.viewCalendar": "Takvimi Görüntüle",
+    
     "common.saving": "Kaydediliyor...",
     "common.passive": "Pasif",
     "common.records": "kayıt",
