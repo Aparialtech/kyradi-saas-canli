@@ -30,5 +30,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 EXPOSE 8000
 
-# Startup script: önce migration, sonra uvicorn
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Copy and make startup script executable
+COPY backend/scripts/startup.sh /app/scripts/startup.sh
+RUN chmod +x /app/scripts/startup.sh
+
+# Use startup script with timeout for migrations
+CMD ["/app/scripts/startup.sh"]
