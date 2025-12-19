@@ -8,9 +8,12 @@ except Exception:  # noqa: BLE001 - uvloop is optional
     uvloop = None
 
 import logging
+import re
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from .api import api_router
 from .core.config import settings
@@ -41,46 +44,79 @@ app = FastAPI(
 )
 
 # =============================================================================
-# CORS Configuration
+# CORS Configuration - Dynamic Origin Support
 # =============================================================================
-# When credentials: "include" is used in frontend fetch requests,
-# Access-Control-Allow-Origin CANNOT be "*". It must be the specific origin.
+# Custom CORS handling for Vercel preview deployments + static origins
 
-# Get allowed origins from settings (which includes defaults from config.py)
-allowed_origins = list(settings.cors_origins)
+# Static allowed origins
+STATIC_ORIGINS = {
+    "https://kyradi-saas-canli.vercel.app",
+    "https://kyradi-saas-canli-git-main-aparialtechs-projects.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+}
 
-# Add Vercel preview deployment pattern support
-def is_allowed_origin(origin: str) -> bool:
-    """Check if origin is allowed, including Vercel preview deployments."""
+# Add origins from settings
+STATIC_ORIGINS.update(settings.cors_origins)
+
+# Patterns for dynamic Vercel preview deployments
+VERCEL_PATTERNS = [
+    re.compile(r"https://kyradi.*\.vercel\.app$"),
+    re.compile(r"https://.*aparialtechs.*\.vercel\.app$"),
+    re.compile(r"https://.*-aparialtechs-projects\.vercel\.app$"),
+]
+
+def is_origin_allowed(origin: str) -> bool:
+    """Check if origin is allowed (static list or Vercel pattern)."""
     if not origin:
         return False
-    # Check exact match
-    if origin in allowed_origins:
+    if origin in STATIC_ORIGINS:
         return True
-    # Check Vercel preview deployments pattern
-    if "vercel.app" in origin and ("kyradi" in origin.lower() or "aparialtechs" in origin.lower()):
-        return True
+    for pattern in VERCEL_PATTERNS:
+        if pattern.match(origin):
+            return True
     return False
 
-# Build final allowed origins list - include all Vercel patterns
-final_origins = allowed_origins.copy()
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    """Custom CORS middleware that supports dynamic Vercel preview URLs."""
+    
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin", "")
+        
+        # Handle preflight OPTIONS request
+        if request.method == "OPTIONS":
+            if is_origin_allowed(origin):
+                return Response(
+                    status_code=200,
+                    headers={
+                        "Access-Control-Allow-Origin": origin,
+                        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+                        "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Requested-With, Accept, Origin, X-Tenant-ID",
+                        "Access-Control-Allow-Credentials": "true",
+                        "Access-Control-Max-Age": "600",
+                    },
+                )
+            else:
+                return Response(status_code=403, content="CORS not allowed")
+        
+        # Process actual request
+        response = await call_next(request)
+        
+        # Add CORS headers to response
+        if is_origin_allowed(origin):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Expose-Headers"] = "*"
+        
+        return response
 
 logger.info("Starting Kyradi backend...")
-logger.info(f"CORS allowed origins: {final_origins}")
+logger.info(f"CORS static origins: {STATIC_ORIGINS}")
 
-# Add CORS middleware BEFORE including routers
-# This ensures ALL routes (including /auth/*) get CORS headers
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=final_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=600,
-    # Allow origin callback for dynamic Vercel preview URLs
-    allow_origin_regex=r"https://kyradi.*\.vercel\.app|https://.*aparialtechs.*\.vercel\.app",
-)
+# Add custom CORS middleware BEFORE including routers
+app.add_middleware(DynamicCORSMiddleware)
 
 app.include_router(api_router)
 
