@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,20 +16,10 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { Badge } from "../../../components/ui/Badge";
-import { HardDrive, Calendar, Edit, Trash2, ChevronDown, ChevronUp, MapPin, Clock, Package, Search } from "../../../lib/lucide";
-
-// Status badge classes - labels are fetched via i18n inside component
-// Colors: dolu=kırmızı, boş=yeşil, rezervasyon=kahverengi
-const statusBadgeClass: Record<StorageStatus, string> = {
-  idle: "badge badge--success", // Yeşil - Boş
-  occupied: "badge badge--danger", // Kırmızı - Dolu
-  reserved: "badge badge--warning", // Kahverengi - Rezervasyon
-  faulty: "badge badge--danger",
-};
+import { HardDrive, Calendar, Edit, Trash2, ChevronDown, MapPin, Clock, Package, Search } from "../../../lib/lucide";
 
 export function LockersPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const [editingStorage, setEditingStorage] = useState<Storage | null>(null);
@@ -568,7 +557,7 @@ export function LockersPage() {
                                         Son Güncelleme
                                       </div>
                                       <div style={{ fontWeight: 'var(--font-semibold)' }}>
-                                        {storage.updated_at ? new Date(storage.updated_at).toLocaleString("tr-TR") : '-'}
+                                        {storage.created_at ? new Date(storage.created_at).toLocaleString("tr-TR") : '-'}
                                       </div>
                                     </div>
                                   </div>

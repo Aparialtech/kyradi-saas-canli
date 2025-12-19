@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Package, MapPin, Loader2, AlertCircle, UserPlus, Edit, Trash2, Eye, Download, X, Plus } from "../../../lib/lucide";
+import { Users, Package, MapPin, Loader2, AlertCircle, UserPlus, Edit, Trash2, Eye, Download, X } from "../../../lib/lucide";
 import { staffService, type Staff, type StaffPayload } from "../../../services/partner/staff";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";

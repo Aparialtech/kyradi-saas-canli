@@ -1,11 +1,11 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { ArrowLeft, UserPlus, MapPin, Package, User, Save, X, Search, Shield } from "../../../lib/lucide";
+import { ArrowLeft, MapPin, Package, User, Save, X, Search, Shield } from "../../../lib/lucide";
 
 import { staffService, type StaffAssignmentCreate } from "../../../services/partner/staff";
 import { tenantUserService } from "../../../services/partner/users";
@@ -14,7 +14,6 @@ import { storageService } from "../../../services/partner/storages";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
-import { useTranslation } from "../../../hooks/useTranslation";
 
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
@@ -33,12 +32,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function StaffAssignPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [locationSearchTerm, setLocationSearchTerm] = useState("");
-  const [storageSearchTerm, setStorageSearchTerm] = useState("");
+  const [storageSearchTerm] = useState("");
 
   // Fetch data
   const usersQuery = useQuery({

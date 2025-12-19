@@ -1,14 +1,14 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
-  MessageSquare, 
   Plus, 
   Search, 
   CheckCircle2, 
   Send,
   Loader2,
-  Bell
+  Bell,
+  MessageSquare
 } from "../../../lib/lucide";
 
 import { 
@@ -346,7 +346,7 @@ export function TicketsPage() {
           />
         ) : (
           <div style={{ textAlign: "center", padding: "var(--space-16)", color: "var(--text-tertiary)" }}>
-            <MessageCircle className="h-16 w-16" style={{ margin: "0 auto var(--space-4) auto", color: "var(--text-muted)" }} />
+            <MessageSquare className="h-16 w-16" style={{ margin: "0 auto var(--space-4) auto", color: "var(--text-muted)" }} />
             <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", margin: "0 0 var(--space-2) 0", color: "var(--text-primary)" }}>
               Henüz ticket yok
             </h3>

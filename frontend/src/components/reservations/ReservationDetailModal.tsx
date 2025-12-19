@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Modal } from "../common/Modal";
 import { useTranslation } from "../../hooks/useTranslation";
-import { QrCode, Copy, Check, User, Calendar, DollarSign, CreditCard, Package, MapPin } from "../../lib/lucide";
+import { QrCode, Copy, Check, User, Calendar, DollarSign, CreditCard } from "../../lib/lucide";
 import { useToast } from "../../hooks/useToast";
-import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../services/partner/reservations";
+import { reservationService, type Reservation } from "../../services/partner/reservations";
 import { Badge } from "../ui/Badge";
 import QRCode from "qrcode";
 
@@ -371,14 +371,14 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
                   {formatCurrency(paymentQuery.data.amount_minor)}
                 </p>
               </div>
-              {paymentQuery.data.payment_mode && (
+              {paymentQuery.data.mode && (
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ödeme Yöntemi</span>
                   <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                    {paymentQuery.data.payment_mode === 'CASH' ? 'Nakit' :
-                     paymentQuery.data.payment_mode === 'POS' ? 'POS / Kart' :
-                     paymentQuery.data.payment_mode === 'GATEWAY_LIVE' ? 'Online Ödeme' :
-                     paymentQuery.data.payment_mode}
+                    {paymentQuery.data.mode === 'CASH' ? 'Nakit' :
+                     paymentQuery.data.mode === 'POS' ? 'POS / Kart' :
+                     paymentQuery.data.mode === 'GATEWAY_LIVE' ? 'Online Ödeme' :
+                     paymentQuery.data.mode}
                   </p>
                 </div>
               )}

@@ -6,7 +6,7 @@ import { Eye, CheckCircle2, XOctagon, Search, FileText, Plus, X, Download } from
 import { reservationService, type Reservation, type ReservationPaymentInfo, type ManualReservationCreate } from "../../../services/partner/reservations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
-import { usePagination, calculatePaginationMeta, Pagination } from "../../../components/common/Pagination";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { ReservationDetailModal } from "../../../components/reservations/ReservationDetailModal";
 import { PaymentActionModal } from "../../../components/reservations/PaymentActionModal";
 import { getErrorMessage } from "../../../lib/httpError";
@@ -113,26 +113,6 @@ export function ReservationsPage() {
     onError: (error: unknown) =>
       push({ title: t("reservations.toast.cancelError"), description: getErrorMessage(error), type: "error" }),
   });
-
-  // Payment action handler - for unpaid reservations
-  const handlePaymentAction = useCallback(async (reservation: Reservation) => {
-    try {
-      const [freshReservation, payment] = await Promise.all([
-        reservationService.getById(reservation.id),
-        reservationService.getPayment(reservation.id),
-      ]);
-
-      setPaymentReservation(freshReservation);
-      setPaymentInfo(payment);
-      setShowPaymentActionModal(true);
-    } catch (error) {
-      push({ 
-        title: t("payment.modal.createError"), 
-        description: getErrorMessage(error), 
-        type: "error" 
-      });
-    }
-  }, [push, t]);
 
   const allReservations = reservationsQuery.data ?? [];
   

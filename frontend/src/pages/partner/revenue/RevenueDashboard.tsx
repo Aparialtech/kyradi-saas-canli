@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar, AreaChart, Area } from "recharts";
-import { TrendingUp, DollarSign, CreditCard, FileText, Loader2, AlertCircle, BarChart3, Download, MapPin, Package, Calendar, LineChart as LineChartIcon, PieChart as PieChartIcon } from "../../../lib/lucide";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, Calendar, LineChart as LineChartIcon } from "../../../lib/lucide";
 import { revenueService, type PaymentModeRevenue } from "../../../services/partner/revenue";
 import { locationService } from "../../../services/partner/locations";
 import { storageService } from "../../../services/partner/storages";
@@ -12,8 +12,6 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
-import { usePagination, calculatePaginationMeta, Pagination } from "../../../components/common/Pagination";
-import { Badge } from "../../../components/ui/Badge";
 
 // Colors for charts
 const COLORS = ["#00a389", "#6366f1", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"];
@@ -28,7 +26,6 @@ export function RevenueDashboard() {
   const [locationFilter, setLocationFilter] = useState<string>("");
   const [storageFilter, setStorageFilter] = useState<string>("");
   const [chartType, setChartType] = useState<ChartType>('line');
-  const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
   // Fetch locations for filter
   const locationsQuery = useQuery({

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from '../../../lib/lucide';
+import { ChevronLeft, ChevronRight } from '../../../lib/lucide';
 import styles from './Pagination.module.css';
 
 export interface PaginationMeta {
@@ -119,7 +119,7 @@ export const Pagination: React.FC<PaginationProps> = ({
           aria-label="İlk sayfa"
           title="İlk sayfa"
         >
-          <ChevronsLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" /><ChevronLeft className="h-4 w-4" style={{ marginLeft: '-8px' }} />
         </button>
 
         {/* Previous Page */}
@@ -176,7 +176,7 @@ export const Pagination: React.FC<PaginationProps> = ({
           aria-label="Son sayfa"
           title="Son sayfa"
         >
-          <ChevronsRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" /><ChevronRight className="h-4 w-4" style={{ marginLeft: '-8px' }} />
         </button>
       </div>
 

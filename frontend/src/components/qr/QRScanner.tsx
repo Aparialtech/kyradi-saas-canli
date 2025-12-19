@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Camera, CameraOff, RefreshCw, AlertTriangle } from "../../lib/lucide";
+import { ScanLine, XCircle, RefreshCw, AlertTriangle } from "../../lib/lucide";
 import { ModernButton } from "../ui/ModernButton";
 import { ModernCard } from "../ui/ModernCard";
 import { Badge } from "../ui/Badge";
@@ -340,7 +340,7 @@ export function QRScanner({ onScan, isProcessing = false, disabled = false }: QR
               color: "var(--text-tertiary)",
             }}
           >
-            <CameraOff className="h-16 w-16" style={{ marginBottom: "var(--space-4)" }} />
+            <XCircle className="h-16 w-16" style={{ marginBottom: "var(--space-4)" }} />
             <p style={{ margin: 0 }}>Kamera kapalı</p>
           </div>
         )}
@@ -370,7 +370,7 @@ export function QRScanner({ onScan, isProcessing = false, disabled = false }: QR
             variant="primary"
             onClick={startCamera}
             disabled={disabled}
-            leftIcon={<Camera className="h-4 w-4" />}
+            leftIcon={<ScanLine className="h-4 w-4" />}
             style={{ flex: 1 }}
           >
             Kamerayı Aç
@@ -379,7 +379,7 @@ export function QRScanner({ onScan, isProcessing = false, disabled = false }: QR
           <ModernButton
             variant="outline"
             onClick={stopCamera}
-            leftIcon={<CameraOff className="h-4 w-4" />}
+            leftIcon={<XCircle className="h-4 w-4" />}
             style={{ flex: 1 }}
           >
             Kamerayı Kapat

@@ -12,7 +12,7 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
-import { usePagination, calculatePaginationMeta, Pagination } from "../../../components/common/Pagination";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 
 export function SettlementsPage() {
   const { t } = useTranslation();

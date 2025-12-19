@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
@@ -12,23 +12,19 @@ import {
   Clock, 
   Plus, 
   Trash2,
-  Building,
+  Building2,
   Save,
   X
 } from "../../../lib/lucide";
 
-import { locationService, type Location, type LocationPayload } from "../../../services/partner/locations";
+import { locationService, type LocationPayload } from "../../../services/partner/locations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
-import { useTranslation } from "../../../hooks/useTranslation";
 
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
-import { ModernCard } from "../../../components/ui/ModernCard";
-import { ModernButton } from "../../../components/ui/ModernButton";
-import { ModernInput } from "../../../components/ui/ModernInput";
 
 // Time slot schema for multiple time ranges per day
 const timeSlotSchema = z.object({
@@ -75,7 +71,6 @@ const DAY_LABELS: Record<string, string> = {
 export function LocationEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -95,8 +90,7 @@ export function LocationEditPage() {
     reset,
     watch,
     setValue,
-    control,
-    formState: { errors, isDirty },
+    formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -270,7 +264,7 @@ export function LocationEditPage() {
                     label="Lokasyon Adı *"
                     placeholder="Örn: Taksim Şube"
                     error={errors.name?.message}
-                    leftIcon={<Building className="h-4 w-4" />}
+                    leftIcon={<Building2 className="h-4 w-4" />}
                   />
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
@@ -412,7 +406,7 @@ export function LocationEditPage() {
 
                       {daySchedule.enabled && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                          {daySchedule.slots.map((slot, slotIndex) => (
+                          {daySchedule.slots.map((_, slotIndex) => (
                             <div 
                               key={slotIndex}
                               style={{ 
