@@ -7,11 +7,10 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import { ArrowLeft, User, Mail, Phone, Save, X, Shield } from "../../../lib/lucide";
 
-import { userService, type TenantUser, type TenantUserCreate, type TenantUserUpdate } from "../../../services/partner/users";
+import { userService, type TenantUserCreate, type TenantUserUpdate } from "../../../services/partner/users";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
-import { useTranslation } from "../../../hooks/useTranslation";
 
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
@@ -21,7 +20,7 @@ const formSchema = z.object({
   name: z.string().min(2, "İsim en az 2 karakter olmalı"),
   email: z.string().email("Geçerli bir e-posta adresi girin"),
   phone_number: z.string().optional(),
-  role: z.enum(["operator", "manager", "admin"]).default("operator"),
+  role: z.enum(["operator", "manager", "admin"]),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -35,7 +34,6 @@ const ROLE_LABELS: Record<string, string> = {
 export function UserEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
 

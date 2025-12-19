@@ -5,14 +5,9 @@ import {
   MessageSquare, 
   Plus, 
   Search, 
-  Filter, 
-  Clock, 
   CheckCircle2, 
-  AlertCircle,
   Send,
-  X,
   Loader2,
-  MessageCircle,
   Bell
 } from "../../../lib/lucide";
 
@@ -25,9 +20,8 @@ import {
 } from "../../../services/partner/tickets";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
-import { usePagination, calculatePaginationMeta, Pagination } from "../../../components/common/Pagination";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
-import { useTranslation } from "../../../hooks/useTranslation";
 
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
@@ -65,7 +59,6 @@ const priorityVariants: Record<TicketPriority, "success" | "warning" | "info" | 
 };
 
 export function TicketsPage() {
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const [searchTerm, setSearchTerm] = useState("");

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, UserPlus, Edit, Key, UserCheck, UserX, Loader2, AlertCircle, Search, Mail, Phone, Shield, CheckCircle2, XCircle, AlertTriangle, Plus } from "../../../lib/lucide";
+import { Users, UserPlus, Edit, Key, UserCheck, UserX, Loader2, AlertCircle, Search, Mail, Phone, Shield, CheckCircle2, XCircle, AlertTriangle } from "../../../lib/lucide";
 
 import {
   tenantUserService,
@@ -233,12 +233,6 @@ export function UsersPage() {
     window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_blank");
   }, []);
 
-  const handleNew = () => {
-    setEditingUser(null);
-    reset({ email: "", password: "", role: "storage_operator", is_active: true, phone_number: "" });
-    setShowForm(true);
-  };
-
   const handleCancelForm = () => {
     setShowForm(false);
     setEditingUser(null);
@@ -335,7 +329,7 @@ export function UsersPage() {
         </div>
         <ModernButton
           variant="primary"
-          onClick={handleNew}
+          onClick={handleNewUser}
           leftIcon={<UserPlus className="h-4 w-4" />}
         >
           {t("users.newUser")}
@@ -648,18 +642,7 @@ export function UsersPage() {
                       <ModernButton
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          setEditingUser(row);
-                          reset({
-                            email: row.email,
-                            password: "",
-                            phone_number: row.phone_number || "",
-                            role: row.role as FormValues["role"],
-                            is_active: row.is_active,
-                          });
-                          setShowForm(true);
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
+                        onClick={() => handleEditUser(row)}
                         leftIcon={<Edit className="h-4 w-4" />}
                       >
                         Düzenle
@@ -705,11 +688,15 @@ export function UsersPage() {
                 },
               },
             ] as ModernTableColumn<TenantUser>[]}
-            data={filteredUsers}
+            data={paginatedUsers}
             loading={usersQuery.isLoading}
             striped
             hoverable
             stickyHeader
+            showRowNumbers
+            pagination={paginationMeta}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
           />
         ) : (
           <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
