@@ -22,6 +22,10 @@ export const storageService = {
     const response = await http.get<Storage[]>("/storages", { params: status ? { status } : undefined });
     return response.data;
   },
+  async get(id: string): Promise<Storage> {
+    const response = await http.get<Storage>(`/storages/${id}`);
+    return response.data;
+  },
   async create(payload: StoragePayload): Promise<Storage> {
     const response = await http.post<Storage>("/storages", payload);
     return response.data;

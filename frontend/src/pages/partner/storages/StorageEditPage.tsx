@@ -43,9 +43,8 @@ export function StorageEditPage() {
     register,
     handleSubmit,
     reset,
-    watch,
     setValue,
-    formState: { errors, isDirty },
+    formState: { errors },
   } = useForm<StoragePayload>({
     defaultValues: {
       location_id: "",
@@ -128,7 +127,6 @@ export function StorageEditPage() {
     setShowLocationDropdown(false);
   }, [setValue]);
 
-  const isLoading = storageQuery.isLoading || locationsQuery.isLoading;
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   if (!isNew && storageQuery.isLoading) {
@@ -199,7 +197,7 @@ export function StorageEditPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <ModernCard variant="elevated" padding="xl">
+        <ModernCard variant="elevated" padding="lg">
           <form onSubmit={submit}>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
               

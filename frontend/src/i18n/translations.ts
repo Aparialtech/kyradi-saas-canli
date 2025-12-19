@@ -901,19 +901,10 @@ export const translations = {
     "storages.locationRequired": "Lokasyon seçimi zorunludur",
     "storages.codeHint": "Depo için benzersiz bir kod belirleyin (örn: DEPO-001)",
     
-    // Reports filters
-    "reports.filters.title": "Filtreler",
-    "reports.filters.startDate": "Başlangıç Tarihi",
-    "reports.filters.endDate": "Bitiş Tarihi",
-    "reports.filters.location": "Lokasyon",
-    "reports.filters.allLocations": "Tümü",
-    "reports.filters.status": "Durum",
-    "reports.filters.allStatuses": "Tümü",
-    "reports.filters.anonymousReport": "Anonim rapor (misafir bilgileri gizli)",
-    
-    // Calendar
-    "calendar.viewCalendar": "Takvimi Görüntüle",
-    "calendar.storageCalendarTitle": "Depo Takvimi",
+    // Common navigation
+    "common.back": "Geri",
+    "common.create": "Oluştur",
+    "common.update": "Güncelle",
     
     // Tickets
     "tickets.title": "İletişim / Ticket",

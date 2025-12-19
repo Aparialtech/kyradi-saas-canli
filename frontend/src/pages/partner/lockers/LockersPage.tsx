@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { storageService, type Storage, type StoragePayload, type StorageStatus } from "../../../services/partner/storages";
+import { storageService, type Storage, type StorageStatus } from "../../../services/partner/storages";
 import { locationService } from "../../../services/partner/locations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
