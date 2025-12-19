@@ -84,7 +84,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-staff',
-          label: 'Elemanlar',
+          label: 'Çalışanlar',
           description: 'Personel yönetimi',
           icon: <Users className="h-4 w-4" />,
           action: () => navigate('/app/staff'),

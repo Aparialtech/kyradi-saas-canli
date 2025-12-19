@@ -15,6 +15,12 @@ export interface StaffPayload {
   location_ids?: string[];
 }
 
+export interface StaffAssignmentCreate {
+  user_id: string;
+  location_id?: string;
+  storage_id?: string;
+}
+
 export const staffService = {
   async list(): Promise<Staff[]> {
     const response = await http.get<Staff[]>("/staff");
@@ -23,6 +29,17 @@ export const staffService = {
 
   async create(payload: StaffPayload): Promise<Staff> {
     const response = await http.post<Staff>("/staff", payload);
+    return response.data;
+  },
+
+  async assign(payload: StaffAssignmentCreate): Promise<Staff> {
+    // Convert to the expected format
+    const apiPayload: StaffPayload = {
+      user_id: payload.user_id,
+      storage_ids: payload.storage_id ? [payload.storage_id] : undefined,
+      location_ids: payload.location_id ? [payload.location_id] : undefined,
+    };
+    const response = await http.post<Staff>("/staff", apiPayload);
     return response.data;
   },
 

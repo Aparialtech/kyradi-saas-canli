@@ -25,6 +25,10 @@ export const locationService = {
     const response = await http.get<Location[]>("/locations");
     return response.data;
   },
+  async get(id: string): Promise<Location> {
+    const response = await http.get<Location>(`/locations/${id}`);
+    return response.data;
+  },
   async create(payload: LocationPayload): Promise<Location> {
     const response = await http.post<Location>("/locations", payload);
     return response.data;

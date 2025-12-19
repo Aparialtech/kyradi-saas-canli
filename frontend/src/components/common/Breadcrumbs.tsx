@@ -27,7 +27,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'lockers': 'Depolar',
   'reservations': 'Rezervasyonlar',
   'users': 'Kullanıcılar',
-  'staff': 'Elemanlar',
+  'staff': 'Çalışanlar',
   'pricing': 'Ücretlendirme',
   'revenue': 'Gelir',
   'reports': 'Raporlar',

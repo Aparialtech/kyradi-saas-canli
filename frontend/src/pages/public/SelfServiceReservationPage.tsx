@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   User, Phone, Calendar, Package, MapPin, DollarSign, FileText, CheckCircle2, AlertCircle, Loader2, Clock, Shield, Eye
@@ -76,8 +76,55 @@ export function SelfServiceReservationPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [hasReadKvkk, setHasReadKvkk] = useState(false);
   const [hasReadTerms, setHasReadTerms] = useState(false);
+  const [kvkkScrolledToBottom, setKvkkScrolledToBottom] = useState(false);
+  const [termsScrolledToBottom, setTermsScrolledToBottom] = useState(false);
+  
+  // Refs for scroll detection
+  const kvkkScrollRef = useRef<HTMLDivElement>(null);
+  const termsScrollRef = useRef<HTMLDivElement>(null);
   
   const { messages, push } = useToast();
+
+  // Handle scroll to bottom detection for KVKK
+  const handleKvkkScroll = useCallback(() => {
+    const element = kvkkScrollRef.current;
+    if (!element) return;
+    
+    const isAtBottom = Math.abs(element.scrollHeight - element.scrollTop - element.clientHeight) < 10;
+    if (isAtBottom && !kvkkScrolledToBottom) {
+      setKvkkScrolledToBottom(true);
+      // Auto-accept when scrolled to bottom
+      setHasReadKvkk(true);
+      setKvkkAccepted(true);
+    }
+  }, [kvkkScrolledToBottom]);
+
+  // Handle scroll to bottom detection for Terms
+  const handleTermsScroll = useCallback(() => {
+    const element = termsScrollRef.current;
+    if (!element) return;
+    
+    const isAtBottom = Math.abs(element.scrollHeight - element.scrollTop - element.clientHeight) < 10;
+    if (isAtBottom && !termsScrolledToBottom) {
+      setTermsScrolledToBottom(true);
+      // Auto-accept when scrolled to bottom
+      setHasReadTerms(true);
+      setTermsAccepted(true);
+    }
+  }, [termsScrolledToBottom]);
+
+  // Reset scroll state when modals open
+  useEffect(() => {
+    if (showKvkkModal) {
+      setKvkkScrolledToBottom(false);
+    }
+  }, [showKvkkModal]);
+
+  useEffect(() => {
+    if (showTermsModal) {
+      setTermsScrolledToBottom(false);
+    }
+  }, [showTermsModal]);
 
   // Calculate price when dates or baggage count changes
   const calculatePrice = useCallback(async () => {
@@ -804,7 +851,46 @@ export function SelfServiceReservationPage() {
         title="KVKK Aydınlatma Metni"
         size="lg"
       >
-        <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: 'var(--space-4)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-4)' }}>
+        {/* Scroll instruction */}
+        {!kvkkScrolledToBottom && (
+          <div style={{ 
+            padding: 'var(--space-2) var(--space-3)', 
+            background: 'var(--info-50)', 
+            border: '1px solid var(--info-200)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 'var(--space-3)',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--info-700)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)'
+          }}>
+            <Eye className="h-4 w-4" />
+            Sözleşmeyi okumak için aşağı kaydırın. Sonuna ulaştığınızda otomatik olarak kabul edilecektir.
+          </div>
+        )}
+        {kvkkScrolledToBottom && (
+          <div style={{ 
+            padding: 'var(--space-2) var(--space-3)', 
+            background: 'var(--success-50)', 
+            border: '1px solid var(--success-200)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 'var(--space-3)',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--success-700)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)'
+          }}>
+            <CheckCircle2 className="h-4 w-4" />
+            Sözleşmenin tamamını görüntülediniz ve kabul edildi.
+          </div>
+        )}
+        <div 
+          ref={kvkkScrollRef}
+          onScroll={handleKvkkScroll}
+          style={{ maxHeight: '50vh', overflowY: 'auto', padding: 'var(--space-4)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-4)' }}
+        >
           <p style={{ marginBottom: 'var(--space-4)', lineHeight: 1.6, color: 'var(--text-primary)' }}>
             <strong>1. Veri Sorumlusu</strong><br />
             Kişisel verileriniz, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca veri sorumlusu sıfatıyla [Şirket Adı] tarafından işlenmektedir.
@@ -837,8 +923,9 @@ export function SelfServiceReservationPage() {
               setKvkkAccepted(true);
               setShowKvkkModal(false);
             }}
+            disabled={!kvkkScrolledToBottom}
           >
-            Okudum ve Kabul Ediyorum
+            {kvkkScrolledToBottom ? 'Kabul Edildi - Kapat' : 'Sonuna kadar okuyun'}
           </ModernButton>
         </div>
       </ModernModal>
@@ -850,7 +937,46 @@ export function SelfServiceReservationPage() {
         title="Kullanım Şartları ve Gizlilik Politikası"
         size="lg"
       >
-        <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: 'var(--space-4)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-4)' }}>
+        {/* Scroll instruction */}
+        {!termsScrolledToBottom && (
+          <div style={{ 
+            padding: 'var(--space-2) var(--space-3)', 
+            background: 'var(--info-50)', 
+            border: '1px solid var(--info-200)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 'var(--space-3)',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--info-700)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)'
+          }}>
+            <Eye className="h-4 w-4" />
+            Sözleşmeyi okumak için aşağı kaydırın. Sonuna ulaştığınızda otomatik olarak kabul edilecektir.
+          </div>
+        )}
+        {termsScrolledToBottom && (
+          <div style={{ 
+            padding: 'var(--space-2) var(--space-3)', 
+            background: 'var(--success-50)', 
+            border: '1px solid var(--success-200)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 'var(--space-3)',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--success-700)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)'
+          }}>
+            <CheckCircle2 className="h-4 w-4" />
+            Sözleşmenin tamamını görüntülediniz ve kabul edildi.
+          </div>
+        )}
+        <div 
+          ref={termsScrollRef}
+          onScroll={handleTermsScroll}
+          style={{ maxHeight: '50vh', overflowY: 'auto', padding: 'var(--space-4)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-4)' }}
+        >
           <p style={{ marginBottom: 'var(--space-4)', lineHeight: 1.6, color: 'var(--text-primary)' }}>
             <strong>1. Hizmet Kapsamı</strong><br />
             Bu platform, bavul depolama hizmetleri için rezervasyon yapmanıza olanak sağlar. Hizmetler, belirtilen koşullar ve sınırlamalar dahilinde sunulmaktadır.
@@ -883,8 +1009,9 @@ export function SelfServiceReservationPage() {
               setTermsAccepted(true);
               setShowTermsModal(false);
             }}
+            disabled={!termsScrolledToBottom}
           >
-            Okudum ve Kabul Ediyorum
+            {termsScrolledToBottom ? 'Kabul Edildi - Kapat' : 'Sonuna kadar okuyun'}
           </ModernButton>
         </div>
       </ModernModal>

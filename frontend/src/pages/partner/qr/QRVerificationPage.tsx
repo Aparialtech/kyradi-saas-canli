@@ -13,6 +13,7 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { Badge } from "../../../components/ui/Badge";
+import { QRScanner } from "../../../components/qr/QRScanner";
 
 const statusLabels: Record<string, string> = {
   active: "Aktif",
@@ -92,15 +93,17 @@ export function QRVerificationPage() {
     return "Rezervasyon bulundu ancak QR kodu şu anda kullanılamıyor.";
   }, []);
 
-  const handleVerify = useCallback(async () => {
-    if (!code.trim()) {
+  const handleVerify = useCallback(async (qrCode?: string) => {
+    const codeToVerify = qrCode || code.trim();
+    if (!codeToVerify) {
       push({ title: "QR kodu girin", type: "error" });
       return;
     }
     setLoading(true);
     setActionModal(null);
+    if (qrCode) setCode(qrCode); // Update input field if scanned
     try {
-      const response = await qrService.verify(code.trim());
+      const response = await qrService.verify(codeToVerify);
       setResult(response);
       if (response.valid) {
         push({ title: "QR doğrulandı", description: "Rezervasyon aktif ve geçerli", type: "success" });
@@ -115,6 +118,13 @@ export function QRVerificationPage() {
       setLoading(false);
     }
   }, [code, getVerificationErrorMessage, push]);
+
+  // Handle QR scan from camera
+  const handleQRScan = useCallback((scannedCode: string) => {
+    if (!loading && scannedCode) {
+      handleVerify(scannedCode);
+    }
+  }, [loading, handleVerify]);
 
   const handleVerifySubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -231,17 +241,37 @@ export function QRVerificationPage() {
         </p>
       </motion.div>
 
-      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
-        <div style={{ marginBottom: 'var(--space-4)' }}>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
-            Kod Doğrulama
-          </h2>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-            QR kodu girip doğrulayın; geçerliyse teslim veya iade adımını başlatabilirsiniz.
-          </p>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+        {/* Camera Scanner */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <QRScanner
+            onScan={handleQRScan}
+            isProcessing={loading}
+            disabled={false}
+          />
+        </motion.div>
 
-        <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {/* Manual Input */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                Manuel Kod Girişi
+              </h2>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                QR kodu elle girip doğrulayın
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <ModernInput
             id={inputId}
             label="QR Kodu"
@@ -275,8 +305,11 @@ export function QRVerificationPage() {
             )}
           </div>
         </form>
+          </ModernCard>
+        </motion.div>
+      </div>
 
-        {result && (
+      {result && (
           <ModernCard variant="glass" padding="lg" style={{ marginTop: 'var(--space-6)', background: 'var(--bg-secondary)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
               <div>
@@ -447,7 +480,6 @@ export function QRVerificationPage() {
             )}
           </ModernCard>
         )}
-      </ModernCard>
 
       {actionModal && result && (
         <Modal

@@ -105,11 +105,13 @@ export const ModernSidebar: React.FC<ModernSidebarProps> = ({
               }
               onMouseEnter={() => setHoveredItem(item.to)}
               onMouseLeave={() => setHoveredItem(null)}
+              title={!isOpen ? item.label : undefined}
             >
               <motion.div
                 className={styles.navItemContent}
-                whileHover={{ x: 4 }}
+                whileHover={{ x: isOpen ? 4 : 0 }}
                 transition={{ type: 'spring', stiffness: 300 }}
+                style={{ justifyContent: isOpen ? 'flex-start' : 'center' }}
               >
                 <div className={styles.navItemIcon}>{item.icon}</div>
 

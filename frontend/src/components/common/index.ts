@@ -11,4 +11,5 @@ export { DataStateWrapper, errorMessagesTR } from './DataStateWrapper';
 export { LanguageSwitcher } from './LanguageSwitcher';
 export { PageHeader } from './PageHeader';
 export { PasswordStrength } from './PasswordStrength';
+export { Pagination, usePagination, calculatePaginationMeta, type PaginationMeta, type PaginationProps } from './Pagination';
 

@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { AlertCircle, Package, MapPin, DollarSign, Plus, Edit, Trash2, X, Loader2 } from "../../../lib/lucide";
+import { AlertCircle, Package, MapPin, DollarSign, Plus, Edit, Trash2, X, Loader2, Search } from "../../../lib/lucide";
 import { pricingService, type PricingRule, type PricingRuleCreate, type PricingScope } from "../../../services/partner/pricing";
 import { locationService, type Location } from "../../../services/partner/locations";
 import { storageService, type Storage } from "../../../services/partner/storages";
@@ -10,7 +10,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
-import { SearchInput } from "../../../components/common/SearchInput";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
@@ -64,6 +64,7 @@ export function PricingPage() {
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [scopeFilter, setScopeFilter] = useState<PricingScope | "">("");
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
   // Fetch pricing rules
   const pricingQuery = useQuery({
@@ -183,6 +184,23 @@ export function PricingPage() {
       return true;
     });
   }, [pricingQuery.data, scopeFilter, searchQuery]);
+
+  // Paginate filtered data
+  const paginatedRules = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredRules.slice(start, end);
+  }, [filteredRules, page, pageSize]);
+
+  const paginationMeta = useMemo(() => {
+    return calculatePaginationMeta(filteredRules.length, page, pageSize);
+  }, [filteredRules.length, page, pageSize]);
+
+  // Reset to page 1 when search changes
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    setPage(1);
+  }, [setPage]);
 
   const submit = handleSubmit(async (values) => {
     console.log("[PricingPage] Form submit called", { editingRule: editingRule?.id, values });
@@ -324,10 +342,12 @@ export function PricingPage() {
           <ModernCard variant="glass" padding="md" style={{ marginBottom: 'var(--space-4)' }}>
             <div style={{ display: "flex", gap: "var(--space-4)", flexWrap: "wrap", alignItems: "center" }}>
               <div style={{ flex: "1 1 300px" }}>
-                <SearchInput
+                <ModernInput
                   value={searchQuery}
-                  onChange={setSearchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder={t("pricing.searchPlaceholder")}
+                  leftIcon={<Search className="h-4 w-4" />}
+                  fullWidth
                 />
               </div>
               <div style={{ flex: "0 0 200px" }}>
@@ -518,11 +538,15 @@ export function PricingPage() {
                     align: 'right',
                   },
                 ] as ModernTableColumn<PricingRule>[]}
-                data={filteredRules}
+                data={paginatedRules}
                 loading={pricingQuery.isLoading}
                 striped
                 hoverable
                 stickyHeader
+                showRowNumbers
+                pagination={paginationMeta}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
               />
             </ModernCard>
           ) : (

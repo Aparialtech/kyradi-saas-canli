@@ -1,10 +1,27 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 
 import { KyradiChat } from "./KyradiChat";
 import { useAuth } from "../context/AuthContext";
 import { env } from "../config/env";
 import { useTranslation } from "../hooks/useTranslation";
 import { MessageSquare, X } from "../lib/lucide";
+
+// Page context descriptions for AI assistant
+const pageContextMap: Record<string, { page: string; description: string; entityType?: string }> = {
+  "/app": { page: "dashboard", description: "Ana panel - genel istatistikler ve özet" },
+  "/app/locations": { page: "locations", description: "Lokasyonlar listesi", entityType: "location" },
+  "/app/lockers": { page: "warehouses", description: "Depolar/Dolaplar listesi", entityType: "warehouse" },
+  "/app/reservations": { page: "reservations", description: "Rezervasyonlar listesi", entityType: "reservation" },
+  "/app/qr-verification": { page: "qr-verification", description: "QR kod doğrulama sayfası" },
+  "/app/revenue-report": { page: "reports", description: "Gelir raporları ve analizler" },
+  "/app/settlements": { page: "settlements", description: "Hakedişler ve mutabakat" },
+  "/app/users": { page: "users", description: "Kullanıcı yönetimi", entityType: "user" },
+  "/app/staff": { page: "staff", description: "Çalışan yönetimi", entityType: "staff" },
+  "/app/pricing": { page: "pricing", description: "Ücretlendirme kuralları", entityType: "pricing" },
+  "/app/tickets": { page: "tickets", description: "Destek talepleri / İletişim", entityType: "ticket" },
+  "/app/settings": { page: "settings", description: "Hesap ve sistem ayarları" },
+};
 
 const floatingStyles = `
 .kyradi-chat-widget {
@@ -104,6 +121,7 @@ export function FloatingChatWidget() {
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
   const { user, isLoading } = useAuth();
   const { t, locale } = useTranslation();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ x: number; y: number }>(() => {
     // Load saved position from localStorage
@@ -217,6 +235,52 @@ export function FloatingChatWidget() {
 
   const ariaLabel = useMemo(() => (open ? t("chat.close") : t("chat.open")), [open, t]);
 
+  // Determine current page context for AI assistant
+  const pageContext = useMemo(() => {
+    const path = location.pathname;
+    
+    // Check for exact match first
+    if (pageContextMap[path]) {
+      return {
+        currentPage: pageContextMap[path].page,
+        entityType: pageContextMap[path].entityType,
+        metadata: { description: pageContextMap[path].description },
+      };
+    }
+    
+    // Check for edit/detail pages with ID
+    const editMatch = path.match(/^\/app\/(\w+)\/([^/]+)\/(edit|new)$/);
+    if (editMatch) {
+      const [, section, entityId, action] = editMatch;
+      const baseContext = pageContextMap[`/app/${section}`];
+      return {
+        currentPage: `${section}-${action}`,
+        entityId: action === "new" ? undefined : entityId,
+        entityType: baseContext?.entityType,
+        metadata: { 
+          description: `${baseContext?.description || section} - ${action === "new" ? "yeni oluşturma" : "düzenleme"}`,
+          action,
+        },
+      };
+    }
+    
+    // Partial match for parent routes
+    for (const [key, value] of Object.entries(pageContextMap)) {
+      if (path.startsWith(key) && key !== "/app") {
+        return {
+          currentPage: value.page,
+          entityType: value.entityType,
+          metadata: { description: value.description },
+        };
+      }
+    }
+    
+    return {
+      currentPage: "unknown",
+      metadata: { path },
+    };
+  }, [location.pathname]);
+
   // Debug: Log widget state
   useEffect(() => {
     console.log("[FloatingChatWidget] State:", {
@@ -298,6 +362,7 @@ export function FloatingChatWidget() {
             locale={locale}
             theme="light"
             useAssistantEndpoint={true}
+            context={pageContext}
           />
         )}
       </div>

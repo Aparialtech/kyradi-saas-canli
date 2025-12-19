@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Package, MapPin, Loader2, AlertCircle, UserPlus, Edit, Trash2, Eye, Download, X } from "../../../lib/lucide";
+import { Users, Package, MapPin, Loader2, AlertCircle, UserPlus, Edit, Trash2, Eye, Download, X, Plus } from "../../../lib/lucide";
 import { staffService, type Staff, type StaffPayload } from "../../../services/partner/staff";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { SearchInput } from "../../../components/common/SearchInput";
@@ -15,6 +16,7 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 import { Badge } from "../../../components/ui/Badge";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 
 interface User {
   id: string;
@@ -40,11 +42,13 @@ export function StaffPage() {
   const { t } = useTranslation();
   const { messages, push } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [viewingStaff, setViewingStaff] = useState<Staff | null>(null);
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
   const staffQuery = useQuery({
     queryKey: ["staff"],
@@ -145,6 +149,17 @@ export function StaffPage() {
     
     return staffList;
   }, [staffQuery.data, searchTerm, roleFilter, usersById, storagesById, locationsById]);
+
+  // Paginate filtered data
+  const paginatedStaff = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredStaff.slice(start, end);
+  }, [filteredStaff, page, pageSize]);
+
+  const paginationMeta = useMemo(() => {
+    return calculatePaginationMeta(filteredStaff.length, page, pageSize);
+  }, [filteredStaff.length, page, pageSize]);
 
   // Get unique roles for filter
   const availableRoles = useMemo(() => {
@@ -278,9 +293,8 @@ export function StaffPage() {
   });
 
   const handleNew = () => {
-    setEditingStaff(null);
-    reset({ user_id: "", storage_ids: [], location_ids: [] });
-    setShowForm(true);
+    // Navigate to secure staff assignment page
+    navigate("/app/staff/assign");
   };
 
   const handleCloseForm = () => {
@@ -659,11 +673,15 @@ export function StaffPage() {
                 align: 'right',
               },
             ] as ModernTableColumn<Staff>[]}
-            data={filteredStaff}
+            data={paginatedStaff}
             loading={staffQuery.isLoading}
             striped
             hoverable
             stickyHeader
+            showRowNumbers
+            pagination={paginationMeta}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
           />
         ) : (
           <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>

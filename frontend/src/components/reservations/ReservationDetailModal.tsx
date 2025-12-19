@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Modal } from "../common/Modal";
 import { useTranslation } from "../../hooks/useTranslation";
-import { QrCode, Copy, Check, User, Calendar, DollarSign } from "../../lib/lucide";
+import { QrCode, Copy, Check, User, Calendar, DollarSign, CreditCard, Package, MapPin } from "../../lib/lucide";
 import { useToast } from "../../hooks/useToast";
-import type { Reservation } from "../../services/partner/reservations";
+import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../services/partner/reservations";
+import { Badge } from "../ui/Badge";
 import QRCode from "qrcode";
 
 interface ReservationDetailModalProps {
@@ -38,6 +40,14 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
   const { push } = useToast();
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  // Fetch payment info for this reservation
+  const paymentQuery = useQuery({
+    queryKey: ["reservation-payment", reservation?.id],
+    queryFn: () => reservationService.getPayment(reservation!.id),
+    enabled: !!reservation?.id && isOpen,
+    staleTime: 30000,
+  });
 
   const formatDate = useCallback((dateStr?: string | null) => {
     if (!dateStr) return "—";
@@ -316,6 +326,94 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
             </div>
           </section>
         )}
+
+        {/* Payment Information - Combined Section */}
+        <section>
+          <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <CreditCard className="h-4 w-4" />
+            Ödeme Bilgileri
+          </h5>
+          {paymentQuery.isLoading ? (
+            <div style={{ padding: "1rem", textAlign: "center", color: "#64748b" }}>
+              Ödeme bilgileri yükleniyor...
+            </div>
+          ) : paymentQuery.data ? (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "0.75rem",
+                background: paymentQuery.data.status === 'paid' || paymentQuery.data.status === 'captured' ? "#f0fdf4" : "#fefce8",
+                padding: "1rem",
+                borderRadius: "8px",
+                border: `1px solid ${paymentQuery.data.status === 'paid' || paymentQuery.data.status === 'captured' ? "#bbf7d0" : "#fef08a"}`,
+              }}
+            >
+              <div>
+                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ödeme Durumu</span>
+                <p style={{ margin: "0.25rem 0 0" }}>
+                  <Badge variant={
+                    paymentQuery.data.status === 'paid' || paymentQuery.data.status === 'captured' ? 'success' :
+                    paymentQuery.data.status === 'pending' ? 'warning' :
+                    paymentQuery.data.status === 'failed' ? 'danger' : 'neutral'
+                  }>
+                    {paymentQuery.data.status === 'paid' ? 'Ödendi' :
+                     paymentQuery.data.status === 'captured' ? 'Tahsil Edildi' :
+                     paymentQuery.data.status === 'pending' ? 'Beklemede' :
+                     paymentQuery.data.status === 'failed' ? 'Başarısız' :
+                     paymentQuery.data.status}
+                  </Badge>
+                </p>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ödeme Tutarı</span>
+                <p style={{ margin: "0.25rem 0 0", fontWeight: 600, color: "#16a34a" }}>
+                  {formatCurrency(paymentQuery.data.amount_minor)}
+                </p>
+              </div>
+              {paymentQuery.data.payment_mode && (
+                <div>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ödeme Yöntemi</span>
+                  <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
+                    {paymentQuery.data.payment_mode === 'CASH' ? 'Nakit' :
+                     paymentQuery.data.payment_mode === 'POS' ? 'POS / Kart' :
+                     paymentQuery.data.payment_mode === 'GATEWAY_LIVE' ? 'Online Ödeme' :
+                     paymentQuery.data.payment_mode}
+                  </p>
+                </div>
+              )}
+              {paymentQuery.data.paid_at && (
+                <div>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ödeme Tarihi</span>
+                  <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
+                    {formatDate(paymentQuery.data.paid_at)}
+                  </p>
+                </div>
+              )}
+              {paymentQuery.data.transaction_id && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>İşlem ID</span>
+                  <p style={{ margin: "0.25rem 0 0", fontWeight: 500, fontFamily: "monospace", fontSize: "0.75rem" }}>
+                    {paymentQuery.data.transaction_id}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              style={{
+                background: "#f8fafc",
+                padding: "1rem",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                textAlign: "center",
+                color: "#64748b",
+              }}
+            >
+              Bu rezervasyon için ödeme bilgisi bulunamadı.
+            </div>
+          )}
+        </section>
 
         {/* QR Code */}
         {(reservation.qr_code || reservation.qr_token) && (

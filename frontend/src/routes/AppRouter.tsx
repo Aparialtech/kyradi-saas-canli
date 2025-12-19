@@ -35,6 +35,10 @@ import {
   PartnerMailPage,
   PartnerSettingsPage,
 } from "../pages/partner/PartnerDashboard";
+import { LocationEditPage } from "../pages/partner/locations/LocationEditPage";
+import { UserEditPage } from "../pages/partner/users/UserEditPage";
+import { StaffAssignPage } from "../pages/partner/staff/StaffAssignPage";
+import { TicketsPage } from "../pages/partner/tickets/TicketsPage";
 import { WidgetPreviewPage } from "../pages/partner/WidgetPreviewPage";
 import { MagicPayDemoPage } from "../pages/partner/magicpay/MagicPayDemoPage";
 import { SelfServiceReservationPage } from "../pages/public/SelfServiceReservationPage";
@@ -75,6 +79,8 @@ export function AppRouter() {
         <Route path="/app" element={<PartnerDashboard />}>
           <Route index element={<PartnerOverview />} />
           <Route path="locations" element={<PartnerLocationsPlaceholder />} />
+          <Route path="locations/:id/edit" element={<LocationEditPage />} />
+          <Route path="locations/new" element={<LocationEditPage />} />
           <Route path="lockers" element={<PartnerLockersPage />} />
           <Route path="reservations" element={<PartnerReservationsPage />} />
           <Route path="widget-preview" element={<WidgetPreviewPage />} />
@@ -90,7 +96,11 @@ export function AppRouter() {
             element={<RequireAuth allowedRoles={["tenant_admin", "hotel_manager"]} redirectTo="/app" />}
           >
             <Route path="users" element={<PartnerUsersPage />} />
+            <Route path="users/:id/edit" element={<UserEditPage />} />
+            <Route path="users/new" element={<UserEditPage />} />
             <Route path="staff" element={<PartnerStaffPage />} />
+            <Route path="staff/assign" element={<StaffAssignPage />} />
+            <Route path="tickets" element={<TicketsPage />} />
             <Route path="pricing" element={<PartnerPricingPage />} />
             <Route path="demo-flow" element={<DemoFlowPage />} />
             <Route path="demo-payment-flow" element={<DemoPaymentFlowPage />} />

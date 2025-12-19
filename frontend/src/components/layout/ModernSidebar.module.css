@@ -167,7 +167,8 @@
 
 .navItem {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-lg);
   text-decoration: none;
@@ -179,6 +180,7 @@
   overflow: hidden;
   pointer-events: auto; /* Ensure nav items are clickable */
   z-index: 1; /* Ensure nav items are above other elements */
+  min-height: 44px;
 }
 
 .navItem:hover {
@@ -214,16 +216,17 @@
 
 .navItemIcon {
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .navItemIcon svg {
-  width: 100%;
-  height: 100%;
+  width: 20px;
+  height: 20px;
 }
 
 .navItemLabel {

@@ -3,6 +3,7 @@ import type { UserRole } from "../../types/auth";
 
 export interface TenantUser {
   id: string;
+  name: string;
   email: string;
   tenant_id?: string | null;
   role: UserRole;
@@ -10,6 +11,22 @@ export interface TenantUser {
   phone_number?: string | null;
   last_login_at?: string | null;
   created_at: string;
+}
+
+export interface TenantUserCreate {
+  name: string;
+  email: string;
+  phone_number?: string;
+  role: string;
+  is_active?: boolean;
+}
+
+export interface TenantUserUpdate {
+  name?: string;
+  email?: string;
+  phone_number?: string;
+  role?: string;
+  is_active?: boolean;
 }
 
 export interface TenantUserCreatePayload {
@@ -40,6 +57,29 @@ export const tenantUserService = {
     return response.data;
   },
   async deactivate(id: string): Promise<void> {
+    await http.delete(`/users/${id}`);
+  },
+};
+
+// Alias for new API
+export const userService = {
+  async list(): Promise<TenantUser[]> {
+    const response = await http.get<TenantUser[]>("/users");
+    return response.data;
+  },
+  async get(id: string): Promise<TenantUser> {
+    const response = await http.get<TenantUser>(`/users/${id}`);
+    return response.data;
+  },
+  async create(payload: TenantUserCreate): Promise<TenantUser> {
+    const response = await http.post<TenantUser>("/users", payload);
+    return response.data;
+  },
+  async update(id: string, payload: TenantUserUpdate): Promise<TenantUser> {
+    const response = await http.patch<TenantUser>(`/users/${id}`, payload);
+    return response.data;
+  },
+  async remove(id: string): Promise<void> {
     await http.delete(`/users/${id}`);
   },
 };

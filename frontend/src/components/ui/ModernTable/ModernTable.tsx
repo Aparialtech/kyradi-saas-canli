@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import styles from './ModernTable.module.css';
+import { Pagination, type PaginationMeta } from '../../common/Pagination';
 
 export interface ModernTableColumn<T = any> {
   key: string;
@@ -20,6 +21,13 @@ export interface ModernTableProps<T = any> {
   hoverable?: boolean;
   stickyHeader?: boolean;
   onRowClick?: (row: T, index: number) => void;
+  // Row numbering
+  showRowNumbers?: boolean;
+  rowNumberLabel?: string;
+  // Pagination
+  pagination?: PaginationMeta;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
 }
 
 export const ModernTable = <T extends Record<string, any>>({
@@ -31,7 +39,20 @@ export const ModernTable = <T extends Record<string, any>>({
   hoverable = true,
   stickyHeader = true,
   onRowClick,
+  showRowNumbers = false,
+  rowNumberLabel = '#',
+  pagination,
+  onPageChange,
+  onPageSizeChange,
 }: ModernTableProps<T>) => {
+  // Calculate row number based on pagination
+  const getRowNumber = (index: number): number => {
+    if (pagination) {
+      return (pagination.page - 1) * pagination.pageSize + index + 1;
+    }
+    return index + 1;
+  };
+
   if (loading) {
     return (
       <div className={styles.tableContainer}>
@@ -65,13 +86,18 @@ export const ModernTable = <T extends Record<string, any>>({
     );
   }
 
+  // Build columns with optional row number column
+  const tableColumns = showRowNumbers
+    ? [{ key: '__rowNumber', label: rowNumberLabel, width: '60px', align: 'center' as const }, ...columns]
+    : columns;
+
   return (
     <div className={styles.tableContainer}>
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead className={clsx(styles.thead, { [styles.stickyHeader]: stickyHeader })}>
             <tr>
-              {columns.map((column) => (
+              {tableColumns.map((column) => (
                 <th
                   key={column.key}
                   className={styles.th}
@@ -97,9 +123,14 @@ export const ModernTable = <T extends Record<string, any>>({
                 onClick={() => onRowClick?.(row, rowIndex)}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: rowIndex * 0.02 }}
+                transition={{ delay: Math.min(rowIndex * 0.02, 0.5) }}
                 whileHover={hoverable ? { backgroundColor: 'var(--bg-tertiary)' } : undefined}
               >
+                {showRowNumbers && (
+                  <td className={clsx(styles.td, styles.rowNumberCell)} style={{ textAlign: 'center' }}>
+                    <span className={styles.rowNumber}>{getRowNumber(rowIndex)}</span>
+                  </td>
+                )}
                 {columns.map((column) => (
                   <td
                     key={column.key}
@@ -116,6 +147,15 @@ export const ModernTable = <T extends Record<string, any>>({
           </tbody>
         </table>
       </div>
+      
+      {/* Pagination */}
+      {pagination && onPageChange && onPageSizeChange && (
+        <Pagination
+          meta={pagination}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
+      )}
     </div>
   );
 };

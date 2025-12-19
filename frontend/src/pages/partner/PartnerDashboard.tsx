@@ -52,6 +52,7 @@ import {
   BadgePercent,
   Settings2,
   Mail,
+  MessageSquare,
 } from "../../lib/lucide";
 
 const warningActions: Record<
@@ -703,7 +704,8 @@ export function PartnerDashboard() {
       items.push({ to: "mail", label: "E-posta", icon: <Mail className="h-5 w-5" /> });
     }
     
-    // All authenticated users can access settings
+    // All authenticated users can access tickets and settings
+    items.push({ to: "tickets", label: "İletişim", icon: <MessageSquare className="h-5 w-5" /> });
     items.push({ to: "settings", label: t("nav.settings"), icon: <Settings2 className="h-5 w-5" /> });
     
     return items;
@@ -728,8 +730,8 @@ export function PartnerDashboard() {
           flexDirection: 'column',
           width: '100%',
           minWidth: 0,
-          marginLeft: '280px',
-          transition: 'margin-left 0.2s',
+          marginLeft: sidebarOpen ? '280px' : '80px',
+          transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
         className="main-content"
         >

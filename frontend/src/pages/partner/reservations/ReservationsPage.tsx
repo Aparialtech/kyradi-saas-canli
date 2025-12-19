@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, CheckCircle2, XOctagon, CreditCard, Search, FileText, Plus, X, Download } from "../../../lib/lucide";
+import { Eye, CheckCircle2, XOctagon, Search, FileText, Plus, X, Download } from "../../../lib/lucide";
 
 import { reservationService, type Reservation, type ReservationPaymentInfo, type ManualReservationCreate } from "../../../services/partner/reservations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
+import { usePagination, calculatePaginationMeta, Pagination } from "../../../components/common/Pagination";
 import { ReservationDetailModal } from "../../../components/reservations/ReservationDetailModal";
 import { PaymentActionModal } from "../../../components/reservations/PaymentActionModal";
-import { PaymentDetailModal } from "../../../components/reservations/PaymentDetailModal";
 import { getErrorMessage } from "../../../lib/httpError";
 import { env } from "../../../config/env";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -30,13 +30,12 @@ export function ReservationsPage() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
   
   // Payment modal states
   const [paymentReservation, setPaymentReservation] = useState<Reservation | null>(null);
   const [paymentInfo, setPaymentInfo] = useState<ReservationPaymentInfo | null>(null);
   const [showPaymentActionModal, setShowPaymentActionModal] = useState(false);
-  const [showPaymentDetailModal, setShowPaymentDetailModal] = useState(false);
-  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
 
   // Manual reservation modal state
   const [showManualReservationForm, setShowManualReservationForm] = useState(false);
@@ -115,9 +114,8 @@ export function ReservationsPage() {
       push({ title: t("reservations.toast.cancelError"), description: getErrorMessage(error), type: "error" }),
   });
 
-  // Payment check handler - fetches reservation and opens appropriate modal
-  const handlePaymentCheck = useCallback(async (reservation: Reservation) => {
-    setIsCheckingPayment(true);
+  // Payment action handler - for unpaid reservations
+  const handlePaymentAction = useCallback(async (reservation: Reservation) => {
     try {
       const [freshReservation, payment] = await Promise.all([
         reservationService.getById(reservation.id),
@@ -126,28 +124,20 @@ export function ReservationsPage() {
 
       setPaymentReservation(freshReservation);
       setPaymentInfo(payment);
-
-      const paymentStatus = payment?.status;
-      if (paymentStatus === "paid" || paymentStatus === "captured") {
-        setShowPaymentDetailModal(true);
-      } else {
-        setShowPaymentActionModal(true);
-      }
+      setShowPaymentActionModal(true);
     } catch (error) {
       push({ 
         title: t("payment.modal.createError"), 
         description: getErrorMessage(error), 
         type: "error" 
       });
-    } finally {
-      setIsCheckingPayment(false);
     }
   }, [push, t]);
 
   const allReservations = reservationsQuery.data ?? [];
   
   // Filter reservations by search term and origin
-  const reservations = useMemo(() => {
+  const filteredReservations = useMemo(() => {
     let filtered = allReservations;
     
     // Filter by origin
@@ -176,9 +166,21 @@ export function ReservationsPage() {
     return filtered;
   }, [allReservations, searchTerm, filterOrigin]);
 
+  // Paginate filtered data
+  const paginatedReservations = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredReservations.slice(start, end);
+  }, [filteredReservations, page, pageSize]);
+
+  const paginationMeta = useMemo(() => {
+    return calculatePaginationMeta(filteredReservations.length, page, pageSize);
+  }, [filteredReservations.length, page, pageSize]);
+
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
-  }, []);
+    setPage(1); // Reset to first page on search
+  }, [setPage]);
 
   const dateTimeFormatter = useMemo(
     () =>
@@ -206,7 +208,7 @@ export function ReservationsPage() {
 
   // CSV Export handler
   const exportToCsv = useCallback(() => {
-    if (reservations.length === 0) return;
+    if (filteredReservations.length === 0) return;
 
     const headers = ["ID", "Durum", "Misafir Adı", "Telefon", "E-posta", "Oda No", "Bavul Sayısı", "Kaynak", "Oluşturma Tarihi"];
     const statusLabels: Record<string, string> = {
@@ -224,7 +226,7 @@ export function ReservationsPage() {
     };
 
     const csvRows = [headers.join(";")];
-    for (const res of reservations) {
+    for (const res of filteredReservations) {
       const row = [
         String(res.id),
         statusLabels[res.status] || res.status,
@@ -247,7 +249,7 @@ export function ReservationsPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }, [reservations, filterFrom, filterTo]);
+  }, [filteredReservations, filterFrom, filterTo]);
 
 
   return (
@@ -568,7 +570,7 @@ export function ReservationsPage() {
               variant="outline"
               size="sm"
               onClick={exportToCsv}
-              disabled={reservations.length === 0}
+              disabled={filteredReservations.length === 0}
               leftIcon={<Download className="h-4 w-4" />}
             >
               CSV İndir
@@ -581,8 +583,12 @@ export function ReservationsPage() {
             <div className="shimmer" style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-full)', margin: '0 auto var(--space-4) auto' }} />
             <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>{t("reservations.loading")}</p>
           </div>
-        ) : reservations.length > 0 ? (
+        ) : paginatedReservations.length > 0 ? (
           <ModernTable
+            showRowNumbers
+            pagination={paginationMeta}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
             columns={[
               {
                 key: 'guest',
@@ -699,18 +705,11 @@ export function ReservationsPage() {
                     >
                       <XOctagon className="h-4 w-4" />
                     </ModernButton>
-                    <ModernButton
-                      variant="outline"
-                      disabled={isCheckingPayment}
-                      onClick={() => handlePaymentCheck(row)}
-                    >
-                      <CreditCard className="h-4 w-4" />
-                    </ModernButton>
                   </div>
                 ),
               },
             ] as ModernTableColumn<Reservation>[]}
-            data={reservations}
+            data={paginatedReservations}
             loading={reservationsQuery.isLoading}
             striped
             hoverable
@@ -744,18 +743,6 @@ export function ReservationsPage() {
           setPaymentInfo(null);
         }}
         paymentInfo={paymentInfo}
-      />
-
-      {/* Payment Detail Modal (for paid reservations) */}
-      <PaymentDetailModal
-        reservation={paymentReservation}
-        paymentInfo={paymentInfo}
-        isOpen={showPaymentDetailModal}
-        onClose={() => {
-          setShowPaymentDetailModal(false);
-          setPaymentReservation(null);
-          setPaymentInfo(null);
-        }}
       />
     </div>
   );

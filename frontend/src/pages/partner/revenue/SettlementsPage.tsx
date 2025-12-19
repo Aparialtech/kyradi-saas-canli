@@ -12,6 +12,7 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { usePagination, calculatePaginationMeta, Pagination } from "../../../components/common/Pagination";
 
 export function SettlementsPage() {
   const { t } = useTranslation();
@@ -77,9 +78,22 @@ export function SettlementsPage() {
 
   const statusLabels: Record<string, string> = {
     pending: "Beklemede",
-    settled: "Hesaplaştı",
+    settled: "Mutabakat",
     cancelled: "İptal",
   };
+
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
+
+  // Paginate data
+  const paginatedSettlements = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return settlements.slice(start, end);
+  }, [settlements, page, pageSize]);
+
+  const paginationMeta = useMemo(() => {
+    return calculatePaginationMeta(settlements.length, page, pageSize);
+  }, [settlements.length, page, pageSize]);
 
   // Export to CSV
   const handleExportCSV = useCallback(() => {
@@ -270,7 +284,7 @@ export function SettlementsPage() {
             >
               <option value="">{t("common.all")}</option>
               <option value="pending">Beklemede</option>
-              <option value="settled">Hesaplaştı</option>
+              <option value="settled">Mutabakat</option>
               <option value="cancelled">İptal</option>
             </select>
           </div>
@@ -516,11 +530,15 @@ export function SettlementsPage() {
                 align: 'center',
               },
             ] as ModernTableColumn<typeof settlements[0]>[]}
-            data={settlements}
+            data={paginatedSettlements}
             loading={settlementsQuery.isLoading}
             striped
             hoverable
             stickyHeader
+            showRowNumbers
+            pagination={paginationMeta}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
           />
         </ModernCard>
       ) : (

@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, UserPlus, Edit, Key, UserCheck, UserX, Loader2, AlertCircle, Search, Mail, Phone, Shield, CheckCircle2, XCircle, AlertTriangle } from "../../../lib/lucide";
+import { Users, UserPlus, Edit, Key, UserCheck, UserX, Loader2, AlertCircle, Search, Mail, Phone, Shield, CheckCircle2, XCircle, AlertTriangle, Plus } from "../../../lib/lucide";
 
 import {
   tenantUserService,
@@ -16,6 +17,7 @@ import { quotaService } from "../../../services/partner/reports";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
+import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
 import type { UserRole } from "../../../types/auth";
 import { useAuth } from "../../../context/AuthContext";
@@ -52,6 +54,7 @@ const roleLabels: Record<UserRole, string> = {
 
 export function UsersPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const { user: currentUser } = useAuth();
@@ -61,6 +64,7 @@ export function UsersPage() {
   const [resetPassword, setResetPassword] = useState("");
   const [resetShouldSendInvite, setResetShouldSendInvite] = useState(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
   const usersQuery = useQuery({
     queryKey: ["tenant", "users"],
@@ -87,9 +91,29 @@ export function UsersPage() {
     });
   }, [usersQuery.data, searchTerm]);
 
+  // Paginate data
+  const paginatedUsers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredUsers.slice(start, end);
+  }, [filteredUsers, page, pageSize]);
+
+  const paginationMeta = useMemo(() => {
+    return calculatePaginationMeta(filteredUsers.length, page, pageSize);
+  }, [filteredUsers.length, page, pageSize]);
+
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
-  }, []);
+    setPage(1); // Reset to first page on search
+  }, [setPage]);
+
+  const handleNewUser = useCallback(() => {
+    navigate('/app/users/new');
+  }, [navigate]);
+
+  const handleEditUser = useCallback((user: TenantUser) => {
+    navigate(`/app/users/${user.id}/edit`);
+  }, [navigate]);
 
   const createMutation = useMutation({
     mutationFn: (payload: TenantUserCreatePayload) => tenantUserService.create(payload),

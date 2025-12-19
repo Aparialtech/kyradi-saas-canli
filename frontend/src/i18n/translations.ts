@@ -12,7 +12,7 @@ export const translations = {
     "nav.qr": "QR Doğrulama",
     "nav.revenue": "Gelir",
     "nav.settlements": "Hakedişler",
-    "nav.staff": "Elemanlar",
+    "nav.staff": "Çalışanlar",
     "nav.pricing": "Ücretlendirme",
     "nav.users": "Kullanıcılar",
     "nav.widgetPreview": "Widget Önizleme",
@@ -482,7 +482,7 @@ export const translations = {
     "demo.flow.payment.processing": "İşleniyor...",
 
     // Staff page translations
-    "staff.title": "Elemanlar",
+    "staff.title": "Çalışanlar",
     "staff.subtitle": "Bu oteldeki personel atamalarını yönetin. Personellere depo ve lokasyon erişimi tanımlayın.",
     "staff.newAssignment": "Yeni Eleman Ataması",
     "staff.editAssignment": "Eleman Atamasını Düzenle",

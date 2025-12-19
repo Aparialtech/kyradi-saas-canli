@@ -1,24 +1,46 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { TrendingUp, DollarSign, CreditCard, FileText, Loader2, AlertCircle, BarChart3, Download } from "../../../lib/lucide";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar, AreaChart, Area } from "recharts";
+import { TrendingUp, DollarSign, CreditCard, FileText, Loader2, AlertCircle, BarChart3, Download, MapPin, Package, Calendar, LineChart as LineChartIcon, PieChart as PieChartIcon } from "../../../lib/lucide";
 import { revenueService, type PaymentModeRevenue } from "../../../services/partner/revenue";
+import { locationService } from "../../../services/partner/locations";
+import { storageService } from "../../../services/partner/storages";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
+import { usePagination, calculatePaginationMeta, Pagination } from "../../../components/common/Pagination";
+import { Badge } from "../../../components/ui/Badge";
 
-// Colors for pie chart
-const COLORS = ["#00a389", "#6366f1", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+// Colors for charts
+const COLORS = ["#00a389", "#6366f1", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"];
+
+type ChartType = 'line' | 'bar' | 'area' | 'pie';
 
 export function RevenueDashboard() {
   const { messages } = useToast();
   const { t } = useTranslation();
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  const [locationFilter, setLocationFilter] = useState<string>("");
+  const [storageFilter, setStorageFilter] = useState<string>("");
+  const [chartType, setChartType] = useState<ChartType>('line');
+  const { page, pageSize, setPage, setPageSize } = usePagination(10);
+
+  // Fetch locations for filter
+  const locationsQuery = useQuery({
+    queryKey: ["locations"],
+    queryFn: locationService.list,
+  });
+
+  // Fetch storages for filter
+  const storagesQuery = useQuery({
+    queryKey: ["storages"],
+    queryFn: () => storageService.list(),
+  });
 
   const revenueQuery = useQuery({
     queryKey: ["revenue", "summary", dateFrom, dateTo],
@@ -144,25 +166,107 @@ export function RevenueDashboard() {
         </p>
       </motion.div>
 
-      {/* Date filters */}
+      {/* Enhanced Filters */}
       <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-4)" }}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-1) 0' }}>
+            Filtreler
+          </h3>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+            Tarih, lokasyon ve depo bazlı filtreleme yapın
+          </p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--space-4)" }}>
           <ModernInput
             type="date"
-            label={t("common.from")}
+            label="Başlangıç Tarihi"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            leftIcon={<FileText className="h-4 w-4" />}
+            leftIcon={<Calendar className="h-4 w-4" />}
             fullWidth
           />
           <ModernInput
             type="date"
-            label={t("common.to")}
+            label="Bitiş Tarihi"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            leftIcon={<FileText className="h-4 w-4" />}
+            leftIcon={<Calendar className="h-4 w-4" />}
             fullWidth
           />
+          <div>
+            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-1)', display: 'block' }}>
+              Lokasyon
+            </label>
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              style={{
+                width: '100%',
+                padding: 'var(--space-2) var(--space-3)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+              }}
+            >
+              <option value="">Tüm Lokasyonlar</option>
+              {locationsQuery.data?.map((loc) => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-1)', display: 'block' }}>
+              Depo
+            </label>
+            <select
+              value={storageFilter}
+              onChange={(e) => setStorageFilter(e.target.value)}
+              style={{
+                width: '100%',
+                padding: 'var(--space-2) var(--space-3)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+              }}
+            >
+              <option value="">Tüm Depolar</option>
+              {storagesQuery.data?.map((storage) => (
+                <option key={storage.id} value={storage.id}>{storage.code}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-1)', display: 'block' }}>
+              Grafik Türü
+            </label>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <ModernButton
+                variant={chartType === 'line' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setChartType('line')}
+                leftIcon={<LineChartIcon className="h-4 w-4" />}
+              >
+                Çizgi
+              </ModernButton>
+              <ModernButton
+                variant={chartType === 'bar' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setChartType('bar')}
+                leftIcon={<BarChart3 className="h-4 w-4" />}
+              >
+                Sütun
+              </ModernButton>
+              <ModernButton
+                variant={chartType === 'area' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setChartType('area')}
+              >
+                Alan
+              </ModernButton>
+            </div>
+          </div>
         </div>
       </ModernCard>
 

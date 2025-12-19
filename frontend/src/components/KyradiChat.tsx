@@ -18,6 +18,17 @@ import type { KyradiAISource } from "../lib/kyradi-ai";
 
 type ChatTheme = "light" | "dark";
 
+interface PageContext {
+  /** Current page/route identifier */
+  currentPage: string;
+  /** Selected entity ID if any (e.g., location_id, reservation_id) */
+  entityId?: string;
+  /** Entity type (location, warehouse, reservation, etc.) */
+  entityType?: "location" | "warehouse" | "reservation" | "user" | "staff" | "pricing" | "ticket" | string;
+  /** Additional context data */
+  metadata?: Record<string, unknown>;
+}
+
 interface KyradiChatProps {
   apiBase: string;
   tenantId?: string;
@@ -26,6 +37,8 @@ interface KyradiChatProps {
   theme?: ChatTheme;
   useRag?: boolean;
   useAssistantEndpoint?: boolean;
+  /** Page context for contextual assistance */
+  context?: PageContext;
 }
 
 interface ConversationMessage {
