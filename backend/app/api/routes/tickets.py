@@ -7,10 +7,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_, func
 
-from app.db.session import get_session
-from app.api.deps import require_tenant_operator, require_admin
-from app.models.tenant import User
-from app.models.ticket import Ticket, TicketStatus, TicketPriority, TicketTarget
+from ...db.session import get_session
+from ...dependencies import require_tenant_operator, require_admin_user
+from ...models.tenant import User
+from ...models.ticket import Ticket, TicketStatus, TicketPriority, TicketTarget
 
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -262,7 +262,7 @@ async def list_all_tickets(
     search: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> TicketListResponse:
     """List all tickets (admin view)."""
@@ -345,7 +345,7 @@ async def list_all_tickets(
 async def update_ticket(
     ticket_id: str,
     payload: TicketUpdate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> TicketRead:
     """Update a ticket (admin only)."""
@@ -398,7 +398,7 @@ async def update_ticket(
 @router.delete("/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_ticket(
     ticket_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a ticket (admin only)."""
