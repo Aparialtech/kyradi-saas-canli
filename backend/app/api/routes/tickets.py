@@ -149,7 +149,7 @@ async def list_tickets(
             resolution_note=ticket.resolution_note,
             read_at=ticket.read_at,
             created_at=ticket.created_at,
-            updated_at=ticket.updated_at,
+            updated_at=None,
         ))
     
     total_pages = (total + page_size - 1) // page_size
@@ -201,7 +201,7 @@ async def create_ticket(
         resolution_note=ticket.resolution_note,
         read_at=ticket.read_at,
         created_at=ticket.created_at,
-        updated_at=ticket.updated_at,
+        updated_at=None,
     )
 
 
@@ -248,7 +248,7 @@ async def get_ticket(
         resolution_note=ticket.resolution_note,
         read_at=ticket.read_at,
         created_at=ticket.created_at,
-        updated_at=ticket.updated_at,
+        updated_at=None,
     )
 
 
@@ -326,7 +326,7 @@ async def list_all_tickets(
             resolution_note=ticket.resolution_note,
             read_at=ticket.read_at,
             created_at=ticket.created_at,
-            updated_at=ticket.updated_at,
+            updated_at=None,
         ))
     
     total_pages = (total + page_size - 1) // page_size
@@ -391,7 +391,7 @@ async def update_ticket(
         resolution_note=ticket.resolution_note,
         read_at=ticket.read_at,
         created_at=ticket.created_at,
-        updated_at=ticket.updated_at,
+        updated_at=None,
     )
 
 
