@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -14,20 +14,17 @@ import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
-import { ModernInput } from "../../../components/ui/ModernInput";
 import { Badge } from "../../../components/ui/Badge";
-import { HardDrive, Calendar, Edit, Trash2, ChevronDown, MapPin, Clock, Package, Search } from "../../../lib/lucide";
+import { HardDrive, Calendar, Edit, Trash2, ChevronDown, MapPin, Clock, Package, Plus } from "../../../lib/lucide";
 
 export function LockersPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
-  const [editingStorage, setEditingStorage] = useState<Storage | null>(null);
-  const [showForm, setShowForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [locationFilter, setLocationFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [locationSearchTerm, setLocationSearchTerm] = useState<string>("");
   const [expandedStorageId, setExpandedStorageId] = useState<string | null>(null);
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
   
@@ -39,44 +36,12 @@ export function LockersPage() {
     queryKey: ["storages", statusFilter],
     queryFn: () => storageService.list(statusFilter ? (statusFilter as StorageStatus) : undefined),
     retry: (failureCount, error: any) => {
-      // Don't retry on 401, 403, 404
       if (error?.response?.status === 401) return false;
       if (error?.response?.status === 403) return false;
       if (error?.response?.status === 404) return false;
-      // Retry up to 1 time for other errors
       return failureCount < 1;
     },
     retryDelay: 1000,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (payload: StoragePayload) => storageService.create(payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["storages"] });
-      void queryClient.invalidateQueries({ queryKey: ["lockers"] });
-      push({ title: t("storages.created"), type: "success" });
-      reset({ location_id: "", code: "", status: "idle" });
-      setEditingStorage(null);
-      setShowForm(false);
-    },
-    onError: (error: unknown) => {
-      push({ title: t("storages.createError"), description: getErrorMessage(error), type: "error" });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Partial<StoragePayload> }) => storageService.update(id, payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["storages"] });
-      void queryClient.invalidateQueries({ queryKey: ["lockers"] });
-      push({ title: t("storages.updated"), type: "success" });
-      reset({ location_id: "", code: "", status: "idle" });
-      setEditingStorage(null);
-      setShowForm(false);
-    },
-    onError: (error: unknown) => {
-      push({ title: t("common.saveError"), description: getErrorMessage(error), type: "error" });
-    },
   });
 
   const deleteMutation = useMutation({
@@ -91,30 +56,9 @@ export function LockersPage() {
     },
   });
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { errors },
-  } = useForm<StoragePayload>({
-    defaultValues: {
-      location_id: "",
-      code: "",
-      status: "idle",
-    },
-  });
-
   const locationOptions = useMemo(() => {
     return (locationsQuery.data ?? []).map((location) => ({ value: location.id, label: location.name }));
   }, [locationsQuery.data]);
-
-  // Filtered location options for typeahead search
-  const filteredLocationOptions = useMemo(() => {
-    if (!locationSearchTerm.trim()) return locationOptions;
-    const term = locationSearchTerm.toLowerCase();
-    return locationOptions.filter(opt => opt.label.toLowerCase().includes(term));
-  }, [locationOptions, locationSearchTerm]);
 
   // Filter storages by search term and location
   const filteredStorages = useMemo(() => {
@@ -158,39 +102,13 @@ export function LockersPage() {
     setSearchTerm(value);
   }, []);
 
-  const submit = handleSubmit(async (values) => {
-    if (!values.location_id) {
-      push({ title: t("locations.title") + " " + t("common.required").toLowerCase(), type: "error" });
-      return;
-    }
-    if (editingStorage) {
-      await updateMutation.mutateAsync({ id: editingStorage.id, payload: values });
-    } else {
-      await createMutation.mutateAsync(values);
-    }
-  });
+  const handleNew = useCallback(() => {
+    navigate("/app/lockers/new");
+  }, [navigate]);
 
-  const handleNew = () => {
-    setEditingStorage(null);
-    reset({ location_id: "", code: "", status: "idle" });
-    setShowForm(true);
-  };
-
-  const handleEdit = (storage: Storage) => {
-    setEditingStorage(storage);
-    reset({
-      location_id: storage.location_id,
-      code: storage.code,
-      status: storage.status,
-    });
-    setShowForm(true);
-  };
-
-  const handleCancelForm = () => {
-    setShowForm(false);
-    setEditingStorage(null);
-    reset({ location_id: "", code: "", status: "idle" });
-  };
+  const handleEdit = useCallback((storage: Storage) => {
+    navigate(`/app/lockers/${storage.id}/edit`);
+  }, [navigate]);
 
   return (
     <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
@@ -208,134 +126,10 @@ export function LockersPage() {
             {t("storages.subtitle")}
           </p>
         </div>
-        <ModernButton variant="primary" onClick={handleNew}>
-          + {t("storages.newStorage")}
+        <ModernButton variant="primary" onClick={handleNew} leftIcon={<Plus className="h-4 w-4" />}>
+          {t("storages.newStorage")}
         </ModernButton>
       </motion.div>
-
-      <AnimatePresence>
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{ overflow: 'hidden', marginBottom: 'var(--space-6)' }}
-          >
-            <ModernCard variant="glass" padding="lg">
-              <div className="panel__header">
-                <div>
-                  <h2 className="panel__title">
-                    {editingStorage ? t("storages.editStorage") : t("storages.newStorage")}
-                  </h2>
-                  <p className="panel__subtitle">
-                    {t("storages.subtitle")}
-                  </p>
-                </div>
-              </div>
-
-              <form className="form-grid" onSubmit={submit}>
-                <label className="form-field">
-                  <span className="form-field__label">{t("storages.location")}</span>
-                  <div style={{ position: 'relative' }}>
-                    <ModernInput
-                      placeholder="Lokasyon ara..."
-                      value={locationSearchTerm}
-                      onChange={(e) => setLocationSearchTerm(e.target.value)}
-                      leftIcon={<Search className="h-4 w-4" />}
-                      fullWidth
-                    />
-                    {locationSearchTerm.length >= 2 && filteredLocationOptions.length > 0 && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        background: 'var(--bg-primary)',
-                        border: '1px solid var(--border-primary)',
-                        borderRadius: 'var(--radius-md)',
-                        boxShadow: 'var(--shadow-lg)',
-                        zIndex: 100,
-                        maxHeight: '200px',
-                        overflowY: 'auto',
-                      }}>
-                        {filteredLocationOptions.slice(0, 10).map((option) => (
-                          <div
-                            key={option.value}
-                            onClick={() => {
-                              reset({ ...watch(), location_id: option.value });
-                              setLocationSearchTerm(option.label);
-                            }}
-                            style={{
-                              padding: 'var(--space-2) var(--space-3)',
-                              cursor: 'pointer',
-                              borderBottom: '1px solid var(--border-primary)',
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                              <MapPin className="h-3 w-3" style={{ color: 'var(--text-tertiary)' }} />
-                              {option.label}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <input type="hidden" {...register("location_id", { required: t("common.required") })} />
-                  {errors.location_id && (
-                    <span className="field-error">{errors.location_id.message}</span>
-                  )}
-                </label>
-
-                <label className="form-field">
-                  <span className="form-field__label">{t("storages.code")}</span>
-                  <input
-                    {...register("code", { required: t("common.required") })}
-                    placeholder="LK-001"
-                  />
-                  {errors.code && <span className="field-error">{errors.code.message}</span>}
-                </label>
-
-                <label className="form-field">
-                  <span className="form-field__label">{t("storages.status")}</span>
-                  <select {...register("status")}>
-                    <option value="idle">{t("storages.status.idle")}</option>
-                    <option value="occupied">{t("storages.status.occupied")}</option>
-                    <option value="reserved">{t("storages.status.reserved")}</option>
-                    <option value="faulty">{t("storages.status.faulty")}</option>
-                  </select>
-                </label>
-
-                <div className="form-actions form-grid__field--full">
-                  <button
-                    type="button"
-                    className="btn btn--ghost-dark"
-                    onClick={handleCancelForm}
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn--primary"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    {editingStorage
-                      ? updateMutation.isPending
-                        ? t("common.saving")
-                        : t("common.update")
-                      : createMutation.isPending
-                        ? t("common.saving")
-                        : t("common.save")}
-                  </button>
-                </div>
-              </form>
-            </ModernCard>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <ModernCard variant="glass" padding="lg">
         <div style={{ marginBottom: 'var(--space-6)' }}>
@@ -568,7 +362,7 @@ export function LockersPage() {
                                       onClick={() => setCalendarStorage(storage)}
                                       leftIcon={<Calendar className="h-4 w-4" />}
                                     >
-                                      Takvimi Görüntüle
+                                      {t("calendar.viewCalendar")}
                                     </ModernButton>
                                     <ModernButton
                                       variant="outline"
@@ -576,7 +370,7 @@ export function LockersPage() {
                                       onClick={() => handleEdit(storage)}
                                       leftIcon={<Edit className="h-4 w-4" />}
                                     >
-                                      Düzenle
+                                      {t("common.edit")}
                                     </ModernButton>
                                   </div>
                                 </div>

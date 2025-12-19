@@ -39,6 +39,7 @@ import {
 import { LocationEditPage } from "../pages/partner/locations/LocationEditPage";
 import { UserEditPage } from "../pages/partner/users/UserEditPage";
 import { StaffAssignPage } from "../pages/partner/staff/StaffAssignPage";
+import { StorageEditPage } from "../pages/partner/storages/StorageEditPage";
 import { TicketsPage } from "../pages/partner/tickets/TicketsPage";
 import { TransfersPage } from "../pages/partner/transfers/TransfersPage";
 import { WidgetPreviewPage } from "../pages/partner/WidgetPreviewPage";
@@ -86,6 +87,8 @@ export function AppRouter() {
           <Route path="locations/:id/edit" element={<LocationEditPage />} />
           <Route path="locations/new" element={<LocationEditPage />} />
           <Route path="lockers" element={<PartnerLockersPage />} />
+          <Route path="lockers/:id/edit" element={<StorageEditPage />} />
+          <Route path="lockers/new" element={<StorageEditPage />} />
           <Route path="reservations" element={<PartnerReservationsPage />} />
           <Route path="widget-preview" element={<WidgetPreviewPage />} />
           <Route path="qr" element={<PartnerQRPage />} />
