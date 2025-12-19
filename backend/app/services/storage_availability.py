@@ -180,6 +180,16 @@ async def get_storage_calendar(
             res_start = res.start_datetime or res.start_at
             res_end = res.end_datetime or res.end_at
             
+            # Normalize datetimes to naive (remove timezone info for comparison)
+            if res_start and hasattr(res_start, 'replace') and res_start.tzinfo is not None:
+                res_start = res_start.replace(tzinfo=None)
+            if res_end and hasattr(res_end, 'replace') and res_end.tzinfo is not None:
+                res_end = res_end.replace(tzinfo=None)
+            
+            # Skip if no valid dates
+            if not res_start or not res_end:
+                continue
+            
             # Check if reservation overlaps with this day
             if res_start < day_end and res_end > day_start:
                 overlapping_ids.append(str(res.id))
