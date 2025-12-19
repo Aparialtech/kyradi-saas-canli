@@ -28,6 +28,23 @@ async def list_locations(
     return [LocationRead.model_validate(loc) for loc in locations]
 
 
+@router.get("/{location_id}", response_model=LocationRead)
+async def get_location(
+    location_id: str,
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> LocationRead:
+    """Get a single location by ID."""
+    stmt = select(Location).where(
+        Location.id == location_id,
+        Location.tenant_id == current_user.tenant_id,
+    )
+    location = (await session.execute(stmt)).scalar_one_or_none()
+    if location is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Location not found")
+    return LocationRead.model_validate(location)
+
+
 @router.post("", response_model=LocationRead, status_code=status.HTTP_201_CREATED)
 async def create_location(
     payload: LocationCreate,

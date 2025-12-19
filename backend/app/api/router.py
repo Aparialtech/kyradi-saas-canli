@@ -44,6 +44,7 @@ from .routes import (
     reservations,
     revenue,
     staff,
+    tickets,
     users,
     webhooks,
     health,
@@ -79,6 +80,7 @@ api_router.include_router(magicpay.router)
 api_router.include_router(pricing.router)
 api_router.include_router(users.router)
 api_router.include_router(staff.router)
+api_router.include_router(tickets.router)
 api_router.include_router(qr.router)
 api_router.include_router(reports.router)
 api_router.include_router(revenue.router)

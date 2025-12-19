@@ -17,6 +17,7 @@ from .tenant import Tenant, TenantPlanLimit, User
 from .password_reset import PasswordResetToken, PasswordResetMethod
 from .phone_verification import PhoneLoginVerification
 from .pricing import PricingRule
+from .ticket import Ticket, TicketStatus, TicketPriority, TicketTarget
 
 __all__ = [
     "Locker",  # Backward compatibility
@@ -41,4 +42,8 @@ __all__ = [
     "User",
     "UserRole",
     "AuditLog",
+    "Ticket",
+    "TicketStatus",
+    "TicketPriority",
+    "TicketTarget",
 ]
