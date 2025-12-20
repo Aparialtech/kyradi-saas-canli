@@ -279,24 +279,36 @@ export function WidgetPreviewPage() {
                   <div className="agreements-header"><Shield className="agreements-icon" /><span>Sözleşmeler</span></div>
                   <div className={`agreement-box ${formData.kvkkAccepted ? 'accepted' : ''}`}>
                     <div className="agreement-title"><span>KVKK Aydınlatma Metni</span>{formData.kvkkAccepted && <CheckCircle2 className="check-icon" />}</div>
-                    {!kvkkScrolled && <p className="scroll-hint">↓ Aşağı kaydırarak okuyun ve otomatik kabul edin</p>}
+                    {!kvkkScrolled && <p className="scroll-hint">↓ Sözleşmeyi sonuna kadar okuyun - otomatik onaylanacak</p>}
                     <div ref={kvkkRef} onScroll={handleKvkkScroll} className="agreement-content">
-                      <p><strong>1.</strong> Kişisel verileriniz Kyradi tarafından işlenmektedir.</p>
-                      <p><strong>2.</strong> Ad, soyad, telefon, e-posta verileri işlenir.</p>
-                      <p><strong>3.</strong> Amaç: Rezervasyon yönetimi ve hizmet kalitesi.</p>
-                      <p><strong>4.</strong> Verileriniz güvenli şekilde korunur.</p>
-                      <p><strong>5.</strong> KVKK 11. madde kapsamında haklarınız saklıdır.</p>
+                      <p><strong>1. VERİ SORUMLUSU</strong></p>
+                      <p>Kişisel verileriniz, 6698 sayılı Kişisel Verilerin Korunması Kanunu uyarınca veri sorumlusu sıfatıyla Kyradi tarafından işlenmektedir.</p>
+                      <p><strong>2. İŞLENEN KİŞİSEL VERİLER</strong></p>
+                      <p>Rezervasyon sürecinde ad, soyad, telefon numarası, e-posta adresi gibi kişisel verileriniz işlenmektedir.</p>
+                      <p><strong>3. İŞLEME AMAÇLARI</strong></p>
+                      <p>Kişisel verileriniz rezervasyon yönetimi, müşteri hizmetleri, yasal yükümlülüklerin yerine getirilmesi ve hizmet kalitesinin artırılması amaçlarıyla işlenmektedir.</p>
+                      <p><strong>4. VERİ GÜVENLİĞİ</strong></p>
+                      <p>Kişisel verileriniz, teknik ve idari güvenlik önlemleri alınarak korunmaktadır. Verileriniz üçüncü kişilerle paylaşılmamaktadır.</p>
+                      <p><strong>5. HAKLARINIZ</strong></p>
+                      <p>KVKK'nın 11. maddesi uyarınca kişisel verileriniz hakkında bilgi talep etme, düzeltme, silme, itiraz etme ve şikayet etme haklarınız bulunmaktadır.</p>
+                      <p style={{marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', textAlign: 'center', color: '#16a34a', fontWeight: 600}}>✓ Sözleşmenin sonuna ulaştınız</p>
                     </div>
                   </div>
                   <div className={`agreement-box ${formData.termsAccepted ? 'accepted' : ''}`}>
                     <div className="agreement-title"><span>Kullanım Şartları</span>{formData.termsAccepted && <CheckCircle2 className="check-icon" />}</div>
-                    {!termsScrolled && <p className="scroll-hint">↓ Aşağı kaydırarak okuyun ve otomatik kabul edin</p>}
+                    {!termsScrolled && <p className="scroll-hint">↓ Sözleşmeyi sonuna kadar okuyun - otomatik onaylanacak</p>}
                     <div ref={termsRef} onScroll={handleTermsScroll} className="agreement-content">
-                      <p><strong>1.</strong> Bavul depolama rezervasyonu yapabilirsiniz.</p>
-                      <p><strong>2.</strong> Doğru bilgi sağlamakla yükümlüsünüz.</p>
-                      <p><strong>3.</strong> Fiyatlar belirtilen kurallara göre hesaplanır.</p>
-                      <p><strong>4.</strong> Sınırlı sorumluluk uygulanır.</p>
-                      <p><strong>5.</strong> Verileriniz KVKK kapsamında korunur.</p>
+                      <p><strong>1. HİZMET KAPSAMI</strong></p>
+                      <p>Bu platform, bavul depolama hizmetleri için rezervasyon yapmanıza olanak sağlar. Hizmetler, belirtilen koşullar ve sınırlamalar dahilinde sunulmaktadır.</p>
+                      <p><strong>2. KULLANICI YÜKÜMLÜLÜKLERİ</strong></p>
+                      <p>Kullanıcılar, doğru ve güncel bilgi sağlamakla yükümlüdür. Yanlış bilgi verilmesi durumunda hizmet reddedilebilir.</p>
+                      <p><strong>3. ÖDEME VE İPTAL</strong></p>
+                      <p>Rezervasyon ücretleri belirtilen fiyatlandırma kurallarına göre hesaplanır. İptal koşulları rezervasyon sırasında belirtilir.</p>
+                      <p><strong>4. SORUMLULUK SINIRLAMASI</strong></p>
+                      <p>Platform, bavulların kaybolması, hasar görmesi veya çalınması durumunda sınırlı sorumluluk taşır. Detaylar için lütfen hizmet sağlayıcıyla iletişime geçin.</p>
+                      <p><strong>5. GİZLİLİK</strong></p>
+                      <p>Kişisel verileriniz KVKK uyarınca korunmakta ve yalnızca belirtilen amaçlar doğrultusunda kullanılmaktadır.</p>
+                      <p style={{marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', textAlign: 'center', color: '#16a34a', fontWeight: 600}}>✓ Sözleşmenin sonuna ulaştınız</p>
                     </div>
                   </div>
                 </div>
@@ -348,25 +360,26 @@ export function WidgetPreviewPage() {
           background: var(--bg-primary);
         }
         .page-header {
-          padding: 20px 24px;
+          padding: 28px 32px;
           border-bottom: 1px solid var(--border-primary);
           background: var(--bg-secondary);
         }
         .page-title {
-          font-size: clamp(20px, 3vw, 24px);
+          font-size: clamp(22px, 3vw, 28px);
           font-weight: 700;
           color: var(--text-primary);
-          margin: 0 0 4px 0;
-          line-height: 1.2;
+          margin: 0 0 8px 0;
+          line-height: 1.3;
           overflow-wrap: anywhere;
         }
         .page-subtitle {
-          font-size: 13px;
+          font-size: 14px;
           color: var(--text-tertiary);
           margin: 0;
+          line-height: 1.5;
         }
         .page-content {
-          padding: 20px 24px;
+          padding: 28px 32px;
           max-width: 640px;
           margin: 0 auto;
         }
@@ -498,16 +511,31 @@ export function WidgetPreviewPage() {
         .duration-icon { width: 20px; height: 20px; color: #16a34a; }
         
         /* Agreements */
-        .agreements-section { margin-top: 8px; }
-        .agreements-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
-        .agreements-icon { width: 16px; height: 16px; color: #3b82f6; }
-        .agreement-box { padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 12px; transition: all 0.3s; }
-        .agreement-box.accepted { background: #f0fdf4; border-color: #bbf7d0; }
-        .agreement-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; font-weight: 500; }
-        .check-icon { width: 16px; height: 16px; color: #16a34a; }
-        .scroll-hint { font-size: 11px; color: #3b82f6; margin: 0 0 8px; }
-        .agreement-content { max-height: 80px; overflow-y: auto; padding: 8px; background: white; border-radius: 6px; font-size: 11px; line-height: 1.5; color: #64748b; }
-        .agreement-content p { margin: 0 0 6px; }
+        .agreements-section { margin-top: 16px; }
+        .agreements-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 15px; font-weight: 600; color: var(--text-primary); }
+        .agreements-icon { width: 18px; height: 18px; color: #3b82f6; }
+        .agreement-box { padding: 14px; background: #f8fafc; border-radius: 12px; border: 2px solid #e2e8f0; margin-bottom: 14px; transition: all 0.3s; }
+        .agreement-box.accepted { background: #f0fdf4; border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1); }
+        .agreement-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; font-weight: 600; }
+        .check-icon { width: 20px; height: 20px; color: #16a34a; }
+        .scroll-hint { font-size: 12px; color: #3b82f6; margin: 0 0 10px; font-weight: 500; background: #eff6ff; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
+        .scroll-hint::before { content: '📜'; }
+        .agreement-content { 
+          height: 120px; 
+          overflow-y: scroll; 
+          padding: 12px; 
+          background: white; 
+          border-radius: 8px; 
+          font-size: 12px; 
+          line-height: 1.6; 
+          color: #475569;
+          border: 1px solid #e2e8f0;
+        }
+        .agreement-content::-webkit-scrollbar { width: 8px; }
+        .agreement-content::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .agreement-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .agreement-content::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .agreement-content p { margin: 0 0 10px; }
         .agreement-content p:last-child { margin: 0; }
         
         /* Embed Section */
