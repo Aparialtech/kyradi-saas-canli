@@ -57,25 +57,21 @@ const buildSnippet = (
 
 // Step definitions
 const steps = [
-  { id: 1, title: "Kişisel Bilgiler", icon: User },
-  { id: 2, title: "Rezervasyon Bilgileri", icon: Calendar },
-  { id: 3, title: "Bavul & Sözleşme", icon: Package },
+  { id: 1, title: "Kişisel Bilgiler", shortTitle: "Kişisel", icon: User },
+  { id: 2, title: "Rezervasyon Bilgileri", shortTitle: "Rezervasyon", icon: Calendar },
+  { id: 3, title: "Bavul & Sözleşme", shortTitle: "Bavul", icon: Package },
 ];
 
 interface FormData {
-  // Step 1: Personal Info
   fullName: string;
   email: string;
   phone: string;
-  // Step 2: Reservation Info
   checkIn: string;
   checkOut: string;
-  // Step 3: Luggage Info
   baggageCount: number;
   baggageType: string;
   weightKg: string;
   notes: string;
-  // Agreements
   kvkkAccepted: boolean;
   termsAccepted: boolean;
 }
@@ -86,9 +82,9 @@ export function WidgetPreviewPage() {
   const [snippet, setSnippet] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
+  const [showEmbedCode, setShowEmbedCode] = useState(false);
   const { t, locale } = useTranslation();
 
-  // Form state
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
     email: "",
@@ -103,7 +99,6 @@ export function WidgetPreviewPage() {
     termsAccepted: false,
   });
 
-  // Scroll states for auto-accept
   const [kvkkScrolled, setKvkkScrolled] = useState(false);
   const [termsScrolled, setTermsScrolled] = useState(false);
   const kvkkRef = useRef<HTMLDivElement>(null);
@@ -115,7 +110,7 @@ export function WidgetPreviewPage() {
   });
 
   useEffect(() => {
-    if (!tenantQuery.data || !containerRef.current) return;
+    if (!tenantQuery.data) return;
     const { tenant_id, widget_public_key } = tenantQuery.data;
     const cdnBase = env.PUBLIC_CDN_BASE || window.location.origin;
     const code = buildSnippet(cdnBase, env.API_URL, tenant_id, widget_public_key, locale);
@@ -130,10 +125,8 @@ export function WidgetPreviewPage() {
         type: "error",
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantQuery.isError]);
 
-  // Handle KVKK scroll
   const handleKvkkScroll = useCallback(() => {
     const el = kvkkRef.current;
     if (!el) return;
@@ -144,7 +137,6 @@ export function WidgetPreviewPage() {
     }
   }, [kvkkScrolled]);
 
-  // Handle Terms scroll
   const handleTermsScroll = useCallback(() => {
     const el = termsRef.current;
     if (!el) return;
@@ -190,7 +182,6 @@ export function WidgetPreviewPage() {
       return;
     }
     push({ title: "Rezervasyon oluşturuldu!", description: "Demo formu başarıyla tamamlandı.", type: "success" });
-    // Reset form
     setFormData({
       fullName: "",
       email: "",
@@ -220,36 +211,40 @@ export function WidgetPreviewPage() {
     }
   };
 
-  // Render step content
   const renderStepContent = () => {
     switch (activeStep) {
       case 1:
         return (
           <motion.div
             key="step1"
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.3 }}
+            style={{ padding: "var(--space-6)" }}
           >
-            <div style={{ marginBottom: "var(--space-6)" }}>
-              <h3
-                style={{
-                  fontSize: "var(--text-xl)",
-                  fontWeight: "var(--font-bold)",
-                  color: "var(--text-primary)",
-                  margin: "0 0 var(--space-2) 0",
+            <div style={{ marginBottom: "var(--space-5)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+                <div style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "var(--radius-lg)",
+                  background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "var(--space-2)",
-                }}
-              >
-                <User className="h-5 w-5" style={{ color: "var(--primary)" }} />
-                Kişisel Bilgiler
-              </h3>
-              <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-                Rezervasyon için iletişim bilgilerinizi girin.
-              </p>
+                  justifyContent: "center",
+                }}>
+                  <User className="h-5 w-5" style={{ color: "white" }} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", color: "var(--text-primary)", margin: 0 }}>
+                    Kişisel Bilgiler
+                  </h3>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
+                    İletişim bilgilerinizi girin
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
@@ -290,29 +285,34 @@ export function WidgetPreviewPage() {
         return (
           <motion.div
             key="step2"
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.3 }}
+            style={{ padding: "var(--space-6)" }}
           >
-            <div style={{ marginBottom: "var(--space-6)" }}>
-              <h3
-                style={{
-                  fontSize: "var(--text-xl)",
-                  fontWeight: "var(--font-bold)",
-                  color: "var(--text-primary)",
-                  margin: "0 0 var(--space-2) 0",
+            <div style={{ marginBottom: "var(--space-5)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+                <div style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "var(--radius-lg)",
+                  background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "var(--space-2)",
-                }}
-              >
-                <Calendar className="h-5 w-5" style={{ color: "var(--primary)" }} />
-                Rezervasyon Bilgileri
-              </h3>
-              <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-                Bavulunuzu bırakacağınız ve alacağınız tarihleri seçin.
-              </p>
+                  justifyContent: "center",
+                }}>
+                  <Calendar className="h-5 w-5" style={{ color: "white" }} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", color: "var(--text-primary)", margin: 0 }}>
+                    Rezervasyon Bilgileri
+                  </h3>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
+                    Tarih ve saat seçin
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
@@ -335,36 +335,37 @@ export function WidgetPreviewPage() {
                 required
               />
 
-              {/* Duration display */}
               {formData.checkIn && formData.checkOut && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   style={{
                     padding: "var(--space-4)",
-                    background: "linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%)",
+                    background: "linear-gradient(135deg, var(--success-50) 0%, var(--success-100) 100%)",
                     borderRadius: "var(--radius-lg)",
-                    border: "1px solid var(--primary-200)",
+                    border: "1px solid var(--success-200)",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-                    <Calendar className="h-4 w-4" style={{ color: "var(--primary-600)" }} />
-                    <span style={{ fontWeight: "var(--font-semibold)", color: "var(--primary-700)" }}>
-                      Rezervasyon Süresi
-                    </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                    <CheckCircle2 className="h-5 w-5" style={{ color: "var(--success-600)" }} />
+                    <div>
+                      <span style={{ fontWeight: "var(--font-semibold)", color: "var(--success-700)", fontSize: "var(--text-sm)" }}>
+                        Rezervasyon Süresi:
+                      </span>
+                      <span style={{ marginLeft: "var(--space-2)", color: "var(--success-600)", fontSize: "var(--text-sm)" }}>
+                        {(() => {
+                          const start = new Date(formData.checkIn);
+                          const end = new Date(formData.checkOut);
+                          const hours = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60));
+                          const days = Math.floor(hours / 24);
+                          const remainingHours = hours % 24;
+                          if (hours <= 0) return "Geçersiz tarih";
+                          if (days > 0) return `${days} gün ${remainingHours} saat`;
+                          return `${hours} saat`;
+                        })()}
+                      </span>
+                    </div>
                   </div>
-                  <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--primary-600)" }}>
-                    {(() => {
-                      const start = new Date(formData.checkIn);
-                      const end = new Date(formData.checkOut);
-                      const hours = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-                      const days = Math.floor(hours / 24);
-                      const remainingHours = hours % 24;
-                      if (hours <= 0) return "Geçersiz tarih aralığı";
-                      if (days > 0) return `${days} gün ${remainingHours} saat`;
-                      return `${hours} saat`;
-                    })()}
-                  </p>
                 </motion.div>
               )}
             </div>
@@ -375,33 +376,38 @@ export function WidgetPreviewPage() {
         return (
           <motion.div
             key="step3"
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.3 }}
+            style={{ padding: "var(--space-6)" }}
           >
-            <div style={{ marginBottom: "var(--space-6)" }}>
-              <h3
-                style={{
-                  fontSize: "var(--text-xl)",
-                  fontWeight: "var(--font-bold)",
-                  color: "var(--text-primary)",
-                  margin: "0 0 var(--space-2) 0",
+            <div style={{ marginBottom: "var(--space-5)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+                <div style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "var(--radius-lg)",
+                  background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "var(--space-2)",
-                }}
-              >
-                <Package className="h-5 w-5" style={{ color: "var(--primary)" }} />
-                Bavul Bilgileri & Sözleşme
-              </h3>
-              <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-                Bavul detaylarınızı girin ve sözleşmeleri onaylayın.
-              </p>
+                  justifyContent: "center",
+                }}>
+                  <Package className="h-5 w-5" style={{ color: "white" }} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", color: "var(--text-primary)", margin: 0 }}>
+                    Bavul & Sözleşme
+                  </h3>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
+                    Bavul bilgilerini girin ve sözleşmeleri onaylayın
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Luggage Info */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
               <ModernInput
                 label="Bavul Sayısı"
                 type="number"
@@ -421,7 +427,7 @@ export function WidgetPreviewPage() {
                 fullWidth
               />
               <ModernInput
-                label="Tahmini Ağırlık (kg)"
+                label="Ağırlık (kg)"
                 type="number"
                 value={formData.weightKg}
                 onChange={(e) => updateField("weightKg", e.target.value)}
@@ -432,23 +438,15 @@ export function WidgetPreviewPage() {
             </div>
 
             {/* Notes */}
-            <div style={{ marginBottom: "var(--space-6)" }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "var(--space-2)",
-                  fontWeight: "var(--font-medium)",
-                  fontSize: "var(--text-sm)",
-                  color: "var(--text-primary)",
-                }}
-              >
+            <div style={{ marginBottom: "var(--space-5)" }}>
+              <label style={{ display: "block", marginBottom: "var(--space-2)", fontWeight: "var(--font-medium)", fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>
                 Notlar (Opsiyonel)
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => updateField("notes", e.target.value)}
-                placeholder="Özel istekleriniz varsa belirtin..."
-                rows={3}
+                placeholder="Özel istekleriniz..."
+                rows={2}
                 style={{
                   width: "100%",
                   padding: "var(--space-3)",
@@ -458,139 +456,100 @@ export function WidgetPreviewPage() {
                   color: "var(--text-primary)",
                   fontSize: "var(--text-sm)",
                   fontFamily: "inherit",
-                  resize: "vertical",
-                  transition: "border-color 0.2s, box-shadow 0.2s",
+                  resize: "none",
                 }}
               />
             </div>
 
-            {/* Agreements Section */}
-            <div style={{ marginBottom: "var(--space-4)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
-                <Shield className="h-5 w-5" style={{ color: "var(--primary)" }} />
-                <h4 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)", margin: 0 }}>
+            {/* Agreements */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+                <Shield className="h-4 w-4" style={{ color: "var(--primary)" }} />
+                <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>
                   Sözleşmeler
-                </h4>
+                </span>
               </div>
 
-              {/* KVKK Agreement */}
-              <div
-                style={{
-                  marginBottom: "var(--space-4)",
-                  padding: "var(--space-4)",
-                  background: formData.kvkkAccepted
-                    ? "linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)"
-                    : "var(--bg-tertiary)",
-                  borderRadius: "var(--radius-lg)",
-                  border: formData.kvkkAccepted ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid var(--border-primary)",
-                  transition: "all 0.3s ease",
-                }}
-              >
+              {/* KVKK */}
+              <div style={{
+                marginBottom: "var(--space-3)",
+                padding: "var(--space-3)",
+                background: formData.kvkkAccepted ? "var(--success-50)" : "var(--bg-tertiary)",
+                borderRadius: "var(--radius-lg)",
+                border: formData.kvkkAccepted ? "1px solid var(--success-300)" : "1px solid var(--border-primary)",
+                transition: "all 0.3s ease",
+              }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-                  <span style={{ fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>
+                  <span style={{ fontWeight: "var(--font-medium)", fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>
                     KVKK Aydınlatma Metni
                   </span>
-                  {formData.kvkkAccepted && <CheckCircle2 className="h-5 w-5" style={{ color: "#16a34a" }} />}
+                  {formData.kvkkAccepted && <CheckCircle2 className="h-4 w-4" style={{ color: "var(--success-500)" }} />}
                 </div>
                 {!kvkkScrolled && (
                   <p style={{ fontSize: "var(--text-xs)", color: "var(--info-600)", margin: "0 0 var(--space-2) 0" }}>
-                    📜 Sözleşmeyi okumak için aşağı kaydırın. Sonuna ulaştığınızda otomatik kabul edilecektir.
+                    ↓ Aşağı kaydırarak okuyun ve otomatik kabul edin
                   </p>
                 )}
                 <div
                   ref={kvkkRef}
                   onScroll={handleKvkkScroll}
                   style={{
-                    maxHeight: "150px",
+                    maxHeight: "100px",
                     overflowY: "auto",
-                    padding: "var(--space-3)",
+                    padding: "var(--space-2)",
                     background: "var(--bg-primary)",
                     borderRadius: "var(--radius-md)",
                     fontSize: "var(--text-xs)",
-                    lineHeight: 1.6,
+                    lineHeight: 1.5,
                     color: "var(--text-secondary)",
                   }}
                 >
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}>
-                    <strong>1. Veri Sorumlusu</strong><br />
-                    Kişisel verileriniz, 6698 sayılı KVKK uyarınca veri sorumlusu sıfatıyla Kyradi tarafından işlenmektedir.
-                  </p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}>
-                    <strong>2. İşlenen Kişisel Veriler</strong><br />
-                    Ad, soyad, telefon numarası, e-posta adresi gibi kişisel verileriniz işlenmektedir.
-                  </p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}>
-                    <strong>3. İşleme Amaçları</strong><br />
-                    Kişisel verileriniz rezervasyon yönetimi ve hizmet kalitesinin artırılması amaçlarıyla işlenmektedir.
-                  </p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}>
-                    <strong>4. Veri Güvenliği</strong><br />
-                    Kişisel verileriniz, teknik ve idari güvenlik önlemleri alınarak korunmaktadır.
-                  </p>
-                  <p style={{ margin: 0 }}>
-                    <strong>5. Haklarınız</strong><br />
-                    KVKK'nın 11. maddesi uyarınca kişisel verileriniz hakkında bilgi talep etme haklarınız bulunmaktadır.
-                  </p>
+                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>1. Veri Sorumlusu:</strong> Kişisel verileriniz Kyradi tarafından işlenmektedir.</p>
+                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>2. İşlenen Veriler:</strong> Ad, soyad, telefon, e-posta.</p>
+                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>3. Amaç:</strong> Rezervasyon yönetimi ve hizmet kalitesi.</p>
+                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>4. Güvenlik:</strong> Verileriniz güvenli şekilde korunur.</p>
+                  <p style={{ margin: 0 }}><strong>5. Haklarınız:</strong> KVKK 11. madde kapsamında haklarınız saklıdır.</p>
                 </div>
               </div>
 
-              {/* Terms Agreement */}
-              <div
-                style={{
-                  padding: "var(--space-4)",
-                  background: formData.termsAccepted
-                    ? "linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)"
-                    : "var(--bg-tertiary)",
-                  borderRadius: "var(--radius-lg)",
-                  border: formData.termsAccepted ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid var(--border-primary)",
-                  transition: "all 0.3s ease",
-                }}
-              >
+              {/* Terms */}
+              <div style={{
+                padding: "var(--space-3)",
+                background: formData.termsAccepted ? "var(--success-50)" : "var(--bg-tertiary)",
+                borderRadius: "var(--radius-lg)",
+                border: formData.termsAccepted ? "1px solid var(--success-300)" : "1px solid var(--border-primary)",
+                transition: "all 0.3s ease",
+              }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-                  <span style={{ fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>
+                  <span style={{ fontWeight: "var(--font-medium)", fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>
                     Kullanım Şartları
                   </span>
-                  {formData.termsAccepted && <CheckCircle2 className="h-5 w-5" style={{ color: "#16a34a" }} />}
+                  {formData.termsAccepted && <CheckCircle2 className="h-4 w-4" style={{ color: "var(--success-500)" }} />}
                 </div>
                 {!termsScrolled && (
                   <p style={{ fontSize: "var(--text-xs)", color: "var(--info-600)", margin: "0 0 var(--space-2) 0" }}>
-                    📜 Sözleşmeyi okumak için aşağı kaydırın. Sonuna ulaştığınızda otomatik kabul edilecektir.
+                    ↓ Aşağı kaydırarak okuyun ve otomatik kabul edin
                   </p>
                 )}
                 <div
                   ref={termsRef}
                   onScroll={handleTermsScroll}
                   style={{
-                    maxHeight: "150px",
+                    maxHeight: "100px",
                     overflowY: "auto",
-                    padding: "var(--space-3)",
+                    padding: "var(--space-2)",
                     background: "var(--bg-primary)",
                     borderRadius: "var(--radius-md)",
                     fontSize: "var(--text-xs)",
-                    lineHeight: 1.6,
+                    lineHeight: 1.5,
                     color: "var(--text-secondary)",
                   }}
                 >
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}>
-                    <strong>1. Hizmet Kapsamı</strong><br />
-                    Bu platform, bavul depolama hizmetleri için rezervasyon yapmanıza olanak sağlar.
-                  </p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}>
-                    <strong>2. Kullanıcı Yükümlülükleri</strong><br />
-                    Kullanıcılar, doğru ve güncel bilgi sağlamakla yükümlüdür.
-                  </p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}>
-                    <strong>3. Ödeme ve İptal</strong><br />
-                    Rezervasyon ücretleri belirtilen fiyatlandırma kurallarına göre hesaplanır.
-                  </p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}>
-                    <strong>4. Sorumluluk Sınırlaması</strong><br />
-                    Platform, bavulların kaybolması durumunda sınırlı sorumluluk taşır.
-                  </p>
-                  <p style={{ margin: 0 }}>
-                    <strong>5. Gizlilik</strong><br />
-                    Kişisel verileriniz KVKK uyarınca korunmaktadır.
-                  </p>
+                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>1. Hizmet:</strong> Bavul depolama rezervasyonu yapabilirsiniz.</p>
+                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>2. Yükümlülük:</strong> Doğru bilgi sağlamakla yükümlüsünüz.</p>
+                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>3. Ödeme:</strong> Fiyatlar belirtilen kurallara göre hesaplanır.</p>
+                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>4. Sorumluluk:</strong> Sınırlı sorumluluk uygulanır.</p>
+                  <p style={{ margin: 0 }}><strong>5. Gizlilik:</strong> Verileriniz KVKK kapsamında korunur.</p>
                 </div>
               </div>
             </div>
@@ -603,7 +562,7 @@ export function WidgetPreviewPage() {
   };
 
   return (
-    <div style={{ padding: "var(--space-6)", maxWidth: "1400px", margin: "0 auto" }}>
+    <div style={{ padding: "var(--space-6)", maxWidth: "900px", margin: "0 auto" }}>
       <ToastContainer messages={messages} />
 
       {/* Header */}
@@ -612,283 +571,236 @@ export function WidgetPreviewPage() {
         animate={{ opacity: 1, y: 0 }}
         style={{ marginBottom: "var(--space-6)" }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-          <div
-            style={{
-              width: "48px",
-              height: "48px",
+        <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--text-primary)", margin: "0 0 var(--space-1) 0" }}>
+          Online Rezervasyon Formu
+        </h1>
+        <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
+          Web sitenize entegre edeceğiniz rezervasyon formunu buradan test edebilirsiniz.
+        </p>
+      </motion.div>
+
+      {/* Stepper Card */}
+      <ModernCard variant="glass" padding="none" style={{ marginBottom: "var(--space-6)", overflow: "hidden" }}>
+        {/* Stepper Header */}
+        <div style={{
+          padding: "var(--space-4) var(--space-6)",
+          background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
+          position: "relative",
+        }}>
+          <div style={{
+            position: "absolute",
+            top: "-30px",
+            right: "-30px",
+            width: "100px",
+            height: "100px",
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.1)",
+          }} />
+          <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", color: "white", margin: 0 }}>
+            Rezervasyon Formu
+          </h2>
+        </div>
+
+        {/* Steps Indicator */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "var(--space-4) var(--space-6)",
+          background: "var(--bg-secondary)",
+          borderBottom: "1px solid var(--border-primary)",
+          gap: "var(--space-2)",
+        }}>
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            const isActive = activeStep === step.id;
+            const isCompleted = activeStep > step.id;
+
+            return (
+              <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
+                <motion.div
+                  animate={{
+                    scale: isActive ? 1.05 : 1,
+                    background: isCompleted
+                      ? "linear-gradient(135deg, #16a34a 0%, #15803d 100%)"
+                      : isActive
+                      ? "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)"
+                      : "var(--bg-tertiary)",
+                  }}
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: isActive || isCompleted ? "none" : "2px solid var(--border-primary)",
+                    transition: "all 0.3s ease",
+                    flexShrink: 0,
+                  }}
+                >
+                  {isCompleted ? (
+                    <Check className="h-4 w-4" style={{ color: "white" }} />
+                  ) : (
+                    <Icon className="h-4 w-4" style={{ color: isActive ? "white" : "var(--text-tertiary)" }} />
+                  )}
+                </motion.div>
+                <span style={{
+                  marginLeft: "var(--space-2)",
+                  fontSize: "var(--text-sm)",
+                  fontWeight: isActive ? "var(--font-semibold)" : "var(--font-medium)",
+                  color: isActive || isCompleted ? "var(--text-primary)" : "var(--text-tertiary)",
+                  display: "none",
+                }}>
+                  {step.shortTitle}
+                </span>
+                {index < steps.length - 1 && (
+                  <div style={{
+                    width: "40px",
+                    height: "2px",
+                    margin: "0 var(--space-2)",
+                    background: isCompleted ? "#16a34a" : "var(--border-primary)",
+                    transition: "background 0.3s ease",
+                  }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Step Title */}
+        <div style={{ padding: "var(--space-3) var(--space-6)", background: "var(--bg-secondary)", borderBottom: "1px solid var(--border-primary)" }}>
+          <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>
+            Adım {activeStep} / 3: {steps[activeStep - 1].title}
+          </span>
+        </div>
+
+        {/* Form Content */}
+        <div style={{ minHeight: "380px" }}>
+          <AnimatePresence mode="wait">{renderStepContent()}</AnimatePresence>
+        </div>
+
+        {/* Navigation */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "var(--space-4) var(--space-6)",
+          borderTop: "1px solid var(--border-primary)",
+          background: "var(--bg-secondary)",
+        }}>
+          <ModernButton
+            variant="ghost"
+            onClick={handlePrev}
+            disabled={activeStep === 1}
+            leftIcon={<ChevronLeft className="h-4 w-4" />}
+          >
+            Geri
+          </ModernButton>
+
+          {activeStep < 3 ? (
+            <ModernButton
+              variant="primary"
+              onClick={handleNext}
+              disabled={!canProceed()}
+              rightIcon={<ChevronRight className="h-4 w-4" />}
+            >
+              İleri
+            </ModernButton>
+          ) : (
+            <ModernButton
+              variant="primary"
+              onClick={handleSubmit}
+              disabled={!canProceed()}
+              leftIcon={<CheckCircle2 className="h-4 w-4" />}
+            >
+              Tamamla
+            </ModernButton>
+          )}
+        </div>
+      </ModernCard>
+
+      {/* Embed Code Section */}
+      <ModernCard variant="glass" padding="lg">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+            <div style={{
+              width: "36px",
+              height: "36px",
               borderRadius: "var(--radius-lg)",
               background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-            }}
-          >
-            <Code className="h-6 w-6" style={{ color: "white" }} />
-          </div>
-          <div>
-            <h1
-              style={{
-                fontSize: "var(--text-2xl)",
-                fontWeight: "var(--font-bold)",
-                color: "var(--text-primary)",
-                margin: 0,
-              }}
-            >
-              {t("widget.preview.title")}
-            </h1>
-            <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-              {t("widget.preview.subtitle")}
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Main Content Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: "var(--space-6)", alignItems: "start" }}>
-        {/* Left: Live Preview */}
-        <ModernCard variant="glass" padding="lg">
-          <div style={{ marginBottom: "var(--space-4)" }}>
-            <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", margin: "0 0 var(--space-1) 0" }}>
-              Canlı Önizleme
-            </h2>
-            <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-              Widget'ın web sitenizde nasıl görüneceğini test edin.
-            </p>
-          </div>
-
-          {tenantQuery.isLoading ? (
-            <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--text-tertiary)" }}>
-              <Loader2
-                className="h-10 w-10"
-                style={{ margin: "0 auto var(--space-3) auto", color: "var(--primary)", animation: "spin 1s linear infinite" }}
-              />
-              <p style={{ fontSize: "var(--text-base)", margin: 0 }}>{t("widget.preview.loading")}</p>
+            }}>
+              <Code className="h-4 w-4" style={{ color: "white" }} />
             </div>
-          ) : tenantQuery.isError ? (
-            <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--danger-500)" }}>
-              <AlertCircle className="h-10 w-10" style={{ margin: "0 auto var(--space-3) auto" }} />
-              <p style={{ fontSize: "var(--text-base)", margin: 0 }}>{getErrorMessage(tenantQuery.error)}</p>
-            </div>
-          ) : (
-            <div ref={containerRef} style={{ minHeight: "400px", padding: "var(--space-4)", background: "var(--bg-secondary)", borderRadius: "var(--radius-lg)" }}></div>
-          )}
-
-          {/* Embed Code Section */}
-          <div style={{ marginTop: "var(--space-6)", paddingTop: "var(--space-6)", borderTop: "1px solid var(--border-primary)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-3)" }}>
-              <h3 style={{ fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)", margin: 0 }}>
+            <div>
+              <h3 style={{ fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)", margin: 0, color: "var(--text-primary)" }}>
                 Embed Kodu
               </h3>
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", margin: 0 }}>
+                Web sitenize ekleyin
+              </p>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <ModernButton
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowEmbedCode(!showEmbedCode)}
+            >
+              {showEmbedCode ? "Gizle" : "Göster"}
+            </ModernButton>
+            {showEmbedCode && (
               <ModernButton
                 variant="outline"
                 size="sm"
                 onClick={copySnippet}
-                leftIcon={copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                leftIcon={copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
               >
-                {copied ? "Kopyalandı!" : "Kopyala"}
-              </ModernButton>
-            </div>
-            <textarea
-              readOnly
-              value={snippet}
-              rows={6}
-              style={{
-                width: "100%",
-                padding: "var(--space-3)",
-                borderRadius: "var(--radius-lg)",
-                border: "1px solid var(--border-primary)",
-                background: "var(--bg-tertiary)",
-                color: "var(--text-primary)",
-                fontFamily: "monospace",
-                fontSize: "var(--text-xs)",
-                resize: "none",
-              }}
-              onFocus={(e) => e.currentTarget.select()}
-            />
-          </div>
-        </ModernCard>
-
-        {/* Right: Form Preview */}
-        <ModernCard variant="glass" padding="none" style={{ overflow: "hidden" }}>
-          {/* Form Header with gradient */}
-          <div
-            style={{
-              padding: "var(--space-5)",
-              background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {/* Decorative elements */}
-            <div
-              style={{
-                position: "absolute",
-                top: "-20px",
-                right: "-20px",
-                width: "100px",
-                height: "100px",
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.1)",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                bottom: "-30px",
-                left: "-30px",
-                width: "80px",
-                height: "80px",
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.05)",
-              }}
-            />
-
-            <h2 style={{ fontSize: "var(--text-xl)", fontWeight: "var(--font-bold)", color: "white", margin: "0 0 var(--space-1) 0", position: "relative" }}>
-              Rezervasyon Formu
-            </h2>
-            <p style={{ fontSize: "var(--text-sm)", color: "rgba(255,255,255,0.8)", margin: 0, position: "relative" }}>
-              Form Önizlemesi
-            </p>
-          </div>
-
-          {/* Stepper */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "var(--space-4) var(--space-5)",
-              background: "var(--bg-secondary)",
-              borderBottom: "1px solid var(--border-primary)",
-            }}
-          >
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = activeStep === step.id;
-              const isCompleted = activeStep > step.id;
-
-              return (
-                <div
-                  key={step.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-2)",
-                    flex: 1,
-                    justifyContent: index === 1 ? "center" : index === 0 ? "flex-start" : "flex-end",
-                  }}
-                >
-                  {/* Step Indicator */}
-                  <motion.div
-                    animate={{
-                      scale: isActive ? 1.1 : 1,
-                      background: isCompleted
-                        ? "linear-gradient(135deg, #16a34a 0%, #15803d 100%)"
-                        : isActive
-                        ? "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)"
-                        : "var(--bg-tertiary)",
-                    }}
-                    style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      border: isActive || isCompleted ? "none" : "2px solid var(--border-primary)",
-                      transition: "all 0.3s ease",
-                    }}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle2 className="h-4 w-4" style={{ color: "white" }} />
-                    ) : (
-                      <Icon className="h-4 w-4" style={{ color: isActive ? "white" : "var(--text-tertiary)" }} />
-                    )}
-                  </motion.div>
-
-                  {/* Step Label - Only show on larger screens */}
-                  <div style={{ display: "none" }}>
-                    <span
-                      style={{
-                        fontSize: "var(--text-xs)",
-                        fontWeight: isActive ? "var(--font-semibold)" : "var(--font-medium)",
-                        color: isActive || isCompleted ? "var(--text-primary)" : "var(--text-tertiary)",
-                      }}
-                    >
-                      {step.title}
-                    </span>
-                  </div>
-
-                  {/* Connector Line */}
-                  {index < steps.length - 1 && (
-                    <div
-                      style={{
-                        flex: 1,
-                        height: "2px",
-                        background: isCompleted ? "#16a34a" : "var(--border-primary)",
-                        margin: "0 var(--space-2)",
-                        transition: "background 0.3s ease",
-                      }}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Step Title */}
-          <div style={{ padding: "var(--space-3) var(--space-5)", background: "var(--bg-secondary)", borderBottom: "1px solid var(--border-primary)" }}>
-            <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>
-              Adım {activeStep}: {steps[activeStep - 1].title}
-            </span>
-          </div>
-
-          {/* Form Content */}
-          <div style={{ padding: "var(--space-5)", minHeight: "400px" }}>
-            <AnimatePresence mode="wait">{renderStepContent()}</AnimatePresence>
-          </div>
-
-          {/* Navigation Buttons */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "var(--space-4) var(--space-5)",
-              borderTop: "1px solid var(--border-primary)",
-              background: "var(--bg-secondary)",
-            }}
-          >
-            <ModernButton
-              variant="ghost"
-              onClick={handlePrev}
-              disabled={activeStep === 1}
-              leftIcon={<ChevronLeft className="h-4 w-4" />}
-            >
-              Geri
-            </ModernButton>
-
-            {activeStep < 3 ? (
-              <ModernButton
-                variant="primary"
-                onClick={handleNext}
-                disabled={!canProceed()}
-                rightIcon={<ChevronRight className="h-4 w-4" />}
-              >
-                İleri
-              </ModernButton>
-            ) : (
-              <ModernButton
-                variant="primary"
-                onClick={handleSubmit}
-                disabled={!canProceed()}
-                leftIcon={<CheckCircle2 className="h-4 w-4" />}
-              >
-                Rezervasyonu Tamamla
+                {copied ? "Kopyalandı" : "Kopyala"}
               </ModernButton>
             )}
           </div>
-        </ModernCard>
-      </div>
+        </div>
+
+        {showEmbedCode && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            {tenantQuery.isLoading ? (
+              <div style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--text-tertiary)" }}>
+                <Loader2 className="h-6 w-6" style={{ margin: "0 auto", animation: "spin 1s linear infinite" }} />
+              </div>
+            ) : tenantQuery.isError ? (
+              <div style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--danger-500)" }}>
+                <AlertCircle className="h-6 w-6" style={{ margin: "0 auto var(--space-2) auto" }} />
+                <p style={{ margin: 0, fontSize: "var(--text-sm)" }}>{getErrorMessage(tenantQuery.error)}</p>
+              </div>
+            ) : (
+              <textarea
+                readOnly
+                value={snippet}
+                rows={5}
+                style={{
+                  width: "100%",
+                  padding: "var(--space-3)",
+                  borderRadius: "var(--radius-lg)",
+                  border: "1px solid var(--border-primary)",
+                  background: "var(--bg-tertiary)",
+                  color: "var(--text-primary)",
+                  fontFamily: "monospace",
+                  fontSize: "var(--text-xs)",
+                  resize: "none",
+                }}
+                onFocus={(e) => e.currentTarget.select()}
+              />
+            )}
+          </motion.div>
+        )}
+      </ModernCard>
     </div>
   );
 }
