@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Code,
-  Eye,
   Loader2,
   AlertCircle,
   User,
@@ -14,7 +13,6 @@ import {
   Package,
   Briefcase,
   Weight,
-  FileText,
   Shield,
   CheckCircle2,
   ChevronRight,
