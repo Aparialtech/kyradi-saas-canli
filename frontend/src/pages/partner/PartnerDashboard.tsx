@@ -774,13 +774,15 @@ export function PartnerDashboard() {
 
         {/* Main Content */}
         <main style={{ 
-          flex: 1, 
+          flex: '1 1 auto',
           display: 'flex', 
           flexDirection: 'column',
           width: '100%',
           minWidth: 0,
+          maxWidth: '100%',
           marginLeft: sidebarOpen ? '280px' : '80px',
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
         }}
         className="main-content-area"
         >
@@ -845,7 +847,13 @@ export function PartnerDashboard() {
           </div>
 
           {/* Page Content */}
-          <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+          <div style={{ 
+            flex: '1 1 auto', 
+            overflow: 'auto', 
+            position: 'relative',
+            minWidth: 0,
+            width: '100%',
+          }}>
             <Outlet />
           </div>
         </main>
