@@ -1,7 +1,23 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  ResponsiveContainer, 
+  Legend, 
+  Tooltip,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid
+} from "recharts";
 import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon } from "../../../lib/lucide";
 import { revenueService, type PaymentModeRevenue } from "../../../services/partner/revenue";
 import { locationService } from "../../../services/partner/locations";
@@ -24,7 +40,7 @@ export function RevenueDashboard() {
   const [dateTo, setDateTo] = useState<string>("");
   const [locationFilter, setLocationFilter] = useState<string>("");
   const [storageFilter, setStorageFilter] = useState<string>("");
-  const [chartType, setChartType] = useState<ChartType>('line');
+  const [chartType, setChartType] = useState<ChartType>('bar');
 
   // Fetch locations for filter
   const locationsQuery = useQuery({
@@ -396,6 +412,26 @@ export function RevenueDashboard() {
               <TrendingUp className="h-4 w-4" />
               Alan
             </button>
+            <button
+              onClick={() => setChartType('pie')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-2) var(--space-3)',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                background: chartType === 'pie' ? 'var(--primary-500)' : 'transparent',
+                color: chartType === 'pie' ? 'white' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <DollarSign className="h-4 w-4" />
+              Pasta
+            </button>
           </div>
         </div>
       </ModernCard>
@@ -523,32 +559,129 @@ export function RevenueDashboard() {
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)', alignItems: 'center' }}>
-            {/* Pie Chart */}
-            <div style={{ height: 300 }}>
+            {/* Dynamic Chart based on chartType */}
+            <div style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend 
-                    verticalAlign="bottom" 
-                    height={36}
-                    formatter={(value: string) => (
-                      <span style={{ color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>{value}</span>
-                    )}
-                  />
-                </PieChart>
+                {chartType === 'pie' ? (
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {chartData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={chartData[index].color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36}
+                      formatter={(value: string) => (
+                        <span style={{ color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>{value}</span>
+                      )}
+                    />
+                  </PieChart>
+                ) : chartType === 'bar' ? (
+                  <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                    <defs>
+                      {chartData.map((entry, index) => (
+                        <linearGradient key={`gradient-${index}`} id={`barGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={entry.color} stopOpacity={1}/>
+                          <stop offset="100%" stopColor={entry.color} stopOpacity={0.7}/>
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+                      tickLine={false}
+                      axisLine={{ stroke: 'var(--border-primary)' }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `₺${value.toLocaleString()}`}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={60}>
+                      {chartData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={`url(#barGradient-${index})`} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : chartType === 'line' ? (
+                  <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+                      tickLine={false}
+                      axisLine={{ stroke: 'var(--border-primary)' }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `₺${value.toLocaleString()}`}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="#00a389" 
+                      strokeWidth={3}
+                      dot={{ fill: '#00a389', strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7, fill: '#00a389' }}
+                    />
+                  </LineChart>
+                ) : (
+                  <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                    <defs>
+                      <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00a389" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#00a389" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+                      tickLine={false}
+                      axisLine={{ stroke: 'var(--border-primary)' }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `₺${value.toLocaleString()}`}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="#00a389" 
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#areaGradient)"
+                    />
+                  </AreaChart>
+                )}
               </ResponsiveContainer>
             </div>
             
