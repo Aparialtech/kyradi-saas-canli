@@ -53,6 +53,7 @@ import {
   Settings2,
   MessageSquare,
 } from "../../lib/lucide";
+import { ticketService } from "../../services/partner/tickets";
 
 const warningActions: Record<
   string,
@@ -109,6 +110,13 @@ export function PartnerOverview() {
   const summaryQuery = useQuery<PartnerSummary, Error>({
     queryKey: ["partner", "summary"],
     queryFn: () => partnerReportService.summary(),
+  });
+
+  // Unread tickets count for menu badge
+  const unreadTicketsQuery = useQuery({
+    queryKey: ["unread-tickets"],
+    queryFn: () => ticketService.getUnreadCount(),
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Chart data queries
@@ -704,11 +712,17 @@ export function PartnerDashboard() {
     }
     
     // All authenticated users can access tickets and settings
-    items.push({ to: "tickets", label: "İletişim", icon: <MessageSquare className="h-5 w-5" /> });
+    const unreadCount = unreadTicketsQuery.data ?? 0;
+    items.push({ 
+      to: "tickets", 
+      label: "İletişim", 
+      icon: <MessageSquare className="h-5 w-5" />,
+      badge: unreadCount > 0 ? unreadCount : undefined,
+    });
     items.push({ to: "settings", label: t("nav.settings"), icon: <Settings2 className="h-5 w-5" /> });
     
     return items;
-  }, [hasRole, t]);
+  }, [hasRole, t, unreadTicketsQuery.data]);
 
   return (
     <ConfirmProvider>

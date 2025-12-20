@@ -252,6 +252,78 @@ async def get_ticket(
     )
 
 
+# ==================== PARTNER MARK AS READ ====================
+
+@router.patch("/{ticket_id}/read", response_model=TicketRead)
+async def mark_ticket_as_read(
+    ticket_id: str,
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> TicketRead:
+    """Mark a ticket as read."""
+    
+    query = select(Ticket).where(
+        Ticket.id == ticket_id,
+        or_(
+            Ticket.tenant_id == current_user.tenant_id,
+            Ticket.creator_id == current_user.id
+        )
+    )
+    
+    ticket = (await session.execute(query)).scalar_one_or_none()
+    if not ticket:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+    
+    # Mark as read
+    if ticket.read_at is None:
+        ticket.read_at = datetime.utcnow()
+        await session.commit()
+        await session.refresh(ticket)
+    
+    return TicketRead(
+        id=ticket.id,
+        title=ticket.title,
+        message=ticket.message,
+        status=ticket.status,
+        priority=ticket.priority,
+        target=ticket.target,
+        creator_id=ticket.creator_id,
+        creator_email=ticket.creator.email if ticket.creator else None,
+        tenant_id=ticket.tenant_id,
+        tenant_name=ticket.tenant.name if ticket.tenant else None,
+        resolved_at=ticket.resolved_at,
+        resolved_by_id=ticket.resolved_by_id,
+        resolution_note=ticket.resolution_note,
+        read_at=ticket.read_at,
+        created_at=ticket.created_at,
+        updated_at=None,
+    )
+
+
+@router.get("/unread-count")
+async def get_unread_count(
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Get unread ticket count for current user."""
+    
+    unread_query = select(func.count()).select_from(
+        select(Ticket).where(
+            and_(
+                or_(
+                    Ticket.tenant_id == current_user.tenant_id,
+                    Ticket.creator_id == current_user.id
+                ),
+                Ticket.read_at.is_(None),
+                Ticket.creator_id != current_user.id  # Only count tickets not created by self
+            )
+        ).subquery()
+    )
+    unread_count = (await session.execute(unread_query)).scalar() or 0
+    
+    return {"unread_count": unread_count}
+
+
 # ==================== ADMIN ENDPOINTS ====================
 
 @router.get("/admin/all", response_model=TicketListResponse)

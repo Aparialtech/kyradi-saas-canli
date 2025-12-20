@@ -92,12 +92,26 @@ export function TicketsPage() {
     mutationFn: (payload: TicketCreate) => ticketService.create(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      void queryClient.invalidateQueries({ queryKey: ["unread-tickets"] });
       push({ title: "Ticket oluşturuldu", description: "Mesajınız iletildi", type: "success" });
       setShowNewTicketModal(false);
       setNewTicket({ title: "", message: "", priority: "medium", target: "admin" });
     },
     onError: (error: unknown) => {
       push({ title: "Ticket oluşturulamadı", description: getErrorMessage(error), type: "error" });
+    },
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: (id: string) => ticketService.markAsRead(id),
+    onSuccess: (updatedTicket) => {
+      void queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      void queryClient.invalidateQueries({ queryKey: ["unread-tickets"] });
+      push({ title: "Ticket okundu olarak işaretlendi", type: "success" });
+      setSelectedTicket(updatedTicket);
+    },
+    onError: (error: unknown) => {
+      push({ title: "İşlem başarısız", description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -532,7 +546,18 @@ export function TicketsPage() {
               </div>
             )}
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)" }}>
+              {selectedTicket.read_at === null && selectedTicket.creator_id !== "self" && (
+                <ModernButton 
+                  variant="primary" 
+                  onClick={() => markAsReadMutation.mutate(selectedTicket.id)}
+                  disabled={markAsReadMutation.isPending}
+                  isLoading={markAsReadMutation.isPending}
+                  leftIcon={!markAsReadMutation.isPending && <CheckCircle2 className="h-4 w-4" />}
+                >
+                  Okundu Olarak İşaretle
+                </ModernButton>
+              )}
               <ModernButton variant="ghost" onClick={() => setSelectedTicket(null)}>
                 Kapat
               </ModernButton>

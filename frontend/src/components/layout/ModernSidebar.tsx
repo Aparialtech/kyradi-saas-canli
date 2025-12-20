@@ -129,14 +129,16 @@ export const ModernSidebar: React.FC<ModernSidebarProps> = ({
                   )}
                 </AnimatePresence>
 
-                {item.badge && isOpen && (
+                {item.badge && (
                   <motion.span
-                    className={styles.navItemBadge}
+                    className={clsx(styles.navItemBadge, {
+                      [styles.navItemBadgeCollapsed]: !isOpen,
+                    })}
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     exit={{ scale: 0 }}
                   >
-                    {item.badge}
+                    {isOpen ? item.badge : ''}
                   </motion.span>
                 )}
               </motion.div>

@@ -87,4 +87,14 @@ export const ticketService = {
   async remove(id: string): Promise<void> {
     await http.delete(`/tickets/${id}`);
   },
+
+  async markAsRead(id: string): Promise<Ticket> {
+    const response = await http.patch<Ticket>(`/tickets/${id}/read`, {});
+    return response.data;
+  },
+
+  async getUnreadCount(): Promise<number> {
+    const response = await http.get<{ unread_count: number }>("/tickets/unread-count");
+    return response.data.unread_count;
+  },
 };
