@@ -88,6 +88,107 @@ async def get_revenue_by_payment_mode_endpoint(
     return [PaymentModeRevenue(**item) for item in data]
 
 
+class DailyRevenueItem(BaseModel):
+    """Daily revenue item."""
+    date: str
+    total_revenue_minor: int
+    tenant_settlement_minor: int
+    kyradi_commission_minor: int
+    transaction_count: int
+
+
+class RevenueHistoryResponse(BaseModel):
+    """Response with daily revenue list."""
+    items: List[DailyRevenueItem]
+    total_revenue_minor: int
+    total_tenant_settlement_minor: int
+    total_kyradi_commission_minor: int
+    total_transaction_count: int
+    period_start: str
+    period_end: str
+
+
+@router.get("/history", response_model=RevenueHistoryResponse)
+async def get_revenue_history(
+    date_from: Optional[datetime] = Query(default=None, alias="from"),
+    date_to: Optional[datetime] = Query(default=None, alias="to"),
+    granularity: str = Query(default="daily", description="daily, weekly, monthly"),
+    current_user: User = Depends(require_accounting),
+    session: AsyncSession = Depends(get_session),
+) -> RevenueHistoryResponse:
+    """Get revenue history grouped by day/week/month."""
+    from datetime import timedelta
+    from sqlalchemy import cast, Date, extract
+    
+    # Default to last 30 days if no dates provided
+    if not date_to:
+        date_to = datetime.utcnow()
+    if not date_from:
+        date_from = date_to - timedelta(days=30)
+    
+    # Base query for settlements
+    base_query = select(Settlement).where(
+        Settlement.tenant_id == current_user.tenant_id,
+        Settlement.created_at >= date_from,
+        Settlement.created_at <= date_to,
+    )
+    
+    result = await session.execute(base_query)
+    settlements = result.scalars().all()
+    
+    # Group by date
+    from collections import defaultdict
+    daily_data = defaultdict(lambda: {
+        "total_revenue_minor": 0,
+        "tenant_settlement_minor": 0,
+        "kyradi_commission_minor": 0,
+        "transaction_count": 0,
+    })
+    
+    for s in settlements:
+        if granularity == "monthly":
+            key = s.created_at.strftime("%Y-%m")
+        elif granularity == "weekly":
+            # ISO week
+            key = s.created_at.strftime("%Y-W%W")
+        else:  # daily
+            key = s.created_at.strftime("%Y-%m-%d")
+        
+        daily_data[key]["total_revenue_minor"] += s.total_amount_minor
+        daily_data[key]["tenant_settlement_minor"] += s.tenant_settlement_minor
+        daily_data[key]["kyradi_commission_minor"] += s.kyradi_commission_minor
+        daily_data[key]["transaction_count"] += 1
+    
+    # Sort by date and create items
+    sorted_keys = sorted(daily_data.keys(), reverse=True)
+    items = [
+        DailyRevenueItem(
+            date=key,
+            total_revenue_minor=daily_data[key]["total_revenue_minor"],
+            tenant_settlement_minor=daily_data[key]["tenant_settlement_minor"],
+            kyradi_commission_minor=daily_data[key]["kyradi_commission_minor"],
+            transaction_count=daily_data[key]["transaction_count"],
+        )
+        for key in sorted_keys
+    ]
+    
+    # Calculate totals
+    total_revenue = sum(d["total_revenue_minor"] for d in daily_data.values())
+    total_settlement = sum(d["tenant_settlement_minor"] for d in daily_data.values())
+    total_commission = sum(d["kyradi_commission_minor"] for d in daily_data.values())
+    total_transactions = sum(d["transaction_count"] for d in daily_data.values())
+    
+    return RevenueHistoryResponse(
+        items=items,
+        total_revenue_minor=total_revenue,
+        total_tenant_settlement_minor=total_settlement,
+        total_kyradi_commission_minor=total_commission,
+        total_transaction_count=total_transactions,
+        period_start=date_from.strftime("%Y-%m-%d"),
+        period_end=date_to.strftime("%Y-%m-%d"),
+    )
+
+
 @router.get("/settlements", response_model=SettlementListResponse)
 async def list_settlements(
     status_filter: Optional[str] = Query(default=None, alias="status"),

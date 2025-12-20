@@ -41,6 +41,24 @@ export interface PaymentModeRevenue {
   transaction_count: number;
 }
 
+export interface DailyRevenueItem {
+  date: string;
+  total_revenue_minor: number;
+  tenant_settlement_minor: number;
+  kyradi_commission_minor: number;
+  transaction_count: number;
+}
+
+export interface RevenueHistoryResponse {
+  items: DailyRevenueItem[];
+  total_revenue_minor: number;
+  total_tenant_settlement_minor: number;
+  total_kyradi_commission_minor: number;
+  total_transaction_count: number;
+  period_start: string;
+  period_end: string;
+}
+
 export const revenueService = {
   async getSummary(dateFrom?: string, dateTo?: string): Promise<RevenueSummary> {
     const params: Record<string, string> = {};
@@ -95,6 +113,18 @@ export const revenueService = {
     if (dateFrom) params.from = dateFrom;
     if (dateTo) params.to = dateTo;
     const response = await http.get<PaymentModeRevenue[]>("/revenue/by-payment-mode", { params });
+    return response.data;
+  },
+
+  async getHistory(
+    dateFrom?: string, 
+    dateTo?: string, 
+    granularity: "daily" | "weekly" | "monthly" = "daily"
+  ): Promise<RevenueHistoryResponse> {
+    const params: Record<string, string> = { granularity };
+    if (dateFrom) params.from = dateFrom;
+    if (dateTo) params.to = dateTo;
+    const response = await http.get<RevenueHistoryResponse>("/revenue/history", { params });
     return response.data;
   },
 };

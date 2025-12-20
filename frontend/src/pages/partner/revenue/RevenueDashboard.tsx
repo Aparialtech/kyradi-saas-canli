@@ -18,8 +18,8 @@ import {
   YAxis,
   CartesianGrid
 } from "recharts";
-import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon } from "../../../lib/lucide";
-import { revenueService, type PaymentModeRevenue } from "../../../services/partner/revenue";
+import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon, Calendar, Clock } from "../../../lib/lucide";
+import { revenueService, type PaymentModeRevenue, type RevenueHistoryResponse } from "../../../services/partner/revenue";
 import { locationService } from "../../../services/partner/locations";
 import { storageService } from "../../../services/partner/storages";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -41,6 +41,7 @@ export function RevenueDashboard() {
   const [locationFilter, setLocationFilter] = useState<string>("");
   const [storageFilter, setStorageFilter] = useState<string>("");
   const [chartType, setChartType] = useState<ChartType>('bar');
+  const [granularity, setGranularity] = useState<"daily" | "weekly" | "monthly">("daily");
 
   // Fetch locations for filter
   const locationsQuery = useQuery({
@@ -67,6 +68,11 @@ export function RevenueDashboard() {
   const paymentModeQuery = useQuery({
     queryKey: ["revenue", "by-payment-mode", dateFrom, dateTo],
     queryFn: () => revenueService.getByPaymentMode(dateFrom, dateTo),
+  });
+
+  const historyQuery = useQuery<RevenueHistoryResponse>({
+    queryKey: ["revenue", "history", dateFrom, dateTo, granularity],
+    queryFn: () => revenueService.getHistory(dateFrom, dateTo, granularity),
   });
 
   const formatCurrency = (minor: number) => {
@@ -741,6 +747,190 @@ export function RevenueDashboard() {
               ))}
             </div>
           </div>
+        )}
+      </ModernCard>
+
+      {/* Revenue History Table */}
+      <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-5)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+          <div>
+            <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Clock className="h-5 w-5" style={{ color: 'var(--primary-500)' }} />
+              Dönemsel Gelir Listesi
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+              {historyQuery.data?.period_start && historyQuery.data?.period_end 
+                ? `${historyQuery.data.period_start} - ${historyQuery.data.period_end} tarihleri arası`
+                : 'Son 30 günlük gelir geçmişi'}
+            </p>
+          </div>
+          
+          {/* Granularity Selector */}
+          <div style={{ 
+            display: 'inline-flex', 
+            gap: 'var(--space-1)', 
+            background: 'var(--bg-tertiary)', 
+            padding: 'var(--space-1)', 
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-primary)'
+          }}>
+            <button
+              onClick={() => setGranularity('daily')}
+              style={{
+                padding: 'var(--space-2) var(--space-3)',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                background: granularity === 'daily' ? 'var(--primary-500)' : 'transparent',
+                color: granularity === 'daily' ? 'white' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Günlük
+            </button>
+            <button
+              onClick={() => setGranularity('weekly')}
+              style={{
+                padding: 'var(--space-2) var(--space-3)',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                background: granularity === 'weekly' ? 'var(--primary-500)' : 'transparent',
+                color: granularity === 'weekly' ? 'white' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Haftalık
+            </button>
+            <button
+              onClick={() => setGranularity('monthly')}
+              style={{
+                padding: 'var(--space-2) var(--space-3)',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                background: granularity === 'monthly' ? 'var(--primary-500)' : 'transparent',
+                color: granularity === 'monthly' ? 'white' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Aylık
+            </button>
+          </div>
+        </div>
+
+        {historyQuery.isLoading ? (
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Loader2 className="h-10 w-10" style={{ margin: '0 auto var(--space-3) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <p style={{ fontSize: 'var(--text-base)', margin: 0 }}>Gelir geçmişi yükleniyor...</p>
+          </div>
+        ) : historyQuery.isError ? (
+          <div style={{ textAlign: "center", padding: 'var(--space-8)' }}>
+            <AlertCircle className="h-10 w-10" style={{ margin: '0 auto var(--space-3) auto', color: '#dc2626' }} />
+            <p style={{ color: "#dc2626", fontWeight: 600, margin: 0 }}>Gelir geçmişi yüklenemedi</p>
+          </div>
+        ) : historyQuery.data?.items.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+            <Calendar className="h-12 w-12" style={{ margin: '0 auto var(--space-3) auto', opacity: 0.4 }} />
+            <p style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "0.5rem" }}>Bu dönemde gelir kaydı yok</p>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>Seçili tarih aralığında işlem bulunmuyor.</p>
+          </div>
+        ) : (
+          <>
+            {/* Summary Row */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(4, 1fr)', 
+              gap: 'var(--space-4)', 
+              marginBottom: 'var(--space-5)',
+              padding: 'var(--space-4)',
+              background: 'linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--primary-200)'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Toplam Gelir</p>
+                <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: '#16a34a', margin: 0 }}>{formatCurrency(historyQuery.data?.total_revenue_minor ?? 0)}</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Otel Hakedişi</p>
+                <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: '#1d4ed8', margin: 0 }}>{formatCurrency(historyQuery.data?.total_tenant_settlement_minor ?? 0)}</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Komisyon</p>
+                <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: '#dc2626', margin: 0 }}>{formatCurrency(historyQuery.data?.total_kyradi_commission_minor ?? 0)}</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>İşlem Sayısı</p>
+                <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: '#6366f1', margin: 0 }}>{historyQuery.data?.total_transaction_count ?? 0}</p>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border-primary)' }}>
+                    <th style={{ padding: 'var(--space-3)', textAlign: 'left', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>
+                      {granularity === 'daily' ? 'Tarih' : granularity === 'weekly' ? 'Hafta' : 'Ay'}
+                    </th>
+                    <th style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Toplam Gelir</th>
+                    <th style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Otel Hakedişi</th>
+                    <th style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Komisyon</th>
+                    <th style={{ padding: 'var(--space-3)', textAlign: 'center', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>İşlem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyQuery.data?.items.map((item, index) => (
+                    <motion.tr
+                      key={item.date}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                      style={{ 
+                        borderBottom: '1px solid var(--border-secondary)',
+                        background: index % 2 === 0 ? 'transparent' : 'var(--bg-secondary)',
+                      }}
+                    >
+                      <td style={{ padding: 'var(--space-3)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                          <Calendar className="h-4 w-4" style={{ color: 'var(--text-tertiary)' }} />
+                          {item.date}
+                        </div>
+                      </td>
+                      <td style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: '#16a34a' }}>
+                        {formatCurrency(item.total_revenue_minor)}
+                      </td>
+                      <td style={{ padding: 'var(--space-3)', textAlign: 'right', color: '#1d4ed8' }}>
+                        {formatCurrency(item.tenant_settlement_minor)}
+                      </td>
+                      <td style={{ padding: 'var(--space-3)', textAlign: 'right', color: '#dc2626' }}>
+                        {formatCurrency(item.kyradi_commission_minor)}
+                      </td>
+                      <td style={{ padding: 'var(--space-3)', textAlign: 'center' }}>
+                        <span style={{ 
+                          background: 'var(--primary-100)', 
+                          color: 'var(--primary-700)', 
+                          padding: 'var(--space-1) var(--space-2)', 
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 'var(--font-semibold)'
+                        }}>
+                          {item.transaction_count}
+                        </span>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </ModernCard>
 
