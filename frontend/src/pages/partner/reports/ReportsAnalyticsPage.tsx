@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Download, Filter, BarChart3, LineChart as LineChartIcon, Circle, TrendingUp } from "../../../lib/lucide";
+import { Download, Filter, BarChart3, LineChart as LineChartIcon, PieChartIcon, TrendingUp } from "../../../lib/lucide";
 
 import { partnerReportService, type PartnerOverviewResponse } from "../../../services/partner/reports";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -519,7 +519,7 @@ export function ReportsAnalyticsPage() {
                     }}
                     title="Pasta Grafiği"
                   >
-                    <Circle className="h-4 w-4" />
+                    <PieChartIcon className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setRevenueChartType("bar")}
