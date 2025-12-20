@@ -82,8 +82,8 @@ api_router.include_router(pricing.router)
 api_router.include_router(users.router)
 api_router.include_router(staff.router)
 api_router.include_router(tickets.router)
-# TODO: Enable after running migration: alembic upgrade head
-# api_router.include_router(payment_schedules.router)
+# Payment schedules for Kyradi commission transfers
+api_router.include_router(payment_schedules.router)
 api_router.include_router(qr.router)
 api_router.include_router(reports.router)
 api_router.include_router(revenue.router)
