@@ -27,7 +27,6 @@ import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
 import { useTranslation } from "../../hooks/useTranslation";
-import { ModernCard } from "../../components/ui/ModernCard";
 import { ModernButton } from "../../components/ui/ModernButton";
 import { ModernInput } from "../../components/ui/ModernInput";
 
@@ -57,9 +56,9 @@ const buildSnippet = (
 
 // Step definitions
 const steps = [
-  { id: 1, title: "Kişisel Bilgiler", shortTitle: "Kişisel", icon: User },
-  { id: 2, title: "Rezervasyon Bilgileri", shortTitle: "Rezervasyon", icon: Calendar },
-  { id: 3, title: "Bavul & Sözleşme", shortTitle: "Bavul", icon: Package },
+  { id: 1, title: "Kişisel Bilgiler", icon: User },
+  { id: 2, title: "Rezervasyon Bilgileri", icon: Calendar },
+  { id: 3, title: "Bavul & Sözleşme", icon: Package },
 ];
 
 interface FormData {
@@ -210,405 +209,49 @@ export function WidgetPreviewPage() {
     }
   };
 
-  const renderStepContent = () => {
-    switch (activeStep) {
-      case 1:
-        return (
-          <motion.div
-            key="step1"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-            transition={{ duration: 0.3 }}
-            style={{ padding: "var(--space-6)" }}
-          >
-            <div style={{ marginBottom: "var(--space-5)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-                <div style={{
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "var(--radius-lg)",
-                  background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
-                  <User className="h-5 w-5" style={{ color: "white" }} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", color: "var(--text-primary)", margin: 0 }}>
-                    Kişisel Bilgiler
-                  </h3>
-                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-                    İletişim bilgilerinizi girin
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-              <ModernInput
-                label="Ad Soyad"
-                value={formData.fullName}
-                onChange={(e) => updateField("fullName", e.target.value)}
-                placeholder="Adınız ve soyadınız"
-                leftIcon={<User className="h-4 w-4" />}
-                fullWidth
-                required
-              />
-              <ModernInput
-                label="E-posta"
-                type="email"
-                value={formData.email}
-                onChange={(e) => updateField("email", e.target.value)}
-                placeholder="ornek@email.com"
-                leftIcon={<Mail className="h-4 w-4" />}
-                fullWidth
-                required
-              />
-              <ModernInput
-                label="Telefon"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => updateField("phone", e.target.value)}
-                placeholder="+90 5XX XXX XX XX"
-                leftIcon={<Phone className="h-4 w-4" />}
-                fullWidth
-                required
-              />
-            </div>
-          </motion.div>
-        );
-
-      case 2:
-        return (
-          <motion.div
-            key="step2"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-            transition={{ duration: 0.3 }}
-            style={{ padding: "var(--space-6)" }}
-          >
-            <div style={{ marginBottom: "var(--space-5)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-                <div style={{
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "var(--radius-lg)",
-                  background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
-                  <Calendar className="h-5 w-5" style={{ color: "white" }} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", color: "var(--text-primary)", margin: 0 }}>
-                    Rezervasyon Bilgileri
-                  </h3>
-                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-                    Tarih ve saat seçin
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-              <ModernInput
-                label="Bırakış Tarihi & Saati"
-                type="datetime-local"
-                value={formData.checkIn}
-                onChange={(e) => updateField("checkIn", e.target.value)}
-                leftIcon={<Clock className="h-4 w-4" />}
-                fullWidth
-                required
-              />
-              <ModernInput
-                label="Alış Tarihi & Saati"
-                type="datetime-local"
-                value={formData.checkOut}
-                onChange={(e) => updateField("checkOut", e.target.value)}
-                leftIcon={<Clock className="h-4 w-4" />}
-                fullWidth
-                required
-              />
-
-              {formData.checkIn && formData.checkOut && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  style={{
-                    padding: "var(--space-4)",
-                    background: "linear-gradient(135deg, var(--success-50) 0%, var(--success-100) 100%)",
-                    borderRadius: "var(--radius-lg)",
-                    border: "1px solid var(--success-200)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                    <CheckCircle2 className="h-5 w-5" style={{ color: "var(--success-600)" }} />
-                    <div>
-                      <span style={{ fontWeight: "var(--font-semibold)", color: "var(--success-700)", fontSize: "var(--text-sm)" }}>
-                        Rezervasyon Süresi:
-                      </span>
-                      <span style={{ marginLeft: "var(--space-2)", color: "var(--success-600)", fontSize: "var(--text-sm)" }}>
-                        {(() => {
-                          const start = new Date(formData.checkIn);
-                          const end = new Date(formData.checkOut);
-                          const hours = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-                          const days = Math.floor(hours / 24);
-                          const remainingHours = hours % 24;
-                          if (hours <= 0) return "Geçersiz tarih";
-                          if (days > 0) return `${days} gün ${remainingHours} saat`;
-                          return `${hours} saat`;
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-        );
-
-      case 3:
-        return (
-          <motion.div
-            key="step3"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-            transition={{ duration: 0.3 }}
-            style={{ padding: "var(--space-6)" }}
-          >
-            <div style={{ marginBottom: "var(--space-5)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-                <div style={{
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "var(--radius-lg)",
-                  background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
-                  <Package className="h-5 w-5" style={{ color: "white" }} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", color: "var(--text-primary)", margin: 0 }}>
-                    Bavul & Sözleşme
-                  </h3>
-                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-                    Bavul bilgilerini girin ve sözleşmeleri onaylayın
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Luggage Info */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
-              <ModernInput
-                label="Bavul Sayısı"
-                type="number"
-                min={1}
-                max={10}
-                value={formData.baggageCount.toString()}
-                onChange={(e) => updateField("baggageCount", parseInt(e.target.value) || 1)}
-                leftIcon={<Briefcase className="h-4 w-4" />}
-                fullWidth
-              />
-              <ModernInput
-                label="Bavul Tipi"
-                value={formData.baggageType}
-                onChange={(e) => updateField("baggageType", e.target.value)}
-                placeholder="Kabin / Büyük"
-                leftIcon={<Package className="h-4 w-4" />}
-                fullWidth
-              />
-              <ModernInput
-                label="Ağırlık (kg)"
-                type="number"
-                value={formData.weightKg}
-                onChange={(e) => updateField("weightKg", e.target.value)}
-                placeholder="15"
-                leftIcon={<Weight className="h-4 w-4" />}
-                fullWidth
-              />
-            </div>
-
-            {/* Notes */}
-            <div style={{ marginBottom: "var(--space-5)" }}>
-              <label style={{ display: "block", marginBottom: "var(--space-2)", fontWeight: "var(--font-medium)", fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>
-                Notlar (Opsiyonel)
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => updateField("notes", e.target.value)}
-                placeholder="Özel istekleriniz..."
-                rows={2}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-3)",
-                  borderRadius: "var(--radius-lg)",
-                  border: "1px solid var(--border-primary)",
-                  background: "var(--bg-tertiary)",
-                  color: "var(--text-primary)",
-                  fontSize: "var(--text-sm)",
-                  fontFamily: "inherit",
-                  resize: "none",
-                }}
-              />
-            </div>
-
-            {/* Agreements */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-                <Shield className="h-4 w-4" style={{ color: "var(--primary)" }} />
-                <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>
-                  Sözleşmeler
-                </span>
-              </div>
-
-              {/* KVKK */}
-              <div style={{
-                marginBottom: "var(--space-3)",
-                padding: "var(--space-3)",
-                background: formData.kvkkAccepted ? "var(--success-50)" : "var(--bg-tertiary)",
-                borderRadius: "var(--radius-lg)",
-                border: formData.kvkkAccepted ? "1px solid var(--success-300)" : "1px solid var(--border-primary)",
-                transition: "all 0.3s ease",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-                  <span style={{ fontWeight: "var(--font-medium)", fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>
-                    KVKK Aydınlatma Metni
-                  </span>
-                  {formData.kvkkAccepted && <CheckCircle2 className="h-4 w-4" style={{ color: "var(--success-500)" }} />}
-                </div>
-                {!kvkkScrolled && (
-                  <p style={{ fontSize: "var(--text-xs)", color: "var(--info-600)", margin: "0 0 var(--space-2) 0" }}>
-                    ↓ Aşağı kaydırarak okuyun ve otomatik kabul edin
-                  </p>
-                )}
-                <div
-                  ref={kvkkRef}
-                  onScroll={handleKvkkScroll}
-                  style={{
-                    maxHeight: "100px",
-                    overflowY: "auto",
-                    padding: "var(--space-2)",
-                    background: "var(--bg-primary)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: "var(--text-xs)",
-                    lineHeight: 1.5,
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>1. Veri Sorumlusu:</strong> Kişisel verileriniz Kyradi tarafından işlenmektedir.</p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>2. İşlenen Veriler:</strong> Ad, soyad, telefon, e-posta.</p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>3. Amaç:</strong> Rezervasyon yönetimi ve hizmet kalitesi.</p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>4. Güvenlik:</strong> Verileriniz güvenli şekilde korunur.</p>
-                  <p style={{ margin: 0 }}><strong>5. Haklarınız:</strong> KVKK 11. madde kapsamında haklarınız saklıdır.</p>
-                </div>
-              </div>
-
-              {/* Terms */}
-              <div style={{
-                padding: "var(--space-3)",
-                background: formData.termsAccepted ? "var(--success-50)" : "var(--bg-tertiary)",
-                borderRadius: "var(--radius-lg)",
-                border: formData.termsAccepted ? "1px solid var(--success-300)" : "1px solid var(--border-primary)",
-                transition: "all 0.3s ease",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-                  <span style={{ fontWeight: "var(--font-medium)", fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>
-                    Kullanım Şartları
-                  </span>
-                  {formData.termsAccepted && <CheckCircle2 className="h-4 w-4" style={{ color: "var(--success-500)" }} />}
-                </div>
-                {!termsScrolled && (
-                  <p style={{ fontSize: "var(--text-xs)", color: "var(--info-600)", margin: "0 0 var(--space-2) 0" }}>
-                    ↓ Aşağı kaydırarak okuyun ve otomatik kabul edin
-                  </p>
-                )}
-                <div
-                  ref={termsRef}
-                  onScroll={handleTermsScroll}
-                  style={{
-                    maxHeight: "100px",
-                    overflowY: "auto",
-                    padding: "var(--space-2)",
-                    background: "var(--bg-primary)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: "var(--text-xs)",
-                    lineHeight: 1.5,
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>1. Hizmet:</strong> Bavul depolama rezervasyonu yapabilirsiniz.</p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>2. Yükümlülük:</strong> Doğru bilgi sağlamakla yükümlüsünüz.</p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>3. Ödeme:</strong> Fiyatlar belirtilen kurallara göre hesaplanır.</p>
-                  <p style={{ margin: "0 0 var(--space-2) 0" }}><strong>4. Sorumluluk:</strong> Sınırlı sorumluluk uygulanır.</p>
-                  <p style={{ margin: 0 }}><strong>5. Gizlilik:</strong> Verileriniz KVKK kapsamında korunur.</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
   return (
-    <div style={{ padding: "var(--space-6)", maxWidth: "900px", margin: "0 auto" }}>
+    <div style={{ 
+      width: "100%",
+      minHeight: "100%",
+      background: "var(--bg-primary)",
+    }}>
       <ToastContainer messages={messages} />
 
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{ marginBottom: "var(--space-6)" }}
-      >
-        <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--text-primary)", margin: "0 0 var(--space-1) 0" }}>
+      {/* Page Header */}
+      <div style={{ 
+        padding: "24px 32px",
+        borderBottom: "1px solid var(--border-primary)",
+        background: "var(--bg-secondary)",
+      }}>
+        <h1 style={{ 
+          fontSize: "24px", 
+          fontWeight: 700, 
+          color: "var(--text-primary)", 
+          margin: "0 0 4px 0" 
+        }}>
           Online Rezervasyon Formu
         </h1>
-        <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
+        <p style={{ 
+          fontSize: "14px", 
+          color: "var(--text-tertiary)", 
+          margin: 0 
+        }}>
           Web sitenize entegre edeceğiniz rezervasyon formunu buradan test edebilirsiniz.
         </p>
-      </motion.div>
+      </div>
 
-      {/* Stepper Card */}
-      <ModernCard variant="glass" padding="none" style={{ marginBottom: "var(--space-6)", overflow: "hidden" }}>
-        {/* Stepper Header */}
-        <div style={{
-          padding: "var(--space-4) var(--space-6)",
-          background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
-          position: "relative",
-        }}>
-          <div style={{
-            position: "absolute",
-            top: "-30px",
-            right: "-30px",
-            width: "100px",
-            height: "100px",
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.1)",
-          }} />
-          <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", color: "white", margin: 0 }}>
-            Rezervasyon Formu
-          </h2>
-        </div>
-
-        {/* Steps Indicator */}
+      {/* Main Content */}
+      <div style={{ padding: "24px 32px" }}>
+        {/* Stepper - Horizontal Steps */}
         <div style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "var(--space-4) var(--space-6)",
+          marginBottom: "32px",
+          padding: "24px",
           background: "var(--bg-secondary)",
-          borderBottom: "1px solid var(--border-primary)",
-          gap: "var(--space-2)",
+          borderRadius: "16px",
+          border: "1px solid var(--border-primary)",
         }}>
           {steps.map((step, index) => {
             const Icon = step.icon;
@@ -617,48 +260,63 @@ export function WidgetPreviewPage() {
 
             return (
               <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
-                <motion.div
-                  animate={{
-                    scale: isActive ? 1.05 : 1,
-                    background: isCompleted
-                      ? "linear-gradient(135deg, #16a34a 0%, #15803d 100%)"
-                      : isActive
-                      ? "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)"
-                      : "var(--bg-tertiary)",
-                  }}
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: isActive || isCompleted ? "none" : "2px solid var(--border-primary)",
-                    transition: "all 0.3s ease",
-                    flexShrink: 0,
-                  }}
-                >
-                  {isCompleted ? (
-                    <Check className="h-4 w-4" style={{ color: "white" }} />
-                  ) : (
-                    <Icon className="h-4 w-4" style={{ color: isActive ? "white" : "var(--text-tertiary)" }} />
-                  )}
-                </motion.div>
-                <span style={{
-                  marginLeft: "var(--space-2)",
-                  fontSize: "var(--text-sm)",
-                  fontWeight: isActive ? "var(--font-semibold)" : "var(--font-medium)",
-                  color: isActive || isCompleted ? "var(--text-primary)" : "var(--text-tertiary)",
-                  display: "none",
-                }}>
-                  {step.shortTitle}
-                </span>
+                {/* Step Circle */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "100px" }}>
+                  <motion.div
+                    animate={{
+                      scale: isActive ? 1.1 : 1,
+                    }}
+                    style={{
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: isCompleted
+                        ? "linear-gradient(135deg, #16a34a 0%, #15803d 100%)"
+                        : isActive
+                        ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
+                        : "#f1f5f9",
+                      border: isActive || isCompleted ? "none" : "2px solid #e2e8f0",
+                      boxShadow: isActive ? "0 4px 12px rgba(59, 130, 246, 0.3)" : "none",
+                      transition: "all 0.3s ease",
+                    }}
+                  >
+                    {isCompleted ? (
+                      <Check style={{ width: "20px", height: "20px", color: "white" }} />
+                    ) : (
+                      <Icon style={{ width: "20px", height: "20px", color: isActive ? "white" : "#94a3b8" }} />
+                    )}
+                  </motion.div>
+                  <div style={{ marginTop: "8px", textAlign: "center" }}>
+                    <div style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: isActive ? "#3b82f6" : isCompleted ? "#16a34a" : "#94a3b8",
+                    }}>
+                      Adım {step.id}
+                    </div>
+                    <div style={{
+                      fontSize: "13px",
+                      fontWeight: isActive ? 600 : 500,
+                      color: isActive || isCompleted ? "var(--text-primary)" : "var(--text-tertiary)",
+                      marginTop: "2px",
+                    }}>
+                      {step.title}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connector Line */}
                 {index < steps.length - 1 && (
                   <div style={{
-                    width: "40px",
-                    height: "2px",
-                    margin: "0 var(--space-2)",
-                    background: isCompleted ? "#16a34a" : "var(--border-primary)",
+                    width: "80px",
+                    height: "3px",
+                    margin: "0 8px",
+                    marginBottom: "40px",
+                    background: isCompleted ? "#16a34a" : "#e2e8f0",
+                    borderRadius: "2px",
                     transition: "background 0.3s ease",
                   }} />
                 )}
@@ -667,139 +325,430 @@ export function WidgetPreviewPage() {
           })}
         </div>
 
-        {/* Step Title */}
-        <div style={{ padding: "var(--space-3) var(--space-6)", background: "var(--bg-secondary)", borderBottom: "1px solid var(--border-primary)" }}>
-          <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>
-            Adım {activeStep} / 3: {steps[activeStep - 1].title}
-          </span>
-        </div>
-
-        {/* Form Content */}
-        <div style={{ minHeight: "380px" }}>
-          <AnimatePresence mode="wait">{renderStepContent()}</AnimatePresence>
-        </div>
-
-        {/* Navigation */}
+        {/* Form Container */}
         <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          padding: "var(--space-4) var(--space-6)",
-          borderTop: "1px solid var(--border-primary)",
-          background: "var(--bg-secondary)",
+          maxWidth: "600px",
+          margin: "0 auto",
+          background: "white",
+          borderRadius: "16px",
+          border: "1px solid var(--border-primary)",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+          overflow: "hidden",
         }}>
-          <ModernButton
-            variant="ghost"
-            onClick={handlePrev}
-            disabled={activeStep === 1}
-            leftIcon={<ChevronLeft className="h-4 w-4" />}
-          >
-            Geri
-          </ModernButton>
-
-          {activeStep < 3 ? (
-            <ModernButton
-              variant="primary"
-              onClick={handleNext}
-              disabled={!canProceed()}
-              rightIcon={<ChevronRight className="h-4 w-4" />}
-            >
-              İleri
-            </ModernButton>
-          ) : (
-            <ModernButton
-              variant="primary"
-              onClick={handleSubmit}
-              disabled={!canProceed()}
-              leftIcon={<CheckCircle2 className="h-4 w-4" />}
-            >
-              Tamamla
-            </ModernButton>
-          )}
-        </div>
-      </ModernCard>
-
-      {/* Embed Code Section */}
-      <ModernCard variant="glass" padding="lg">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-            <div style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "var(--radius-lg)",
-              background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
-              <Code className="h-4 w-4" style={{ color: "white" }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)", margin: 0, color: "var(--text-primary)" }}>
-                Embed Kodu
-              </h3>
-              <p style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", margin: 0 }}>
-                Web sitenize ekleyin
-              </p>
-            </div>
+          {/* Form Header */}
+          <div style={{
+            padding: "20px 24px",
+            background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+            color: "white",
+          }}>
+            <h2 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>
+              {steps[activeStep - 1].title}
+            </h2>
+            <p style={{ fontSize: "13px", opacity: 0.9, margin: "4px 0 0 0" }}>
+              {activeStep === 1 && "İletişim bilgilerinizi girin"}
+              {activeStep === 2 && "Tarih ve saat seçin"}
+              {activeStep === 3 && "Bavul bilgilerini girin ve sözleşmeleri onaylayın"}
+            </p>
           </div>
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+
+          {/* Form Content */}
+          <AnimatePresence mode="wait">
+            {activeStep === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                style={{ padding: "24px" }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <ModernInput
+                    label="Ad Soyad"
+                    value={formData.fullName}
+                    onChange={(e) => updateField("fullName", e.target.value)}
+                    placeholder="Adınız ve soyadınız"
+                    leftIcon={<User style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+                  <ModernInput
+                    label="E-posta"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => updateField("email", e.target.value)}
+                    placeholder="ornek@email.com"
+                    leftIcon={<Mail style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+                  <ModernInput
+                    label="Telefon"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                    placeholder="+90 5XX XXX XX XX"
+                    leftIcon={<Phone style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {activeStep === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                style={{ padding: "24px" }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <ModernInput
+                    label="Bırakış Tarihi & Saati"
+                    type="datetime-local"
+                    value={formData.checkIn}
+                    onChange={(e) => updateField("checkIn", e.target.value)}
+                    leftIcon={<Clock style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+                  <ModernInput
+                    label="Alış Tarihi & Saati"
+                    type="datetime-local"
+                    value={formData.checkOut}
+                    onChange={(e) => updateField("checkOut", e.target.value)}
+                    leftIcon={<Clock style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+
+                  {formData.checkIn && formData.checkOut && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        padding: "16px",
+                        background: "#f0fdf4",
+                        borderRadius: "12px",
+                        border: "1px solid #bbf7d0",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <CheckCircle2 style={{ width: "20px", height: "20px", color: "#16a34a" }} />
+                        <div>
+                          <span style={{ fontWeight: 600, color: "#15803d", fontSize: "14px" }}>
+                            Rezervasyon Süresi:
+                          </span>
+                          <span style={{ marginLeft: "8px", color: "#16a34a", fontSize: "14px" }}>
+                            {(() => {
+                              const start = new Date(formData.checkIn);
+                              const end = new Date(formData.checkOut);
+                              const hours = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60));
+                              const days = Math.floor(hours / 24);
+                              const remainingHours = hours % 24;
+                              if (hours <= 0) return "Geçersiz tarih";
+                              if (days > 0) return `${days} gün ${remainingHours} saat`;
+                              return `${hours} saat`;
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {activeStep === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                style={{ padding: "24px" }}
+              >
+                {/* Luggage Info */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "20px" }}>
+                  <ModernInput
+                    label="Bavul Sayısı"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={formData.baggageCount.toString()}
+                    onChange={(e) => updateField("baggageCount", parseInt(e.target.value) || 1)}
+                    leftIcon={<Briefcase style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                  />
+                  <ModernInput
+                    label="Bavul Tipi"
+                    value={formData.baggageType}
+                    onChange={(e) => updateField("baggageType", e.target.value)}
+                    placeholder="Kabin"
+                    leftIcon={<Package style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                  />
+                  <ModernInput
+                    label="Ağırlık (kg)"
+                    type="number"
+                    value={formData.weightKg}
+                    onChange={(e) => updateField("weightKg", e.target.value)}
+                    placeholder="15"
+                    leftIcon={<Weight style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                  />
+                </div>
+
+                {/* Notes */}
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: 500, fontSize: "14px", color: "var(--text-primary)" }}>
+                    Notlar (Opsiyonel)
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => updateField("notes", e.target.value)}
+                    placeholder="Özel istekleriniz..."
+                    rows={2}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      borderRadius: "10px",
+                      border: "1px solid #e2e8f0",
+                      background: "#f8fafc",
+                      color: "var(--text-primary)",
+                      fontSize: "14px",
+                      fontFamily: "inherit",
+                      resize: "none",
+                    }}
+                  />
+                </div>
+
+                {/* Agreements Section */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                    <Shield style={{ width: "16px", height: "16px", color: "#3b82f6" }} />
+                    <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+                      Sözleşmeler
+                    </span>
+                  </div>
+
+                  {/* KVKK */}
+                  <div style={{
+                    marginBottom: "12px",
+                    padding: "12px",
+                    background: formData.kvkkAccepted ? "#f0fdf4" : "#f8fafc",
+                    borderRadius: "10px",
+                    border: formData.kvkkAccepted ? "1px solid #bbf7d0" : "1px solid #e2e8f0",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                      <span style={{ fontWeight: 500, fontSize: "13px", color: "var(--text-primary)" }}>
+                        KVKK Aydınlatma Metni
+                      </span>
+                      {formData.kvkkAccepted && <CheckCircle2 style={{ width: "16px", height: "16px", color: "#16a34a" }} />}
+                    </div>
+                    {!kvkkScrolled && (
+                      <p style={{ fontSize: "11px", color: "#3b82f6", margin: "0 0 8px 0" }}>
+                        ↓ Aşağı kaydırarak okuyun ve otomatik kabul edin
+                      </p>
+                    )}
+                    <div
+                      ref={kvkkRef}
+                      onScroll={handleKvkkScroll}
+                      style={{
+                        maxHeight: "80px",
+                        overflowY: "auto",
+                        padding: "8px",
+                        background: "white",
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        lineHeight: 1.5,
+                        color: "#64748b",
+                      }}
+                    >
+                      <p style={{ margin: "0 0 6px 0" }}><strong>1.</strong> Kişisel verileriniz Kyradi tarafından işlenmektedir.</p>
+                      <p style={{ margin: "0 0 6px 0" }}><strong>2.</strong> Ad, soyad, telefon, e-posta verileri işlenir.</p>
+                      <p style={{ margin: "0 0 6px 0" }}><strong>3.</strong> Amaç: Rezervasyon yönetimi ve hizmet kalitesi.</p>
+                      <p style={{ margin: "0 0 6px 0" }}><strong>4.</strong> Verileriniz güvenli şekilde korunur.</p>
+                      <p style={{ margin: 0 }}><strong>5.</strong> KVKK 11. madde kapsamında haklarınız saklıdır.</p>
+                    </div>
+                  </div>
+
+                  {/* Terms */}
+                  <div style={{
+                    padding: "12px",
+                    background: formData.termsAccepted ? "#f0fdf4" : "#f8fafc",
+                    borderRadius: "10px",
+                    border: formData.termsAccepted ? "1px solid #bbf7d0" : "1px solid #e2e8f0",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                      <span style={{ fontWeight: 500, fontSize: "13px", color: "var(--text-primary)" }}>
+                        Kullanım Şartları
+                      </span>
+                      {formData.termsAccepted && <CheckCircle2 style={{ width: "16px", height: "16px", color: "#16a34a" }} />}
+                    </div>
+                    {!termsScrolled && (
+                      <p style={{ fontSize: "11px", color: "#3b82f6", margin: "0 0 8px 0" }}>
+                        ↓ Aşağı kaydırarak okuyun ve otomatik kabul edin
+                      </p>
+                    )}
+                    <div
+                      ref={termsRef}
+                      onScroll={handleTermsScroll}
+                      style={{
+                        maxHeight: "80px",
+                        overflowY: "auto",
+                        padding: "8px",
+                        background: "white",
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        lineHeight: 1.5,
+                        color: "#64748b",
+                      }}
+                    >
+                      <p style={{ margin: "0 0 6px 0" }}><strong>1.</strong> Bavul depolama rezervasyonu yapabilirsiniz.</p>
+                      <p style={{ margin: "0 0 6px 0" }}><strong>2.</strong> Doğru bilgi sağlamakla yükümlüsünüz.</p>
+                      <p style={{ margin: "0 0 6px 0" }}><strong>3.</strong> Fiyatlar belirtilen kurallara göre hesaplanır.</p>
+                      <p style={{ margin: "0 0 6px 0" }}><strong>4.</strong> Sınırlı sorumluluk uygulanır.</p>
+                      <p style={{ margin: 0 }}><strong>5.</strong> Verileriniz KVKK kapsamında korunur.</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Navigation Buttons */}
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            padding: "16px 24px",
+            borderTop: "1px solid #e2e8f0",
+            background: "#f8fafc",
+          }}>
             <ModernButton
               variant="ghost"
-              size="sm"
-              onClick={() => setShowEmbedCode(!showEmbedCode)}
+              onClick={handlePrev}
+              disabled={activeStep === 1}
+              leftIcon={<ChevronLeft style={{ width: "16px", height: "16px" }} />}
             >
-              {showEmbedCode ? "Gizle" : "Göster"}
+              Geri
             </ModernButton>
-            {showEmbedCode && (
+
+            {activeStep < 3 ? (
               <ModernButton
-                variant="outline"
-                size="sm"
-                onClick={copySnippet}
-                leftIcon={copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                variant="primary"
+                onClick={handleNext}
+                disabled={!canProceed()}
+                rightIcon={<ChevronRight style={{ width: "16px", height: "16px" }} />}
               >
-                {copied ? "Kopyalandı" : "Kopyala"}
+                İleri
+              </ModernButton>
+            ) : (
+              <ModernButton
+                variant="primary"
+                onClick={handleSubmit}
+                disabled={!canProceed()}
+                leftIcon={<CheckCircle2 style={{ width: "16px", height: "16px" }} />}
+              >
+                Rezervasyonu Tamamla
               </ModernButton>
             )}
           </div>
         </div>
 
-        {showEmbedCode && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            {tenantQuery.isLoading ? (
-              <div style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--text-tertiary)" }}>
-                <Loader2 className="h-6 w-6" style={{ margin: "0 auto", animation: "spin 1s linear infinite" }} />
+        {/* Embed Code Section */}
+        <div style={{
+          maxWidth: "600px",
+          margin: "24px auto 0",
+          padding: "20px",
+          background: "var(--bg-secondary)",
+          borderRadius: "12px",
+          border: "1px solid var(--border-primary)",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "8px",
+                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <Code style={{ width: "18px", height: "18px", color: "white" }} />
               </div>
-            ) : tenantQuery.isError ? (
-              <div style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--danger-500)" }}>
-                <AlertCircle className="h-6 w-6" style={{ margin: "0 auto var(--space-2) auto" }} />
-                <p style={{ margin: 0, fontSize: "var(--text-sm)" }}>{getErrorMessage(tenantQuery.error)}</p>
+              <div>
+                <h3 style={{ fontSize: "14px", fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>
+                  Embed Kodu
+                </h3>
+                <p style={{ fontSize: "12px", color: "var(--text-tertiary)", margin: 0 }}>
+                  Web sitenize ekleyin
+                </p>
               </div>
-            ) : (
-              <textarea
-                readOnly
-                value={snippet}
-                rows={5}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-3)",
-                  borderRadius: "var(--radius-lg)",
-                  border: "1px solid var(--border-primary)",
-                  background: "var(--bg-tertiary)",
-                  color: "var(--text-primary)",
-                  fontFamily: "monospace",
-                  fontSize: "var(--text-xs)",
-                  resize: "none",
-                }}
-                onFocus={(e) => e.currentTarget.select()}
-              />
-            )}
-          </motion.div>
-        )}
-      </ModernCard>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <ModernButton
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEmbedCode(!showEmbedCode)}
+              >
+                {showEmbedCode ? "Gizle" : "Göster"}
+              </ModernButton>
+              {showEmbedCode && (
+                <ModernButton
+                  variant="outline"
+                  size="sm"
+                  onClick={copySnippet}
+                  leftIcon={copied ? <Check style={{ width: "14px", height: "14px" }} /> : <Copy style={{ width: "14px", height: "14px" }} />}
+                >
+                  {copied ? "Kopyalandı" : "Kopyala"}
+                </ModernButton>
+              )}
+            </div>
+          </div>
+
+          {showEmbedCode && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              style={{ marginTop: "16px" }}
+            >
+              {tenantQuery.isLoading ? (
+                <div style={{ textAlign: "center", padding: "16px", color: "var(--text-tertiary)" }}>
+                  <Loader2 style={{ width: "24px", height: "24px", margin: "0 auto", animation: "spin 1s linear infinite" }} />
+                </div>
+              ) : tenantQuery.isError ? (
+                <div style={{ textAlign: "center", padding: "16px", color: "#dc2626" }}>
+                  <AlertCircle style={{ width: "24px", height: "24px", margin: "0 auto 8px" }} />
+                  <p style={{ margin: 0, fontSize: "13px" }}>{getErrorMessage(tenantQuery.error)}</p>
+                </div>
+              ) : (
+                <textarea
+                  readOnly
+                  value={snippet}
+                  rows={5}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e8f0",
+                    background: "#f1f5f9",
+                    color: "var(--text-primary)",
+                    fontFamily: "monospace",
+                    fontSize: "12px",
+                    resize: "none",
+                  }}
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+              )}
+            </motion.div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
