@@ -90,9 +90,9 @@ export const RevenueDonutChart: React.FC<RevenueDonutChartProps> = ({
             animationDuration={1500}
             maxBarSize={35}
           >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
+          {chartData.map((_, index) => (
+            <Cell key={`cell-${index}`} fill={chartData[index].color} />
+          ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
