@@ -123,7 +123,7 @@ export const RevenueDonutChart: React.FC<RevenueDonutChartProps> = ({
           animationDuration={1500}
           animationEasing="ease-out"
         >
-          {chartData.map((entry, index) => (
+          {chartData.map((_, index) => (
             <Cell 
               key={`cell-${index}`} 
               fill={`url(#donutGradient-${index})`}
