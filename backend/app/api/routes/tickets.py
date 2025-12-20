@@ -205,6 +205,30 @@ async def create_ticket(
     )
 
 
+@router.get("/unread-count")
+async def get_unread_count(
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Get unread ticket count for current user."""
+    
+    unread_query = select(func.count()).select_from(
+        select(Ticket).where(
+            and_(
+                or_(
+                    Ticket.tenant_id == current_user.tenant_id,
+                    Ticket.creator_id == current_user.id
+                ),
+                Ticket.read_at.is_(None),
+                Ticket.creator_id != current_user.id  # Only count tickets not created by self
+            )
+        ).subquery()
+    )
+    unread_count = (await session.execute(unread_query)).scalar() or 0
+    
+    return {"unread_count": unread_count}
+
+
 @router.get("/{ticket_id}", response_model=TicketRead)
 async def get_ticket(
     ticket_id: str,
@@ -298,30 +322,6 @@ async def mark_ticket_as_read(
         created_at=ticket.created_at,
         updated_at=None,
     )
-
-
-@router.get("/unread-count")
-async def get_unread_count(
-    current_user: User = Depends(require_tenant_operator),
-    session: AsyncSession = Depends(get_session),
-) -> dict:
-    """Get unread ticket count for current user."""
-    
-    unread_query = select(func.count()).select_from(
-        select(Ticket).where(
-            and_(
-                or_(
-                    Ticket.tenant_id == current_user.tenant_id,
-                    Ticket.creator_id == current_user.id
-                ),
-                Ticket.read_at.is_(None),
-                Ticket.creator_id != current_user.id  # Only count tickets not created by self
-            )
-        ).subquery()
-    )
-    unread_count = (await session.execute(unread_query)).scalar() or 0
-    
-    return {"unread_count": unread_count}
 
 
 # ==================== ADMIN ENDPOINTS ====================
