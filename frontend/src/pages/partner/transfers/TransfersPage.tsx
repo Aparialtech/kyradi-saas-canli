@@ -252,9 +252,19 @@ export function TransfersPage() {
               Kyradi komisyonlarınızı yönetin ve transfer talebinde bulunun
             </p>
           </div>
-          <div className="magicpay-badge">
-            <Zap className="h-4 w-4" />
-            MagicPay Demo
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+            <div className="magicpay-badge">
+              <Zap className="h-4 w-4" />
+              MagicPay Demo
+            </div>
+            <ModernButton
+              variant="primary"
+              size="lg"
+              onClick={() => setShowRequestModal(true)}
+              leftIcon={<Send className="h-5 w-5" />}
+            >
+              Yeni Transfer Oluştur
+            </ModernButton>
           </div>
         </div>
       </motion.div>
@@ -565,15 +575,13 @@ export function TransfersPage() {
                 >
                   Yenile
                 </ModernButton>
-                {balance?.can_request_transfer && commission && commission.available_commission > 0 && (
-                  <ModernButton
-                    variant="primary"
-                    onClick={() => setShowRequestModal(true)}
-                    leftIcon={<Send className="h-4 w-4" />}
-                  >
-                    Transfer Talep Et
-                  </ModernButton>
-                )}
+                <ModernButton
+                  variant="primary"
+                  onClick={() => setShowRequestModal(true)}
+                  leftIcon={<Send className="h-4 w-4" />}
+                >
+                  Transfer Talep Et
+                </ModernButton>
               </div>
             </div>
           </CardHeader>
@@ -591,17 +599,15 @@ export function TransfersPage() {
               <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--text-muted)" }}>
                 <CreditCard className="h-12 w-12" style={{ margin: "0 auto var(--space-4)", opacity: 0.5 }} />
                 <p style={{ margin: 0 }}>Henüz transfer kaydı bulunmuyor.</p>
-                {balance?.can_request_transfer && commission && commission.available_commission > 0 && (
-                  <ModernButton
-                    variant="primary"
-                    size="sm"
-                    onClick={() => setShowRequestModal(true)}
-                    leftIcon={<Send className="h-4 w-4" />}
-                    style={{ marginTop: "var(--space-4)" }}
-                  >
-                    İlk Transfer Talebini Oluştur
-                  </ModernButton>
-                )}
+                <ModernButton
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowRequestModal(true)}
+                  leftIcon={<Send className="h-4 w-4" />}
+                  style={{ marginTop: "var(--space-4)" }}
+                >
+                  İlk Transfer Talebini Oluştur
+                </ModernButton>
               </div>
             ) : (
               <ModernTable
@@ -735,7 +741,7 @@ export function TransfersPage() {
                 />
               </div>
 
-              {requestAmount && parseFloat(requestAmount) > 0 && schedule && (
+              {requestAmount && parseFloat(requestAmount) > 0 && (
                 <div
                   style={{
                     background: "var(--bg-secondary)",
@@ -753,10 +759,10 @@ export function TransfersPage() {
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
                     <span style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-                      Komisyon (%{(schedule.commission_rate * 100).toFixed(2)}):
+                      Komisyon (%{((schedule?.commission_rate || 0.05) * 100).toFixed(2)}):
                     </span>
                     <span style={{ color: "var(--color-danger)", fontSize: "0.875rem" }}>
-                      -{formatCurrency(parseFloat(requestAmount) * schedule.commission_rate)}
+                      -{formatCurrency(parseFloat(requestAmount) * (schedule?.commission_rate || 0.05))}
                     </span>
                   </div>
                   <div
@@ -770,7 +776,7 @@ export function TransfersPage() {
                   >
                     <span>Net Tutar:</span>
                     <span style={{ color: "var(--color-success)", fontSize: "1rem" }}>
-                      {formatCurrency(parseFloat(requestAmount) * (1 - schedule.commission_rate))}
+                      {formatCurrency(parseFloat(requestAmount) * (1 - (schedule?.commission_rate || 0.05)))}
                     </span>
                   </div>
                 </div>
@@ -802,11 +808,7 @@ export function TransfersPage() {
                   variant="primary"
                   onClick={handleRequestTransfer}
                   isLoading={requestMutation.isPending}
-                  disabled={
-                    !requestAmount ||
-                    parseFloat(requestAmount) < (balance?.min_transfer_amount || 100) ||
-                    (commission && parseFloat(requestAmount) > commission.available_commission)
-                  }
+                  disabled={!requestAmount || parseFloat(requestAmount) <= 0}
                   leftIcon={<ArrowRight className="h-4 w-4" />}
                 >
                   Talep Gönder
