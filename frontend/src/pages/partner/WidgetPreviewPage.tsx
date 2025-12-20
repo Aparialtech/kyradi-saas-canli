@@ -211,20 +211,22 @@ export function WidgetPreviewPage() {
 
   return (
     <div style={{ 
+      flex: 1,
       width: "100%",
-      minHeight: "100%",
+      minWidth: 0,
+      overflow: "auto",
       background: "var(--bg-primary)",
     }}>
       <ToastContainer messages={messages} />
 
       {/* Page Header */}
       <div style={{ 
-        padding: "24px 32px",
+        padding: "20px 24px",
         borderBottom: "1px solid var(--border-primary)",
         background: "var(--bg-secondary)",
       }}>
         <h1 style={{ 
-          fontSize: "24px", 
+          fontSize: "22px", 
           fontWeight: 700, 
           color: "var(--text-primary)", 
           margin: "0 0 4px 0" 
@@ -232,26 +234,28 @@ export function WidgetPreviewPage() {
           Online Rezervasyon Formu
         </h1>
         <p style={{ 
-          fontSize: "14px", 
+          fontSize: "13px", 
           color: "var(--text-tertiary)", 
           margin: 0 
         }}>
-          Web sitenize entegre edeceğiniz rezervasyon formunu buradan test edebilirsiniz.
+          Web sitenize entegre edeceğiniz rezervasyon formunu test edin.
         </p>
       </div>
 
       {/* Main Content */}
-      <div style={{ padding: "24px 32px" }}>
+      <div style={{ padding: "20px 24px" }}>
         {/* Stepper - Horizontal Steps */}
         <div style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: "32px",
-          padding: "24px",
+          gap: "8px",
+          marginBottom: "24px",
+          padding: "16px",
           background: "var(--bg-secondary)",
-          borderRadius: "16px",
+          borderRadius: "12px",
           border: "1px solid var(--border-primary)",
+          overflowX: "auto",
         }}>
           {steps.map((step, index) => {
             const Icon = step.icon;
@@ -259,16 +263,14 @@ export function WidgetPreviewPage() {
             const isCompleted = activeStep > step.id;
 
             return (
-              <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
+              <div key={step.id} style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                 {/* Step Circle */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "100px" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "80px" }}>
                   <motion.div
-                    animate={{
-                      scale: isActive ? 1.1 : 1,
-                    }}
+                    animate={{ scale: isActive ? 1.05 : 1 }}
                     style={{
-                      width: "48px",
-                      height: "48px",
+                      width: "40px",
+                      height: "40px",
                       borderRadius: "50%",
                       display: "flex",
                       alignItems: "center",
@@ -284,24 +286,25 @@ export function WidgetPreviewPage() {
                     }}
                   >
                     {isCompleted ? (
-                      <Check style={{ width: "20px", height: "20px", color: "white" }} />
+                      <Check style={{ width: "18px", height: "18px", color: "white" }} />
                     ) : (
-                      <Icon style={{ width: "20px", height: "20px", color: isActive ? "white" : "#94a3b8" }} />
+                      <Icon style={{ width: "18px", height: "18px", color: isActive ? "white" : "#94a3b8" }} />
                     )}
                   </motion.div>
-                  <div style={{ marginTop: "8px", textAlign: "center" }}>
+                  <div style={{ marginTop: "6px", textAlign: "center" }}>
                     <div style={{
-                      fontSize: "12px",
+                      fontSize: "11px",
                       fontWeight: 600,
                       color: isActive ? "#3b82f6" : isCompleted ? "#16a34a" : "#94a3b8",
                     }}>
                       Adım {step.id}
                     </div>
                     <div style={{
-                      fontSize: "13px",
+                      fontSize: "12px",
                       fontWeight: isActive ? 600 : 500,
                       color: isActive || isCompleted ? "var(--text-primary)" : "var(--text-tertiary)",
                       marginTop: "2px",
+                      whiteSpace: "nowrap",
                     }}>
                       {step.title}
                     </div>
@@ -311,13 +314,14 @@ export function WidgetPreviewPage() {
                 {/* Connector Line */}
                 {index < steps.length - 1 && (
                   <div style={{
-                    width: "80px",
-                    height: "3px",
-                    margin: "0 8px",
-                    marginBottom: "40px",
+                    width: "40px",
+                    height: "2px",
+                    margin: "0 4px",
+                    marginBottom: "32px",
                     background: isCompleted ? "#16a34a" : "#e2e8f0",
                     borderRadius: "2px",
                     transition: "background 0.3s ease",
+                    flexShrink: 0,
                   }} />
                 )}
               </div>
@@ -327,24 +331,24 @@ export function WidgetPreviewPage() {
 
         {/* Form Container */}
         <div style={{
-          maxWidth: "600px",
+          maxWidth: "550px",
           margin: "0 auto",
           background: "white",
-          borderRadius: "16px",
+          borderRadius: "12px",
           border: "1px solid var(--border-primary)",
-          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
           overflow: "hidden",
         }}>
           {/* Form Header */}
           <div style={{
-            padding: "20px 24px",
+            padding: "16px 20px",
             background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
             color: "white",
           }}>
-            <h2 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>
+            <h2 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>
               {steps[activeStep - 1].title}
             </h2>
-            <p style={{ fontSize: "13px", opacity: 0.9, margin: "4px 0 0 0" }}>
+            <p style={{ fontSize: "12px", opacity: 0.9, margin: "3px 0 0 0" }}>
               {activeStep === 1 && "İletişim bilgilerinizi girin"}
               {activeStep === 2 && "Tarih ve saat seçin"}
               {activeStep === 3 && "Bavul bilgilerini girin ve sözleşmeleri onaylayın"}
@@ -360,7 +364,7 @@ export function WidgetPreviewPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
-                style={{ padding: "24px" }}
+                style={{ padding: "20px" }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <ModernInput
@@ -403,7 +407,7 @@ export function WidgetPreviewPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
-                style={{ padding: "24px" }}
+                style={{ padding: "20px" }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <ModernInput
@@ -469,7 +473,7 @@ export function WidgetPreviewPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
-                style={{ padding: "24px" }}
+                style={{ padding: "20px" }}
               >
                 {/* Luggage Info */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "20px" }}>
@@ -624,7 +628,7 @@ export function WidgetPreviewPage() {
           <div style={{
             display: "flex",
             justifyContent: "space-between",
-            padding: "16px 24px",
+            padding: "14px 20px",
             borderTop: "1px solid #e2e8f0",
             background: "#f8fafc",
           }}>
@@ -661,11 +665,11 @@ export function WidgetPreviewPage() {
 
         {/* Embed Code Section */}
         <div style={{
-          maxWidth: "600px",
-          margin: "24px auto 0",
-          padding: "20px",
+          maxWidth: "550px",
+          margin: "20px auto 0",
+          padding: "16px",
           background: "var(--bg-secondary)",
-          borderRadius: "12px",
+          borderRadius: "10px",
           border: "1px solid var(--border-primary)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
