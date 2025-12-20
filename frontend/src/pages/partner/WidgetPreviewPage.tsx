@@ -78,7 +78,6 @@ interface FormData {
 
 export function WidgetPreviewPage() {
   const { messages, push } = useToast();
-  const containerRef = useRef<HTMLDivElement>(null);
   const [snippet, setSnippet] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
