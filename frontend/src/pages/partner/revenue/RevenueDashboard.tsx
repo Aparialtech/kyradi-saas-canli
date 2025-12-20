@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, Calendar, LineChart as LineChartIcon } from "../../../lib/lucide";
+import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon } from "../../../lib/lucide";
 import { revenueService, type PaymentModeRevenue } from "../../../services/partner/revenue";
 import { locationService } from "../../../services/partner/locations";
 import { storageService } from "../../../services/partner/storages";
@@ -11,7 +11,6 @@ import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
-import { ModernInput } from "../../../components/ui/ModernInput";
 
 // Colors for charts
 const COLORS = ["#00a389", "#6366f1", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"];
@@ -165,33 +164,91 @@ export function RevenueDashboard() {
 
       {/* Enhanced Filters */}
       <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
-        <div style={{ marginBottom: 'var(--space-4)' }}>
-          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-1) 0' }}>
+        <div style={{ marginBottom: 'var(--space-5)' }}>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-1) 0', color: 'var(--text-primary)' }}>
             Filtreler
           </h3>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
             Tarih, lokasyon ve depo bazlı filtreleme yapın
           </p>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--space-4)" }}>
-          <ModernInput
-            type="date"
-            label="Başlangıç Tarihi"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            leftIcon={<Calendar className="h-4 w-4" />}
-            fullWidth
-          />
-          <ModernInput
-            type="date"
-            label="Bitiş Tarihi"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            leftIcon={<Calendar className="h-4 w-4" />}
-            fullWidth
-          />
+        
+        {/* Filter Grid */}
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(4, 1fr)", 
+          gap: "var(--space-4)",
+          marginBottom: 'var(--space-5)'
+        }}>
+          {/* Başlangıç Tarihi */}
           <div>
-            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-1)', display: 'block' }}>
+            <label style={{ 
+              fontSize: 'var(--text-sm)', 
+              fontWeight: 'var(--font-medium)', 
+              color: 'var(--text-secondary)', 
+              marginBottom: 'var(--space-2)', 
+              display: 'block' 
+            }}>
+              Başlangıç Tarihi
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              style={{
+                width: '100%',
+                height: '44px',
+                padding: '0 var(--space-3)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+                cursor: 'pointer',
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+              }}
+            />
+          </div>
+
+          {/* Bitiş Tarihi */}
+          <div>
+            <label style={{ 
+              fontSize: 'var(--text-sm)', 
+              fontWeight: 'var(--font-medium)', 
+              color: 'var(--text-secondary)', 
+              marginBottom: 'var(--space-2)', 
+              display: 'block' 
+            }}>
+              Bitiş Tarihi
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              style={{
+                width: '100%',
+                height: '44px',
+                padding: '0 var(--space-3)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+                cursor: 'pointer',
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+              }}
+            />
+          </div>
+
+          {/* Lokasyon */}
+          <div>
+            <label style={{ 
+              fontSize: 'var(--text-sm)', 
+              fontWeight: 'var(--font-medium)', 
+              color: 'var(--text-secondary)', 
+              marginBottom: 'var(--space-2)', 
+              display: 'block' 
+            }}>
               Lokasyon
             </label>
             <select
@@ -199,11 +256,19 @@ export function RevenueDashboard() {
               onChange={(e) => setLocationFilter(e.target.value)}
               style={{
                 width: '100%',
-                padding: 'var(--space-2) var(--space-3)',
+                height: '44px',
+                padding: '0 var(--space-3)',
                 border: '1px solid var(--border-primary)',
                 borderRadius: 'var(--radius-lg)',
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+                cursor: 'pointer',
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 12px center',
+                paddingRight: 'var(--space-8)',
               }}
             >
               <option value="">Tüm Lokasyonlar</option>
@@ -212,8 +277,16 @@ export function RevenueDashboard() {
               ))}
             </select>
           </div>
+
+          {/* Depo */}
           <div>
-            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-1)', display: 'block' }}>
+            <label style={{ 
+              fontSize: 'var(--text-sm)', 
+              fontWeight: 'var(--font-medium)', 
+              color: 'var(--text-secondary)', 
+              marginBottom: 'var(--space-2)', 
+              display: 'block' 
+            }}>
               Depo
             </label>
             <select
@@ -221,11 +294,19 @@ export function RevenueDashboard() {
               onChange={(e) => setStorageFilter(e.target.value)}
               style={{
                 width: '100%',
-                padding: 'var(--space-2) var(--space-3)',
+                height: '44px',
+                padding: '0 var(--space-3)',
                 border: '1px solid var(--border-primary)',
                 borderRadius: 'var(--radius-lg)',
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+                cursor: 'pointer',
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 12px center',
+                paddingRight: 'var(--space-8)',
               }}
             >
               <option value="">Tüm Depolar</option>
@@ -234,35 +315,87 @@ export function RevenueDashboard() {
               ))}
             </select>
           </div>
-          <div>
-            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-1)', display: 'block' }}>
-              Grafik Türü
-            </label>
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <ModernButton
-                variant={chartType === 'line' ? 'primary' : 'ghost'}
-                size="sm"
-                onClick={() => setChartType('line')}
-                leftIcon={<LineChartIcon className="h-4 w-4" />}
-              >
-                Çizgi
-              </ModernButton>
-              <ModernButton
-                variant={chartType === 'bar' ? 'primary' : 'ghost'}
-                size="sm"
-                onClick={() => setChartType('bar')}
-                leftIcon={<BarChart3 className="h-4 w-4" />}
-              >
-                Sütun
-              </ModernButton>
-              <ModernButton
-                variant={chartType === 'area' ? 'primary' : 'ghost'}
-                size="sm"
-                onClick={() => setChartType('area')}
-              >
-                Alan
-              </ModernButton>
-            </div>
+        </div>
+
+        {/* Grafik Türü */}
+        <div>
+          <label style={{ 
+            fontSize: 'var(--text-sm)', 
+            fontWeight: 'var(--font-medium)', 
+            color: 'var(--text-secondary)', 
+            marginBottom: 'var(--space-2)', 
+            display: 'block' 
+          }}>
+            Grafik Türü
+          </label>
+          <div style={{ 
+            display: 'inline-flex', 
+            gap: 'var(--space-1)', 
+            background: 'var(--bg-tertiary)', 
+            padding: 'var(--space-1)', 
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-primary)'
+          }}>
+            <button
+              onClick={() => setChartType('line')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-2) var(--space-3)',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                background: chartType === 'line' ? 'var(--primary-500)' : 'transparent',
+                color: chartType === 'line' ? 'white' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <LineChartIcon className="h-4 w-4" />
+              Çizgi
+            </button>
+            <button
+              onClick={() => setChartType('bar')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-2) var(--space-3)',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                background: chartType === 'bar' ? 'var(--primary-500)' : 'transparent',
+                color: chartType === 'bar' ? 'white' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <BarChart3 className="h-4 w-4" />
+              Sütun
+            </button>
+            <button
+              onClick={() => setChartType('area')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-2) var(--space-3)',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                background: chartType === 'area' ? 'var(--primary-500)' : 'transparent',
+                color: chartType === 'area' ? 'white' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <TrendingUp className="h-4 w-4" />
+              Alan
+            </button>
           </div>
         </div>
       </ModernCard>
