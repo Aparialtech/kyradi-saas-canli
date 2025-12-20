@@ -110,4 +110,7 @@ export const Inbox = createIcon(<><polyline points="22 12 16 12 14 15 10 15 8 12
 export const Banknote = createIcon(<><rect width="20" height="12" x="2" y="6" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></>);
 export const Hotel = createIcon(<><path d="M18 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z" /><path d="m9 16 .348-.24c1.465-1.013 3.84-1.013 5.304 0L15 16" /><path d="M8 7h.01" /><path d="M16 7h.01" /><path d="M12 7h.01" /><path d="M12 11h.01" /><path d="M16 11h.01" /><path d="M8 11h.01" /><path d="M10 22v-6.5m4 0V22" /></>);
 export const PieChartIcon = createIcon(<><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></>);
+export const PieChart = PieChartIcon;
 export const Weight = createIcon(<><circle cx="12" cy="5" r="3" /><path d="M6.5 8a2 2 0 0 0-1.905 1.46L2.1 18.5A2 2 0 0 0 4 21h16a2 2 0 0 0 1.925-2.54L19.4 9.5A2 2 0 0 0 17.48 8Z" /></>);
+export const Zap = createIcon(<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></>);
+export const Play = createIcon(<><polygon points="5 3 19 12 5 21 5 3" /></>);

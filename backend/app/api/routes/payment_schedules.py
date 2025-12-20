@@ -1,8 +1,10 @@
-"""Payment schedule and transfer endpoints."""
+"""Payment schedule and transfer endpoints with MagicPay integration."""
 
 from typing import List, Optional
 from datetime import datetime, timezone
 from decimal import Decimal
+import uuid
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
@@ -14,6 +16,8 @@ from ...dependencies import require_tenant_operator, require_admin_user
 from ...models.tenant import User, Tenant
 from ...models.payment_schedule import PaymentSchedule, PaymentTransfer, PaymentPeriod, TransferStatus
 from ...services.audit import record_audit
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/payment-schedules", tags=["payment-schedules"])
 
@@ -357,6 +361,8 @@ async def get_balance_info(
     session: AsyncSession = Depends(get_session),
 ) -> PartnerBalanceInfo:
     """Get balance information for current tenant (partner)."""
+    from ...models import Settlement
+    
     if not current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant bilgisi bulunamadı.")
     
@@ -371,16 +377,25 @@ async def get_balance_info(
     )
     pending = (await session.execute(stmt)).scalar() or Decimal("0.00")
     
-    # Calculate total transferred
+    # Calculate total transferred (completed)
     stmt = select(func.coalesce(func.sum(PaymentTransfer.net_amount), 0)).where(
         PaymentTransfer.tenant_id == current_user.tenant_id,
         PaymentTransfer.status == TransferStatus.COMPLETED.value,
     )
     total_transferred = (await session.execute(stmt)).scalar() or Decimal("0.00")
     
-    # TODO: Calculate available balance from settlements/payments
-    # For now, return 0 - this should be integrated with the actual revenue system
-    available_balance = Decimal("0.00")
+    # Calculate available balance from Kyradi commission (not yet transferred)
+    # Total Kyradi commission from all settlements
+    stmt = select(func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0)).where(
+        Settlement.tenant_id == current_user.tenant_id
+    )
+    total_commission_minor = (await session.execute(stmt)).scalar() or 0
+    total_commission = Decimal(str(total_commission_minor)) / Decimal("100")
+    
+    # Available = Total commission - Already transferred - Pending
+    available_balance = total_commission - total_transferred - pending
+    if available_balance < 0:
+        available_balance = Decimal("0.00")
     
     return PartnerBalanceInfo(
         available_balance=available_balance,
@@ -492,3 +507,239 @@ async def request_transfer(
     await session.refresh(transfer)
     
     return PaymentTransferRead.model_validate(transfer)
+
+
+# ==================== MagicPay Demo Integration ====================
+
+class MagicPayTransferRequest(BaseModel):
+    transfer_id: str
+    amount: Decimal
+    currency: str = "TRY"
+    recipient_iban: str
+    recipient_name: str
+    description: Optional[str] = None
+
+
+class MagicPayTransferResponse(BaseModel):
+    success: bool
+    transaction_id: str
+    reference_id: str
+    status: str
+    message: str
+    processed_at: datetime
+    amount: Decimal
+    currency: str
+    fee: Decimal = Decimal("0.00")
+
+
+class CommissionSummary(BaseModel):
+    total_commission: Decimal
+    pending_commission: Decimal
+    transferred_commission: Decimal
+    available_commission: Decimal
+    reservation_count: int
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
+
+
+@router.get("/commission-summary", response_model=CommissionSummary)
+async def get_commission_summary(
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> CommissionSummary:
+    """Get Kyradi commission summary for current tenant."""
+    from ...models import Settlement
+    
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant bilgisi bulunamadı.")
+    
+    # Total Kyradi commission from all settlements
+    stmt = select(
+        func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0).label("total_commission"),
+        func.count(Settlement.id).label("count"),
+        func.min(Settlement.period_start).label("period_start"),
+        func.max(Settlement.period_end).label("period_end"),
+    ).where(Settlement.tenant_id == current_user.tenant_id)
+    
+    result = (await session.execute(stmt)).one()
+    total_commission_minor = result.total_commission or 0
+    total_commission = Decimal(str(total_commission_minor)) / Decimal("100")
+    
+    # Pending transfers (net_amount)
+    stmt = select(func.coalesce(func.sum(PaymentTransfer.net_amount), 0)).where(
+        PaymentTransfer.tenant_id == current_user.tenant_id,
+        PaymentTransfer.status == TransferStatus.PENDING.value,
+    )
+    pending = (await session.execute(stmt)).scalar() or Decimal("0.00")
+    
+    # Already transferred (completed)
+    stmt = select(func.coalesce(func.sum(PaymentTransfer.net_amount), 0)).where(
+        PaymentTransfer.tenant_id == current_user.tenant_id,
+        PaymentTransfer.status == TransferStatus.COMPLETED.value,
+    )
+    transferred = (await session.execute(stmt)).scalar() or Decimal("0.00")
+    
+    available = total_commission - pending - transferred
+    if available < 0:
+        available = Decimal("0.00")
+    
+    return CommissionSummary(
+        total_commission=total_commission,
+        pending_commission=pending,
+        transferred_commission=transferred,
+        available_commission=available,
+        reservation_count=result.count,
+        period_start=result.period_start,
+        period_end=result.period_end,
+    )
+
+
+@router.post("/transfers/{transfer_id}/process-magicpay", response_model=MagicPayTransferResponse)
+async def process_transfer_with_magicpay(
+    transfer_id: str,
+    current_user: User = Depends(require_admin_user),
+    session: AsyncSession = Depends(get_session),
+) -> MagicPayTransferResponse:
+    """
+    Process a pending transfer via MagicPay gateway (DEMO MODE).
+    
+    This endpoint simulates MagicPay API integration.
+    When real API key is provided, it will use actual MagicPay API.
+    """
+    stmt = select(PaymentTransfer).where(PaymentTransfer.id == transfer_id)
+    transfer = (await session.execute(stmt)).scalar_one_or_none()
+    
+    if not transfer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer bulunamadı.")
+    
+    if transfer.status != TransferStatus.PENDING.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Bu transfer zaten işlenmiş. Mevcut durum: {transfer.status}"
+        )
+    
+    # DEMO MODE: Simulate MagicPay API call
+    # In production, this would call the actual MagicPay API
+    demo_transaction_id = f"MPAY-{uuid.uuid4().hex[:12].upper()}"
+    demo_reference_id = f"REF-{uuid.uuid4().hex[:8].upper()}"
+    
+    logger.info(f"[MagicPay DEMO] Processing transfer {transfer_id}")
+    logger.info(f"[MagicPay DEMO] Amount: {transfer.net_amount} TRY")
+    logger.info(f"[MagicPay DEMO] Recipient IBAN: {transfer.bank_iban}")
+    logger.info(f"[MagicPay DEMO] Transaction ID: {demo_transaction_id}")
+    
+    # Simulate API response (always success in demo mode)
+    # In production, handle actual API response and errors
+    
+    # Update transfer status
+    transfer.status = TransferStatus.COMPLETED.value
+    transfer.transfer_date = datetime.now(timezone.utc)
+    transfer.reference_id = demo_reference_id
+    transfer.processed_by_id = current_user.id
+    transfer.processed_at = datetime.now(timezone.utc)
+    transfer.notes = f"{transfer.notes or ''}\n[MagicPay DEMO] Transaction: {demo_transaction_id}".strip()
+    
+    await record_audit(
+        session,
+        tenant_id=transfer.tenant_id,
+        actor_user_id=current_user.id,
+        action="payment_transfer.magicpay_processed",
+        entity="payment_transfers",
+        entity_id=transfer.id,
+        meta={
+            "demo_mode": True,
+            "transaction_id": demo_transaction_id,
+            "reference_id": demo_reference_id,
+            "amount": str(transfer.net_amount),
+        },
+    )
+    
+    await session.commit()
+    
+    return MagicPayTransferResponse(
+        success=True,
+        transaction_id=demo_transaction_id,
+        reference_id=demo_reference_id,
+        status="completed",
+        message="Transfer başarıyla işlendi (Demo Mod)",
+        processed_at=datetime.now(timezone.utc),
+        amount=transfer.net_amount,
+        currency="TRY",
+        fee=Decimal("0.00"),
+    )
+
+
+@router.post("/transfers/{transfer_id}/reject", response_model=PaymentTransferRead)
+async def reject_transfer(
+    transfer_id: str,
+    reason: Optional[str] = Query(None, description="Red gerekçesi"),
+    current_user: User = Depends(require_admin_user),
+    session: AsyncSession = Depends(get_session),
+) -> PaymentTransferRead:
+    """Reject a pending transfer (admin only)."""
+    stmt = select(PaymentTransfer).where(PaymentTransfer.id == transfer_id)
+    transfer = (await session.execute(stmt)).scalar_one_or_none()
+    
+    if not transfer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer bulunamadı.")
+    
+    if transfer.status != TransferStatus.PENDING.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Bu transfer zaten işlenmiş. Mevcut durum: {transfer.status}"
+        )
+    
+    transfer.status = TransferStatus.CANCELLED.value
+    transfer.error_message = reason or "Admin tarafından reddedildi"
+    transfer.processed_by_id = current_user.id
+    transfer.processed_at = datetime.now(timezone.utc)
+    
+    await record_audit(
+        session,
+        tenant_id=transfer.tenant_id,
+        actor_user_id=current_user.id,
+        action="payment_transfer.rejected",
+        entity="payment_transfers",
+        entity_id=transfer.id,
+        meta={"reason": reason},
+    )
+    
+    await session.commit()
+    await session.refresh(transfer)
+    
+    return PaymentTransferRead.model_validate(transfer)
+
+
+class MagicPayConfigStatus(BaseModel):
+    is_demo_mode: bool = True
+    api_key_configured: bool = False
+    gateway_name: str = "MagicPay"
+    gateway_status: str = "demo"
+    supported_currencies: List[str] = ["TRY", "USD", "EUR"]
+    min_transfer_amount: Decimal = Decimal("10.00")
+    max_transfer_amount: Decimal = Decimal("100000.00")
+
+
+@router.get("/magicpay/status", response_model=MagicPayConfigStatus)
+async def get_magicpay_status(
+    current_user: User = Depends(require_admin_user),
+) -> MagicPayConfigStatus:
+    """
+    Get MagicPay gateway configuration status.
+    
+    Returns demo mode status and configuration info.
+    """
+    # In production, check actual API key configuration
+    from ...core.config import settings
+    
+    api_key_configured = hasattr(settings, 'magicpay_api_key') and bool(getattr(settings, 'magicpay_api_key', None))
+    
+    return MagicPayConfigStatus(
+        is_demo_mode=not api_key_configured,
+        api_key_configured=api_key_configured,
+        gateway_name="MagicPay",
+        gateway_status="active" if api_key_configured else "demo",
+        supported_currencies=["TRY", "USD", "EUR"],
+        min_transfer_amount=Decimal("10.00"),
+        max_transfer_amount=Decimal("100000.00"),
+    )

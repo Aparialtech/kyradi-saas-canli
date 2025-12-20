@@ -18,6 +18,7 @@ import {
   CreditCard,
   TrendingUp,
   MessageSquare,
+  Send,
 } from "../../lib/lucide";
 
 // UX Enhancement Components
@@ -34,6 +35,7 @@ export { AdminRevenuePage } from "./revenue/AdminRevenuePage";
 export { AdminSettlementsPage } from "./settlements/AdminSettlementsPage";
 export { AdminUsersPage } from "./users/AdminUsersPage";
 export { AdminSettingsPage } from "./settings/AdminSettingsPage";
+export { AdminTransfersPage } from "./transfers/AdminTransfersPage";
 
 export function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -53,6 +55,7 @@ export function AdminDashboard() {
       { to: "tenants", label: t("nav.tenants"), icon: <Building2 className="h-5 w-5" /> },
       { to: "revenue", label: t("nav.globalRevenue"), icon: <Receipt className="h-5 w-5" /> },
       { to: "settlements", label: t("nav.globalSettlements"), icon: <CreditCard className="h-5 w-5" /> },
+      { to: "transfers", label: "Transferler (MagicPay)", icon: <Send className="h-5 w-5" /> },
       { to: "users", label: t("nav.globalUsers"), icon: <Users className="h-5 w-5" /> },
       { to: "tickets", label: "İletişim / Ticket", icon: <MessageSquare className="h-5 w-5" /> },
       { to: "settings", label: t("nav.systemSettings"), icon: <Settings className="h-5 w-5" /> },

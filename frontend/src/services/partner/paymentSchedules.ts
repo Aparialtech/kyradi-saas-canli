@@ -98,6 +98,38 @@ export interface TransferRequest {
   notes?: string;
 }
 
+export interface CommissionSummary {
+  total_commission: number;
+  pending_commission: number;
+  transferred_commission: number;
+  available_commission: number;
+  reservation_count: number;
+  period_start?: string;
+  period_end?: string;
+}
+
+export interface MagicPayTransferResponse {
+  success: boolean;
+  transaction_id: string;
+  reference_id: string;
+  status: string;
+  message: string;
+  processed_at: string;
+  amount: number;
+  currency: string;
+  fee: number;
+}
+
+export interface MagicPayConfigStatus {
+  is_demo_mode: boolean;
+  api_key_configured: boolean;
+  gateway_name: string;
+  gateway_status: string;
+  supported_currencies: string[];
+  min_transfer_amount: number;
+  max_transfer_amount: number;
+}
+
 export const paymentScheduleService = {
   // Partner endpoints
   async getMySchedule(): Promise<PaymentSchedule | null> {
@@ -159,6 +191,29 @@ export const paymentScheduleService = {
 
   async adminProcessTransfer(transferId: string, payload: { status?: TransferStatus; reference_id?: string; notes?: string; error_message?: string }): Promise<PaymentTransfer> {
     const response = await http.patch<PaymentTransfer>(`/payment-schedules/admin/transfers/${transferId}`, payload);
+    return response.data;
+  },
+
+  // Commission endpoints
+  async getCommissionSummary(): Promise<CommissionSummary> {
+    const response = await http.get<CommissionSummary>("/payment-schedules/commission-summary");
+    return response.data;
+  },
+
+  // MagicPay endpoints
+  async processTransferWithMagicPay(transferId: string): Promise<MagicPayTransferResponse> {
+    const response = await http.post<MagicPayTransferResponse>(`/payment-schedules/transfers/${transferId}/process-magicpay`);
+    return response.data;
+  },
+
+  async rejectTransfer(transferId: string, reason?: string): Promise<PaymentTransfer> {
+    const params = reason ? `?reason=${encodeURIComponent(reason)}` : "";
+    const response = await http.post<PaymentTransfer>(`/payment-schedules/transfers/${transferId}/reject${params}`);
+    return response.data;
+  },
+
+  async getMagicPayStatus(): Promise<MagicPayConfigStatus> {
+    const response = await http.get<MagicPayConfigStatus>("/payment-schedules/magicpay/status");
     return response.data;
   },
 };

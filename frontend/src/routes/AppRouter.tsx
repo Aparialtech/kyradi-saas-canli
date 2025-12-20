@@ -12,6 +12,7 @@ import {
   AdminSettlementsPage,
   AdminUsersPage,
   AdminSettingsPage,
+  AdminTransfersPage,
 } from "../pages/admin/AdminDashboard";
 import { AdminTicketsPage } from "../pages/admin/tickets/AdminTicketsPage";
 import { LoginPage } from "../pages/auth/LoginPage";
@@ -68,6 +69,7 @@ export function AppRouter() {
           <Route path="tenants" element={<AdminTenantsPage />} />
           <Route path="revenue" element={<AdminRevenuePage />} />
           <Route path="settlements" element={<AdminSettlementsPage />} />
+          <Route path="transfers" element={<AdminTransfersPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="tickets" element={<AdminTicketsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
