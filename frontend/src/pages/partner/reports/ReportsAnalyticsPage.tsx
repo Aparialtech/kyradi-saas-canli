@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Download, Filter } from "../../../lib/lucide";
+import { Download, Filter, BarChart3, LineChart as LineChartIcon, PieChart, TrendingUp } from "../../../lib/lucide";
 
 import { partnerReportService, type PartnerOverviewResponse } from "../../../services/partner/reports";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -15,6 +15,8 @@ import { ModernButton } from "../../../components/ui/ModernButton";
 import { PiggyBank, FileText, Briefcase, LineChart } from "../../../lib/lucide";
 import { locationService } from "../../../services/partner/locations";
 
+type ChartType = "area" | "line" | "bar";
+
 export function ReportsAnalyticsPage() {
   const { t, locale } = useTranslation();
   const [dateFrom, setDateFrom] = useState<string>("");
@@ -22,6 +24,8 @@ export function ReportsAnalyticsPage() {
   const [locationId, setLocationId] = useState<string>("");
   const [status, setStatus] = useState<string>("");
   const [anonymous, setAnonymous] = useState<boolean>(false);
+  const [trendChartType, setTrendChartType] = useState<ChartType>("area");
+  const [revenueChartType, setRevenueChartType] = useState<"donut" | "bar">("donut");
 
   // Fetch locations for filter
   const locationsQuery = useQuery({
@@ -412,22 +416,133 @@ export function ReportsAnalyticsPage() {
             transition={{ delay: 0.6 }}
           >
             <ModernCard variant="glass" padding="lg">
-              <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-                Rezervasyon Trendi
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+                <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                  Rezervasyon Trendi
+                </h3>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', background: 'var(--bg-tertiary)', padding: 'var(--space-1)', borderRadius: 'var(--radius-lg)' }}>
+                  <button
+                    onClick={() => setTrendChartType("area")}
+                    style={{
+                      padding: 'var(--space-2) var(--space-3)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      background: trendChartType === "area" ? 'var(--primary-500)' : 'transparent',
+                      color: trendChartType === "area" ? 'white' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-1)',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--font-medium)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title="Alan Grafiği"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    <span style={{ display: 'none', '@media (minWidth: 640px)': { display: 'inline' } } as React.CSSProperties}>Alan</span>
+                  </button>
+                  <button
+                    onClick={() => setTrendChartType("line")}
+                    style={{
+                      padding: 'var(--space-2) var(--space-3)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      background: trendChartType === "line" ? 'var(--primary-500)' : 'transparent',
+                      color: trendChartType === "line" ? 'white' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-1)',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--font-medium)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title="Çizgi Grafiği"
+                  >
+                    <LineChartIcon className="h-4 w-4" />
+                    <span style={{ display: 'none', '@media (minWidth: 640px)': { display: 'inline' } } as React.CSSProperties}>Çizgi</span>
+                  </button>
+                  <button
+                    onClick={() => setTrendChartType("bar")}
+                    style={{
+                      padding: 'var(--space-2) var(--space-3)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      background: trendChartType === "bar" ? 'var(--primary-500)' : 'transparent',
+                      color: trendChartType === "bar" ? 'white' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-1)',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--font-medium)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title="Sütun Grafiği"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span style={{ display: 'none', '@media (minWidth: 640px)': { display: 'inline' } } as React.CSSProperties}>Sütun</span>
+                  </button>
+                </div>
+              </div>
               <div style={{ height: '350px', minHeight: '350px', minWidth: 0 }}>
                 {trendQuery.isLoading ? (
                   <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
                 ) : (
-                  <ReservationTrendChart data={trendData} />
+                  <ReservationTrendChart data={trendData} chartType={trendChartType} />
                 )}
               </div>
             </ModernCard>
 
             <ModernCard variant="glass" padding="lg">
-              <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-                Gelir Dağılımı (Ödeme Yöntemi)
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+                <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                  Gelir Dağılımı (Ödeme Yöntemi)
+                </h3>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', background: 'var(--bg-tertiary)', padding: 'var(--space-1)', borderRadius: 'var(--radius-lg)' }}>
+                  <button
+                    onClick={() => setRevenueChartType("donut")}
+                    style={{
+                      padding: 'var(--space-2) var(--space-3)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      background: revenueChartType === "donut" ? 'var(--primary-500)' : 'transparent',
+                      color: revenueChartType === "donut" ? 'white' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-1)',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--font-medium)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title="Pasta Grafiği"
+                  >
+                    <PieChart className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setRevenueChartType("bar")}
+                    style={{
+                      padding: 'var(--space-2) var(--space-3)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      background: revenueChartType === "bar" ? 'var(--primary-500)' : 'transparent',
+                      color: revenueChartType === "bar" ? 'white' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-1)',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--font-medium)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title="Sütun Grafiği"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
               <div style={{ height: '350px', minHeight: '350px', minWidth: 0 }}>
                 {overviewQuery.data?.by_payment_method && overviewQuery.data.by_payment_method.length > 0 ? (
                   <RevenueDonutChart 
@@ -445,6 +560,7 @@ export function ReportsAnalyticsPage() {
                         color: methodColors[item.method] || ["#6366f1", "#0ea5e9", "#22c55e", "#f59e0b", "#ef4444"][idx % 5],
                       };
                     })}
+                    chartType={revenueChartType}
                   />
                 ) : (
                   <div style={{ 

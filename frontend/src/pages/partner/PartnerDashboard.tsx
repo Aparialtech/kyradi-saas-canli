@@ -455,7 +455,7 @@ export function PartnerOverview() {
       <motion.div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))',
           gap: 'var(--space-6)',
           marginBottom: 'var(--space-6)',
         }}
@@ -463,24 +463,36 @@ export function PartnerOverview() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.4 }}
       >
-        <ModernCard variant="glass" padding="lg">
-          <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-            Rezervasyon Trendi
+        <ModernCard variant="glass" padding="lg" style={{ overflow: 'hidden' }}>
+          <h3 style={{ margin: '0 0 var(--space-4) 0', fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+            📈 Rezervasyon Trendi
           </h3>
-          <div style={{ height: '300px', minHeight: '300px', minWidth: 0 }}>
+          <div style={{ height: '280px', minHeight: '280px', minWidth: 0, width: '100%' }}>
             {trendQuery.isLoading ? (
               <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
+            ) : trendData.length === 0 ? (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                height: '100%',
+                color: 'var(--text-tertiary)'
+              }}>
+                <LineChart className="h-12 w-12" style={{ opacity: 0.3, marginBottom: 'var(--space-3)' }} />
+                <p style={{ fontSize: 'var(--text-sm)' }}>Henüz trend verisi yok</p>
+              </div>
             ) : (
-              <ReservationTrendChart data={trendData} />
+              <ReservationTrendChart data={trendData} chartType="area" />
             )}
           </div>
         </ModernCard>
 
-        <ModernCard variant="glass" padding="lg">
-          <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-            Gelir Dağılımı
+        <ModernCard variant="glass" padding="lg" style={{ overflow: 'hidden' }}>
+          <h3 style={{ margin: '0 0 var(--space-4) 0', fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+            💰 Gelir Dağılımı
           </h3>
-          <div style={{ height: '300px', minHeight: '300px', minWidth: 0 }}>
+          <div style={{ height: '280px', minHeight: '280px', minWidth: 0, width: '100%' }}>
             {paymentMethodQuery.isLoading ? (
               <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
             ) : paymentMethodQuery.error ? (
@@ -503,21 +515,45 @@ export function PartnerOverview() {
                   {getErrorMessage(paymentMethodQuery.error)}
                 </span>
               </div>
+            ) : revenueDistributionData.length === 0 ? (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                height: '100%',
+                color: 'var(--text-tertiary)'
+              }}>
+                <PiggyBank className="h-12 w-12" style={{ opacity: 0.3, marginBottom: 'var(--space-3)' }} />
+                <p style={{ fontSize: 'var(--text-sm)' }}>Henüz gelir verisi yok</p>
+              </div>
             ) : (
-              <RevenueDonutChart data={revenueDistributionData} />
+              <RevenueDonutChart data={revenueDistributionData} chartType="donut" />
             )}
           </div>
         </ModernCard>
 
-        <ModernCard variant="glass" padding="lg">
-          <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-            Depo Doluluk Oranları
+        <ModernCard variant="glass" padding="lg" style={{ overflow: 'hidden' }}>
+          <h3 style={{ margin: '0 0 var(--space-4) 0', fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+            📦 Depo Doluluk Oranları
           </h3>
-          <div style={{ height: '300px', minHeight: '300px', minWidth: 0 }}>
+          <div style={{ height: '280px', minHeight: '280px', minWidth: 0, width: '100%' }}>
             {storageUsageQuery.isLoading ? (
               <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
+            ) : occupancyData.length === 0 ? (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                height: '100%',
+                color: 'var(--text-tertiary)'
+              }}>
+                <Briefcase className="h-12 w-12" style={{ opacity: 0.3, marginBottom: 'var(--space-3)' }} />
+                <p style={{ fontSize: 'var(--text-sm)' }}>Henüz depo verisi yok</p>
+              </div>
             ) : (
-              <OccupancyBarChart data={occupancyData} />
+              <OccupancyBarChart data={occupancyData} showDetailCards={false} />
             )}
           </div>
         </ModernCard>
