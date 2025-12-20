@@ -112,13 +112,6 @@ export function PartnerOverview() {
     queryFn: () => partnerReportService.summary(),
   });
 
-  // Unread tickets count for menu badge
-  const unreadTicketsQuery = useQuery({
-    queryKey: ["unread-tickets"],
-    queryFn: () => ticketService.getUnreadCount(),
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
   // Chart data queries
   const trendQuery = useQuery({
     queryKey: ["partner", "trends"],
@@ -682,6 +675,13 @@ export function PartnerDashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+
+  // Unread tickets count for menu badge
+  const unreadTicketsQuery = useQuery({
+    queryKey: ["unread-tickets"],
+    queryFn: () => ticketService.getUnreadCount(),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
 
   // Keyboard shortcut for Quick Actions (Cmd+K / Ctrl+K)
   useQuickActionsShortcut(useCallback(() => setQuickActionsOpen(true), []));
