@@ -736,7 +736,7 @@ export function PartnerDashboard() {
       items.push({ to: "reports", label: t("nav.reports"), icon: <LineChart className="h-5 w-5" /> });
       items.push({ to: "revenue", label: t("nav.revenue"), icon: <Wallet className="h-5 w-5" /> });
       items.push({ to: "settlements", label: t("nav.settlements"), icon: <PiggyBank className="h-5 w-5" /> });
-      items.push({ to: "transfers", label: "Para Transferi", icon: <PiggyBank className="h-5 w-5" /> });
+      items.push({ to: "transfers", label: "Komisyon Ödemeleri", icon: <PiggyBank className="h-5 w-5" /> });
     }
     
     // Hotel manager and tenant admin can manage users and staff

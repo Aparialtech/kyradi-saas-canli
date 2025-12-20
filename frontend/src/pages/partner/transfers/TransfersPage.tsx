@@ -7,7 +7,6 @@ import {
   Clock,
   Loader2,
   AlertCircle,
-  TrendingUp,
   Calendar,
   CreditCard,
   Building2,
@@ -17,6 +16,7 @@ import {
   ArrowRight,
   Wallet,
   PieChart,
+  CheckCircle,
 } from "../../../lib/lucide";
 
 import {
@@ -36,7 +36,7 @@ import { Badge } from "../../../components/ui/Badge";
 const statusConfig: Record<TransferStatus, { label: string; color: "success" | "warning" | "danger" | "info" | "neutral" }> = {
   pending: { label: "Beklemede", color: "warning" },
   processing: { label: "İşleniyor", color: "info" },
-  completed: { label: "Tamamlandı", color: "success" },
+  completed: { label: "Ödendi", color: "success" },
   failed: { label: "Başarısız", color: "danger" },
   cancelled: { label: "İptal", color: "neutral" },
 };
@@ -82,7 +82,7 @@ export function TransfersPage() {
     mutationFn: (payload: { gross_amount: number; notes?: string }) =>
       paymentScheduleService.requestTransfer(payload),
     onSuccess: () => {
-      push({ type: "success", title: "Başarılı", description: "Transfer talebi gönderildi." });
+      push({ type: "success", title: "Başarılı", description: "Komisyon ödeme talebi oluşturuldu." });
       queryClient.invalidateQueries({ queryKey: ["payment-transfers"] });
       queryClient.invalidateQueries({ queryKey: ["payment-balance"] });
       queryClient.invalidateQueries({ queryKey: ["commission-summary"] });
@@ -144,24 +144,10 @@ export function TransfersPage() {
     },
     {
       key: "gross_amount",
-      label: "Brüt Tutar",
-      render: (row: PaymentTransfer) => formatCurrency(row.gross_amount),
-    },
-    {
-      key: "commission_amount",
-      label: "Komisyon",
+      label: "Komisyon Tutarı",
       render: (row: PaymentTransfer) => (
-        <span style={{ color: "var(--color-danger)" }}>
-          -{formatCurrency(row.commission_amount)}
-        </span>
-      ),
-    },
-    {
-      key: "net_amount",
-      label: "Net Tutar",
-      render: (row: PaymentTransfer) => (
-        <span style={{ fontWeight: 600, color: "var(--color-success)" }}>
-          {formatCurrency(row.net_amount)}
+        <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>
+          {formatCurrency(row.gross_amount)}
         </span>
       ),
     },
@@ -175,12 +161,12 @@ export function TransfersPage() {
     },
     {
       key: "transfer_date",
-      label: "Transfer Tarihi",
+      label: "Ödeme Tarihi",
       render: (row: PaymentTransfer) => formatDate(row.transfer_date),
     },
     {
       key: "reference_id",
-      label: "Referans",
+      label: "Referans No",
       render: (row: PaymentTransfer) => (
         <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
           {row.reference_id || "-"}
@@ -197,11 +183,11 @@ export function TransfersPage() {
     <div style={{ padding: "var(--space-6)" }}>
       <style>{`
         @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.2); }
-          50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+          0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
+          50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
         }
         .commission-card {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
           color: white;
           border-radius: var(--radius-xl);
           padding: var(--space-6);
@@ -235,6 +221,9 @@ export function TransfersPage() {
           transform: translateY(-2px);
           box-shadow: var(--shadow-lg);
         }
+        .paid-card {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
       `}</style>
 
       {/* Header */}
@@ -246,10 +235,10 @@ export function TransfersPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
           <div>
             <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-              Para Transferleri
+              Kyradi Komisyon Ödemeleri
             </h1>
             <p style={{ color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>
-              Kyradi komisyonlarınızı yönetin ve transfer talebinde bulunun
+              Kyradi'ye borçlu olduğunuz komisyon tutarlarını görüntüleyin ve ödeyin
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
@@ -263,178 +252,169 @@ export function TransfersPage() {
               onClick={() => setShowRequestModal(true)}
               leftIcon={<Send className="h-5 w-5" />}
             >
-              Yeni Transfer Oluştur
+              Komisyon Öde
             </ModernButton>
           </div>
         </div>
       </motion.div>
 
-      {/* Commission Summary Card */}
-      {commission && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="commission-card"
-          style={{ marginBottom: "var(--space-6)" }}
-        >
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
-              <Wallet className="h-6 w-6" />
-              <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>Komisyon Özeti</span>
-            </div>
-            
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-4)" }}>
-              <div>
-                <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Toplam Komisyon</p>
-                <p style={{ fontSize: "1.5rem", fontWeight: 700, margin: "var(--space-1) 0 0" }}>
-                  {formatCurrency(commission.total_commission)}
-                </p>
-              </div>
-              <div>
-                <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Transfer Edilebilir</p>
-                <p style={{ fontSize: "1.5rem", fontWeight: 700, margin: "var(--space-1) 0 0" }}>
-                  {formatCurrency(commission.available_commission)}
-                </p>
-              </div>
-              <div>
-                <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Bekleyen</p>
-                <p style={{ fontSize: "1.25rem", fontWeight: 600, margin: "var(--space-1) 0 0" }}>
-                  {formatCurrency(commission.pending_commission)}
-                </p>
-              </div>
-              <div>
-                <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Transfer Edilmiş</p>
-                <p style={{ fontSize: "1.25rem", fontWeight: 600, margin: "var(--space-1) 0 0" }}>
-                  {formatCurrency(commission.transferred_commission)}
-                </p>
-              </div>
-            </div>
-            
-            {commission.reservation_count > 0 && (
-              <div style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "0.875rem", opacity: 0.9 }}>
-                  <PieChart className="h-4 w-4" />
-                  {commission.reservation_count} rezervasyondan
-                </span>
-                {commission.period_start && commission.period_end && (
-                  <span style={{ fontSize: "0.875rem", opacity: 0.9 }}>
-                    • {new Date(commission.period_start).toLocaleDateString("tr-TR")} - {new Date(commission.period_end).toLocaleDateString("tr-TR")}
-                  </span>
-                )}
-              </div>
-            )}
+      {/* Commission Summary Card - Borç Durumu */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="commission-card"
+        style={{ marginBottom: "var(--space-6)" }}
+      >
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
+            <Wallet className="h-6 w-6" />
+            <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>Kyradi'ye Borçlu Olduğunuz Komisyon</span>
           </div>
-        </motion.div>
-      )}
-
-      {/* Balance Cards */}
-      {balance && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "var(--space-4)",
-            marginBottom: "var(--space-6)",
-          }}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.15 }}
-          >
-            <Card className="stat-card">
-              <CardBody>
-                <div style={{ textAlign: "center" }}>
-                  <DollarSign
-                    className="h-8 w-8"
-                    style={{ margin: "0 auto var(--space-2)", color: "var(--color-primary)" }}
-                  />
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                    Mevcut Bakiye
-                  </p>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
-                    {formatCurrency(balance.available_balance)}
-                  </p>
-                </div>
-              </CardBody>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="stat-card">
-              <CardBody>
-                <div style={{ textAlign: "center" }}>
-                  <Clock
-                    className="h-8 w-8"
-                    style={{ margin: "0 auto var(--space-2)", color: "var(--color-warning)" }}
-                  />
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                    Bekleyen Transferler
-                  </p>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
-                    {formatCurrency(balance.pending_transfers)}
-                  </p>
-                </div>
-              </CardBody>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.25 }}
-          >
-            <Card className="stat-card">
-              <CardBody>
-                <div style={{ textAlign: "center" }}>
-                  <TrendingUp
-                    className="h-8 w-8"
-                    style={{ margin: "0 auto var(--space-2)", color: "var(--color-success)" }}
-                  />
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                    Toplam Transfer
-                  </p>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
-                    {formatCurrency(balance.total_transferred)}
-                  </p>
-                </div>
-              </CardBody>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card className="stat-card">
-              <CardBody>
-                <div style={{ textAlign: "center" }}>
-                  <Calendar
-                    className="h-8 w-8"
-                    style={{ margin: "0 auto var(--space-2)", color: "var(--color-info)" }}
-                  />
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                    Sonraki Planlanan
-                  </p>
-                  <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
-                    {balance.next_scheduled_date
-                      ? new Date(balance.next_scheduled_date).toLocaleDateString("tr-TR")
-                      : "Planlanmamış"}
-                  </p>
-                </div>
-              </CardBody>
-            </Card>
-          </motion.div>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-4)" }}>
+            <div>
+              <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Toplam Komisyon Borcu</p>
+              <p style={{ fontSize: "2rem", fontWeight: 700, margin: "var(--space-1) 0 0" }}>
+                {formatCurrency(commission?.total_commission || 0)}
+              </p>
+            </div>
+            <div>
+              <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Ödenmemiş Tutar</p>
+              <p style={{ fontSize: "1.75rem", fontWeight: 700, margin: "var(--space-1) 0 0" }}>
+                {formatCurrency(commission?.available_commission || 0)}
+              </p>
+            </div>
+            <div>
+              <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Ödeme Bekleyen</p>
+              <p style={{ fontSize: "1.25rem", fontWeight: 600, margin: "var(--space-1) 0 0" }}>
+                {formatCurrency(commission?.pending_commission || 0)}
+              </p>
+            </div>
+            <div>
+              <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Ödenen Toplam</p>
+              <p style={{ fontSize: "1.25rem", fontWeight: 600, margin: "var(--space-1) 0 0" }}>
+                {formatCurrency(commission?.transferred_commission || 0)}
+              </p>
+            </div>
+          </div>
+          
+          {commission && commission.reservation_count > 0 && (
+            <div style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "0.875rem", opacity: 0.9 }}>
+                <PieChart className="h-4 w-4" />
+                {commission.reservation_count} rezervasyondan hesaplanan
+              </span>
+            </div>
+          )}
         </div>
-      )}
+      </motion.div>
 
-      {/* Schedule Info */}
+      {/* Stats Cards */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "var(--space-4)",
+          marginBottom: "var(--space-6)",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Card className="stat-card">
+            <CardBody>
+              <div style={{ textAlign: "center" }}>
+                <DollarSign
+                  className="h-8 w-8"
+                  style={{ margin: "0 auto var(--space-2)", color: "#dc2626" }}
+                />
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
+                  Ödenmemiş Borç
+                </p>
+                <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#dc2626", margin: "var(--space-1) 0 0" }}>
+                  {formatCurrency(balance?.available_balance || 0)}
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="stat-card">
+            <CardBody>
+              <div style={{ textAlign: "center" }}>
+                <Clock
+                  className="h-8 w-8"
+                  style={{ margin: "0 auto var(--space-2)", color: "var(--color-warning)" }}
+                />
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
+                  Ödeme Bekliyor
+                </p>
+                <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
+                  {formatCurrency(balance?.pending_transfers || 0)}
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.25 }}
+        >
+          <Card className="stat-card">
+            <CardBody>
+              <div style={{ textAlign: "center" }}>
+                <CheckCircle
+                  className="h-8 w-8"
+                  style={{ margin: "0 auto var(--space-2)", color: "var(--color-success)" }}
+                />
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
+                  Toplam Ödenen
+                </p>
+                <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-success)", margin: "var(--space-1) 0 0" }}>
+                  {formatCurrency(balance?.total_transferred || 0)}
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="stat-card">
+            <CardBody>
+              <div style={{ textAlign: "center" }}>
+                <Calendar
+                  className="h-8 w-8"
+                  style={{ margin: "0 auto var(--space-2)", color: "var(--color-info)" }}
+                />
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
+                  Sonraki Ödeme Tarihi
+                </p>
+                <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
+                  {balance?.next_scheduled_date
+                    ? new Date(balance.next_scheduled_date).toLocaleDateString("tr-TR")
+                    : "Belirlenmedi"}
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Commission Rate Info */}
       {schedule && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -445,7 +425,7 @@ export function TransfersPage() {
             <CardHeader>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                 <Building2 className="h-5 w-5" />
-                <span>Ödeme Planı Bilgileri</span>
+                <span>Komisyon Bilgileri</span>
               </div>
             </CardHeader>
             <CardBody>
@@ -457,13 +437,13 @@ export function TransfersPage() {
                 }}
               >
                 <div>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Durum</p>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Sistem Durumu</p>
                   <Badge variant={schedule.is_enabled ? "success" : "neutral"}>
                     {schedule.is_enabled ? "Aktif" : "Pasif"}
                   </Badge>
                 </div>
                 <div>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Periyot</p>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Ödeme Periyodu</p>
                   <p style={{ fontWeight: 500, margin: "var(--space-1) 0 0" }}>
                     {schedule.period_type === "daily" && "Günlük"}
                     {schedule.period_type === "weekly" && "Haftalık"}
@@ -473,25 +453,17 @@ export function TransfersPage() {
                   </p>
                 </div>
                 <div>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Komisyon Oranı</p>
-                  <p style={{ fontWeight: 500, margin: "var(--space-1) 0 0" }}>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Kyradi Komisyon Oranı</p>
+                  <p style={{ fontWeight: 600, fontSize: "1.25rem", color: "#dc2626", margin: "var(--space-1) 0 0" }}>
                     %{(schedule.commission_rate * 100).toFixed(2)}
                   </p>
                 </div>
                 <div>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Min. Transfer</p>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Min. Ödeme Tutarı</p>
                   <p style={{ fontWeight: 500, margin: "var(--space-1) 0 0" }}>
                     {formatCurrency(schedule.min_transfer_amount)}
                   </p>
                 </div>
-                {schedule.bank_iban && (
-                  <div>
-                    <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Banka Hesabı</p>
-                    <p style={{ fontWeight: 500, margin: "var(--space-1) 0 0", fontFamily: "monospace", fontSize: "0.875rem" }}>
-                      {schedule.bank_iban}
-                    </p>
-                  </div>
-                )}
               </div>
             </CardBody>
           </Card>
@@ -522,14 +494,14 @@ export function TransfersPage() {
               MagicPay Demo Modu Aktif
             </p>
             <p style={{ margin: "var(--space-1) 0 0", fontSize: "0.875rem", color: "var(--text-secondary)" }}>
-              Şu anda demo modunda çalışıyorsunuz. Transfer talepleri simüle edilmektedir.
-              Gerçek API key entegrasyonu yapıldığında otomatik olarak gerçek transferler başlayacaktır.
+              Şu anda demo modunda çalışıyorsunuz. Ödeme işlemleri simüle edilmektedir.
+              Gerçek API entegrasyonu yapıldığında komisyon ödemeleri otomatik olarak işlenecektir.
             </p>
           </div>
         </div>
       </motion.div>
 
-      {/* Actions & Filters */}
+      {/* Payment History */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -540,7 +512,7 @@ export function TransfersPage() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "wrap", gap: "var(--space-3)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                 <CreditCard className="h-5 w-5" />
-                <span>Transfer Geçmişi</span>
+                <span>Ödeme Geçmişi</span>
               </div>
               <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
                 <select
@@ -560,7 +532,7 @@ export function TransfersPage() {
                   <option value="">Tüm Durumlar</option>
                   <option value="pending">Beklemede</option>
                   <option value="processing">İşleniyor</option>
-                  <option value="completed">Tamamlandı</option>
+                  <option value="completed">Ödendi</option>
                   <option value="failed">Başarısız</option>
                   <option value="cancelled">İptal</option>
                 </select>
@@ -580,7 +552,7 @@ export function TransfersPage() {
                   onClick={() => setShowRequestModal(true)}
                   leftIcon={<Send className="h-4 w-4" />}
                 >
-                  Transfer Talep Et
+                  Komisyon Öde
                 </ModernButton>
               </div>
             </div>
@@ -598,7 +570,7 @@ export function TransfersPage() {
             ) : transfers.length === 0 ? (
               <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--text-muted)" }}>
                 <CreditCard className="h-12 w-12" style={{ margin: "0 auto var(--space-4)", opacity: 0.5 }} />
-                <p style={{ margin: 0 }}>Henüz transfer kaydı bulunmuyor.</p>
+                <p style={{ margin: 0 }}>Henüz ödeme kaydı bulunmuyor.</p>
                 <ModernButton
                   variant="primary"
                   size="sm"
@@ -606,7 +578,7 @@ export function TransfersPage() {
                   leftIcon={<Send className="h-4 w-4" />}
                   style={{ marginTop: "var(--space-4)" }}
                 >
-                  İlk Transfer Talebini Oluştur
+                  İlk Komisyon Ödemesini Yap
                 </ModernButton>
               </div>
             ) : (
@@ -627,7 +599,7 @@ export function TransfersPage() {
         </Card>
       </motion.div>
 
-      {/* Request Transfer Modal */}
+      {/* Payment Modal */}
       <AnimatePresence>
         {showRequestModal && (
           <div
@@ -663,7 +635,7 @@ export function TransfersPage() {
                     width: "48px",
                     height: "48px",
                     borderRadius: "var(--radius-lg)",
-                    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -673,20 +645,20 @@ export function TransfersPage() {
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>
-                    Transfer Talep Et
+                    Kyradi'ye Komisyon Öde
                   </h3>
                   <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--text-secondary)" }}>
-                    Kyradi'ye komisyon transferi başlat
+                    Borçlu olduğunuz komisyonu ödeyin
                   </p>
                 </div>
               </div>
 
-              {/* Available Balance Highlight */}
+              {/* Outstanding Balance Highlight */}
               {commission && (
                 <div
                   style={{
-                    background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)",
-                    border: "1px solid rgba(16, 185, 129, 0.3)",
+                    background: "linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(185, 28, 28, 0.1) 100%)",
+                    border: "1px solid rgba(220, 38, 38, 0.3)",
                     borderRadius: "var(--radius-lg)",
                     padding: "var(--space-4)",
                     marginBottom: "var(--space-4)",
@@ -694,9 +666,9 @@ export function TransfersPage() {
                   }}
                 >
                   <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--text-secondary)" }}>
-                    Transfer Edilebilir Tutar
+                    Ödenmemiş Komisyon Borcu
                   </p>
-                  <p style={{ margin: "var(--space-1) 0 0", fontSize: "1.5rem", fontWeight: 700, color: "#10b981" }}>
+                  <p style={{ margin: "var(--space-1) 0 0", fontSize: "1.75rem", fontWeight: 700, color: "#dc2626" }}>
                     {formatCurrency(commission.available_commission)}
                   </p>
                 </div>
@@ -704,18 +676,18 @@ export function TransfersPage() {
 
               <div style={{ marginBottom: "var(--space-4)" }}>
                 <label style={{ display: "block", marginBottom: "var(--space-2)", fontWeight: 500 }}>
-                  Tutar (TL) *
+                  Ödeme Tutarı (TL) *
                 </label>
                 <ModernInput
                   type="number"
                   value={requestAmount}
                   onChange={(e) => setRequestAmount(e.target.value)}
-                  placeholder={`Min. ${balance?.min_transfer_amount || 100} TL`}
+                  placeholder={`Ödemek istediğiniz tutar`}
                   fullWidth
                 />
                 {commission && requestAmount && parseFloat(requestAmount) > commission.available_commission && (
-                  <p style={{ margin: "var(--space-2) 0 0", fontSize: "0.75rem", color: "var(--color-danger)" }}>
-                    Transfer edilebilir tutardan fazla girdiniz.
+                  <p style={{ margin: "var(--space-2) 0 0", fontSize: "0.75rem", color: "var(--color-warning)" }}>
+                    Borç tutarından fazla ödeme yapamazsınız.
                   </p>
                 )}
               </div>
@@ -727,7 +699,7 @@ export function TransfersPage() {
                 <textarea
                   value={requestNotes}
                   onChange={(e) => setRequestNotes(e.target.value)}
-                  placeholder="Transfer ile ilgili notunuz..."
+                  placeholder="Ödeme ile ilgili notunuz..."
                   style={{
                     width: "100%",
                     padding: "var(--space-3)",
@@ -751,32 +723,12 @@ export function TransfersPage() {
                   }}
                 >
                   <p style={{ margin: "0 0 var(--space-3)", fontWeight: 600, fontSize: "0.875rem" }}>
-                    Transfer Özeti
+                    Ödeme Özeti
                   </p>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-                    <span style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>Brüt Tutar:</span>
-                    <span style={{ fontSize: "0.875rem" }}>{formatCurrency(parseFloat(requestAmount))}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-                    <span style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-                      Komisyon (%{((schedule?.commission_rate || 0.05) * 100).toFixed(2)}):
-                    </span>
-                    <span style={{ color: "var(--color-danger)", fontSize: "0.875rem" }}>
-                      -{formatCurrency(parseFloat(requestAmount) * (schedule?.commission_rate || 0.05))}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontWeight: 600,
-                      borderTop: "1px solid var(--border-color)",
-                      paddingTop: "var(--space-2)",
-                    }}
-                  >
-                    <span>Net Tutar:</span>
-                    <span style={{ color: "var(--color-success)", fontSize: "1rem" }}>
-                      {formatCurrency(parseFloat(requestAmount) * (1 - (schedule?.commission_rate || 0.05)))}
+                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}>
+                    <span>Kyradi'ye Ödenecek:</span>
+                    <span style={{ color: "#dc2626", fontSize: "1.125rem" }}>
+                      {formatCurrency(parseFloat(requestAmount))}
                     </span>
                   </div>
                 </div>
@@ -796,7 +748,7 @@ export function TransfersPage() {
               >
                 <Zap className="h-4 w-4" style={{ color: "#8b5cf6" }} />
                 <span style={{ fontSize: "0.75rem", color: "#7c3aed" }}>
-                  MagicPay Demo - Transfer simüle edilecektir
+                  MagicPay Demo - Ödeme simüle edilecektir
                 </span>
               </div>
 
@@ -811,7 +763,7 @@ export function TransfersPage() {
                   disabled={!requestAmount || parseFloat(requestAmount) <= 0}
                   leftIcon={<ArrowRight className="h-4 w-4" />}
                 >
-                  Talep Gönder
+                  Ödemeyi Gönder
                 </ModernButton>
               </div>
             </motion.div>
