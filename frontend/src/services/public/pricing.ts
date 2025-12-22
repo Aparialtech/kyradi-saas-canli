@@ -17,6 +17,7 @@ export interface PriceEstimateRequest {
 
 export interface PriceEstimateResponse {
   total_minor: number;
+  price_total_minor: number;
   total_formatted: string;
   duration_hours: number;
   duration_days: number;

@@ -5,22 +5,25 @@ export interface SelfServiceLookupPayload {
 }
 
 export interface SelfServiceReservation {
-
   reservation_id?: string | null;
+  confirmation_code?: string | null;
   tenant_slug?: string | null;
   locker_code?: string | null;
   location_name?: string | null;
   status: string;
   start_at?: string | null;
   end_at?: string | null;
+  customer_name?: string | null;
   customer_hint?: string | null;
   customer_phone?: string | null;
+  customer_email?: string | null;
   baggage_count?: number | null;
   baggage_type?: string | null;
   notes?: string | null;
   evidence_url?: string | null;
   handover_by?: string | null;
   handover_at?: string | null;
+  handed_over_at?: string | null;
   returned_by?: string | null;
   returned_at?: string | null;
   valid: boolean;
@@ -33,6 +36,9 @@ export interface SelfServiceReservationCreatePayload {
   end_at: string;
   customer_name?: string;
   customer_phone?: string;
+  customer_email?: string;
+  id_type?: string;
+  room_number?: string;
   baggage_count?: number;
   baggage_type?: string;
   weight_kg?: number;
@@ -41,11 +47,13 @@ export interface SelfServiceReservationCreatePayload {
 
 export interface SelfServiceReservationCreateResponse {
   reservation_id: string;
-  qr_code: string;
+  confirmation_code: string;
+  qr_code?: string;
   status: string;
   locker_code: string;
   start_at: string;
   end_at: string;
+  price_total_minor?: number;
 }
 
 export interface SelfServiceHandoverPayload {
