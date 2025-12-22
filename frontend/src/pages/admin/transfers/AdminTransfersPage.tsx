@@ -146,11 +146,11 @@ export function AdminTransfersPage() {
 
   // Stats
   const stats = useMemo(() => {
-    const allTransfers = transfers;
+    const allTransfers = transfers.filter((t) => t != null);
     return {
-      pending: allTransfers.filter((t) => t.status === "pending").length,
-      total: allTransfers.reduce((sum, t) => sum + t.net_amount, 0),
-      completed: allTransfers.filter((t) => t.status === "completed").reduce((sum, t) => sum + t.net_amount, 0),
+      pending: allTransfers.filter((t) => t?.status === "pending").length,
+      total: allTransfers.reduce((sum, t) => sum + (t?.net_amount || 0), 0),
+      completed: allTransfers.filter((t) => t?.status === "completed").reduce((sum, t) => sum + (t?.net_amount || 0), 0),
     };
   }, [transfers]);
 
@@ -159,7 +159,7 @@ export function AdminTransfersPage() {
       key: "created_at",
       label: "Tarih",
       render: (row: PaymentTransfer) => (
-        <span style={{ fontSize: "0.875rem" }}>{formatDate(row.created_at)}</span>
+        <span style={{ fontSize: "0.875rem" }}>{row ? formatDate(row.created_at) : "-"}</span>
       ),
     },
     {
@@ -167,21 +167,21 @@ export function AdminTransfersPage() {
       label: "Tenant",
       render: (row: PaymentTransfer) => (
         <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
-          {row.tenant_id.substring(0, 8)}...
+          {row?.tenant_id ? `${row.tenant_id.substring(0, 8)}...` : "-"}
         </span>
       ),
     },
     {
       key: "gross_amount",
       label: "Brüt Tutar",
-      render: (row: PaymentTransfer) => formatCurrency(row.gross_amount),
+      render: (row: PaymentTransfer) => row ? formatCurrency(row.gross_amount || 0) : "-",
     },
     {
       key: "commission_amount",
       label: "Komisyon",
       render: (row: PaymentTransfer) => (
         <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>
-          {formatCurrency(row.commission_amount)}
+          {row ? formatCurrency(row.commission_amount || 0) : "-"}
         </span>
       ),
     },
@@ -190,7 +190,7 @@ export function AdminTransfersPage() {
       label: "Net Tutar",
       render: (row: PaymentTransfer) => (
         <span style={{ fontWeight: 600, color: "var(--color-success)" }}>
-          {formatCurrency(row.net_amount)}
+          {row ? formatCurrency(row.net_amount || 0) : "-"}
         </span>
       ),
     },
@@ -198,7 +198,8 @@ export function AdminTransfersPage() {
       key: "status",
       label: "Durum",
       render: (row: PaymentTransfer) => {
-        const config = statusConfig[row.status];
+        if (!row) return <Badge variant="neutral">-</Badge>;
+        const config = statusConfig[row.status as keyof typeof statusConfig] || { label: row.status || "Bilinmiyor", color: "neutral" as const };
         return <Badge variant={config.color}>{config.label}</Badge>;
       },
     },
@@ -207,53 +208,56 @@ export function AdminTransfersPage() {
       label: "IBAN",
       render: (row: PaymentTransfer) => (
         <span style={{ fontFamily: "monospace", fontSize: "0.7rem" }}>
-          {row.bank_iban ? `${row.bank_iban.substring(0, 10)}...` : "-"}
+          {row?.bank_iban ? `${row.bank_iban.substring(0, 10)}...` : "-"}
         </span>
       ),
     },
     {
       key: "actions",
       label: "İşlemler",
-      render: (row: PaymentTransfer) => (
-        <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          {row.status === "pending" && (
-            <>
+      render: (row: PaymentTransfer) => {
+        if (!row) return null;
+        return (
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            {row.status === "pending" && (
+              <>
+                <ModernButton
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedTransfer(row);
+                    setShowProcessModal(true);
+                  }}
+                  leftIcon={<Play className="h-3 w-3" />}
+                >
+                  İşle
+                </ModernButton>
+                <ModernButton
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedTransfer(row);
+                    setShowRejectModal(true);
+                  }}
+                  leftIcon={<Ban className="h-3 w-3" />}
+                >
+                  Reddet
+                </ModernButton>
+              </>
+            )}
+            {row.status !== "pending" && (
               <ModernButton
-                variant="primary"
+                variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setSelectedTransfer(row);
-                  setShowProcessModal(true);
-                }}
-                leftIcon={<Play className="h-3 w-3" />}
+                onClick={() => setSelectedTransfer(row)}
+                leftIcon={<Eye className="h-3 w-3" />}
               >
-                İşle
+                Detay
               </ModernButton>
-              <ModernButton
-                variant="danger"
-                size="sm"
-                onClick={() => {
-                  setSelectedTransfer(row);
-                  setShowRejectModal(true);
-                }}
-                leftIcon={<Ban className="h-3 w-3" />}
-              >
-                Reddet
-              </ModernButton>
-            </>
-          )}
-          {row.status !== "pending" && (
-            <ModernButton
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedTransfer(row)}
-              leftIcon={<Eye className="h-3 w-3" />}
-            >
-              Detay
-            </ModernButton>
-          )}
-        </div>
-      ),
+            )}
+          </div>
+        );
+      },
     },
   ];
 
