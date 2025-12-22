@@ -169,6 +169,55 @@ async def ensure_critical_schema() -> None:
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS location_id VARCHAR(36)",
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS storage_id VARCHAR(36)",
         "ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS name VARCHAR(100)",
+        # Payment schedules table
+        """CREATE TABLE IF NOT EXISTS payment_schedules (
+            id VARCHAR(36) PRIMARY KEY,
+            tenant_id VARCHAR(36) NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+            is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+            period_type VARCHAR(20) NOT NULL DEFAULT 'weekly',
+            custom_days INTEGER,
+            min_transfer_amount NUMERIC(10,2) NOT NULL DEFAULT 100.00,
+            commission_rate NUMERIC(5,4) NOT NULL DEFAULT 0.0500,
+            bank_name VARCHAR(100),
+            bank_account_holder VARCHAR(200),
+            bank_iban VARCHAR(34),
+            bank_swift VARCHAR(11),
+            next_payment_date TIMESTAMPTZ,
+            last_payment_date TIMESTAMPTZ,
+            partner_can_request BOOLEAN NOT NULL DEFAULT TRUE,
+            admin_notes TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ
+        )""",
+        # Payment transfers table
+        """CREATE TABLE IF NOT EXISTS payment_transfers (
+            id VARCHAR(36) PRIMARY KEY,
+            tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            schedule_id VARCHAR(36) REFERENCES payment_schedules(id) ON DELETE SET NULL,
+            gross_amount NUMERIC(10,2) NOT NULL,
+            commission_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+            net_amount NUMERIC(10,2) NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            transfer_date TIMESTAMPTZ,
+            reference_id VARCHAR(100),
+            period_start TIMESTAMPTZ,
+            period_end TIMESTAMPTZ,
+            bank_name VARCHAR(100),
+            bank_account_holder VARCHAR(200),
+            bank_iban VARCHAR(34),
+            processed_by_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+            processed_at TIMESTAMPTZ,
+            notes TEXT,
+            error_message TEXT,
+            is_manual_request BOOLEAN NOT NULL DEFAULT FALSE,
+            requested_by_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+            requested_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ
+        )""",
+        # Index for payment transfers
+        "CREATE INDEX IF NOT EXISTS idx_payment_transfers_tenant ON payment_transfers(tenant_id)",
+        "CREATE INDEX IF NOT EXISTS idx_payment_transfers_status ON payment_transfers(status)",
     ]
     
     try:
