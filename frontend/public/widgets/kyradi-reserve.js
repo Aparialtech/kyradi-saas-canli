@@ -813,8 +813,7 @@
       }
 
       // Real-time validation and price calculation: set checkout min datetime based on checkin
-      const startInput = this.querySelector('input[name="start_datetime"]');
-      const endInput = this.querySelector('input[name="end_datetime"]');
+      // Note: startInput and endInput already declared above for date pickers
       const durationInput = this.querySelector('input[name="duration_hours"]');
       const priceInput = this.querySelector('input[name="estimated_price"]');
       
