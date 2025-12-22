@@ -485,10 +485,7 @@ export function DemoFlowPage() {
               className="widget-preview"
               style={{
                 minHeight: "400px",
-                padding: "2rem",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "flex-start",
+                padding: "1.5rem",
                 background: "#f8fafc",
                 borderRadius: "8px",
                 width: "100%",
@@ -510,29 +507,17 @@ export function DemoFlowPage() {
               )}
             </div>
             <style>{`
+              /* Widget Container - FULL WIDTH */
               .widget-preview kyradi-reserve {
                 width: 100%;
-                max-width: 500px;
-                margin: 0 auto;
+                max-width: 100%;
                 display: block;
               }
               .widget-preview .kyradi-reserve {
                 width: 100%;
-                max-width: 500px;
-                margin: 0 auto;
+                max-width: 100%;
               }
-              .widget-preview .kyradi-reserve__fieldset {
-                display: block;
-                margin-bottom: 1rem;
-              }
-              .widget-preview .kyradi-reserve__form {
-                display: grid;
-                gap: 0.75rem;
-              }
-              .widget-preview .kyradi-reserve__form label {
-                display: flex;
-                flex-direction: column;
-              }
+              /* Let widget CSS handle all internal styling */
               .widget-preview .kyradi-reserve__form input,
               .widget-preview .kyradi-reserve__form select,
               .widget-preview .kyradi-reserve__form textarea {
@@ -545,14 +530,8 @@ export function DemoFlowPage() {
                 display: block !important;
                 visibility: visible !important;
                 opacity: 1 !important;
-                margin-bottom: 1rem !important;
               }
               .widget-preview .kyradi-reserve__legend {
-                display: block !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-              }
-              .widget-preview .kyradi-reserve__helper {
                 display: block !important;
                 visibility: visible !important;
                 opacity: 1 !important;
@@ -560,9 +539,6 @@ export function DemoFlowPage() {
               @media (max-width: 768px) {
                 .widget-preview {
                   padding: 0.5rem !important;
-                }
-                .widget-preview kyradi-reserve {
-                  max-width: 100%;
                 }
                 .demo-step {
                   flex-direction: column !important;
