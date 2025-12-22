@@ -43,6 +43,7 @@ import { StaffAssignPage } from "../pages/partner/staff/StaffAssignPage";
 import { StorageEditPage } from "../pages/partner/storages/StorageEditPage";
 import { TicketsPage } from "../pages/partner/tickets/TicketsPage";
 import { TransfersPage } from "../pages/partner/transfers/TransfersPage";
+import { PricingEditPage } from "../pages/partner/pricing/PricingEditPage";
 import { WidgetPreviewPage } from "../pages/partner/WidgetPreviewPage";
 import { MagicPayDemoPage } from "../pages/partner/magicpay/MagicPayDemoPage";
 import { SelfServiceReservationPage } from "../pages/public/SelfServiceReservationPage";
@@ -112,6 +113,8 @@ export function AppRouter() {
             <Route path="staff/assign" element={<StaffAssignPage />} />
             <Route path="tickets" element={<TicketsPage />} />
             <Route path="pricing" element={<PartnerPricingPage />} />
+            <Route path="pricing/new" element={<PricingEditPage />} />
+            <Route path="pricing/:id/edit" element={<PricingEditPage />} />
             <Route path="demo-flow" element={<DemoFlowPage />} />
             <Route path="demo-payment-flow" element={<DemoPaymentFlowPage />} />
           </Route>

@@ -47,10 +47,15 @@ export interface TicketListResponse {
   unread_count: number;
 }
 
+export type TicketDirection = "incoming" | "outgoing";
+
 export interface TicketListParams {
   status?: TicketStatus;
   priority?: TicketPriority;
   search?: string;
+  direction?: TicketDirection;
+  start_date?: string;
+  end_date?: string;
   page?: number;
   pageSize?: number;
 }
@@ -61,6 +66,9 @@ export const ticketService = {
     if (params.status) queryParams.append("status", params.status);
     if (params.priority) queryParams.append("priority", params.priority);
     if (params.search) queryParams.append("search", params.search);
+    if (params.direction) queryParams.append("direction", params.direction);
+    if (params.start_date) queryParams.append("start_date", params.start_date);
+    if (params.end_date) queryParams.append("end_date", params.end_date);
     if (params.page) queryParams.append("page", String(params.page));
     if (params.pageSize) queryParams.append("page_size", String(params.pageSize));
     

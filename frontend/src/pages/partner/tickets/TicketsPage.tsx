@@ -8,7 +8,9 @@ import {
   Send,
   Loader2,
   Bell,
-  MessageSquare
+  MessageSquare,
+  Inbox,
+  Calendar,
 } from "../../../lib/lucide";
 
 import { 
@@ -16,7 +18,8 @@ import {
   type Ticket, 
   type TicketCreate, 
   type TicketStatus, 
-  type TicketPriority 
+  type TicketPriority,
+  type TicketDirection,
 } from "../../../services/partner/tickets";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -33,7 +36,7 @@ import { Modal } from "../../../components/common/Modal";
 const statusLabels: Record<TicketStatus, string> = {
   open: "Açık",
   in_progress: "İşlemde",
-  resolved: "Çözüldü",
+  resolved: "Okundu",
   closed: "Kapatıldı",
 };
 
@@ -58,12 +61,17 @@ const priorityVariants: Record<TicketPriority, "success" | "warning" | "info" | 
   urgent: "danger",
 };
 
+type TabType = "incoming" | "outgoing";
+
 export function TicketsPage() {
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "">("");
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "">("");
+  const [activeTab, setActiveTab] = useState<TabType>("incoming");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
@@ -78,11 +86,14 @@ export function TicketsPage() {
 
   // Fetch tickets
   const ticketsQuery = useQuery({
-    queryKey: ["tickets", statusFilter, priorityFilter, searchTerm, page, pageSize],
+    queryKey: ["tickets", activeTab, statusFilter, priorityFilter, searchTerm, startDate, endDate, page, pageSize],
     queryFn: () => ticketService.list({
+      direction: activeTab as TicketDirection,
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       search: searchTerm || undefined,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
       page,
       pageSize,
     }),
@@ -93,12 +104,13 @@ export function TicketsPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tickets"] });
       void queryClient.invalidateQueries({ queryKey: ["unread-tickets"] });
-      push({ title: "Ticket oluşturuldu", description: "Mesajınız iletildi", type: "success" });
+      push({ title: "Mesaj gönderildi", description: "Mesajınız iletildi", type: "success" });
       setShowNewTicketModal(false);
       setNewTicket({ title: "", message: "", priority: "medium", target: "admin" });
+      setActiveTab("outgoing"); // Switch to sent tab
     },
     onError: (error: unknown) => {
-      push({ title: "Ticket oluşturulamadı", description: getErrorMessage(error), type: "error" });
+      push({ title: "Mesaj gönderilemedi", description: getErrorMessage(error), type: "error" });
     },
   });
 
@@ -107,7 +119,7 @@ export function TicketsPage() {
     onSuccess: (updatedTicket) => {
       void queryClient.invalidateQueries({ queryKey: ["tickets"] });
       void queryClient.invalidateQueries({ queryKey: ["unread-tickets"] });
-      push({ title: "Ticket okundu olarak işaretlendi", type: "success" });
+      push({ title: "Okundu olarak işaretlendi", type: "success" });
       setSelectedTicket(updatedTicket);
     },
     onError: (error: unknown) => {
@@ -117,6 +129,11 @@ export function TicketsPage() {
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
+    setPage(1);
+  }, [setPage]);
+
+  const handleTabChange = useCallback((tab: TabType) => {
+    setActiveTab(tab);
     setPage(1);
   }, [setPage]);
 
@@ -164,7 +181,7 @@ export function TicketsPage() {
             alignItems: "center",
             gap: "var(--space-2)"
           }}>
-            {!row.read_at && row.creator_id !== "self" && (
+            {!row.read_at && activeTab === "incoming" && (
               <span style={{
                 width: "8px",
                 height: "8px",
@@ -183,6 +200,19 @@ export function TicketsPage() {
           </div>
         </div>
       ),
+    },
+    {
+      key: "direction",
+      label: "Yön",
+      align: "center",
+      render: () => {
+        const isIncoming = activeTab === "incoming";
+        return (
+          <Badge variant={isIncoming ? "success" : "info"}>
+            {isIncoming ? "Gelen" : "Giden"}
+          </Badge>
+        );
+      },
     },
     {
       key: "status",
@@ -206,7 +236,7 @@ export function TicketsPage() {
     },
     {
       key: "created_at",
-      label: "Oluşturulma",
+      label: "Tarih",
       render: (value: string) => (
         <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
           {formatDate(value)}
@@ -215,17 +245,17 @@ export function TicketsPage() {
     },
     {
       key: "resolved_at",
-      label: "Çözüm",
-      render: (value: string | null) => value ? (
+      label: "Okunma",
+      render: (_, row) => row.read_at ? (
         <div style={{ fontSize: "var(--text-sm)", color: "var(--success-600)" }}>
           <CheckCircle2 className="h-3 w-3" style={{ display: "inline", marginRight: "var(--space-1)" }} />
-          {formatDate(value)}
+          {formatDate(row.read_at)}
         </div>
       ) : (
         <span style={{ color: "var(--text-tertiary)" }}>-</span>
       ),
     },
-  ], [formatDate]);
+  ], [formatDate, activeTab]);
 
   return (
     <div style={{ padding: "var(--space-8)", maxWidth: "1600px", margin: "0 auto" }}>
@@ -239,9 +269,25 @@ export function TicketsPage() {
       >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-            <h1 style={{ fontSize: "var(--text-3xl)", fontWeight: "var(--font-black)", color: "var(--text-primary)", margin: 0 }}>
-              İletişim / Ticket
-            </h1>
+            <div style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "var(--radius-xl)",
+              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              <MessageSquare style={{ width: "24px", height: "24px", color: "white" }} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: "var(--text-3xl)", fontWeight: "var(--font-black)", color: "var(--text-primary)", margin: 0 }}>
+                İletişim
+              </h1>
+              <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
+                Destek taleplerinizi oluşturun ve takip edin
+              </p>
+            </div>
             {unreadCount > 0 && (
               <Badge variant="danger">
                 <Bell className="h-3 w-3" style={{ marginRight: "var(--space-1)" }} />
@@ -249,22 +295,79 @@ export function TicketsPage() {
               </Badge>
             )}
           </div>
-          <p style={{ fontSize: "var(--text-base)", color: "var(--text-tertiary)", margin: "var(--space-2) 0 0 0" }}>
-            Destek taleplerinizi oluşturun ve takip edin
-          </p>
         </div>
         <ModernButton
           variant="primary"
           onClick={() => setShowNewTicketModal(true)}
           leftIcon={<Plus className="h-4 w-4" />}
         >
-          Yeni Ticket
+          Yeni Mesaj
         </ModernButton>
       </motion.div>
 
+      {/* Tabs */}
+      <ModernCard variant="glass" padding="none" style={{ marginBottom: "var(--space-4)" }}>
+        <div style={{ display: "flex", borderBottom: "1px solid var(--border-primary)" }}>
+          <button
+            onClick={() => handleTabChange("incoming")}
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--space-2)",
+              padding: "var(--space-4)",
+              background: activeTab === "incoming" ? "var(--bg-secondary)" : "transparent",
+              border: "none",
+              borderBottom: activeTab === "incoming" ? "3px solid var(--primary)" : "3px solid transparent",
+              cursor: "pointer",
+              fontWeight: activeTab === "incoming" ? 600 : 400,
+              color: activeTab === "incoming" ? "var(--primary)" : "var(--text-secondary)",
+              transition: "all 0.2s",
+            }}
+          >
+            <Inbox style={{ width: "18px", height: "18px" }} />
+            <span>Gelen Mesajlar</span>
+            {activeTab === "incoming" && unreadCount > 0 && (
+              <span style={{
+                background: "var(--danger-500)",
+                color: "white",
+                padding: "2px 8px",
+                borderRadius: "var(--radius-full)",
+                fontSize: "var(--text-xs)",
+                fontWeight: 600,
+              }}>
+                {unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => handleTabChange("outgoing")}
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--space-2)",
+              padding: "var(--space-4)",
+              background: activeTab === "outgoing" ? "var(--bg-secondary)" : "transparent",
+              border: "none",
+              borderBottom: activeTab === "outgoing" ? "3px solid var(--primary)" : "3px solid transparent",
+              cursor: "pointer",
+              fontWeight: activeTab === "outgoing" ? 600 : 400,
+              color: activeTab === "outgoing" ? "var(--primary)" : "var(--text-secondary)",
+              transition: "all 0.2s",
+            }}
+          >
+            <Send style={{ width: "18px", height: "18px" }} />
+            <span>Gönderilen Mesajlar</span>
+          </button>
+        </div>
+      </ModernCard>
+
       {/* Filters */}
       <ModernCard variant="glass" padding="lg" style={{ marginBottom: "var(--space-6)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-4)", alignItems: "end" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--space-4)", alignItems: "end" }}>
           <div style={{ gridColumn: "span 2" }}>
             <ModernInput
               value={searchTerm}
@@ -296,7 +399,7 @@ export function TicketsPage() {
               <option value="">Tümü</option>
               <option value="open">Açık</option>
               <option value="in_progress">İşlemde</option>
-              <option value="resolved">Çözüldü</option>
+              <option value="resolved">Okundu</option>
               <option value="closed">Kapatıldı</option>
             </select>
           </div>
@@ -326,6 +429,50 @@ export function TicketsPage() {
               <option value="urgent">Acil</option>
             </select>
           </div>
+          <div>
+            <label style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+              <Calendar style={{ width: "14px", height: "14px" }} />
+              Başlangıç
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPage(1);
+              }}
+              style={{
+                width: "100%",
+                padding: "var(--space-2) var(--space-3)",
+                border: "1px solid var(--border-primary)",
+                borderRadius: "var(--radius-lg)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+              <Calendar style={{ width: "14px", height: "14px" }} />
+              Bitiş
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setPage(1);
+              }}
+              style={{
+                width: "100%",
+                padding: "var(--space-2) var(--space-3)",
+                border: "1px solid var(--border-primary)",
+                borderRadius: "var(--radius-lg)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+              }}
+            />
+          </div>
         </div>
       </ModernCard>
 
@@ -333,10 +480,10 @@ export function TicketsPage() {
       <ModernCard variant="glass" padding="lg">
         <div style={{ marginBottom: "var(--space-4)" }}>
           <h2 style={{ fontSize: "var(--text-xl)", fontWeight: "var(--font-bold)", margin: "0 0 var(--space-1) 0" }}>
-            Ticket Listesi
+            {activeTab === "incoming" ? "Gelen Mesajlar" : "Gönderilen Mesajlar"}
           </h2>
           <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-            {ticketsQuery.data?.total ?? 0} ticket bulundu
+            {ticketsQuery.data?.total ?? 0} mesaj bulundu
           </p>
         </div>
 
@@ -360,16 +507,24 @@ export function TicketsPage() {
           />
         ) : (
           <div style={{ textAlign: "center", padding: "var(--space-16)", color: "var(--text-tertiary)" }}>
-            <MessageSquare className="h-16 w-16" style={{ margin: "0 auto var(--space-4) auto", color: "var(--text-muted)" }} />
+            {activeTab === "incoming" ? (
+              <Inbox className="h-16 w-16" style={{ margin: "0 auto var(--space-4) auto", color: "var(--text-muted)" }} />
+            ) : (
+              <Send className="h-16 w-16" style={{ margin: "0 auto var(--space-4) auto", color: "var(--text-muted)" }} />
+            )}
             <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", margin: "0 0 var(--space-2) 0", color: "var(--text-primary)" }}>
-              Henüz ticket yok
+              {activeTab === "incoming" ? "Gelen mesaj yok" : "Gönderilen mesaj yok"}
             </h3>
             <p style={{ margin: "0 0 var(--space-4) 0" }}>
-              Yeni bir destek talebi oluşturmak için "Yeni Ticket" butonuna tıklayın.
+              {activeTab === "incoming" 
+                ? "Henüz size gelen mesaj bulunmuyor." 
+                : "Henüz mesaj göndermediniz."}
             </p>
-            <ModernButton variant="primary" onClick={() => setShowNewTicketModal(true)} leftIcon={<Plus className="h-4 w-4" />}>
-              Yeni Ticket Oluştur
-            </ModernButton>
+            {activeTab === "outgoing" && (
+              <ModernButton variant="primary" onClick={() => setShowNewTicketModal(true)} leftIcon={<Plus className="h-4 w-4" />}>
+                Yeni Mesaj Gönder
+              </ModernButton>
+            )}
           </div>
         )}
       </ModernCard>
@@ -378,7 +533,7 @@ export function TicketsPage() {
       <Modal
         isOpen={showNewTicketModal}
         onClose={() => setShowNewTicketModal(false)}
-        title="Yeni Ticket Oluştur"
+        title="Yeni Mesaj Gönder"
         width="600px"
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
@@ -386,7 +541,7 @@ export function TicketsPage() {
             label="Başlık *"
             value={newTicket.title}
             onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
-            placeholder="Ticket başlığı"
+            placeholder="Mesaj başlığı"
             fullWidth
           />
           <div>
@@ -435,7 +590,7 @@ export function TicketsPage() {
             </div>
             <div>
               <label style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--space-2)", display: "block" }}>
-                Hedef
+                Alıcı
               </label>
               <select
                 value={newTicket.target}
@@ -449,9 +604,7 @@ export function TicketsPage() {
                   color: "var(--text-primary)",
                 }}
               >
-                <option value="admin">Admin</option>
-                <option value="partner">Partner</option>
-                <option value="all">Herkese</option>
+                <option value="admin">Yönetim</option>
               </select>
             </div>
           </div>
@@ -477,7 +630,7 @@ export function TicketsPage() {
       <Modal
         isOpen={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
-        title="Ticket Detayı"
+        title="Mesaj Detayı"
         width="700px"
       >
         {selectedTicket && (
@@ -487,7 +640,7 @@ export function TicketsPage() {
                 <h3 style={{ fontSize: "var(--text-xl)", fontWeight: "var(--font-bold)", margin: "0 0 var(--space-2) 0" }}>
                   {selectedTicket.title}
                 </h3>
-                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
                   <Badge variant={statusVariants[selectedTicket.status]}>
                     {statusLabels[selectedTicket.status]}
                   </Badge>
@@ -533,21 +686,21 @@ export function TicketsPage() {
                   gap: "var(--space-2)"
                 }}>
                   <CheckCircle2 className="h-4 w-4" />
-                  Çözüm Notu
+                  Yanıt
                 </div>
                 <div style={{ color: "var(--success-800)", whiteSpace: "pre-wrap" }}>
                   {selectedTicket.resolution_note}
                 </div>
                 {selectedTicket.resolved_at && (
                   <div style={{ fontSize: "var(--text-xs)", color: "var(--success-600)", marginTop: "var(--space-2)" }}>
-                    Çözüm tarihi: {formatDate(selectedTicket.resolved_at)}
+                    Yanıt tarihi: {formatDate(selectedTicket.resolved_at)}
                   </div>
                 )}
               </div>
             )}
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)" }}>
-              {selectedTicket.read_at === null && selectedTicket.creator_id !== "self" && (
+              {selectedTicket.read_at === null && activeTab === "incoming" && (
                 <ModernButton 
                   variant="primary" 
                   onClick={() => markAsReadMutation.mutate(selectedTicket.id)}
