@@ -161,6 +161,12 @@ async def ensure_critical_schema() -> None:
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS legal_name VARCHAR(255)",
         # User columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date TIMESTAMPTZ",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS tc_identity_number VARCHAR(11)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS city VARCHAR(100)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS district VARCHAR(100)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS address VARCHAR(500)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(20)",
         # Location columns
         "ALTER TABLE locations ADD COLUMN IF NOT EXISTS phone_number VARCHAR(32)",
         "ALTER TABLE locations ADD COLUMN IF NOT EXISTS working_hours JSONB",
