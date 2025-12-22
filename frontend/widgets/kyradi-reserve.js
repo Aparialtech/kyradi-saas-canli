@@ -367,9 +367,6 @@
             <!-- Onaylar - Strict Contract Acceptance -->
             <fieldset class="kyradi-reserve__fieldset kyradi-reserve__fieldset--consents">
               <legend class="kyradi-reserve__legend">${this.t("consents")}</legend>
-              <div class="kyradi-reserve__consents-info">
-                <span class="kyradi-reserve__consents-hint">📋 Devam etmek için tüm sözleşmeleri açıp en alta kadar kaydırarak onaylayın.</span>
-              </div>
               <div class="kyradi-reserve__consents-grid">
                 <div class="kyradi-reserve__consent-card" data-contract="kvkk">
                   <div class="kyradi-reserve__consent-header">
@@ -632,11 +629,6 @@
           submitBtn.disabled = !allAccepted;
           submitBtn.style.opacity = allAccepted ? '1' : '0.5';
           submitBtn.style.cursor = allAccepted ? 'pointer' : 'not-allowed';
-        }
-        // Update hint visibility
-        const hint = this.querySelector('.kyradi-reserve__consents-hint');
-        if (hint) {
-          hint.style.display = allAccepted ? 'none' : 'flex';
         }
       };
       
