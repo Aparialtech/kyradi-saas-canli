@@ -25,6 +25,7 @@ import { getErrorMessage } from "../../../lib/httpError";
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
+import { GoogleMapPicker } from "../../../components/maps/GoogleMapPicker";
 
 // Time slot schema for multiple time ranges per day
 const timeSlotSchema = z.object({
@@ -319,30 +320,22 @@ export function LocationEditPage() {
                 description="Haritadan lokasyon seçin"
               />
               <CardBody>
-                <div 
-                  style={{ 
-                    width: '100%', 
-                    height: '300px', 
-                    background: 'var(--bg-tertiary)',
-                    borderRadius: 'var(--radius-lg)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px dashed var(--border-primary)',
-                    flexDirection: 'column',
-                    gap: 'var(--space-2)'
+                <GoogleMapPicker
+                  initialLat={mapCoords?.lat}
+                  initialLng={mapCoords?.lng}
+                  onLocationSelect={(location) => {
+                    setMapCoords({ lat: location.lat, lng: location.lng });
+                    if (location.address) {
+                      setValue('address', location.address);
+                    }
+                    if (location.city) {
+                      setValue('city', location.city);
+                    }
+                    if (location.district) {
+                      setValue('district', location.district);
+                    }
                   }}
-                >
-                  <MapPin className="h-12 w-12" style={{ color: 'var(--text-tertiary)' }} />
-                  <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', maxWidth: '200px' }}>
-                    Google Maps entegrasyonu için API key gerekli
-                  </p>
-                  {mapCoords && (
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-                      Koordinatlar: {mapCoords.lat.toFixed(4)}, {mapCoords.lng.toFixed(4)}
-                    </p>
-                  )}
-                </div>
+                />
                 <p style={{ 
                   marginTop: 'var(--space-3)', 
                   fontSize: 'var(--text-sm)', 
