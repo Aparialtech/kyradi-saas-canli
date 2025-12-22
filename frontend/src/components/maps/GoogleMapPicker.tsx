@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from '@react-google-maps/api';
 import { Loader2, MapPin, Search, AlertTriangle, Edit } from '../../lib/lucide';
 
@@ -254,11 +254,28 @@ export function GoogleMapPicker({
 }: GoogleMapPickerProps) {
   const mapApiKey = apiKey || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const [useManualEntry, setUseManualEntry] = useState(false);
+  const [runtimeError, setRuntimeError] = useState(false);
   
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: mapApiKey,
     libraries,
   });
+
+  // Listen for Google Maps API errors (like BillingNotEnabledMapError)
+  useEffect(() => {
+    const handleGoogleMapsError = (event: ErrorEvent) => {
+      if (event.message?.includes('Google Maps') || 
+          event.message?.includes('BillingNotEnabled') ||
+          event.message?.includes('ApiNotActivated') ||
+          event.message?.includes('InvalidKeyMapError')) {
+        console.warn('Google Maps API error detected, switching to manual entry');
+        setRuntimeError(true);
+      }
+    };
+
+    window.addEventListener('error', handleGoogleMapsError);
+    return () => window.removeEventListener('error', handleGoogleMapsError);
+  }, []);
 
   const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null
@@ -397,10 +414,11 @@ export function GoogleMapPicker({
   }
 
   // Load error - show manual entry with option
-  if (loadError) {
+  // Load error or runtime error (like billing issues)
+  if (loadError || runtimeError) {
     return (
       <div>
-        <ManualCoordinateInput 
+        <ManualCoordinateInput
           onLocationSelect={onLocationSelect}
           initialLat={initialLat}
           initialLng={initialLng}
@@ -512,6 +530,9 @@ export function GoogleMapPicker({
         zoom={marker ? 16 : 12}
         onClick={onMapClick}
         onLoad={onMapLoad}
+        onUnmount={() => {
+          mapRef.current = null;
+        }}
         options={{
           streetViewControl: false,
           mapTypeControl: false,
