@@ -1,27 +1,39 @@
-/* Kyradi Reserve Widget */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Kyradi Reserve Widget - Professional SaaS Design */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-* { box-sizing: border-box; }
-
-.kyradi-reserve {
-  font-family: 'Inter', -apple-system, sans-serif;
-  width: 100%;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* Header */
+/* ═══════════════════════════════════════════════════════════════
+   MAIN CONTAINER - Premium wide layout
+   ═══════════════════════════════════════════════════════════════ */
+.kyradi-reserve {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 10px 40px rgba(0,0,0,0.08);
+  overflow: visible;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER - Clean professional header
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__title {
-  margin: 0;
-  padding: 20px 24px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #1e293b;
-  background: #f8fafc;
+  padding: 24px 32px;
+  font-size: clamp(20px, 2.5vw, 26px);
+  font-weight: 800;
+  color: #0f172a;
+  background: linear-gradient(to bottom, #ffffff, #f8fafc);
   border-bottom: 1px solid #e2e8f0;
   border-radius: 16px 16px 0 0;
   position: relative;
+  letter-spacing: -0.02em;
 }
 
 .kyradi-reserve__title::before {
@@ -30,228 +42,309 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
   border-radius: 16px 16px 0 0;
 }
 
-/* Form */
+/* ═══════════════════════════════════════════════════════════════
+   FORM CONTAINER
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__form {
-  padding: 24px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
-/* Fieldset */
+/* ═══════════════════════════════════════════════════════════════
+   FIELDSET - Section cards
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__fieldset {
   border: none;
   padding: 0;
-  margin: 0 0 24px 0;
+  margin: 0;
+  width: 100%;
+  min-width: 0;
 }
 
-.kyradi-reserve__fieldset:last-of-type {
-  margin-bottom: 0;
-}
-
-/* Legend */
+/* ═══════════════════════════════════════════════════════════════
+   LEGEND - Section titles
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__legend {
-  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
   font-weight: 700;
-  color: #64748b;
+  color: #334155;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 16px;
-  padding-left: 12px;
-  border-left: 3px solid #3b82f6;
+  letter-spacing: 0.05em;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+  width: 100%;
 }
 
-/* Grid - 3 columns */
+.kyradi-reserve__legend::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GRID - 3 column responsive grid
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
 }
 
-/* Labels */
+.kyradi-reserve__grid--full {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.kyradi-reserve__grid--full > label {
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LABELS
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__form label {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
 }
 
 .kyradi-reserve__form label > span:first-child {
-  display: block;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #475569;
-  margin-bottom: 6px;
+  line-height: 1.4;
 }
 
 .kyradi-reserve__required {
   color: #ef4444;
+  font-weight: 600;
 }
 
-/* Inputs */
+/* ═══════════════════════════════════════════════════════════════
+   INPUTS - Clean modern inputs
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__form input,
 .kyradi-reserve__form select,
 .kyradi-reserve__form textarea {
   width: 100%;
-  padding: 10px 12px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
   font-size: 14px;
   font-family: inherit;
   color: #1e293b;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 10px;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: all 0.2s ease;
+}
+
+.kyradi-reserve__form input:hover,
+.kyradi-reserve__form select:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
 }
 
 .kyradi-reserve__form input:focus,
 .kyradi-reserve__form select:focus,
 .kyradi-reserve__form textarea:focus {
   border-color: #3b82f6;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.kyradi-reserve__form input::placeholder {
+  color: #94a3b8;
 }
 
 .kyradi-reserve__form select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='%2394a3b8' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 10px center;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+  background-position: right 12px center;
   background-repeat: no-repeat;
-  background-size: 16px;
-  padding-right: 36px;
+  background-size: 18px;
+  padding-right: 44px;
   cursor: pointer;
 }
 
 .kyradi-reserve__form textarea {
+  height: auto;
+  min-height: 100px;
+  padding: 14px;
   resize: vertical;
-  min-height: 70px;
+  line-height: 1.5;
 }
 
-/* Readonly */
+/* Readonly price field */
 .kyradi-reserve__readonly {
-  background: #ecfdf5 !important;
-  border-color: #86efac !important;
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5) !important;
+  border-color: #6ee7b7 !important;
   color: #047857 !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
 }
 
-/* Full width row */
-.kyradi-reserve__grid--full {
-  margin-top: 16px;
-}
-
-.kyradi-reserve__grid--full label {
-  grid-column: 1 / -1;
-}
-
-/* Consents Section */
+/* ═══════════════════════════════════════════════════════════════
+   CONSENTS SECTION - Full width, proper text wrap
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__fieldset--consents {
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 20px;
-  margin-top: 8px;
+  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  min-width: 0;
 }
 
 .kyradi-reserve__consents-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
 }
 
-/* Consent Row */
+/* Consent checkbox row */
 .kyradi-reserve__consent {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: flex-start !important;
-  gap: 12px;
-  padding: 14px 16px;
-  background: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  background: #ffffff;
   border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: all 0.2s ease;
+  width: 100%;
+  min-width: 0;
 }
 
 .kyradi-reserve__consent:hover {
   border-color: #3b82f6;
+  background: #f0f9ff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
 .kyradi-reserve__consent input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  margin: 2px 0 0 0;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  flex-shrink: 0;
+  margin: 0;
   padding: 0;
   accent-color: #3b82f6;
   cursor: pointer;
-  flex-shrink: 0;
 }
 
 .kyradi-reserve__consent > span {
-  font-size: 13px;
-  line-height: 1.5;
-  color: #334155;
   flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #334155;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .kyradi-reserve__contract-link {
   color: #3b82f6;
   font-weight: 600;
   text-decoration: none;
-  margin-left: 4px;
+  white-space: nowrap;
 }
 
 .kyradi-reserve__contract-link:hover {
   text-decoration: underline;
 }
 
-/* Button */
+/* ═══════════════════════════════════════════════════════════════
+   SUBMIT BUTTON
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__button {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  padding: 14px 24px;
-  margin-top: 20px;
-  font-size: 15px;
+  height: 52px;
+  padding: 0 32px;
+  font-size: 16px;
   font-weight: 700;
   font-family: inherit;
-  color: #fff;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  margin-top: 8px;
 }
 
 .kyradi-reserve__button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+}
+
+.kyradi-reserve__button:active {
+  transform: translateY(0);
 }
 
 .kyradi-reserve__button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
-/* Error */
+/* ═══════════════════════════════════════════════════════════════
+   ERROR MESSAGE
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__error {
-  padding: 12px 16px;
+  padding: 14px 18px;
   margin-top: 16px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #dc2626;
   background: #fef2f2;
   border: 1px solid #fecaca;
-  border-radius: 8px;
+  border-radius: 10px;
+  line-height: 1.5;
 }
 
 .kyradi-reserve__error:empty {
   display: none;
 }
 
-/* Status */
+/* ═══════════════════════════════════════════════════════════════
+   SUCCESS STATE
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__status {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: #059669;
   margin: 0;
@@ -259,51 +352,67 @@
 
 .kyradi-reserve__muted {
   color: #64748b;
-  font-size: 14px;
-  margin-top: 4px;
+  font-size: 15px;
+  margin-top: 8px;
 }
 
-/* Modal */
+/* ═══════════════════════════════════════════════════════════════
+   MODAL
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
   z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 24px;
 }
 
 .kyradi-reserve__modal > div {
   width: 100%;
-  max-width: 500px;
-  max-height: 80vh;
-  background: #fff;
-  border-radius: 12px;
+  max-width: 560px;
+  max-height: 85vh;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .kyradi-reserve__modal h3 {
-  margin: 0;
-  padding: 16px 20px;
-  font-size: 16px;
+  padding: 20px 24px;
+  font-size: 18px;
   font-weight: 700;
+  color: #0f172a;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
 }
 
-/* Dark Theme */
+/* ═══════════════════════════════════════════════════════════════
+   DARK THEME
+   ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve--dark {
   background: #0f172a;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
 }
 
 .kyradi-reserve--dark .kyradi-reserve__title {
-  background: #1e293b;
+  background: linear-gradient(to bottom, #1e293b, #0f172a);
   border-color: #334155;
   color: #f1f5f9;
+}
+
+.kyradi-reserve--dark .kyradi-reserve__legend {
+  color: #94a3b8;
+  border-color: #334155;
+}
+
+.kyradi-reserve--dark .kyradi-reserve__form label > span:first-child {
+  color: #94a3b8;
 }
 
 .kyradi-reserve--dark .kyradi-reserve__form input,
@@ -314,8 +423,16 @@
   color: #f1f5f9;
 }
 
+.kyradi-reserve--dark .kyradi-reserve__form input:focus,
+.kyradi-reserve--dark .kyradi-reserve__form select:focus,
+.kyradi-reserve--dark .kyradi-reserve__form textarea:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.15);
+}
+
 .kyradi-reserve--dark .kyradi-reserve__fieldset--consents {
-  background: #1e293b;
+  background: linear-gradient(to bottom, #1e293b, #0f172a);
+  border-color: #334155;
 }
 
 .kyradi-reserve--dark .kyradi-reserve__consent {
@@ -323,33 +440,92 @@
   border-color: #334155;
 }
 
-/* Responsive - Tablet */
-@media (max-width: 768px) {
+.kyradi-reserve--dark .kyradi-reserve__consent:hover {
+  border-color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+}
+
+.kyradi-reserve--dark .kyradi-reserve__consent > span {
+  color: #cbd5e1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE - TABLET (768px)
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .kyradi-reserve {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  
+  .kyradi-reserve__title {
+    padding: 20px 24px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .kyradi-reserve__title::before {
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .kyradi-reserve__form {
+    padding: 24px;
+    gap: 28px;
+  }
+  
   .kyradi-reserve__grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 }
 
-/* Responsive - Mobile */
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE - MOBILE (520px)
+   ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 520px) {
+  .kyradi-reserve {
+    border-radius: 0;
+    box-shadow: none;
+  }
+  
   .kyradi-reserve__title {
-    padding: 16px 20px;
+    padding: 18px 20px;
     font-size: 18px;
+    border-radius: 0;
+  }
+  
+  .kyradi-reserve__title::before {
+    border-radius: 0;
   }
   
   .kyradi-reserve__form {
     padding: 20px;
+    gap: 24px;
   }
   
   .kyradi-reserve__grid {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  
+  .kyradi-reserve__legend {
+    font-size: 12px;
+    margin-bottom: 16px;
   }
   
   .kyradi-reserve__fieldset--consents {
-    padding: 16px;
+    padding: 18px;
   }
   
   .kyradi-reserve__consent {
-    padding: 12px;
+    padding: 14px;
+  }
+  
+  .kyradi-reserve__consent > span {
+    font-size: 13px;
+  }
+  
+  .kyradi-reserve__button {
+    height: 48px;
+    font-size: 15px;
   }
 }
