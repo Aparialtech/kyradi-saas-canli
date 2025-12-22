@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Users, Package, MapPin, Loader2, AlertCircle, UserPlus, Edit, Trash2, Eye, Download, X } from "../../../lib/lucide";
 import { staffService, type Staff, type StaffPayload } from "../../../services/partner/staff";
 import { ToastContainer } from "../../../components/common/ToastContainer";
+import { useConfirm } from "../../../components/common/ConfirmDialog";
 import { SearchInput } from "../../../components/common/SearchInput";
 import { StaffDetailModal } from "../../../components/staff/StaffDetailModal";
 import { useToast } from "../../../hooks/useToast";
@@ -43,6 +44,7 @@ export function StaffPage() {
   const { messages, push } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -651,8 +653,15 @@ export function StaffPage() {
                     <ModernButton
                       variant="danger"
                       size="sm"
-                      onClick={() => {
-                        if (confirm(t("common.confirmDelete") || "Bu kaydı silmek istediğinize emin misiniz?")) {
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Personel Kaydı Silme',
+                          message: 'Bu personel kaydını silmek istediğinize emin misiniz?',
+                          confirmText: 'Sil',
+                          cancelText: 'İptal',
+                          variant: 'danger',
+                        });
+                        if (confirmed) {
                           deleteMutation.mutate(row.id);
                         }
                       }}

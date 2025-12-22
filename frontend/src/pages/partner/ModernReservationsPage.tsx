@@ -8,6 +8,7 @@ import { ModernInput } from '../../components/ui/ModernInput';
 import { ModernModal } from '../../components/ui/ModernModal';
 import { reservationService, type Reservation } from '../../services/partner/reservations';
 import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../components/common/ConfirmDialog';
 import { useTranslation } from '../../hooks/useTranslation';
 import { getErrorMessage } from '../../lib/httpError';
 import { Eye, CheckCircle2, XOctagon, Search } from '../../lib/lucide';
@@ -17,6 +18,7 @@ export const ModernReservationsPage: React.FC = () => {
   const { push } = useToast();
   const { locale } = useTranslation();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
@@ -144,8 +146,15 @@ export const ModernReservationsPage: React.FC = () => {
             variant="primary"
             size="sm"
             disabled={row.status === 'completed' || row.status === 'cancelled'}
-            onClick={() => {
-              if (confirm('Teslim edildi olarak işaretle?')) {
+            onClick={async () => {
+              const confirmed = await confirm({
+                title: 'Teslim Onayı',
+                message: 'Bu rezervasyonu teslim edildi olarak işaretlemek istediğinize emin misiniz?',
+                confirmText: 'Teslim Edildi',
+                cancelText: 'İptal',
+                variant: 'success',
+              });
+              if (confirmed) {
                 completeMutation.mutate(row.id);
               }
             }}
@@ -157,8 +166,15 @@ export const ModernReservationsPage: React.FC = () => {
             variant="danger"
             size="sm"
             disabled={row.status === 'completed' || row.status === 'cancelled'}
-            onClick={() => {
-              if (confirm('İptal etmek istediğinize emin misiniz?')) {
+            onClick={async () => {
+              const confirmed = await confirm({
+                title: 'Rezervasyon İptali',
+                message: 'Bu rezervasyonu iptal etmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+                confirmText: 'İptal Et',
+                cancelText: 'Vazgeç',
+                variant: 'danger',
+              });
+              if (confirmed) {
                 cancelMutation.mutate(row.id);
               }
             }}

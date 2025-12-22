@@ -8,6 +8,7 @@ import { http } from "../../../lib/http";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
+import { useConfirm } from "../../../components/common/ConfirmDialog";
 import { getErrorMessage } from "../../../lib/httpError";
 import type { UserRole } from "../../../types/auth";
 import { ModernCard } from "../../../components/ui/ModernCard";
@@ -43,6 +44,7 @@ export function AdminUsersPage() {
   const { t } = useTranslation();
   const { messages, push } = useToast();
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [isActiveFilter, setIsActiveFilter] = useState<string>("");
@@ -230,8 +232,15 @@ export function AdminUsersPage() {
     });
   };
 
-  const handleDelete = (user: User) => {
-    if (window.confirm(`${user.email} kullanıcısını devre dışı bırakmak istediğinizden emin misiniz?`)) {
+  const handleDelete = async (user: User) => {
+    const confirmed = await confirmDialog({
+      title: 'Kullanıcı Devre Dışı Bırakma',
+      message: `${user.email} kullanıcısını devre dışı bırakmak istediğinize emin misiniz?`,
+      confirmText: 'Devre Dışı Bırak',
+      cancelText: 'İptal',
+      variant: 'danger',
+    });
+    if (confirmed) {
       deleteUserMutation.mutate(user.id);
     }
   };

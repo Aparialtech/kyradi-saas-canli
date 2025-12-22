@@ -6,6 +6,7 @@ import { magicpayService } from "../../services/partner/magicpay";
 import { paymentService } from "../../services/partner/payments";
 import { http } from "../../lib/http";
 import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../components/common/ConfirmDialog";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
 
@@ -31,6 +32,7 @@ interface Reservation {
 
 export function DemoPaymentFlowPage() {
   const { messages, push } = useToast();
+  const confirmDialog = useConfirm();
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
 
   // Get reservations list
@@ -102,7 +104,7 @@ export function DemoPaymentFlowPage() {
     return (minor / 100).toFixed(2) + (currency === "TRY" ? " ₺" : ` ${currency}`);
   };
 
-  const handlePosPayment = () => {
+  const handlePosPayment = async () => {
     if (!selectedReservationId || !reservationQuery.data?.payment) {
       push({
         title: "Hata",
@@ -131,7 +133,14 @@ export function DemoPaymentFlowPage() {
       return;
     }
 
-    if (confirm("POS ödemesini onaylamak istediğinize emin misiniz?")) {
+    const confirmed = await confirmDialog({
+      title: 'POS Ödeme Onayı',
+      message: 'POS ödemesini onaylamak istediğinize emin misiniz?',
+      confirmText: 'Onayla',
+      cancelText: 'İptal',
+      variant: 'success',
+    });
+    if (confirmed) {
       confirmPosMutation.mutate(payment.id);
     }
   };
@@ -169,7 +178,7 @@ export function DemoPaymentFlowPage() {
     magicpayCompleteMutation.mutate({ sessionId, result: "success" });
   };
 
-  const handleMagicPayFail = () => {
+  const handleMagicPayFail = async () => {
     if (!selectedReservationId || !reservationQuery.data?.payment) {
       push({
         title: "Hata",
@@ -199,7 +208,14 @@ export function DemoPaymentFlowPage() {
       return;
     }
 
-    if (confirm("MagicPay ödemesini iptal etmek istediğinize emin misiniz?")) {
+    const confirmed = await confirmDialog({
+      title: 'MagicPay İptal',
+      message: 'MagicPay ödemesini iptal etmek istediğinize emin misiniz?',
+      confirmText: 'İptal Et',
+      cancelText: 'Vazgeç',
+      variant: 'danger',
+    });
+    if (confirmed) {
       magicpayCompleteMutation.mutate({ sessionId, result: "failed" });
     }
   };

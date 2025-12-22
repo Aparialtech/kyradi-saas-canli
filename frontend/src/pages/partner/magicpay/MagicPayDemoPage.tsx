@@ -4,12 +4,14 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 
 import { magicpayService } from "../../../services/partner/magicpay";
 import { useToast } from "../../../hooks/useToast";
+import { useConfirm } from "../../../components/common/ConfirmDialog";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
 
 export function MagicPayDemoPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { messages, push } = useToast();
+  const confirmDialog = useConfirm();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const paymentInfoQuery = useQuery({
@@ -61,9 +63,16 @@ export function MagicPayDemoPage() {
     completeMutation.mutate("success");
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (isProcessing) return;
-    if (confirm("Ödemeyi iptal etmek istediğinize emin misiniz?")) {
+    const confirmed = await confirmDialog({
+      title: 'Ödeme İptali',
+      message: 'Ödemeyi iptal etmek istediğinize emin misiniz?',
+      confirmText: 'İptal Et',
+      cancelText: 'Vazgeç',
+      variant: 'danger',
+    });
+    if (confirmed) {
       setIsProcessing(true);
       completeMutation.mutate("failed");
     }

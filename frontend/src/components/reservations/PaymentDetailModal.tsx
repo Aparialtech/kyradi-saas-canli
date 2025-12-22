@@ -5,6 +5,7 @@ import { CheckCircle2 } from "../../lib/lucide";
 
 import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../services/partner/reservations";
 import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../common/ConfirmDialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { getErrorMessage } from "../../lib/httpError";
 
@@ -29,6 +30,7 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
   const { t, locale } = useTranslation();
   const { push } = useToast();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
 
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
@@ -84,8 +86,15 @@ export const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
   const storageCode = reservation.storage_code || "—";
   const guestName = reservation.full_name || reservation.customer_name || reservation.guest_name || t("reservations.guestUnknown");
 
-  const handleRefund = () => {
-    if (window.confirm(t("payment.modal.refundConfirm"))) {
+  const handleRefund = async () => {
+    const confirmed = await confirm({
+      title: 'İade Onayı',
+      message: t("payment.modal.refundConfirm") || 'Bu ödemeyi iade etmek istediğinize emin misiniz?',
+      confirmText: 'İade Et',
+      cancelText: 'İptal',
+      variant: 'warning',
+    });
+    if (confirmed) {
       refundMutation.mutate();
     }
   };

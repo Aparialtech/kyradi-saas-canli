@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { AlertCircle, Package, MapPin, DollarSign, Plus, Edit, Trash2, Loader2, Search } from "../../../lib/lucide";
 import { pricingService, type PricingRule, type PricingScope } from "../../../services/partner/pricing";
 import { ToastContainer } from "../../../components/common/ToastContainer";
+import { useConfirm } from "../../../components/common/ConfirmDialog";
 import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
@@ -59,6 +60,7 @@ export function PricingPage() {
   const { messages, push } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [searchQuery, setSearchQuery] = useState("");
   const [scopeFilter, setScopeFilter] = useState<PricingScope | "">("");
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
@@ -362,8 +364,15 @@ export function PricingPage() {
                     <ModernButton
                       variant="danger"
                       size="sm"
-                      onClick={() => {
-                        if (confirm(t("pricing.confirmDelete"))) {
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Fiyatlandırma Kuralı Silme',
+                          message: 'Bu fiyatlandırma kuralını silmek istediğinize emin misiniz?',
+                          confirmText: 'Sil',
+                          cancelText: 'İptal',
+                          variant: 'danger',
+                        });
+                        if (confirmed) {
                           deleteMutation.mutate(row.id);
                         }
                       }}
