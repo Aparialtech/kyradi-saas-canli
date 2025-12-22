@@ -1035,11 +1035,12 @@ function StorageSelectionModal({
                       padding: "0.25rem 0.75rem",
                       borderRadius: "4px",
                       fontSize: "0.75rem",
-                      backgroundColor: storage.status === "idle" ? "#dcfce7" : "#fef3c7",
-                      color: storage.status === "idle" ? "#166534" : "#92400e",
+                      fontWeight: 500,
+                      backgroundColor: storage.status === "idle" ? "#dcfce7" : storage.status === "occupied" ? "#fee2e2" : "#fef3c7",
+                      color: storage.status === "idle" ? "#166534" : storage.status === "occupied" ? "#dc2626" : "#92400e",
                     }}
                   >
-                    {storage.status === "idle" ? "Boş" : "Müsait"}
+                    {storage.status === "idle" ? "Boş" : storage.status === "occupied" ? "Dolu" : storage.status}
                   </div>
                 </div>
               </div>
