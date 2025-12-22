@@ -52,8 +52,11 @@ import {
   BadgePercent,
   Settings2,
   MessageSquare,
+  DollarSign,
+  Send,
 } from "../../lib/lucide";
 import { ticketService } from "../../services/partner/tickets";
+import { paymentScheduleService } from "../../services/partner/paymentSchedules";
 
 const warningActions: Record<
   string,
@@ -133,6 +136,12 @@ export function PartnerOverview() {
       return response.by_payment_method ?? [];
     },
     staleTime: 5 * 60 * 1000,
+  });
+
+  // Commission summary query
+  const commissionQuery = useQuery({
+    queryKey: ["commission-summary"],
+    queryFn: () => paymentScheduleService.getCommissionSummary(),
   });
 
   useEffect(() => {
@@ -269,6 +278,22 @@ export function PartnerOverview() {
         hint: storageLimit,
         icon: <HardDrive className="h-[22px] w-[22px]" />,
       },
+      {
+        label: "Kalan Komisyon Borcu",
+        value: commissionQuery.isPending
+          ? "..."
+          : currencyFormatter.format(commissionQuery.data?.available_commission ?? 0),
+        hint: "Kyradi'ye ödenmesi gereken komisyon",
+        icon: <DollarSign className="h-[22px] w-[22px]" />,
+      },
+      {
+        label: "Gönderilen Komisyon",
+        value: commissionQuery.isPending
+          ? "..."
+          : currencyFormatter.format(commissionQuery.data?.transferred_commission ?? 0),
+        hint: "Toplam ödenen komisyon tutarı",
+        icon: <Send className="h-[22px] w-[22px]" />,
+      },
     ];
   }, [
     summaryQuery.isPending,
@@ -279,6 +304,8 @@ export function PartnerOverview() {
     locale,
     currencyFormatter,
     t,
+    commissionQuery.isPending,
+    commissionQuery.data,
   ]);
 
   return (

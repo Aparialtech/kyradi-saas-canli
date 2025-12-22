@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Building2, Users, Package, DollarSign, HardDrive, Mail, MessageSquare, CreditCard, Loader2, AlertCircle, CheckCircle2, XCircle } from "../../../lib/lucide";
+import { Building2, Users, Package, DollarSign, HardDrive, Mail, MessageSquare, CreditCard, Loader2, AlertCircle, CheckCircle2, XCircle, Clock, Send } from "../../../lib/lucide";
 
 import { adminReportService, type AdminSummaryResponse } from "../../../services/admin/reports";
+import { paymentScheduleService } from "../../../services/partner/paymentSchedules";
 import { adminTenantService } from "../../../services/admin/tenants";
 import type { Tenant } from "../../../services/admin/tenants";
 import { useToast } from "../../../hooks/useToast";
@@ -20,6 +21,21 @@ export function AdminReportsOverview() {
     queryFn: () => adminReportService.summary(),
   });
   const tenantsQuery = useQuery({ queryKey: ["admin", "tenants"], queryFn: adminTenantService.list });
+  
+  // Commission transfers query
+  const transfersQuery = useQuery({
+    queryKey: ["admin-payment-transfers-summary"],
+    queryFn: () => paymentScheduleService.adminListAllTransfers({ page: 1, pageSize: 100 }),
+  });
+
+  // Calculate commission stats
+  const commissionStats = useMemo(() => {
+    const transfers = transfersQuery.data?.data || [];
+    const pendingCount = transfers.filter((t) => t?.status === "pending").length;
+    const pendingAmount = transfers.filter((t) => t?.status === "pending").reduce((sum, t) => sum + (t?.gross_amount || 0), 0);
+    const completedAmount = transfers.filter((t) => t?.status === "completed").reduce((sum, t) => sum + (t?.gross_amount || 0), 0);
+    return { pendingCount, pendingAmount, completedAmount };
+  }, [transfersQuery.data?.data]);
 
   const tenantsById = useMemo(() => {
     const map = new Map<string, Tenant>();
@@ -169,6 +185,53 @@ export function AdminReportsOverview() {
               </p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
                 {t("common.storages")} - {t("common.allHotels" as any)}
+              </p>
+            </div>
+          </ModernCard>
+        </motion.div>
+
+        {/* Commission Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <ModernCard variant="glass" padding="lg" hoverable>
+            <div style={{ padding: 'var(--space-4)', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', margin: 0 }}>
+                  Onay Bekleyen Komisyon
+                </p>
+                <Clock className="h-5 w-5" style={{ color: '#d97706' }} />
+              </div>
+              <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#d97706', margin: '0 0 var(--space-1) 0' }}>
+                {transfersQuery.isLoading ? "..." : `${commissionStats.pendingCount} adet`}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Tutar: {formatCurrency(commissionStats.pendingAmount * 100)}
+              </p>
+            </div>
+          </ModernCard>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <ModernCard variant="glass" padding="lg" hoverable>
+            <div style={{ padding: 'var(--space-4)', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', margin: 0 }}>
+                  Alınan Komisyon
+                </p>
+                <Send className="h-5 w-5" style={{ color: '#059669' }} />
+              </div>
+              <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#059669', margin: '0 0 var(--space-1) 0' }}>
+                {transfersQuery.isLoading ? "..." : formatCurrency(commissionStats.completedAmount * 100)}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Onaylanan komisyon ödemeleri
               </p>
             </div>
           </ModernCard>
