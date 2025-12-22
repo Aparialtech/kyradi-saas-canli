@@ -7,11 +7,11 @@
 
 .kyradi-reserve {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  max-width: 800px;
   width: 100%;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
   background: #fff;
-  border-radius: 20px;
+  border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
   overflow: hidden;
 }
@@ -40,10 +40,12 @@
 
 /* Form Container */
 .kyradi-reserve__form {
-  padding: 24px 28px;
+  padding: 24px 28px 28px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Fieldsets - Horizontal Sections */
@@ -77,7 +79,12 @@
 .kyradi-reserve__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 16px;
+  width: 100%;
+}
+
+.kyradi-reserve__grid--full {
+  width: 100%;
 }
 
 .kyradi-reserve__grid--full label {
@@ -168,29 +175,38 @@
   margin-top: 2px;
 }
 
-/* Consent Section - Horizontal Compact */
+/* Consent Section */
 .kyradi-reserve__fieldset--consents {
   background: #f8fafc;
   border-radius: 12px;
-  padding: 16px;
+  padding: 20px;
   margin-top: 4px;
 }
 
 .kyradi-reserve__fieldset--consents .kyradi-reserve__legend {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.kyradi-reserve__consents-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
 }
 
 .kyradi-reserve__consent {
   flex-direction: row !important;
   align-items: center !important;
-  gap: 10px !important;
-  padding: 10px 14px !important;
+  gap: 12px !important;
+  padding: 12px 16px !important;
   margin-bottom: 8px;
   background: #fff;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .kyradi-reserve__consent:last-child {
@@ -203,9 +219,9 @@
 }
 
 .kyradi-reserve__consent input[type="checkbox"] {
-  width: 18px !important;
-  height: 18px !important;
-  min-width: 18px !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
   margin: 0 !important;
   padding: 0 !important;
   accent-color: #3b82f6;
@@ -214,17 +230,19 @@
 }
 
 .kyradi-reserve__consent span {
-  font-size: 12px !important;
-  line-height: 1.4 !important;
-  color: #475569 !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #334155 !important;
   flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .kyradi-reserve__contract-link {
   color: #3b82f6 !important;
   font-weight: 600 !important;
   text-decoration: none !important;
-  white-space: nowrap;
 }
 
 .kyradi-reserve__contract-link:hover {
