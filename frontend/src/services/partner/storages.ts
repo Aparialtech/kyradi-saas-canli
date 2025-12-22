@@ -17,6 +17,20 @@ export interface StoragePayload {
   status: StorageStatus;
 }
 
+export interface StorageCalendarDay {
+  date: string;
+  status: "free" | "occupied";
+  reservation_ids: string[];
+}
+
+export interface StorageCalendarResponse {
+  storage_id: string;
+  storage_code: string;
+  start_date: string;
+  end_date: string;
+  days: StorageCalendarDay[];
+}
+
 export const storageService = {
   async list(status?: StorageStatus): Promise<Storage[]> {
     const response = await http.get<Storage[]>("/storages", { params: status ? { status } : undefined });
@@ -36,6 +50,12 @@ export const storageService = {
   },
   async remove(id: string): Promise<void> {
     await http.delete(`/storages/${id}`);
+  },
+  async getCalendar(id: string, startDate: string, endDate: string): Promise<StorageCalendarResponse> {
+    const response = await http.get<StorageCalendarResponse>(`/storages/${id}/calendar`, {
+      params: { start_date: startDate, end_date: endDate },
+    });
+    return response.data;
   },
 };
 

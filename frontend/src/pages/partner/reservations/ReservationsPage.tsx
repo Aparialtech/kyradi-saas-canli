@@ -26,7 +26,7 @@ export function ReservationsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterFrom, setFilterFrom] = useState<string>("");
   const [filterTo, setFilterTo] = useState<string>("");
-  const [filterOrigin, setFilterOrigin] = useState<string>("");
+  const [filterOrigin, setFilterOrigin] = useState<string>("widget");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -268,7 +268,6 @@ export function ReservationsPage() {
               color: 'var(--text-primary)',
             }}
           >
-            <option value="">Tüm Kaynaklar</option>
             <option value="widget">Widget</option>
             <option value="panel">Panel</option>
             <option value="api">API</option>

@@ -3,9 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, HardDrive, MapPin, Search, Save, Loader2 } from "../../../lib/lucide";
+import { ArrowLeft, HardDrive, MapPin, Search, Save, Loader2, Calendar, CheckCircle, XCircle } from "../../../lib/lucide";
 
-import { storageService, type StoragePayload } from "../../../services/partner/storages";
+import { storageService, type StoragePayload, type StorageCalendarDay } from "../../../services/partner/storages";
 import { locationService } from "../../../services/partner/locations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -26,10 +26,28 @@ export function StorageEditPage() {
   const [locationSearchTerm, setLocationSearchTerm] = useState("");
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 
+  // Calendar date range (next 14 days)
+  const calendarRange = useMemo(() => {
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + 13);
+    return {
+      start: today.toISOString().split("T")[0],
+      end: endDate.toISOString().split("T")[0],
+    };
+  }, []);
+
   // Fetch existing storage if editing
   const storageQuery = useQuery({
     queryKey: ["storage", id],
     queryFn: () => storageService.get(id!),
+    enabled: !isNew && !!id,
+  });
+
+  // Fetch storage calendar (availability)
+  const calendarQuery = useQuery({
+    queryKey: ["storage-calendar", id, calendarRange.start, calendarRange.end],
+    queryFn: () => storageService.getCalendar(id!, calendarRange.start, calendarRange.end),
     enabled: !isNew && !!id,
   });
 
@@ -190,6 +208,119 @@ export function StorageEditPage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Availability Calendar - Show only when editing */}
+      {!isNew && calendarQuery.data && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          style={{ marginBottom: "var(--space-6)" }}
+        >
+          <ModernCard variant="elevated" padding="lg">
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+                <Calendar className="h-5 w-5" style={{ color: "var(--primary)" }} />
+                <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)", margin: 0 }}>
+                  Müsaitlik Takvimi
+                </h3>
+              </div>
+              <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
+                Önümüzdeki 14 günlük müsaitlik durumu
+              </p>
+            </div>
+            
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(7, 1fr)", 
+              gap: "var(--space-2)",
+            }}>
+              {/* Week day headers */}
+              {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map((day) => (
+                <div key={day} style={{ 
+                  textAlign: "center", 
+                  fontSize: "var(--text-xs)", 
+                  fontWeight: "var(--font-semibold)", 
+                  color: "var(--text-tertiary)",
+                  padding: "var(--space-1) 0",
+                }}>
+                  {day}
+                </div>
+              ))}
+              
+              {/* Calendar days */}
+              {calendarQuery.data.days.map((day: StorageCalendarDay) => {
+                const date = new Date(day.date);
+                const dayNum = date.getDate();
+                const isOccupied = day.status === "occupied";
+                
+                return (
+                  <div
+                    key={day.date}
+                    title={isOccupied ? `${day.reservation_ids.length} rezervasyon` : "Müsait"}
+                    style={{
+                      aspectRatio: "1",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "var(--radius-md)",
+                      background: isOccupied 
+                        ? "linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%)"
+                        : "linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.08) 100%)",
+                      border: `1px solid ${isOccupied ? "rgba(239, 68, 68, 0.3)" : "rgba(34, 197, 94, 0.3)"}`,
+                      cursor: "default",
+                    }}
+                  >
+                    <span style={{ 
+                      fontSize: "var(--text-sm)", 
+                      fontWeight: "var(--font-semibold)",
+                      color: isOccupied ? "#dc2626" : "#16a34a",
+                    }}>
+                      {dayNum}
+                    </span>
+                    {isOccupied ? (
+                      <XCircle className="h-3 w-3" style={{ color: "#dc2626", marginTop: "2px" }} />
+                    ) : (
+                      <CheckCircle className="h-3 w-3" style={{ color: "#16a34a", marginTop: "2px" }} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Legend */}
+            <div style={{ 
+              display: "flex", 
+              gap: "var(--space-6)", 
+              marginTop: "var(--space-4)",
+              paddingTop: "var(--space-4)",
+              borderTop: "1px solid var(--border-secondary)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <div style={{ 
+                  width: "12px", 
+                  height: "12px", 
+                  borderRadius: "var(--radius-sm)", 
+                  background: "rgba(34, 197, 94, 0.3)",
+                  border: "1px solid rgba(34, 197, 94, 0.5)",
+                }} />
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>Müsait</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <div style={{ 
+                  width: "12px", 
+                  height: "12px", 
+                  borderRadius: "var(--radius-sm)", 
+                  background: "rgba(239, 68, 68, 0.3)",
+                  border: "1px solid rgba(239, 68, 68, 0.5)",
+                }} />
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>Dolu</span>
+              </div>
+            </div>
+          </ModernCard>
+        </motion.div>
+      )}
 
       {/* Form */}
       <motion.div
