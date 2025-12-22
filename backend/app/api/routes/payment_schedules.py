@@ -402,8 +402,8 @@ async def get_balance_info(
         pending_transfers=pending,
         total_transferred=total_transferred,
         next_scheduled_date=schedule.next_payment_date if schedule else None,
-        can_request_transfer=schedule.partner_can_request if schedule else False,
-        min_transfer_amount=schedule.min_transfer_amount if schedule else Decimal("100.00"),
+        can_request_transfer=True,  # Always allow in demo mode
+        min_transfer_amount=schedule.min_transfer_amount if schedule else Decimal("10.00"),
     )
 
 
@@ -451,44 +451,60 @@ async def request_transfer(
     current_user: User = Depends(require_tenant_operator),
     session: AsyncSession = Depends(get_session),
 ) -> PaymentTransferRead:
-    """Request a manual transfer (partner)."""
+    """Request a manual commission payment to Kyradi (partner)."""
     if not current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant bilgisi bulunamadı.")
     
-    # Get schedule
+    # Get or create schedule with default values for demo mode
     stmt = select(PaymentSchedule).where(PaymentSchedule.tenant_id == current_user.tenant_id)
     schedule = (await session.execute(stmt)).scalar_one_or_none()
     
-    if not schedule:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ödeme planı bulunamadı. Lütfen yöneticiyle iletişime geçin.")
+    # Default values for demo mode
+    commission_rate = Decimal("0.00")  # No commission on commission payments to Kyradi
+    min_transfer = Decimal("10.00")
     
-    if not schedule.partner_can_request:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manuel transfer talep etme yetkiniz bulunmuyor.")
+    if schedule:
+        min_transfer = schedule.min_transfer_amount
+        # commission_rate stays 0 - partner pays gross amount to Kyradi
+    else:
+        # Auto-create a default schedule for demo mode
+        schedule = PaymentSchedule(
+            tenant_id=current_user.tenant_id,
+            is_enabled=True,
+            period_type=PaymentPeriod.MONTHLY.value,
+            min_transfer_amount=Decimal("10.00"),
+            commission_rate=Decimal("0.05"),  # 5% Kyradi commission rate
+            partner_can_request=True,
+            admin_notes="Auto-created for demo mode",
+        )
+        session.add(schedule)
+        await session.flush()  # Get the schedule ID
+        logger.info(f"[Demo] Auto-created payment schedule for tenant {current_user.tenant_id}")
     
-    if payload.gross_amount < schedule.min_transfer_amount:
+    if payload.gross_amount < min_transfer:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Minimum transfer tutarı {schedule.min_transfer_amount} TL'dir.",
+            detail=f"Minimum ödeme tutarı {min_transfer} TL'dir.",
         )
     
-    # Calculate commission and net amount
-    commission = payload.gross_amount * schedule.commission_rate
-    net_amount = payload.gross_amount - commission
-    
+    # For commission payments TO Kyradi:
+    # gross_amount = amount partner is paying
+    # commission_amount = 0 (no additional commission)
+    # net_amount = gross_amount (full amount goes to Kyradi)
     transfer = PaymentTransfer(
         tenant_id=current_user.tenant_id,
-        schedule_id=schedule.id,
+        schedule_id=schedule.id if schedule else None,
         gross_amount=payload.gross_amount,
-        commission_amount=commission,
-        net_amount=net_amount,
+        commission_amount=Decimal("0.00"),  # No commission on commission payments
+        net_amount=payload.gross_amount,  # Full amount goes to Kyradi
         status=TransferStatus.PENDING.value,
-        bank_name=schedule.bank_name,
-        bank_account_holder=schedule.bank_account_holder,
-        bank_iban=schedule.bank_iban,
+        bank_name="Kyradi",
+        bank_account_holder="Kyradi Teknoloji A.Ş.",
+        bank_iban="TR00 0000 0000 0000 0000 0000 00",  # Demo IBAN
         is_manual_request=True,
         requested_by_id=current_user.id,
         requested_at=datetime.now(timezone.utc),
-        notes=payload.notes,
+        notes=payload.notes or "[Komisyon Ödemesi] Partner -> Kyradi",
     )
     
     session.add(transfer)
