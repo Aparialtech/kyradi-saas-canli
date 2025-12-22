@@ -54,8 +54,8 @@
       this.displayInput.readOnly = true;
       this.wrapper.insertBefore(this.displayInput, this.input);
 
-      // Hide original input
-      this.input.style.display = 'none';
+      // Hide original input completely
+      this.input.style.cssText = 'display: none !important; visibility: hidden !important; position: absolute !important; width: 0 !important; height: 0 !important; opacity: 0 !important; pointer-events: none !important;';
 
       // Create popup
       this.popup = document.createElement('div');
