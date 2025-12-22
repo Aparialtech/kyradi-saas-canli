@@ -8,9 +8,9 @@ import {
   Send,
   Loader2,
   Bell,
-  MessageSquare,
   XCircle,
   Building2,
+  Inbox,
 } from "../../../lib/lucide";
 
 import { 
@@ -20,6 +20,7 @@ import {
   type TicketStatus, 
   type TicketPriority,
   type TicketUpdate,
+  type TicketDirection,
 } from "../../../services/admin/tickets";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { useToast } from "../../../hooks/useToast";
@@ -62,6 +63,8 @@ const priorityVariants: Record<TicketPriority, "success" | "warning" | "info" | 
   urgent: "danger",
 };
 
+type TabType = "incoming" | "outgoing";
+
 export function AdminTicketsPage() {
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
@@ -69,6 +72,7 @@ export function AdminTicketsPage() {
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "">("");
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "">("");
   const [tenantFilter, setTenantFilter] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<TabType>("incoming");
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [resolutionNote, setResolutionNote] = useState("");
@@ -90,8 +94,9 @@ export function AdminTicketsPage() {
 
   // Fetch tickets
   const ticketsQuery = useQuery({
-    queryKey: ["admin", "tickets", statusFilter, priorityFilter, tenantFilter, searchTerm, page, pageSize],
+    queryKey: ["admin", "tickets", activeTab, statusFilter, priorityFilter, tenantFilter, searchTerm, page, pageSize],
     queryFn: () => adminTicketService.list({
+      direction: activeTab as TicketDirection,
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       tenant_id: tenantFilter || undefined,
@@ -157,6 +162,11 @@ export function AdminTicketsPage() {
     setPage(1);
   }, [setPage]);
 
+  const handleTabChange = useCallback((tab: TabType) => {
+    setActiveTab(tab);
+    setPage(1);
+  }, [setPage]);
+
   const handleCreateTicket = useCallback(() => {
     if (!newTicket.title.trim() || !newTicket.message.trim()) {
       push({ title: "Lütfen başlık ve mesaj girin", type: "error" });
@@ -217,7 +227,7 @@ export function AdminTicketsPage() {
             alignItems: "center",
             gap: "var(--space-2)"
           }}>
-            {!row.read_at && (
+            {!row.read_at && activeTab === "incoming" && (
               <span style={{
                 width: "8px",
                 height: "8px",
@@ -238,6 +248,19 @@ export function AdminTicketsPage() {
       ),
     },
     {
+      key: "direction",
+      label: "Yön",
+      align: "center",
+      render: () => {
+        const isIncoming = activeTab === "incoming";
+        return (
+          <Badge variant={isIncoming ? "success" : "info"}>
+            {isIncoming ? "Gelen" : "Giden"}
+          </Badge>
+        );
+      },
+    },
+    {
       key: "tenant_name",
       label: "Otel",
       render: (value: string | undefined) => value ? (
@@ -251,7 +274,7 @@ export function AdminTicketsPage() {
     },
     {
       key: "creator_email",
-      label: "Gönderen",
+      label: activeTab === "incoming" ? "Gönderen" : "Alıcı",
       render: (value: string | undefined) => (
         <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
           {value || "-"}
@@ -296,7 +319,7 @@ export function AdminTicketsPage() {
     },
     {
       key: "created_at",
-      label: "Oluşturulma",
+      label: "Tarih",
       render: (value: string) => (
         <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
           {formatDate(value)}
@@ -315,7 +338,7 @@ export function AdminTicketsPage() {
         <span style={{ color: "var(--text-tertiary)" }}>-</span>
       ),
     },
-  ], [formatDate, handleStatusChange]);
+  ], [formatDate, handleStatusChange, activeTab]);
 
   return (
     <div style={{ padding: "var(--space-8)", maxWidth: "1600px", margin: "0 auto" }}>
@@ -351,6 +374,66 @@ export function AdminTicketsPage() {
           Yeni Ticket
         </ModernButton>
       </motion.div>
+
+      {/* Tabs */}
+      <ModernCard variant="glass" padding="none" style={{ marginBottom: "var(--space-4)" }}>
+        <div style={{ display: "flex", borderBottom: "1px solid var(--border-primary)" }}>
+          <button
+            onClick={() => handleTabChange("incoming")}
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--space-2)",
+              padding: "var(--space-4)",
+              background: activeTab === "incoming" ? "var(--bg-secondary)" : "transparent",
+              border: "none",
+              borderBottom: activeTab === "incoming" ? "3px solid var(--primary)" : "3px solid transparent",
+              cursor: "pointer",
+              fontWeight: activeTab === "incoming" ? 600 : 400,
+              color: activeTab === "incoming" ? "var(--primary)" : "var(--text-secondary)",
+              transition: "all 0.2s",
+            }}
+          >
+            <Inbox style={{ width: "18px", height: "18px" }} />
+            <span>Gelen Mesajlar</span>
+            {activeTab === "incoming" && unreadCount > 0 && (
+              <span style={{
+                background: "var(--danger-500)",
+                color: "white",
+                padding: "2px 8px",
+                borderRadius: "var(--radius-full)",
+                fontSize: "var(--text-xs)",
+                fontWeight: 600,
+              }}>
+                {unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => handleTabChange("outgoing")}
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--space-2)",
+              padding: "var(--space-4)",
+              background: activeTab === "outgoing" ? "var(--bg-secondary)" : "transparent",
+              border: "none",
+              borderBottom: activeTab === "outgoing" ? "3px solid var(--primary)" : "3px solid transparent",
+              cursor: "pointer",
+              fontWeight: activeTab === "outgoing" ? 600 : 400,
+              color: activeTab === "outgoing" ? "var(--primary)" : "var(--text-secondary)",
+              transition: "all 0.2s",
+            }}
+          >
+            <Send style={{ width: "18px", height: "18px" }} />
+            <span>Gönderilen Mesajlar</span>
+          </button>
+        </div>
+      </ModernCard>
 
       {/* Filters */}
       <ModernCard variant="glass" padding="lg" style={{ marginBottom: "var(--space-6)" }}>
@@ -450,10 +533,10 @@ export function AdminTicketsPage() {
       <ModernCard variant="glass" padding="lg">
         <div style={{ marginBottom: "var(--space-4)" }}>
           <h2 style={{ fontSize: "var(--text-xl)", fontWeight: "var(--font-bold)", margin: "0 0 var(--space-1) 0" }}>
-            Ticket Listesi
+            {activeTab === "incoming" ? "Gelen Mesajlar" : "Gönderilen Mesajlar"}
           </h2>
           <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
-            {ticketsQuery.data?.total ?? 0} ticket bulundu
+            {ticketsQuery.data?.total ?? 0} mesaj bulundu
           </p>
         </div>
 
@@ -477,13 +560,24 @@ export function AdminTicketsPage() {
           />
         ) : (
           <div style={{ textAlign: "center", padding: "var(--space-16)", color: "var(--text-tertiary)" }}>
-            <MessageSquare className="h-16 w-16" style={{ margin: "0 auto var(--space-4) auto", color: "var(--text-muted)" }} />
+            {activeTab === "incoming" ? (
+              <Inbox className="h-16 w-16" style={{ margin: "0 auto var(--space-4) auto", color: "var(--text-muted)" }} />
+            ) : (
+              <Send className="h-16 w-16" style={{ margin: "0 auto var(--space-4) auto", color: "var(--text-muted)" }} />
+            )}
             <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", margin: "0 0 var(--space-2) 0", color: "var(--text-primary)" }}>
-              Henüz ticket yok
+              {activeTab === "incoming" ? "Gelen mesaj yok" : "Gönderilen mesaj yok"}
             </h3>
             <p style={{ margin: "0 0 var(--space-4) 0" }}>
-              Partnerlerden gelen destek talepleri burada görünecek.
+              {activeTab === "incoming" 
+                ? "Partnerlerden gelen destek talepleri burada görünecek." 
+                : "Henüz mesaj göndermediniz."}
             </p>
+            {activeTab === "outgoing" && (
+              <ModernButton variant="primary" onClick={() => setShowNewTicketModal(true)} leftIcon={<Plus className="h-4 w-4" />}>
+                Yeni Mesaj Gönder
+              </ModernButton>
+            )}
           </div>
         )}
       </ModernCard>

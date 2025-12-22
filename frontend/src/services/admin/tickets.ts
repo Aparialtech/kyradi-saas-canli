@@ -47,11 +47,14 @@ export interface TicketListResponse {
   unread_count: number;
 }
 
+export type TicketDirection = "incoming" | "outgoing";
+
 export interface TicketListParams {
   status?: TicketStatus;
   priority?: TicketPriority;
   tenant_id?: string;
   search?: string;
+  direction?: TicketDirection;
   page?: number;
   pageSize?: number;
 }
@@ -63,6 +66,7 @@ export const adminTicketService = {
     if (params.priority) queryParams.append("priority", params.priority);
     if (params.tenant_id) queryParams.append("tenant_id", params.tenant_id);
     if (params.search) queryParams.append("search", params.search);
+    if (params.direction) queryParams.append("direction", params.direction);
     if (params.page) queryParams.append("page", String(params.page));
     if (params.pageSize) queryParams.append("page_size", String(params.pageSize));
     
