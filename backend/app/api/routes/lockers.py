@@ -38,6 +38,63 @@ class AvailableStorageRead(BaseModel):
     is_available: bool = True
 
 
+class StorageTodayOccupancy(BaseModel):
+    """Today's occupancy status for a storage."""
+    storage_id: str
+    storage_code: str
+    location_id: str
+    is_occupied_today: bool
+    active_reservation_count: int
+
+
+@router.get("/today-occupancy", response_model=List[StorageTodayOccupancy])
+async def get_today_occupancy(
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> List[StorageTodayOccupancy]:
+    """Get today's occupancy status for all storages.
+    
+    Checks if each storage has any active/reserved reservations 
+    that overlap with TODAY's date (00:00 to 23:59:59).
+    
+    This endpoint uses the current server date (today) to determine
+    which storages are occupied RIGHT NOW, not in the future.
+    """
+    today = date.today()
+    today_start = datetime.combine(today, datetime.min.time())
+    today_end = datetime.combine(today + timedelta(days=1), datetime.min.time())
+    
+    # Get all storages for this tenant
+    stmt = select(Storage).where(Storage.tenant_id == current_user.tenant_id)
+    result = await session.execute(stmt)
+    storages = result.scalars().all()
+    
+    occupancy_list: List[StorageTodayOccupancy] = []
+    
+    for storage in storages:
+        # Find reservations that overlap with TODAY
+        # A reservation overlaps if: start < today_end AND end > today_start
+        res_stmt = select(func.count()).where(
+            Reservation.storage_id == storage.id,
+            Reservation.status.in_([ReservationStatus.RESERVED.value, ReservationStatus.ACTIVE.value]),
+            # Use COALESCE to handle both start_datetime and legacy start_at fields
+            func.coalesce(Reservation.start_datetime, Reservation.start_at) < today_end,
+            func.coalesce(Reservation.end_datetime, Reservation.end_at) > today_start,
+        )
+        
+        active_count = (await session.execute(res_stmt)).scalar_one()
+        
+        occupancy_list.append(StorageTodayOccupancy(
+            storage_id=str(storage.id),
+            storage_code=storage.code,
+            location_id=str(storage.location_id),
+            is_occupied_today=active_count > 0,
+            active_reservation_count=active_count,
+        ))
+    
+    return occupancy_list
+
+
 @router.get("/available", response_model=List[AvailableStorageRead])
 async def list_available_storages(
     start_datetime: datetime = Query(..., description="Reservation start datetime"),
