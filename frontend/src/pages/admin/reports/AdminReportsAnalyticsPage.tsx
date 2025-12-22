@@ -10,6 +10,7 @@ import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
+import { DateField } from "../../../components/ui/DateField";
 import { ReservationTrendChart } from "../../../components/charts/ReservationTrendChart";
 import { OccupancyBarChart } from "../../../components/charts/OccupancyBarChart";
 import { http } from "../../../lib/http";
@@ -489,44 +490,18 @@ export function AdminReportsAnalyticsPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Başlangıç Tarihi
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--border-primary)',
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--text-primary)',
-                  fontSize: 'var(--text-sm)',
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Bitiş Tarihi
-              </label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--border-primary)',
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--text-primary)',
-                  fontSize: 'var(--text-sm)',
-                }}
-              />
-            </div>
+            <DateField
+              label="Başlangıç Tarihi"
+              value={dateFrom}
+              onChange={(value) => setDateFrom(value || "")}
+              fullWidth
+            />
+            <DateField
+              label="Bitiş Tarihi"
+              value={dateTo}
+              onChange={(value) => setDateTo(value || "")}
+              fullWidth
+            />
           </div>
         </ModernCard>
       </motion.div>

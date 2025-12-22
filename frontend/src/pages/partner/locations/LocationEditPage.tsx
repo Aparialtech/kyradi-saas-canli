@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
@@ -25,6 +25,7 @@ import { getErrorMessage } from "../../../lib/httpError";
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
+import { TimeField } from "../../../components/ui/DateField";
 import { GoogleMapPicker } from "../../../components/maps/GoogleMapPicker";
 
 // Time slot schema for multiple time ranges per day
@@ -91,6 +92,7 @@ export function LocationEditPage() {
     reset,
     watch,
     setValue,
+    control,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -412,28 +414,28 @@ export function LocationEditPage() {
                               }}
                             >
                               <Clock className="h-4 w-4" style={{ color: 'var(--text-tertiary)' }} />
-                              <input
-                                type="time"
-                                {...register(`schedule.${day}.slots.${slotIndex}.start`)}
-                                style={{
-                                  padding: 'var(--space-2)',
-                                  border: '1px solid var(--border-primary)',
-                                  borderRadius: 'var(--radius-md)',
-                                  background: 'var(--bg-tertiary)',
-                                  color: 'var(--text-primary)',
-                                }}
+                              <Controller
+                                name={`schedule.${day}.slots.${slotIndex}.start` as const}
+                                control={control}
+                                render={({ field }) => (
+                                  <TimeField
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    size="sm"
+                                  />
+                                )}
                               />
                               <span style={{ color: 'var(--text-tertiary)' }}>-</span>
-                              <input
-                                type="time"
-                                {...register(`schedule.${day}.slots.${slotIndex}.end`)}
-                                style={{
-                                  padding: 'var(--space-2)',
-                                  border: '1px solid var(--border-primary)',
-                                  borderRadius: 'var(--radius-md)',
-                                  background: 'var(--bg-tertiary)',
-                                  color: 'var(--text-primary)',
-                                }}
+                              <Controller
+                                name={`schedule.${day}.slots.${slotIndex}.end` as const}
+                                control={control}
+                                render={({ field }) => (
+                                  <TimeField
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    size="sm"
+                                  />
+                                )}
                               />
                               {daySchedule.slots.length > 1 && (
                                 <Button

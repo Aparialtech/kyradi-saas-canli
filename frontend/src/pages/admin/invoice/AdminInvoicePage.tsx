@@ -9,6 +9,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
+import { DateField } from "../../../components/ui/DateField";
 import { http } from "../../../lib/http";
 
 interface InvoiceItem {
@@ -261,44 +262,18 @@ export function AdminInvoicePage() {
             />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  Fatura Tarihi
-                </label>
-                <input
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-3)',
-                    borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--border-primary)',
-                    background: 'var(--bg-tertiary)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-sm)',
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  Vade Tarihi
-                </label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-3)',
-                    borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--border-primary)',
-                    background: 'var(--bg-tertiary)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-sm)',
-                  }}
-                />
-              </div>
+              <DateField
+                label="Fatura Tarihi"
+                value={invoiceDate}
+                onChange={(value) => setInvoiceDate(value || new Date().toISOString().split("T")[0])}
+                fullWidth
+              />
+              <DateField
+                label="Vade Tarihi"
+                value={dueDate}
+                onChange={(value) => setDueDate(value || "")}
+                fullWidth
+              />
             </div>
 
             {selectedTenant && (

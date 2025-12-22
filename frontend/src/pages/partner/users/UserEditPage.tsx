@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Mail, Phone, Save, X, Shield, Calendar, CreditCard, MapPin, Users } from "../../../lib/lucide";
+import { ArrowLeft, User, Mail, Phone, Save, X, Shield, CreditCard, MapPin, Users } from "../../../lib/lucide";
 
 import { userService, type TenantUserCreate, type TenantUserUpdate, type Gender } from "../../../services/partner/users";
 import { useToast } from "../../../hooks/useToast";
@@ -15,6 +15,7 @@ import { getErrorMessage } from "../../../lib/httpError";
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
+import { DateField } from "../../../components/ui/DateField";
 
 const VALID_ROLES = ["storage_operator", "hotel_manager", "accounting", "staff", "tenant_admin"] as const;
 const VALID_GENDERS = ["male", "female", "other"] as const;
@@ -276,19 +277,18 @@ export function UserEditPage() {
                   leftIcon={<Phone className="h-4 w-4" />}
                 />
 
-                <div>
-                  <label style={labelStyle}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <Calendar className="h-4 w-4" />
-                      Doğum Tarihi
-                    </div>
-                  </label>
-                  <input
-                    {...register("birth_date")}
-                    type="date"
-                    style={inputStyle}
-                  />
-                </div>
+                <Controller
+                  name="birth_date"
+                  control={control}
+                  render={({ field }) => (
+                    <DateField
+                      label="Doğum Tarihi"
+                      value={field.value || ""}
+                      onChange={(value) => field.onChange(value || "")}
+                      fullWidth
+                    />
+                  )}
+                />
 
                 <Input
                   {...register("tc_identity_number")}

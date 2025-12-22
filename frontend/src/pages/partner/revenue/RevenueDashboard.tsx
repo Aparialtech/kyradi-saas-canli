@@ -27,6 +27,7 @@ import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
+import { DateField } from "../../../components/ui/DateField";
 
 // Colors for charts
 const COLORS = ["#00a389", "#6366f1", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"];
@@ -203,64 +204,20 @@ export function RevenueDashboard() {
           marginBottom: 'var(--space-5)'
         }}>
           {/* Başlangıç Tarihi */}
-          <div>
-            <label style={{ 
-              fontSize: 'var(--text-sm)', 
-              fontWeight: 'var(--font-medium)', 
-              color: 'var(--text-secondary)', 
-              marginBottom: 'var(--space-2)', 
-              display: 'block' 
-            }}>
-              Başlangıç Tarihi
-            </label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              style={{
-                width: '100%',
-                height: '44px',
-                padding: '0 var(--space-3)',
-                border: '1px solid var(--border-primary)',
-                borderRadius: 'var(--radius-lg)',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)',
-                fontSize: 'var(--text-sm)',
-                cursor: 'pointer',
-                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-              }}
-            />
-          </div>
+          <DateField
+            label="Başlangıç Tarihi"
+            value={dateFrom}
+            onChange={(value) => setDateFrom(value || "")}
+            fullWidth
+          />
 
           {/* Bitiş Tarihi */}
-          <div>
-            <label style={{ 
-              fontSize: 'var(--text-sm)', 
-              fontWeight: 'var(--font-medium)', 
-              color: 'var(--text-secondary)', 
-              marginBottom: 'var(--space-2)', 
-              display: 'block' 
-            }}>
-              Bitiş Tarihi
-            </label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              style={{
-                width: '100%',
-                height: '44px',
-                padding: '0 var(--space-3)',
-                border: '1px solid var(--border-primary)',
-                borderRadius: 'var(--radius-lg)',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)',
-                fontSize: 'var(--text-sm)',
-                cursor: 'pointer',
-                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-              }}
-            />
-          </div>
+          <DateField
+            label="Bitiş Tarihi"
+            value={dateTo}
+            onChange={(value) => setDateTo(value || "")}
+            fullWidth
+          />
 
           {/* Lokasyon */}
           <div>

@@ -9,7 +9,6 @@ import {
   Mail,
   Phone,
   Calendar,
-  Clock,
   Package,
   Briefcase,
   Weight,
@@ -31,6 +30,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { ModernButton } from "../../components/ui/ModernButton";
 import { ModernInput } from "../../components/ui/ModernInput";
 import { ModernCard } from "../../components/ui/ModernCard";
+import { DateTimeField } from "../../components/ui/DateField";
 
 declare global {
   interface Window {
@@ -459,21 +459,17 @@ export function WidgetPreviewPage() {
                   exit={{ opacity: 0, x: -20 }}
                   style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}
                 >
-                  <ModernInput
-                    label="Bırakış Tarihi & Saati *"
-                    type="datetime-local"
+                  <DateTimeField
+                    label="Bırakış Tarihi & Saati"
                     value={formData.checkIn}
-                    onChange={(e) => updateField("checkIn", e.target.value)}
-                    leftIcon={<Clock style={{ width: "16px", height: "16px" }} />}
+                    onChange={(value) => updateField("checkIn", value || "")}
                     fullWidth
                     required
                   />
-                  <ModernInput
-                    label="Alış Tarihi & Saati *"
-                    type="datetime-local"
+                  <DateTimeField
+                    label="Alış Tarihi & Saati"
                     value={formData.checkOut}
-                    onChange={(e) => updateField("checkOut", e.target.value)}
-                    leftIcon={<Clock style={{ width: "16px", height: "16px" }} />}
+                    onChange={(value) => updateField("checkOut", value || "")}
                     fullWidth
                     required
                   />

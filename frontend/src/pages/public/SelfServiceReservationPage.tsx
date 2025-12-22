@@ -16,6 +16,7 @@ import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { Modal } from "../../components/common/Modal";
 import { getErrorMessage } from "../../lib/httpError";
+import { DateTimeField } from "../../components/ui/DateField";
 
 const statusLabels: Record<string, string> = {
   active: "Aktif",
@@ -495,19 +496,19 @@ export function SelfServiceReservationPage() {
                     <span style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>Tarih & Konaklama</span>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "12px" }}>
-                    <InputField
+                    <DateTimeField
                       label="Bırakış"
                       required
-                      type="datetime-local"
                       value={createForm.start_at}
-                      onChange={(v) => setCreateForm(p => ({ ...p, start_at: v }))}
+                      onChange={(v) => setCreateForm(p => ({ ...p, start_at: v || "" }))}
+                      fullWidth
                     />
-                    <InputField
+                    <DateTimeField
                       label="Alış"
                       required
-                      type="datetime-local"
                       value={createForm.end_at}
-                      onChange={(v) => setCreateForm(p => ({ ...p, end_at: v }))}
+                      onChange={(v) => setCreateForm(p => ({ ...p, end_at: v || "" }))}
+                      fullWidth
                     />
                   </div>
                   <div style={{ marginTop: "12px" }}>

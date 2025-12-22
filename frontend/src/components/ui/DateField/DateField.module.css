@@ -1,0 +1,654 @@
+/* ============================================================
+   PREMIUM DATE FIELD COMPONENT
+   Professional, consistent date picker for Kyradi SaaS
+   ============================================================ */
+
+/* ============================================================
+   CONTAINER & LAYOUT
+   ============================================================ */
+
+.container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* ============================================================
+   LABEL
+   ============================================================ */
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.required {
+  color: var(--danger-500);
+}
+
+/* ============================================================
+   INPUT WRAPPER
+   ============================================================ */
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--bg-tertiary);
+  border: 1.5px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inputWrapper:hover:not(.inputWrapper--disabled) {
+  border-color: var(--border-secondary);
+}
+
+.inputWrapper--focused {
+  border-color: var(--primary-500) !important;
+  box-shadow: 0 0 0 3px var(--primary-50);
+}
+
+[data-theme="dark"] .inputWrapper--focused {
+  border-color: var(--neon-primary) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+.inputWrapper--error {
+  border-color: var(--danger-500) !important;
+}
+
+.inputWrapper--error.inputWrapper--focused {
+  box-shadow: 0 0 0 3px var(--danger-50) !important;
+}
+
+.inputWrapper--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-secondary);
+}
+
+/* Sizes */
+.inputWrapper--sm {
+  padding: var(--space-2) var(--space-3);
+  min-height: 36px;
+}
+
+.inputWrapper--md {
+  padding: var(--space-3) var(--space-4);
+  min-height: 44px;
+}
+
+.inputWrapper--lg {
+  padding: var(--space-4) var(--space-5);
+  min-height: 52px;
+}
+
+/* ============================================================
+   ICON & INPUT
+   ============================================================ */
+
+.icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--text-tertiary);
+}
+
+.input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  color: var(--text-primary);
+  min-width: 0;
+  cursor: pointer;
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input:disabled {
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   CLEAR BUTTON
+   ============================================================ */
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clearButton:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   POPOVER
+   ============================================================ */
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 1000;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .popover {
+  background: var(--bg-secondary);
+  border-color: var(--border-secondary);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2),
+    0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.popoverWide {
+  min-width: 460px;
+}
+
+.popoverRange {
+  min-width: 620px;
+}
+
+.popoverTime {
+  min-width: 200px;
+}
+
+@media (max-width: 640px) {
+  .popover {
+    position: fixed;
+    top: auto !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .popoverWide,
+  .popoverRange {
+    min-width: 100%;
+  }
+
+  .datetimeGrid {
+    flex-direction: column !important;
+  }
+
+  .monthsRange {
+    flex-direction: column !important;
+  }
+}
+
+/* ============================================================
+   CALENDAR STYLES
+   ============================================================ */
+
+.calendar {
+  padding: var(--space-4);
+}
+
+.months {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.monthsRange {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.month {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-2);
+}
+
+.captionLabel {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.nav {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navButton:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.navButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.headRow {
+  display: flex;
+}
+
+.headCell {
+  width: 40px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+.row {
+  display: flex;
+}
+
+.cell {
+  width: 40px;
+  height: 40px;
+  padding: 2px;
+}
+
+.day {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.day:hover:not(.daySelected):not(.dayDisabled) {
+  background: var(--bg-tertiary);
+}
+
+.daySelected {
+  background: var(--primary-500) !important;
+  color: white !important;
+  font-weight: var(--font-semibold);
+}
+
+.dayToday:not(.daySelected) {
+  border: 2px solid var(--primary-500);
+  font-weight: var(--font-bold);
+}
+
+.dayOutside {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.dayDisabled {
+  color: var(--text-muted);
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.dayHidden {
+  visibility: hidden;
+}
+
+/* Range selection */
+.dayRangeStart {
+  background: var(--primary-500) !important;
+  color: white !important;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.dayRangeEnd {
+  background: var(--primary-500) !important;
+  color: white !important;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.dayRangeMiddle {
+  background: var(--primary-50) !important;
+  color: var(--primary-700) !important;
+  border-radius: 0;
+}
+
+[data-theme="dark"] .dayRangeMiddle {
+  background: rgba(var(--primary-500-rgb), 0.2) !important;
+  color: var(--primary-300) !important;
+}
+
+/* ============================================================
+   DATETIME GRID
+   ============================================================ */
+
+.datetimeGrid {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.calendarSection {
+  flex-shrink: 0;
+}
+
+.timeSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-left: 1px solid var(--border-primary);
+  min-width: 140px;
+}
+
+.timeHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+}
+
+.timeSelectors {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.timeColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+}
+
+.timeColumnLabel {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.timeScroller {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--space-1);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.timeScroller::-webkit-scrollbar {
+  width: 4px;
+}
+
+.timeScroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timeScroller::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 2px;
+}
+
+.timeSeparator {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--text-tertiary);
+  padding-top: 24px;
+}
+
+.timeOption {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.timeOption:hover {
+  background: var(--bg-secondary);
+}
+
+.timeOptionSelected {
+  background: var(--primary-500) !important;
+  color: white !important;
+}
+
+/* ============================================================
+   RANGE INPUT
+   ============================================================ */
+
+.rangeInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--bg-tertiary);
+  border: 1.5px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rangeInputWrapper:hover:not(.inputWrapper--disabled) {
+  border-color: var(--border-secondary);
+}
+
+.rangeDisplay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.rangeValue {
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  color: var(--text-primary);
+}
+
+.rangePlaceholder {
+  color: var(--text-muted);
+}
+
+.rangeSeparator {
+  color: var(--text-tertiary);
+  font-weight: var(--font-medium);
+}
+
+/* ============================================================
+   PRESETS
+   ============================================================ */
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+}
+
+.presets button {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.presets button:hover {
+  background: var(--primary-50);
+  border-color: var(--primary-500);
+  color: var(--primary-600);
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+}
+
+.footerButton {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: white;
+  background: var(--primary-500);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.footerButton:hover {
+  background: var(--primary-600);
+}
+
+.footerButtonOutline {
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+}
+
+.footerButtonOutline:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-secondary);
+}
+
+/* ============================================================
+   HELPER TEXT
+   ============================================================ */
+
+.helperText {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.errorText {
+  color: var(--danger-500);
+}
+
+/* ============================================================
+   DARK MODE ADJUSTMENTS
+   ============================================================ */
+
+[data-theme="dark"] .daySelected {
+  background: var(--neon-primary) !important;
+  color: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .dayToday:not(.daySelected) {
+  border-color: var(--neon-primary);
+}
+
+[data-theme="dark"] .dayRangeStart,
+[data-theme="dark"] .dayRangeEnd {
+  background: var(--neon-primary) !important;
+  color: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .timeOptionSelected {
+  background: var(--neon-primary) !important;
+  color: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .footerButton:not(.footerButtonOutline) {
+  background: var(--neon-primary);
+  color: var(--bg-primary);
+}
+
+[data-theme="dark"] .presets button:hover {
+  background: rgba(var(--neon-primary-rgb), 0.1);
+  border-color: var(--neon-primary);
+  color: var(--neon-primary);
+}
+

@@ -17,6 +17,7 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernButton } from "../../../components/ui/ModernButton";
+import { DateField } from "../../../components/ui/DateField";
 
 
 export function ReservationsPage() {
@@ -272,29 +273,17 @@ export function ReservationsPage() {
             <option value="panel">Panel</option>
             <option value="api">API</option>
           </select>
-          <input 
-            type="date" 
-            value={filterFrom} 
-            onChange={(event) => setFilterFrom(event.target.value)}
-            style={{
-              padding: 'var(--space-2) var(--space-3)',
-              border: '1px solid var(--border-primary)',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--bg-tertiary)',
-              color: 'var(--text-primary)',
-            }}
+          <DateField
+            value={filterFrom}
+            onChange={(value) => setFilterFrom(value || "")}
+            placeholder="Başlangıç"
+            size="sm"
           />
-          <input 
-            type="date" 
-            value={filterTo} 
-            onChange={(event) => setFilterTo(event.target.value)}
-            style={{
-              padding: 'var(--space-2) var(--space-3)',
-              border: '1px solid var(--border-primary)',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--bg-tertiary)',
-              color: 'var(--text-primary)',
-            }}
+          <DateField
+            value={filterTo}
+            onChange={(value) => setFilterTo(value || "")}
+            placeholder="Bitiş"
+            size="sm"
           />
           <div style={{ marginLeft: 'auto' }}>
             <ModernButton

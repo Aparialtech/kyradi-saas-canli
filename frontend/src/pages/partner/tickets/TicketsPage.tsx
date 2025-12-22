@@ -10,7 +10,6 @@ import {
   Bell,
   MessageSquare,
   Inbox,
-  Calendar,
 } from "../../../lib/lucide";
 
 import { 
@@ -28,6 +27,7 @@ import { getErrorMessage } from "../../../lib/httpError";
 
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { DateField } from "../../../components/ui/DateField";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { Badge } from "../../../components/ui/Badge";
@@ -429,50 +429,22 @@ export function TicketsPage() {
               <option value="urgent">Acil</option>
             </select>
           </div>
-          <div>
-            <label style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-              <Calendar style={{ width: "14px", height: "14px" }} />
-              Başlangıç
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setPage(1);
-              }}
-              style={{
-                width: "100%",
-                padding: "var(--space-2) var(--space-3)",
-                border: "1px solid var(--border-primary)",
-                borderRadius: "var(--radius-lg)",
-                background: "var(--bg-tertiary)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-              <Calendar style={{ width: "14px", height: "14px" }} />
-              Bitiş
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setPage(1);
-              }}
-              style={{
-                width: "100%",
-                padding: "var(--space-2) var(--space-3)",
-                border: "1px solid var(--border-primary)",
-                borderRadius: "var(--radius-lg)",
-                background: "var(--bg-tertiary)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
+          <DateField
+            label="Başlangıç"
+            value={startDate}
+            onChange={(value) => {
+              setStartDate(value || "");
+              setPage(1);
+            }}
+          />
+          <DateField
+            label="Bitiş"
+            value={endDate}
+            onChange={(value) => {
+              setEndDate(value || "");
+              setPage(1);
+            }}
+          />
         </div>
       </ModernCard>
 

@@ -9,6 +9,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
+import { DateField } from "../../../components/ui/DateField";
 import { Search, Download, Filter, ChevronLeft, ChevronRight } from "../../../lib/lucide";
 
 export function AdminAuditLogsPage() {
@@ -168,18 +169,18 @@ export function AdminAuditLogsPage() {
             style={{ ...selectStyle, minWidth: '180px' }}
           />
 
-          <input
-            type="date"
+          <DateField
             value={filters.from_date ?? ""}
-            onChange={(event) => applyFilter({ from_date: event.target.value || undefined, page: 1 })}
-            style={selectStyle}
+            onChange={(value) => applyFilter({ from_date: value || undefined, page: 1 })}
+            placeholder="Başlangıç"
+            size="sm"
           />
 
-          <input
-            type="date"
+          <DateField
             value={filters.to_date ?? ""}
-            onChange={(event) => applyFilter({ to_date: event.target.value || undefined, page: 1 })}
-            style={selectStyle}
+            onChange={(value) => applyFilter({ to_date: value || undefined, page: 1 })}
+            placeholder="Bitiş"
+            size="sm"
           />
 
           <select

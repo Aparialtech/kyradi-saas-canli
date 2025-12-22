@@ -8,8 +8,8 @@ import { http } from "../../../lib/http";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { ModernCard } from "../../../components/ui/ModernCard";
-import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { DateField } from "../../../components/ui/DateField";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 
 interface RevenueSummary {
@@ -152,20 +152,16 @@ export function AdminRevenuePage() {
               ))}
             </select>
           </div>
-          <ModernInput
-            type="date"
+          <DateField
             label="Başlangıç Tarihi"
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            leftIcon={<FileText className="h-4 w-4" />}
+            onChange={(value) => setDateFrom(value || "")}
             fullWidth
           />
-          <ModernInput
-            type="date"
+          <DateField
             label="Bitiş Tarihi"
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            leftIcon={<FileText className="h-4 w-4" />}
+            onChange={(value) => setDateTo(value || "")}
             fullWidth
           />
         </div>

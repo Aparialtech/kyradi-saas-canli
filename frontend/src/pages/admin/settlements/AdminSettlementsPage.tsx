@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Search, Filter, FileText, Loader2, AlertCircle, CheckCircle2, XCircle, Clock, CreditCard } from "../../../lib/lucide";
+import { Search, Filter, Loader2, AlertCircle, CheckCircle2, XCircle, Clock, CreditCard } from "../../../lib/lucide";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
@@ -10,6 +10,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { DateField } from "../../../components/ui/DateField";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 
 interface Settlement {
@@ -174,20 +175,16 @@ export function AdminSettlementsPage() {
               <option value="cancelled">İptal</option>
             </select>
           </div>
-          <ModernInput
-            type="date"
+          <DateField
             label="Başlangıç Tarihi"
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            leftIcon={<FileText className="h-4 w-4" />}
+            onChange={(value) => setDateFrom(value || "")}
             fullWidth
           />
-          <ModernInput
-            type="date"
+          <DateField
             label="Bitiş Tarihi"
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            leftIcon={<FileText className="h-4 w-4" />}
+            onChange={(value) => setDateTo(value || "")}
             fullWidth
           />
         </div>

@@ -12,6 +12,7 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
+import { DateField } from "../../../components/ui/DateField";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 
 export function SettlementsPage() {
@@ -365,62 +366,20 @@ export function SettlementsPage() {
           </div>
 
           {/* Date From */}
-          <div>
-            <label style={{ 
-              display: "block", 
-              marginBottom: "var(--space-2)", 
-              fontWeight: 500, 
-              fontSize: "var(--text-sm)", 
-              color: 'var(--text-secondary)' 
-            }}>
-              {t("common.from")}
-            </label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                height: "42px",
-                borderRadius: "var(--radius-lg)",
-                border: "1px solid var(--border-primary)",
-                background: "var(--bg-tertiary)",
-                color: "var(--text-primary)",
-                fontSize: "var(--text-sm)",
-                cursor: "pointer",
-              }}
-            />
-          </div>
+          <DateField
+            label={t("common.from")}
+            value={dateFrom}
+            onChange={(value) => setDateFrom(value || "")}
+            fullWidth
+          />
 
           {/* Date To */}
-          <div>
-            <label style={{ 
-              display: "block", 
-              marginBottom: "var(--space-2)", 
-              fontWeight: 500, 
-              fontSize: "var(--text-sm)", 
-              color: 'var(--text-secondary)' 
-            }}>
-              {t("common.to")}
-            </label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                height: "42px",
-                borderRadius: "var(--radius-lg)",
-                border: "1px solid var(--border-primary)",
-                background: "var(--bg-tertiary)",
-                color: "var(--text-primary)",
-                fontSize: "var(--text-sm)",
-                cursor: "pointer",
-              }}
-            />
-          </div>
+          <DateField
+            label={t("common.to")}
+            value={dateTo}
+            onChange={(value) => setDateTo(value || "")}
+            fullWidth
+          />
         </div>
       </ModernCard>
 

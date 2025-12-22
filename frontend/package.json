@@ -21,6 +21,7 @@
     "framer-motion": "^12.23.25",
     "qrcode": "^1.5.4",
     "react": "^19.1.1",
+    "react-day-picker": "^9.13.0",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.66.0",
     "react-router-dom": "^7.9.5",

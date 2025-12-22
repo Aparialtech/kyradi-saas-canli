@@ -14,6 +14,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
+import { TimeField } from "../../../components/ui/DateField";
 
 const DAYS_OF_WEEK = [
   { key: "monday", label: "Pazartesi" },
@@ -563,36 +564,18 @@ export function StorageEditPage() {
                           {dayHours?.is_open ? "" : "Kapalı"}
                         </div>
                         
-                        <input
-                          type="time"
+                        <TimeField
                           value={dayHours?.open ?? "09:00"}
-                          onChange={(e) => handleDayChange(key as keyof WorkingHours, "open", e.target.value)}
+                          onChange={(value) => handleDayChange(key as keyof WorkingHours, "open", value)}
                           disabled={!dayHours?.is_open}
-                          style={{
-                            padding: "var(--space-2)",
-                            border: "1px solid var(--border-primary)",
-                            borderRadius: "var(--radius-md)",
-                            background: dayHours?.is_open ? "var(--bg-tertiary)" : "var(--bg-secondary)",
-                            color: "var(--text-primary)",
-                            fontSize: "var(--text-sm)",
-                            opacity: dayHours?.is_open ? 1 : 0.5,
-                          }}
+                          size="sm"
                         />
                         
-                        <input
-                          type="time"
+                        <TimeField
                           value={dayHours?.close ?? "18:00"}
-                          onChange={(e) => handleDayChange(key as keyof WorkingHours, "close", e.target.value)}
+                          onChange={(value) => handleDayChange(key as keyof WorkingHours, "close", value)}
                           disabled={!dayHours?.is_open}
-                          style={{
-                            padding: "var(--space-2)",
-                            border: "1px solid var(--border-primary)",
-                            borderRadius: "var(--radius-md)",
-                            background: dayHours?.is_open ? "var(--bg-tertiary)" : "var(--bg-secondary)",
-                            color: "var(--text-primary)",
-                            fontSize: "var(--text-sm)",
-                            opacity: dayHours?.is_open ? 1 : 0.5,
-                          }}
+                          size="sm"
                         />
                       </div>
                     );
