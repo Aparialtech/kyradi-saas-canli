@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Download, Filter, BarChart3, LineChart as LineChartIcon, PieChartIcon, TrendingUp } from "../../../lib/lucide";
+import { Download, Filter, BarChart3, LineChart as LineChartIcon, PieChartIcon, TrendingUp, Search, X, MapPin, Package } from "../../../lib/lucide";
 
 import { partnerReportService, type PartnerOverviewResponse } from "../../../services/partner/reports";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -15,6 +15,23 @@ import { ModernButton } from "../../../components/ui/ModernButton";
 import { DateField } from "../../../components/ui/DateField";
 import { PiggyBank, FileText, Briefcase, LineChart } from "../../../lib/lucide";
 import { locationService } from "../../../services/partner/locations";
+
+// Custom hook for debounced value
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 type ChartType = "area" | "line" | "bar";
 
@@ -55,6 +72,19 @@ export function ReportsAnalyticsPage() {
   });
 
   const [occupancyLocationFilter, setOccupancyLocationFilter] = useState<string>("");
+  
+  // Location Revenue Table - Search & Filter State
+  const [locationSearchTerm, setLocationSearchTerm] = useState("");
+  const debouncedLocationSearch = useDebounce(locationSearchTerm, 200);
+  const [locationSortBy, setLocationSortBy] = useState<"name" | "revenue" | "reservations">("revenue");
+  const [locationSortDir, setLocationSortDir] = useState<"asc" | "desc">("desc");
+  
+  // Storage Usage Table - Search & Filter State
+  const [storageSearchTerm, setStorageSearchTerm] = useState("");
+  const debouncedStorageSearch = useDebounce(storageSearchTerm, 200);
+  const [storageLocationFilter, setStorageLocationFilter] = useState("");
+  const [storageSortBy, setStorageSortBy] = useState<"code" | "location" | "reservations">("reservations");
+  const [storageSortDir, setStorageSortDir] = useState<"asc" | "desc">("desc");
   
   const storageUsageQuery = useQuery({
     queryKey: ["partner", "storage-usage", dateFrom, dateTo],
@@ -125,6 +155,112 @@ export function ReportsAnalyticsPage() {
       total_revenue_minor: item.total_revenue_minor,
     }));
   }, [storageUsageQuery.data, occupancyLocationFilter]);
+
+  // Filtered & Sorted Location Data
+  const filteredLocationData = useMemo(() => {
+    if (!overviewQuery.data?.by_location) return [];
+    
+    let data = [...overviewQuery.data.by_location];
+    
+    // Search filter
+    if (debouncedLocationSearch.trim()) {
+      const term = debouncedLocationSearch.toLowerCase();
+      data = data.filter(item => 
+        item.location_name.toLowerCase().includes(term)
+      );
+    }
+    
+    // Sort
+    data.sort((a, b) => {
+      let comparison = 0;
+      if (locationSortBy === "name") {
+        comparison = a.location_name.localeCompare(b.location_name);
+      } else if (locationSortBy === "revenue") {
+        comparison = a.revenue_minor - b.revenue_minor;
+      } else {
+        comparison = a.reservations - b.reservations;
+      }
+      return locationSortDir === "asc" ? comparison : -comparison;
+    });
+    
+    return data;
+  }, [overviewQuery.data?.by_location, debouncedLocationSearch, locationSortBy, locationSortDir]);
+
+  // Get unique locations for storage filter
+  const storageUniqueLocations = useMemo(() => {
+    if (!overviewQuery.data?.by_storage) return [];
+    const locations = new Set(overviewQuery.data.by_storage.map(item => item.location_name));
+    return Array.from(locations).sort();
+  }, [overviewQuery.data?.by_storage]);
+
+  // Filtered & Sorted Storage Data
+  const filteredStorageData = useMemo(() => {
+    if (!overviewQuery.data?.by_storage) return [];
+    
+    let data = [...overviewQuery.data.by_storage];
+    
+    // Search filter
+    if (debouncedStorageSearch.trim()) {
+      const term = debouncedStorageSearch.toLowerCase();
+      data = data.filter(item => 
+        item.storage_code.toLowerCase().includes(term) ||
+        item.location_name.toLowerCase().includes(term)
+      );
+    }
+    
+    // Location filter
+    if (storageLocationFilter) {
+      data = data.filter(item => item.location_name === storageLocationFilter);
+    }
+    
+    // Sort
+    data.sort((a, b) => {
+      let comparison = 0;
+      if (storageSortBy === "code") {
+        comparison = a.storage_code.localeCompare(b.storage_code);
+      } else if (storageSortBy === "location") {
+        comparison = a.location_name.localeCompare(b.location_name);
+      } else {
+        comparison = a.reservations - b.reservations;
+      }
+      return storageSortDir === "asc" ? comparison : -comparison;
+    });
+    
+    return data;
+  }, [overviewQuery.data?.by_storage, debouncedStorageSearch, storageLocationFilter, storageSortBy, storageSortDir]);
+
+  // Clear filters helpers
+  const clearLocationFilters = useCallback(() => {
+    setLocationSearchTerm("");
+    setLocationSortBy("revenue");
+    setLocationSortDir("desc");
+  }, []);
+
+  const clearStorageFilters = useCallback(() => {
+    setStorageSearchTerm("");
+    setStorageLocationFilter("");
+    setStorageSortBy("reservations");
+    setStorageSortDir("desc");
+  }, []);
+
+  // Toggle sort helper
+  const toggleLocationSort = useCallback((column: "name" | "revenue" | "reservations") => {
+    if (locationSortBy === column) {
+      setLocationSortDir(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setLocationSortBy(column);
+      setLocationSortDir("desc");
+    }
+  }, [locationSortBy]);
+
+  const toggleStorageSort = useCallback((column: "code" | "location" | "reservations") => {
+    if (storageSortBy === column) {
+      setStorageSortDir(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setStorageSortBy(column);
+      setStorageSortDir("desc");
+    }
+  }, [storageSortBy]);
 
   return (
     <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
@@ -738,64 +874,495 @@ export function ReportsAnalyticsPage() {
             </ModernCard>
           )}
 
-          {/* Location Revenue Table */}
+          {/* Location Revenue Table - Enhanced */}
           {overviewQuery.data.by_location.length > 0 && (
             <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
-              <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-                {t("reports.tables.byLocation.title")}
-              </h3>
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              {/* Header */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'flex-start', 
+                marginBottom: 'var(--space-4)',
+                flexWrap: 'wrap',
+                gap: 'var(--space-3)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-lg)',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <MapPin className="h-5 w-5" style={{ color: 'white' }} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                      Lokasyon Bazlı Gelir
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                      {filteredLocationData.length} / {overviewQuery.data.by_location.length} lokasyon
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Toolbar */}
+              <div style={{ 
+                display: 'flex', 
+                gap: 'var(--space-3)', 
+                marginBottom: 'var(--space-4)',
+                flexWrap: 'wrap',
+                alignItems: 'center'
+              }}>
+                {/* Search Input */}
+                <div style={{ position: 'relative', flex: '1 1 250px', minWidth: '200px', maxWidth: '350px' }}>
+                  <Search className="h-4 w-4" style={{ 
+                    position: 'absolute', 
+                    left: 'var(--space-3)', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    color: 'var(--text-tertiary)',
+                    pointerEvents: 'none'
+                  }} />
+                  <input
+                    type="text"
+                    placeholder="Lokasyon ara..."
+                    value={locationSearchTerm}
+                    onChange={(e) => setLocationSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: 'var(--space-2) var(--space-3) var(--space-2) var(--space-9)',
+                      border: '1px solid var(--border-primary)',
+                      borderRadius: 'var(--radius-lg)',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      fontSize: 'var(--text-sm)',
+                    }}
+                  />
+                  {locationSearchTerm && (
+                    <button
+                      onClick={() => setLocationSearchTerm("")}
+                      style={{
+                        position: 'absolute',
+                        right: 'var(--space-2)',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'var(--bg-secondary)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-full)',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: 'var(--text-tertiary)',
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Clear Filters */}
+                {(locationSearchTerm || locationSortBy !== "revenue" || locationSortDir !== "desc") && (
+                  <ModernButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearLocationFilters}
+                    leftIcon={<X className="h-4 w-4" />}
+                  >
+                    Temizle
+                  </ModernButton>
+                )}
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)' }}>
+                <table style={{ 
+                  width: '100%', 
+                  borderCollapse: 'collapse',
+                  fontSize: 'var(--text-sm)'
+                }}>
                   <thead>
-                    <tr>
-                      <th>{t("reports.tables.byLocation.columns.location")}</th>
-                      <th style={{ textAlign: "right" }}>{t("reports.tables.byLocation.columns.revenue")}</th>
-                      <th style={{ textAlign: "right" }}>{t("reports.tables.byLocation.columns.reservations")}</th>
+                    <tr style={{ background: 'var(--bg-secondary)' }}>
+                      <th 
+                        onClick={() => toggleLocationSort("name")}
+                        style={{ 
+                          textAlign: 'left', 
+                          padding: 'var(--space-3) var(--space-4)', 
+                          fontWeight: 'var(--font-semibold)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          borderBottom: '2px solid var(--border-primary)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Lokasyon {locationSortBy === "name" && (locationSortDir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th 
+                        onClick={() => toggleLocationSort("revenue")}
+                        style={{ 
+                          textAlign: 'right', 
+                          padding: 'var(--space-3) var(--space-4)', 
+                          fontWeight: 'var(--font-semibold)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          borderBottom: '2px solid var(--border-primary)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Toplam Ciro {locationSortBy === "revenue" && (locationSortDir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th 
+                        onClick={() => toggleLocationSort("reservations")}
+                        style={{ 
+                          textAlign: 'right', 
+                          padding: 'var(--space-3) var(--space-4)', 
+                          fontWeight: 'var(--font-semibold)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          borderBottom: '2px solid var(--border-primary)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Rezervasyon {locationSortBy === "reservations" && (locationSortDir === "asc" ? "↑" : "↓")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {overviewQuery.data.by_location.map((location, index) => (
-                      <tr key={index}>
-                        <td>
-                          <strong>{location.location_name}</strong>
+                    {filteredLocationData.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
+                          <div style={{ color: 'var(--text-tertiary)' }}>
+                            <MapPin className="h-10 w-10" style={{ margin: '0 auto var(--space-3) auto', opacity: 0.4 }} />
+                            <p style={{ margin: '0 0 var(--space-2) 0', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
+                              Sonuç bulunamadı
+                            </p>
+                            <p style={{ margin: '0 0 var(--space-3) 0', fontSize: 'var(--text-sm)' }}>
+                              Arama kriterlerinize uygun lokasyon yok.
+                            </p>
+                            <ModernButton variant="outline" size="sm" onClick={clearLocationFilters}>
+                              Filtreleri Temizle
+                            </ModernButton>
+                          </div>
                         </td>
-                        <td style={{ textAlign: "right" }}>
-                          {currencyFormatter.format(location.revenue_minor / 100)}
-                        </td>
-                        <td style={{ textAlign: "right" }}>{numberFormatter.format(location.reservations)}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredLocationData.map((location, index) => (
+                        <tr 
+                          key={index}
+                          style={{ 
+                            background: index % 2 === 0 ? 'transparent' : 'var(--bg-secondary)',
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <td style={{ 
+                            padding: 'var(--space-3) var(--space-4)', 
+                            borderBottom: '1px solid var(--border-secondary)',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                              <MapPin className="h-4 w-4" style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                              <strong style={{ color: 'var(--text-primary)' }}>{location.location_name}</strong>
+                            </div>
+                          </td>
+                          <td style={{ 
+                            textAlign: 'right', 
+                            padding: 'var(--space-3) var(--space-4)', 
+                            borderBottom: '1px solid var(--border-secondary)',
+                            fontWeight: 'var(--font-semibold)',
+                            color: '#16a34a',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}>
+                            {currencyFormatter.format(location.revenue_minor / 100)}
+                          </td>
+                          <td style={{ 
+                            textAlign: 'right', 
+                            padding: 'var(--space-3) var(--space-4)', 
+                            borderBottom: '1px solid var(--border-secondary)',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}>
+                            <span style={{
+                              background: 'var(--primary-100)',
+                              color: 'var(--primary-700)',
+                              padding: 'var(--space-1) var(--space-2)',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: 'var(--text-xs)',
+                              fontWeight: 'var(--font-semibold)',
+                            }}>
+                              {numberFormatter.format(location.reservations)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </ModernCard>
           )}
 
-          {/* Storage Usage Table */}
+          {/* Storage Usage Table - Enhanced */}
           {overviewQuery.data.by_storage.length > 0 && (
             <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
-              <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-                {t("reports.tables.byStorage.title")}
-              </h3>
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              {/* Header */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'flex-start', 
+                marginBottom: 'var(--space-4)',
+                flexWrap: 'wrap',
+                gap: 'var(--space-3)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-lg)',
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <Package className="h-5 w-5" style={{ color: 'white' }} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                      Depo Kullanımı (En Çok Kullanılanlar)
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                      {filteredStorageData.length} / {overviewQuery.data.by_storage.length} depo
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Toolbar */}
+              <div style={{ 
+                display: 'flex', 
+                gap: 'var(--space-3)', 
+                marginBottom: 'var(--space-4)',
+                flexWrap: 'wrap',
+                alignItems: 'center'
+              }}>
+                {/* Search Input */}
+                <div style={{ position: 'relative', flex: '1 1 250px', minWidth: '200px', maxWidth: '350px' }}>
+                  <Search className="h-4 w-4" style={{ 
+                    position: 'absolute', 
+                    left: 'var(--space-3)', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    color: 'var(--text-tertiary)',
+                    pointerEvents: 'none'
+                  }} />
+                  <input
+                    type="text"
+                    placeholder="Depo kodu veya lokasyon ara..."
+                    value={storageSearchTerm}
+                    onChange={(e) => setStorageSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: 'var(--space-2) var(--space-3) var(--space-2) var(--space-9)',
+                      border: '1px solid var(--border-primary)',
+                      borderRadius: 'var(--radius-lg)',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      fontSize: 'var(--text-sm)',
+                    }}
+                  />
+                  {storageSearchTerm && (
+                    <button
+                      onClick={() => setStorageSearchTerm("")}
+                      style={{
+                        position: 'absolute',
+                        right: 'var(--space-2)',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'var(--bg-secondary)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-full)',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: 'var(--text-tertiary)',
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Location Filter Dropdown */}
+                <select
+                  value={storageLocationFilter}
+                  onChange={(e) => setStorageLocationFilter(e.target.value)}
+                  style={{
+                    padding: 'var(--space-2) var(--space-3)',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: 'var(--radius-lg)',
+                    background: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                    fontSize: 'var(--text-sm)',
+                    minWidth: '150px',
+                  }}
+                >
+                  <option value="">Tüm Lokasyonlar</option>
+                  {storageUniqueLocations.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
+
+                {/* Clear Filters */}
+                {(storageSearchTerm || storageLocationFilter || storageSortBy !== "reservations" || storageSortDir !== "desc") && (
+                  <ModernButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearStorageFilters}
+                    leftIcon={<X className="h-4 w-4" />}
+                  >
+                    Temizle
+                  </ModernButton>
+                )}
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)' }}>
+                <table style={{ 
+                  width: '100%', 
+                  borderCollapse: 'collapse',
+                  fontSize: 'var(--text-sm)'
+                }}>
                   <thead>
-                    <tr>
-                      <th>{t("reports.tables.byStorage.columns.storage")}</th>
-                      <th>{t("reports.tables.byStorage.columns.location")}</th>
-                      <th style={{ textAlign: "right" }}>{t("reports.tables.byStorage.columns.reservations")}</th>
+                    <tr style={{ background: 'var(--bg-secondary)' }}>
+                      <th 
+                        onClick={() => toggleStorageSort("code")}
+                        style={{ 
+                          textAlign: 'left', 
+                          padding: 'var(--space-3) var(--space-4)', 
+                          fontWeight: 'var(--font-semibold)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          borderBottom: '2px solid var(--border-primary)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Depo Kodu {storageSortBy === "code" && (storageSortDir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th 
+                        onClick={() => toggleStorageSort("location")}
+                        style={{ 
+                          textAlign: 'left', 
+                          padding: 'var(--space-3) var(--space-4)', 
+                          fontWeight: 'var(--font-semibold)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          borderBottom: '2px solid var(--border-primary)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Lokasyon {storageSortBy === "location" && (storageSortDir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th 
+                        onClick={() => toggleStorageSort("reservations")}
+                        style={{ 
+                          textAlign: 'right', 
+                          padding: 'var(--space-3) var(--space-4)', 
+                          fontWeight: 'var(--font-semibold)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          borderBottom: '2px solid var(--border-primary)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Rezervasyon {storageSortBy === "reservations" && (storageSortDir === "asc" ? "↑" : "↓")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {overviewQuery.data.by_storage.map((storage, index) => (
-                      <tr key={index}>
-                        <td>
-                          <strong>{storage.storage_code}</strong>
+                    {filteredStorageData.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
+                          <div style={{ color: 'var(--text-tertiary)' }}>
+                            <Package className="h-10 w-10" style={{ margin: '0 auto var(--space-3) auto', opacity: 0.4 }} />
+                            <p style={{ margin: '0 0 var(--space-2) 0', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
+                              Sonuç bulunamadı
+                            </p>
+                            <p style={{ margin: '0 0 var(--space-3) 0', fontSize: 'var(--text-sm)' }}>
+                              Arama kriterlerinize uygun depo yok.
+                            </p>
+                            <ModernButton variant="outline" size="sm" onClick={clearStorageFilters}>
+                              Filtreleri Temizle
+                            </ModernButton>
+                          </div>
                         </td>
-                        <td>{storage.location_name}</td>
-                        <td style={{ textAlign: "right" }}>{numberFormatter.format(storage.reservations)}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredStorageData.map((storage, index) => (
+                        <tr 
+                          key={index}
+                          style={{ 
+                            background: index % 2 === 0 ? 'transparent' : 'var(--bg-secondary)',
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <td style={{ 
+                            padding: 'var(--space-3) var(--space-4)', 
+                            borderBottom: '1px solid var(--border-secondary)',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                              <Package className="h-4 w-4" style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                              <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{storage.storage_code}</strong>
+                            </div>
+                          </td>
+                          <td style={{ 
+                            padding: 'var(--space-3) var(--space-4)', 
+                            borderBottom: '1px solid var(--border-secondary)',
+                            color: 'var(--text-secondary)',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                              <MapPin className="h-3 w-3" style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                              {storage.location_name}
+                            </div>
+                          </td>
+                          <td style={{ 
+                            textAlign: 'right', 
+                            padding: 'var(--space-3) var(--space-4)', 
+                            borderBottom: '1px solid var(--border-secondary)',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}>
+                            <span style={{
+                              background: storage.reservations > 10 
+                                ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
+                                : storage.reservations > 5 
+                                  ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                                  : 'var(--bg-tertiary)',
+                              color: storage.reservations > 5 ? 'white' : 'var(--text-primary)',
+                              padding: 'var(--space-1) var(--space-2)',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: 'var(--text-xs)',
+                              fontWeight: 'var(--font-semibold)',
+                              display: 'inline-block',
+                              minWidth: '32px',
+                              textAlign: 'center',
+                            }}>
+                              {numberFormatter.format(storage.reservations)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
