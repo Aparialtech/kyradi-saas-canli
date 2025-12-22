@@ -130,14 +130,22 @@ export function AdminTransfersPage() {
     };
   }, [transfersQuery.data?.meta, page, pageSize]);
 
-  // Stats
+  // Stats - with safe number conversion to prevent NaN
   const stats = useMemo(() => {
     const validTransfers = transfers.filter((t) => t != null);
+    
+    // Helper to safely get numeric amount
+    const safeAmount = (val: unknown): number => {
+      if (val == null) return 0;
+      const num = typeof val === 'string' ? parseFloat(val) : Number(val);
+      return isNaN(num) ? 0 : num;
+    };
+    
     return {
       pendingCount: validTransfers.filter((t) => t?.status === "pending").length,
-      pendingAmount: validTransfers.filter((t) => t?.status === "pending").reduce((sum, t) => sum + (t?.gross_amount || 0), 0),
-      completedAmount: validTransfers.filter((t) => t?.status === "completed").reduce((sum, t) => sum + (t?.gross_amount || 0), 0),
-      totalAmount: validTransfers.reduce((sum, t) => sum + (t?.gross_amount || 0), 0),
+      pendingAmount: validTransfers.filter((t) => t?.status === "pending").reduce((sum, t) => sum + safeAmount(t?.gross_amount), 0),
+      completedAmount: validTransfers.filter((t) => t?.status === "completed").reduce((sum, t) => sum + safeAmount(t?.gross_amount), 0),
+      totalAmount: validTransfers.reduce((sum, t) => sum + safeAmount(t?.gross_amount), 0),
     };
   }, [transfers]);
 
