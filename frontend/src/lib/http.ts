@@ -8,6 +8,13 @@ const baseURL = env.API_URL.replace(/\/+$/, "");
 // Startup log for debugging deployed envs
 console.info("[HTTP] Using API base URL:", baseURL);
 
+// Callback for handling 401 errors (will be set by AuthContext)
+let onUnauthorized: (() => void) | null = null;
+
+export const setOnUnauthorized = (callback: () => void) => {
+  onUnauthorized = callback;
+};
+
 export const http = axios.create({
   baseURL,
   withCredentials: false,
@@ -65,9 +72,14 @@ http.interceptors.response.use(
         }
       }
       
-      // 401 Unauthorized - clear token
+      // 401 Unauthorized - clear token and trigger logout
       if (axiosError.response?.status === 401) {
+        console.warn("[HTTP] 401 Unauthorized - token expired or invalid");
         tokenStorage.clear();
+        // Trigger the logout callback if set
+        if (onUnauthorized) {
+          onUnauthorized();
+        }
       }
       
       // 404 Not Found - don't log as error for optional endpoints

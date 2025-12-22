@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 
 import { authService } from "../services/auth";
 import { tokenStorage } from "../lib/tokenStorage";
+import { setOnUnauthorized } from "../lib/http";
 import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
 
 interface AuthContextValue {
@@ -81,6 +82,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setToken(null);
     setUser(null);
     navigate("/login");
+  }, [navigate]);
+
+  // Register the 401 handler callback
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      console.warn("[Auth] Session expired - redirecting to login");
+      setToken(null);
+      setUser(null);
+      navigate("/login");
+    });
+    
+    return () => {
+      setOnUnauthorized(() => {}); // Cleanup
+    };
   }, [navigate]);
 
   const hasRole = useCallback(
