@@ -53,6 +53,15 @@ export function AdminReportsOverview() {
     }).format(minor / 100);
   };
 
+  // For decimal values (transfer amounts are already in TL, not minor)
+  const formatCurrencyDecimal = (value: number) => {
+    return new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
+      minimumFractionDigits: 2,
+    }).format(value);
+  };
+
   return (
     <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
       <ToastContainer messages={messages} />
@@ -208,7 +217,7 @@ export function AdminReportsOverview() {
                 {transfersQuery.isLoading ? "..." : `${commissionStats.pendingCount} adet`}
               </p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
-                Tutar: {formatCurrency(commissionStats.pendingAmount * 100)}
+                Tutar: {formatCurrencyDecimal(commissionStats.pendingAmount)}
               </p>
             </div>
           </ModernCard>
@@ -228,7 +237,7 @@ export function AdminReportsOverview() {
                 <Send className="h-5 w-5" style={{ color: '#059669' }} />
               </div>
               <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#059669', margin: '0 0 var(--space-1) 0' }}>
-                {transfersQuery.isLoading ? "..." : formatCurrency(commissionStats.completedAmount * 100)}
+                {transfersQuery.isLoading ? "..." : formatCurrencyDecimal(commissionStats.completedAmount)}
               </p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
                 Onaylanan komisyon ödemeleri
