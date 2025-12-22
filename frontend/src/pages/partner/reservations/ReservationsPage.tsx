@@ -404,9 +404,10 @@ export function ReservationsPage() {
                 label: t("reservations.table.actions"),
                 align: 'center',
                 render: (_, row: Reservation) => (
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', alignItems: 'center' }}>
                     <ModernButton
                       variant="ghost"
+                      title="Detayları Görüntüle"
                       onClick={() => {
                         setSelectedReservation(row);
                         setShowDetailModal(true);
@@ -416,6 +417,7 @@ export function ReservationsPage() {
                     </ModernButton>
                     <ModernButton
                       variant="primary"
+                      title="Teslim Edildi / Tamamla"
                       disabled={row.status === 'completed' || row.status === 'cancelled'}
                       onClick={() => {
                         if (confirm('Teslim edildi olarak işaretle?')) {
@@ -427,6 +429,7 @@ export function ReservationsPage() {
                     </ModernButton>
                     <ModernButton
                       variant="danger"
+                      title="Rezervasyonu İptal Et"
                       disabled={row.status === 'completed' || row.status === 'cancelled'}
                       onClick={() => {
                         if (confirm('İptal etmek istediğinize emin misiniz?')) {
