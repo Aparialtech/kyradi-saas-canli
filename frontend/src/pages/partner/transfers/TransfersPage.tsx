@@ -147,14 +147,14 @@ export function TransfersPage() {
     {
       key: "created_at",
       label: "Tarih",
-      render: (row: PaymentTransfer) => formatDate(row.created_at),
+      render: (row: PaymentTransfer) => row ? formatDate(row.created_at) : "-",
     },
     {
       key: "gross_amount",
       label: "Komisyon Tutarı",
       render: (row: PaymentTransfer) => (
         <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>
-          {formatCurrency(row.gross_amount)}
+          {row ? formatCurrency(row.gross_amount || 0) : "-"}
         </span>
       ),
     },
@@ -162,6 +162,7 @@ export function TransfersPage() {
       key: "status",
       label: "Durum",
       render: (row: PaymentTransfer) => {
+        if (!row) return <Badge variant="neutral">-</Badge>;
         const config = statusConfig[row.status as TransferStatus] || { label: row.status || "Bilinmiyor", color: "neutral" as const };
         return <Badge variant={config.color}>{config.label}</Badge>;
       },
@@ -169,14 +170,14 @@ export function TransfersPage() {
     {
       key: "transfer_date",
       label: "Ödeme Tarihi",
-      render: (row: PaymentTransfer) => formatDate(row.transfer_date),
+      render: (row: PaymentTransfer) => row ? formatDate(row.transfer_date) : "-",
     },
     {
       key: "reference_id",
       label: "Referans No",
       render: (row: PaymentTransfer) => (
         <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
-          {row.reference_id || "-"}
+          {row?.reference_id || "-"}
         </span>
       ),
     },
