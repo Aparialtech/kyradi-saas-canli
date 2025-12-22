@@ -59,7 +59,8 @@ export function UserEditPage() {
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
 
-  const isNew = id === 'new';
+  // Check if we're creating a new user - id is undefined for /users/new route
+  const isNew = !id || id === 'new';
 
   // Fetch user data if editing
   const { data: user, isLoading } = useQuery({
