@@ -85,6 +85,14 @@ async def create_user(
         password_hash=get_password_hash(payload.password),
         role=payload.role.value,
         is_active=payload.is_active,
+        full_name=payload.full_name,
+        phone_number=payload.phone_number,
+        birth_date=payload.birth_date,
+        tc_identity_number=payload.tc_identity_number,
+        city=payload.city,
+        district=payload.district,
+        address=payload.address,
+        gender=payload.gender,
     )
     session.add(user)
     await session.flush()

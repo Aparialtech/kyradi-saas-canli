@@ -36,7 +36,13 @@ class UserRead(IdentifiedModel):
     is_active: bool
     phone_number: Optional[str] = None
     full_name: Optional[str] = None
-    last_login_at: Optional[datetime]
+    birth_date: Optional[datetime] = None
+    tc_identity_number: Optional[str] = None
+    city: Optional[str] = None
+    district: Optional[str] = None
+    address: Optional[str] = None
+    gender: Optional[str] = None
+    last_login_at: Optional[datetime] = None
 
 
 class ForgotPasswordRequest(BaseModel):

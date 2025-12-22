@@ -127,6 +127,12 @@ class User(IdentifiedMixin, TimestampMixin, Base):
     require_phone_verification_on_next_login: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     phone_number: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)  # For SMS verification
     full_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # Full name of the user
+    birth_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)  # Doğum tarihi
+    tc_identity_number: Mapped[Optional[str]] = mapped_column(String(11), nullable=True)  # TC Kimlik No
+    city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # İl
+    district: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # İlçe
+    address: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # Adres
+    gender: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)  # Cinsiyet: male, female, other
 
     tenant: Mapped[Optional[Tenant]] = relationship("Tenant", back_populates="users")
     reservations: Mapped[List["Reservation"]] = relationship(
