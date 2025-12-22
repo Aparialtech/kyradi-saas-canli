@@ -281,121 +281,113 @@
             <!-- Kişisel Bilgiler -->
             <fieldset class="kyradi-reserve__fieldset">
               <legend class="kyradi-reserve__legend">${this.t("personalInfo")}</legend>
-              <label>
-                <span>${this.t("fullName")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="text" name="full_name" required minlength="2" placeholder="${this.t("fullNamePlaceholder")}" />
-              </label>
-              <label>
-                <span>${this.t("idType")} <span class="kyradi-reserve__required">*</span></span>
-                <select name="id_type" required>
-                  <option value="">${this.t("idTypeSelect")}</option>
-                  <option value="tc">${this.t("tcIdentityNumber")}</option>
-                  <option value="passport">${this.t("passportNumber")}</option>
-                </select>
-              </label>
-              <label id="tc-field" style="display: none;">
-                <span>${this.t("tcIdentityNumber")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="text" name="tc_identity_number" pattern="[0-9]{11}" maxlength="11" placeholder="${this.t("tcIdentityNumberPlaceholder")}" />
-                <small class="kyradi-reserve__helper">${this.t("tcIdentityNumberHelper")}</small>
-              </label>
-              <label id="passport-field" style="display: none;">
-                <span>${this.t("passportNumber")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="text" name="passport_number" maxlength="20" placeholder="${this.t("passportNumberPlaceholder")}" />
-              </label>
-              <label>
-                <span>${this.t("phoneNumber")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="tel" name="phone_number" required minlength="10" placeholder="${this.t("phoneNumberPlaceholder")}" />
-              </label>
-              <label>
-                <span>${this.t("email")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="email" name="email" required placeholder="${this.t("emailPlaceholder")}" />
-              </label>
+              <div class="kyradi-reserve__grid">
+                <label>
+                  <span>${this.t("fullName")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="text" name="full_name" required minlength="2" placeholder="${this.t("fullNamePlaceholder")}" />
+                </label>
+                <label>
+                  <span>${this.t("idType")} <span class="kyradi-reserve__required">*</span></span>
+                  <select name="id_type" required>
+                    <option value="">${this.t("idTypeSelect")}</option>
+                    <option value="tc">${this.t("tcIdentityNumber")}</option>
+                    <option value="passport">${this.t("passportNumber")}</option>
+                  </select>
+                </label>
+                <label id="tc-field" style="display: none;">
+                  <span>${this.t("tcIdentityNumber")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="text" name="tc_identity_number" pattern="[0-9]{11}" maxlength="11" placeholder="${this.t("tcIdentityNumberPlaceholder")}" />
+                </label>
+                <label id="passport-field" style="display: none;">
+                  <span>${this.t("passportNumber")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="text" name="passport_number" maxlength="20" placeholder="${this.t("passportNumberPlaceholder")}" />
+                </label>
+                <label>
+                  <span>${this.t("phoneNumber")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="tel" name="phone_number" required minlength="10" placeholder="${this.t("phoneNumberPlaceholder")}" />
+                </label>
+                <label>
+                  <span>${this.t("email")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="email" name="email" required placeholder="${this.t("emailPlaceholder")}" />
+                </label>
+              </div>
             </fieldset>
             
-            <!-- Konaklama Bilgileri -->
+            <!-- Tarih ve Bavul -->
             <fieldset class="kyradi-reserve__fieldset">
-              <legend class="kyradi-reserve__legend">${this.t("accommodationInfo")}</legend>
-              <label>
-                <span>${this.t("hotelRoomNumber")}</span>
-                <input type="text" name="hotel_room_number" maxlength="20" placeholder="${this.t("hotelRoomNumberPlaceholder")}" />
-              </label>
-              <label>
-                <span>${this.t("checkinDateTime")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="datetime-local" name="start_datetime" required min="${minDateTime}" />
-              </label>
-              <label>
-                <span>${this.t("checkoutDateTime")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="datetime-local" name="end_datetime" required min="${minDateTime}" />
-              </label>
-              <label>
-                <span>${this.t("durationHours")}</span>
-                <input type="text" name="duration_hours" readonly class="kyradi-reserve__readonly" />
-              </label>
-              <label>
-                <span>${this.t("amount")}</span>
-                <input type="text" name="estimated_price" readonly class="kyradi-reserve__readonly" />
-              </label>
-            </fieldset>
-            
-            <!-- Bavul Bilgileri -->
-            <fieldset class="kyradi-reserve__fieldset">
-              <legend class="kyradi-reserve__legend">${this.t("luggageInfo")}</legend>
-              <label>
-                <span>${this.t("luggageCount")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="number" name="luggage_count" required min="1" max="20" value="1" placeholder="${this.t("luggageCount")}" />
-              </label>
-              <label>
-                <span>${this.t("luggageType")}</span>
-                <select name="luggage_type">
-                  <option value="">${this.t("luggageTypeSelect")}</option>
-                  <option value="Kabin">${this.t("luggageTypeCabin")}</option>
-                  <option value="Orta">${this.t("luggageTypeMedium")}</option>
-                  <option value="Büyük">${this.t("luggageTypeLarge")}</option>
-                  <option value="Sırt Çantası">${this.t("luggageTypeBackpack")}</option>
-                  <option value="Diğer">${this.t("luggageTypeOther")}</option>
-                </select>
-              </label>
-              <label>
-                <span>${this.t("luggageDescription")}</span>
-                <textarea name="luggage_description" rows="3" maxlength="500" placeholder="${this.t("luggageDescriptionPlaceholder")}"></textarea>
-              </label>
-              <label>
-                <span>${this.t("notes")}</span>
-                <textarea name="notes" rows="3" placeholder="${this.t("notesPlaceholder")}"></textarea>
-              </label>
+              <legend class="kyradi-reserve__legend">${this.t("accommodationInfo")} & ${this.t("luggageInfo")}</legend>
+              <div class="kyradi-reserve__grid">
+                <label>
+                  <span>${this.t("checkinDateTime")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="datetime-local" name="start_datetime" required min="${minDateTime}" />
+                </label>
+                <label>
+                  <span>${this.t("checkoutDateTime")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="datetime-local" name="end_datetime" required min="${minDateTime}" />
+                </label>
+                <label>
+                  <span>${this.t("luggageCount")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="number" name="luggage_count" required min="1" max="20" value="1" />
+                </label>
+                <label>
+                  <span>${this.t("luggageType")}</span>
+                  <select name="luggage_type">
+                    <option value="">${this.t("luggageTypeSelect")}</option>
+                    <option value="Kabin">${this.t("luggageTypeCabin")}</option>
+                    <option value="Orta">${this.t("luggageTypeMedium")}</option>
+                    <option value="Büyük">${this.t("luggageTypeLarge")}</option>
+                    <option value="Sırt Çantası">${this.t("luggageTypeBackpack")}</option>
+                    <option value="Diğer">${this.t("luggageTypeOther")}</option>
+                  </select>
+                </label>
+                <label>
+                  <span>${this.t("hotelRoomNumber")}</span>
+                  <input type="text" name="hotel_room_number" maxlength="20" placeholder="${this.t("hotelRoomNumberPlaceholder")}" />
+                </label>
+                <label>
+                  <span>${this.t("amount")}</span>
+                  <input type="text" name="estimated_price" readonly class="kyradi-reserve__readonly" placeholder="--" />
+                </label>
+              </div>
+              <div class="kyradi-reserve__grid kyradi-reserve__grid--full" style="margin-top: 12px;">
+                <label style="grid-column: 1 / -1;">
+                  <span>${this.t("notes")}</span>
+                  <textarea name="notes" rows="2" placeholder="${this.t("notesPlaceholder")}"></textarea>
+                </label>
+              </div>
             </fieldset>
             
             <!-- Onaylar -->
-            <fieldset class="kyradi-reserve__fieldset">
+            <fieldset class="kyradi-reserve__fieldset kyradi-reserve__fieldset--consents">
               <legend class="kyradi-reserve__legend">${this.t("consents")}</legend>
               <label class="kyradi-reserve__consent">
                 <input type="checkbox" name="kvkk_consent" required data-contract-type="kvkk" />
-                <span>${this.kvkkText || this.t("kvkkConsent")} <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk" style="text-decoration: underline; color: #0066ff; cursor: pointer;">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
+                <span>KVKK onayı <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
               </label>
               <label class="kyradi-reserve__consent">
                 <input type="checkbox" name="terms_consent" required data-contract-type="terms" />
-                <span>${this.t("termsConsent")} <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms" style="text-decoration: underline; color: #0066ff; cursor: pointer;">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
+                <span>Kullanım şartları <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
               </label>
               <label class="kyradi-reserve__consent">
                 <input type="checkbox" name="disclosure_consent" required data-contract-type="disclosure" />
-                <span>${this.t("disclosureConsent")} <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure" style="text-decoration: underline; color: #0066ff; cursor: pointer;">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
+                <span>Aydınlatma metni <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
               </label>
             </fieldset>
             
             <!-- Contract Modal -->
-            <div class="kyradi-reserve__modal" id="contract-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
-              <div style="max-width: 700px; width: 100%; margin: 20px auto; background: white; border-radius: 16px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); position: relative;">
-                <h3 style="margin: 0 0 24px 0; font-size: 1.5rem; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px;" id="contract-modal-title">Sözleşme</h3>
-                <div style="max-height: 500px; overflow-y: auto; padding: 20px; background: #f8fafc; border-radius: 12px; margin-bottom: 24px; line-height: 1.8; font-size: 0.95rem; white-space: pre-wrap; color: #334155; border: 1px solid #e2e8f0;" id="contract-modal-content"></div>
-                <div style="margin-bottom: 24px; padding: 16px; background: #f1f5f9; border-radius: 10px; border: 1px solid #e2e8f0;">
-                  <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 500; color: #475569;">
-                    <input type="checkbox" id="contract-modal-accept" style="width: 18px; height: 18px; cursor: pointer; accent-color: #00a389;" />
+            <div class="kyradi-reserve__modal" id="contract-modal" style="display: none;">
+              <div>
+                <h3 id="contract-modal-title">Sözleşme</h3>
+                <div id="contract-modal-content" style="max-height: 400px; overflow-y: auto; padding: 16px; background: #f8fafc; border-radius: 8px; margin: 16px 0; font-size: 13px; line-height: 1.7; color: #475569;"></div>
+                <div style="padding: 12px 16px; background: #f1f5f9; border-radius: 8px; margin-bottom: 16px;">
+                  <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: #475569;">
+                    <input type="checkbox" id="contract-modal-accept" style="width: 16px; height: 16px; accent-color: #10b981;" />
                     <span>Okudum, kabul ediyorum</span>
                   </label>
                 </div>
-                <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                  <button type="button" class="kyradi-reserve__button" id="contract-modal-close" style="background: #64748b; padding: 12px 24px; border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s;">Kapat</button>
-                  <button type="button" class="kyradi-reserve__button" id="contract-modal-confirm" style="background: #00a389; padding: 12px 24px; border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.95rem; opacity: 0.5; transition: all 0.2s;" disabled>Kabul Ediyorum</button>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                  <button type="button" id="contract-modal-close" style="padding: 10px 20px; background: #64748b; border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; cursor: pointer;">Kapat</button>
+                  <button type="button" id="contract-modal-confirm" style="padding: 10px 20px; background: #10b981; border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; cursor: pointer; opacity: 0.5;" disabled>Kabul Et</button>
                 </div>
               </div>
             </div>

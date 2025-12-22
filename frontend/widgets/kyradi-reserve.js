@@ -82,13 +82,6 @@
       kvkkConsentRequired: "Devam edebilmek için KVKK onayını vermelisiniz.",
       disclosureConsentRequired: "Devam edebilmek için Aydınlatma Metni'ni okuduğunuzu onaylamalısınız.",
       hours: "saat",
-      step1: "Kişisel Bilgiler",
-      step2: "Konaklama Bilgileri",
-      step3: "Bavul Bilgileri",
-      next: "İleri",
-      back: "Geri",
-      step: "Adım",
-      of: "/",
     },
     "en-us": {
       title: "Reservation Form",
@@ -155,13 +148,6 @@
       kvkkConsentRequired: "You must provide KVKK consent to continue.",
       disclosureConsentRequired: "You must confirm that you have read the Disclosure Text to continue.",
       hours: "hours",
-      step1: "Personal Information",
-      step2: "Accommodation Information",
-      step3: "Luggage Information",
-      next: "Next",
-      back: "Back",
-      step: "Step",
-      of: "/",
     },
   };
 
@@ -177,11 +163,10 @@
   class KyradiReserveElement extends HTMLElement {
     constructor() {
       super();
-      this.state = { loading: true, error: null, successRef: null, currentStep: 1 };
+      this.state = { loading: true, error: null, successRef: null };
       this.options = {};
       this.accessToken = null;
       this.captchaToken = null;
-      this.formData = {}; // Store form data across steps
     }
 
     connectedCallback() {
@@ -296,146 +281,113 @@
             <!-- Kişisel Bilgiler -->
             <fieldset class="kyradi-reserve__fieldset">
               <legend class="kyradi-reserve__legend">${this.t("personalInfo")}</legend>
-              <label>
-                <span>${this.t("fullName")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="text" name="full_name" required minlength="2" placeholder="${this.t("fullNamePlaceholder")}" />
-              </label>
-              <label>
-                <span>${this.t("idType")} <span class="kyradi-reserve__required">*</span></span>
-                <select name="id_type" required>
-                  <option value="">${this.t("idTypeSelect")}</option>
-                  <option value="tc">${this.t("tcIdentityNumber")}</option>
-                  <option value="passport">${this.t("passportNumber")}</option>
-                </select>
-              </label>
-              <label id="tc-field" style="display: none;">
-                <span>${this.t("tcIdentityNumber")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="text" name="tc_identity_number" pattern="[0-9]{11}" maxlength="11" placeholder="${this.t("tcIdentityNumberPlaceholder")}" />
-                <small class="kyradi-reserve__helper">${this.t("tcIdentityNumberHelper")}</small>
-              </label>
-              <label id="passport-field" style="display: none;">
-                <span>${this.t("passportNumber")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="text" name="passport_number" maxlength="20" placeholder="${this.t("passportNumberPlaceholder")}" />
-              </label>
-              <label>
-                <span>${this.t("phoneNumber")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="tel" name="phone_number" required minlength="10" placeholder="${this.t("phoneNumberPlaceholder")}" />
-              </label>
-              <label>
-                <span>${this.t("email")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="email" name="email" required placeholder="${this.t("emailPlaceholder")}" />
-              </label>
+              <div class="kyradi-reserve__grid">
+                <label>
+                  <span>${this.t("fullName")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="text" name="full_name" required minlength="2" placeholder="${this.t("fullNamePlaceholder")}" />
+                </label>
+                <label>
+                  <span>${this.t("idType")} <span class="kyradi-reserve__required">*</span></span>
+                  <select name="id_type" required>
+                    <option value="">${this.t("idTypeSelect")}</option>
+                    <option value="tc">${this.t("tcIdentityNumber")}</option>
+                    <option value="passport">${this.t("passportNumber")}</option>
+                  </select>
+                </label>
+                <label id="tc-field" style="display: none;">
+                  <span>${this.t("tcIdentityNumber")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="text" name="tc_identity_number" pattern="[0-9]{11}" maxlength="11" placeholder="${this.t("tcIdentityNumberPlaceholder")}" />
+                </label>
+                <label id="passport-field" style="display: none;">
+                  <span>${this.t("passportNumber")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="text" name="passport_number" maxlength="20" placeholder="${this.t("passportNumberPlaceholder")}" />
+                </label>
+                <label>
+                  <span>${this.t("phoneNumber")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="tel" name="phone_number" required minlength="10" placeholder="${this.t("phoneNumberPlaceholder")}" />
+                </label>
+                <label>
+                  <span>${this.t("email")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="email" name="email" required placeholder="${this.t("emailPlaceholder")}" />
+                </label>
+              </div>
             </fieldset>
             
-            <!-- Konaklama Bilgileri -->
+            <!-- Tarih ve Bavul -->
             <fieldset class="kyradi-reserve__fieldset">
-              <legend class="kyradi-reserve__legend">${this.t("accommodationInfo")}</legend>
-              <label>
-                <span>${this.t("hotelRoomNumber")}</span>
-                <input type="text" name="hotel_room_number" maxlength="20" placeholder="${this.t("hotelRoomNumberPlaceholder")}" />
-              </label>
-              <label>
-                <span>${this.t("checkinDateTime")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="datetime-local" name="start_datetime" required min="${minDateTime}" />
-              </label>
-              <label>
-                <span>${this.t("checkoutDateTime")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="datetime-local" name="end_datetime" required min="${minDateTime}" />
-              </label>
-            </fieldset>
-            
-            <!-- Fiyat Kartı -->
-            <div class="kyradi-reserve__price-card kyradi-reserve__price-card--empty" id="price-card">
-              <div class="kyradi-reserve__price-header">
-                <svg class="kyradi-reserve__price-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                </svg>
-                <span>${this.t("estimatedPrice")}</span>
+              <legend class="kyradi-reserve__legend">${this.t("accommodationInfo")} & ${this.t("luggageInfo")}</legend>
+              <div class="kyradi-reserve__grid">
+                <label>
+                  <span>${this.t("checkinDateTime")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="datetime-local" name="start_datetime" required min="${minDateTime}" />
+                </label>
+                <label>
+                  <span>${this.t("checkoutDateTime")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="datetime-local" name="end_datetime" required min="${minDateTime}" />
+                </label>
+                <label>
+                  <span>${this.t("luggageCount")} <span class="kyradi-reserve__required">*</span></span>
+                  <input type="number" name="luggage_count" required min="1" max="20" value="1" />
+                </label>
+                <label>
+                  <span>${this.t("luggageType")}</span>
+                  <select name="luggage_type">
+                    <option value="">${this.t("luggageTypeSelect")}</option>
+                    <option value="Kabin">${this.t("luggageTypeCabin")}</option>
+                    <option value="Orta">${this.t("luggageTypeMedium")}</option>
+                    <option value="Büyük">${this.t("luggageTypeLarge")}</option>
+                    <option value="Sırt Çantası">${this.t("luggageTypeBackpack")}</option>
+                    <option value="Diğer">${this.t("luggageTypeOther")}</option>
+                  </select>
+                </label>
+                <label>
+                  <span>${this.t("hotelRoomNumber")}</span>
+                  <input type="text" name="hotel_room_number" maxlength="20" placeholder="${this.t("hotelRoomNumberPlaceholder")}" />
+                </label>
+                <label>
+                  <span>${this.t("amount")}</span>
+                  <input type="text" name="estimated_price" readonly class="kyradi-reserve__readonly" placeholder="--" />
+                </label>
               </div>
-              <div class="kyradi-reserve__price-amount" id="price-amount">
-                Tarih seçin
+              <div class="kyradi-reserve__grid kyradi-reserve__grid--full" style="margin-top: 12px;">
+                <label style="grid-column: 1 / -1;">
+                  <span>${this.t("notes")}</span>
+                  <textarea name="notes" rows="2" placeholder="${this.t("notesPlaceholder")}"></textarea>
+                </label>
               </div>
-              <div class="kyradi-reserve__price-details" id="price-details" style="display: none;">
-                <div class="kyradi-reserve__price-detail">
-                  <svg class="kyradi-reserve__price-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                  </svg>
-                  <span id="price-duration">-</span>
-                </div>
-                <div class="kyradi-reserve__price-detail">
-                  <svg class="kyradi-reserve__price-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                  </svg>
-                  <span id="price-baggage">-</span>
-                </div>
-                <div class="kyradi-reserve__price-detail">
-                  <svg class="kyradi-reserve__price-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                  </svg>
-                  <span id="price-type">-</span>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Bavul Bilgileri -->
-            <fieldset class="kyradi-reserve__fieldset">
-              <legend class="kyradi-reserve__legend">${this.t("luggageInfo")}</legend>
-              <label>
-                <span>${this.t("luggageCount")} <span class="kyradi-reserve__required">*</span></span>
-                <input type="number" name="luggage_count" required min="1" max="20" value="1" placeholder="${this.t("luggageCount")}" />
-              </label>
-              <label>
-                <span>${this.t("luggageType")}</span>
-                <select name="luggage_type">
-                  <option value="">${this.t("luggageTypeSelect")}</option>
-                  <option value="Kabin">${this.t("luggageTypeCabin")}</option>
-                  <option value="Orta">${this.t("luggageTypeMedium")}</option>
-                  <option value="Büyük">${this.t("luggageTypeLarge")}</option>
-                  <option value="Sırt Çantası">${this.t("luggageTypeBackpack")}</option>
-                  <option value="Diğer">${this.t("luggageTypeOther")}</option>
-                </select>
-              </label>
-              <label>
-                <span>${this.t("luggageDescription")}</span>
-                <textarea name="luggage_description" rows="3" maxlength="500" placeholder="${this.t("luggageDescriptionPlaceholder")}"></textarea>
-              </label>
-              <label>
-                <span>${this.t("notes")}</span>
-                <textarea name="notes" rows="3" placeholder="${this.t("notesPlaceholder")}"></textarea>
-              </label>
             </fieldset>
             
             <!-- Onaylar -->
-            <fieldset class="kyradi-reserve__fieldset">
+            <fieldset class="kyradi-reserve__fieldset kyradi-reserve__fieldset--consents">
               <legend class="kyradi-reserve__legend">${this.t("consents")}</legend>
               <label class="kyradi-reserve__consent">
                 <input type="checkbox" name="kvkk_consent" required data-contract-type="kvkk" />
-                <span>${this.kvkkText || this.t("kvkkConsent")} <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk" style="text-decoration: underline; color: #0066ff; cursor: pointer;">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
+                <span>KVKK onayı <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
               </label>
               <label class="kyradi-reserve__consent">
                 <input type="checkbox" name="terms_consent" required data-contract-type="terms" />
-                <span>${this.t("termsConsent")} <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms" style="text-decoration: underline; color: #0066ff; cursor: pointer;">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
+                <span>Kullanım şartları <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
               </label>
               <label class="kyradi-reserve__consent">
                 <input type="checkbox" name="disclosure_consent" required data-contract-type="disclosure" />
-                <span>${this.t("disclosureConsent")} <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure" style="text-decoration: underline; color: #0066ff; cursor: pointer;">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
+                <span>Aydınlatma metni <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
               </label>
             </fieldset>
             
             <!-- Contract Modal -->
-            <div class="kyradi-reserve__modal" id="contract-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
-              <div style="max-width: 700px; width: 100%; margin: 20px auto; background: white; border-radius: 16px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); position: relative;">
-                <h3 style="margin: 0 0 24px 0; font-size: 1.5rem; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px;" id="contract-modal-title">Sözleşme</h3>
-                <div style="max-height: 500px; overflow-y: auto; padding: 20px; background: #f8fafc; border-radius: 12px; margin-bottom: 24px; line-height: 1.8; font-size: 0.95rem; white-space: pre-wrap; color: #334155; border: 1px solid #e2e8f0;" id="contract-modal-content"></div>
-                <div style="margin-bottom: 24px; padding: 16px; background: #f1f5f9; border-radius: 10px; border: 1px solid #e2e8f0;">
-                  <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 500; color: #475569;">
-                    <input type="checkbox" id="contract-modal-accept" style="width: 18px; height: 18px; cursor: pointer; accent-color: #00a389;" />
+            <div class="kyradi-reserve__modal" id="contract-modal" style="display: none;">
+              <div>
+                <h3 id="contract-modal-title">Sözleşme</h3>
+                <div id="contract-modal-content" style="max-height: 400px; overflow-y: auto; padding: 16px; background: #f8fafc; border-radius: 8px; margin: 16px 0; font-size: 13px; line-height: 1.7; color: #475569;"></div>
+                <div style="padding: 12px 16px; background: #f1f5f9; border-radius: 8px; margin-bottom: 16px;">
+                  <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: #475569;">
+                    <input type="checkbox" id="contract-modal-accept" style="width: 16px; height: 16px; accent-color: #10b981;" />
                     <span>Okudum, kabul ediyorum</span>
                   </label>
                 </div>
-                <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                  <button type="button" class="kyradi-reserve__button" id="contract-modal-close" style="background: #64748b; padding: 12px 24px; border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s;">Kapat</button>
-                  <button type="button" class="kyradi-reserve__button" id="contract-modal-confirm" style="background: #00a389; padding: 12px 24px; border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.95rem; opacity: 0.5; transition: all 0.2s;" disabled>Kabul Ediyorum</button>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                  <button type="button" id="contract-modal-close" style="padding: 10px 20px; background: #64748b; border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; cursor: pointer;">Kapat</button>
+                  <button type="button" id="contract-modal-confirm" style="padding: 10px 20px; background: #10b981; border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; cursor: pointer; opacity: 0.5;" disabled>Kabul Et</button>
                 </div>
               </div>
             </div>
@@ -512,12 +464,8 @@
       // Real-time validation and price calculation: set checkout min datetime based on checkin
       const startInput = this.querySelector('input[name="start_datetime"]');
       const endInput = this.querySelector('input[name="end_datetime"]');
-      const priceCard = this.querySelector('#price-card');
-      const priceAmount = this.querySelector('#price-amount');
-      const priceDetails = this.querySelector('#price-details');
-      const priceDuration = this.querySelector('#price-duration');
-      const priceBaggage = this.querySelector('#price-baggage');
-      const priceType = this.querySelector('#price-type');
+      const durationInput = this.querySelector('input[name="duration_hours"]');
+      const priceInput = this.querySelector('input[name="estimated_price"]');
       
       const updateDurationAndPrice = async () => {
         if (startInput && endInput && startInput.value && endInput.value) {
@@ -525,119 +473,50 @@
           const end = new Date(endInput.value);
           if (end > start) {
             const hours = (end - start) / (1000 * 60 * 60);
+            if (durationInput) {
+              durationInput.value = hours.toFixed(2) + ' ' + this.t("hours");
+            }
             
             // Get luggage count for pricing
             const luggageInput = this.querySelector('input[name="luggage_count"]');
             const luggageCount = luggageInput ? parseInt(luggageInput.value) || 1 : 1;
             
-            // Show loading state
-            if (priceCard) {
-              priceCard.classList.remove('kyradi-reserve__price-card--empty');
-              priceCard.classList.add('kyradi-reserve__price-card--loading');
-            }
-            if (priceAmount) {
-              priceAmount.textContent = "Hesaplanıyor...";
-            }
-            if (priceDetails) {
-              priceDetails.style.display = 'none';
-            }
-            
-            try {
-              const estimateUrl = new URL("/demo/public/price-estimate", this.options.apiBase);
-              const response = await fetch(estimateUrl.toString(), {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  tenant_id: this.options.tenantId,
-                  start_datetime: start.toISOString(),
-                  end_datetime: end.toISOString(),
-                  baggage_count: luggageCount,
-                }),
-              });
+            // Call backend pricing estimate endpoint
+            if (priceInput) {
+              priceInput.value = "...";  // Show loading indicator
               
-              if (response.ok) {
-                const data = await response.json();
-                // Store the estimate for later use
-                this.lastPriceEstimate = data;
+              try {
+                const estimateUrl = new URL("/demo/public/price-estimate", this.options.apiBase);
+                const response = await fetch(estimateUrl.toString(), {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    tenant_id: this.options.tenantId,
+                    start_datetime: start.toISOString(),
+                    end_datetime: end.toISOString(),
+                    baggage_count: luggageCount,
+                  }),
+                });
                 
-                // Update price card
-                if (priceCard) {
-                  priceCard.classList.remove('kyradi-reserve__price-card--loading', 'kyradi-reserve__price-card--empty');
+                if (response.ok) {
+                  const data = await response.json();
+                  priceInput.value = data.total_formatted;
+                  // Store the estimate for later use
+                  this.lastPriceEstimate = data;
+                } else {
+                  // Fallback to local calculation if API fails
+              const estimatedPrice = (hours * 15).toFixed(2);
+                  priceInput.value = estimatedPrice + ' ₺ (tahmini)';
                 }
-                if (priceAmount) {
-                  priceAmount.textContent = data.total_formatted;
-                }
-                if (priceDetails) {
-                  priceDetails.style.display = 'flex';
-                }
-                if (priceDuration) {
-                  priceDuration.textContent = hours.toFixed(1) + ' ' + this.t("hours");
-                }
-                if (priceBaggage) {
-                  priceBaggage.textContent = luggageCount + ' bavul';
-                }
-                if (priceType) {
-                  const typeLabel = data.pricing_type === 'hourly' ? 'Saatlik' : 
-                                   data.pricing_type === 'daily' ? 'Günlük' : 
-                                   data.pricing_type || 'Standart';
-                  priceType.textContent = typeLabel;
-                }
-              } else {
-                // Fallback to local calculation if API fails
-                const estimatedPrice = (hours * 15 * luggageCount).toFixed(2);
-                if (priceCard) {
-                  priceCard.classList.remove('kyradi-reserve__price-card--loading');
-                }
-                if (priceAmount) {
-                  priceAmount.textContent = '₺' + estimatedPrice + ' (tahmini)';
-                }
-                if (priceDetails) {
-                  priceDetails.style.display = 'flex';
-                }
-                if (priceDuration) {
-                  priceDuration.textContent = hours.toFixed(1) + ' ' + this.t("hours");
-                }
-                if (priceBaggage) {
-                  priceBaggage.textContent = luggageCount + ' bavul';
-                }
-                if (priceType) {
-                  priceType.textContent = 'Tahmini';
-                }
-              }
-            } catch (err) {
-              console.warn("Price estimate API call failed:", err);
-              // Fallback to local calculation
-              const estimatedPrice = (hours * 15 * luggageCount).toFixed(2);
-              if (priceCard) {
-                priceCard.classList.remove('kyradi-reserve__price-card--loading');
-              }
-              if (priceAmount) {
-                priceAmount.textContent = '₺' + estimatedPrice + ' (tahmini)';
-              }
-              if (priceDetails) {
-                priceDetails.style.display = 'flex';
-              }
-              if (priceDuration) {
-                priceDuration.textContent = hours.toFixed(1) + ' ' + this.t("hours");
-              }
-              if (priceBaggage) {
-                priceBaggage.textContent = luggageCount + ' bavul';
+              } catch (err) {
+                console.warn("Price estimate API call failed:", err);
+                // Fallback to local calculation
+                const estimatedPrice = (hours * 15).toFixed(2);
+                priceInput.value = estimatedPrice + ' ₺ (tahmini)';
               }
             }
-          }
-        } else {
-          // Reset to empty state
-          if (priceCard) {
-            priceCard.classList.add('kyradi-reserve__price-card--empty');
-            priceCard.classList.remove('kyradi-reserve__price-card--loading');
-          }
-          if (priceAmount) {
-            priceAmount.textContent = 'Tarih seçin';
-          }
-          if (priceDetails) {
-            priceDetails.style.display = 'none';
           }
         }
       };
@@ -646,7 +525,6 @@
       const luggageCountInput = this.querySelector('input[name="luggage_count"]');
       if (luggageCountInput) {
         luggageCountInput.addEventListener('change', updateDurationAndPrice);
-        luggageCountInput.addEventListener('input', updateDurationAndPrice);
       }
       
       if (startInput && endInput) {
@@ -707,7 +585,6 @@
           modalAccept.checked = false;
           modalConfirm.disabled = true;
           modalConfirm.style.opacity = '0.5';
-          modalConfirm.style.cursor = 'not-allowed';
           modal.style.display = 'flex';
         });
       });
@@ -732,6 +609,34 @@
         }
         modal.style.display = 'none';
       });
+      
+      // Add hover effects to buttons
+      const closeBtn = modalClose;
+      const confirmBtn = modalConfirm;
+      if (closeBtn) {
+        closeBtn.addEventListener('mouseenter', () => {
+          closeBtn.style.background = '#475569';
+          closeBtn.style.transform = 'translateY(-1px)';
+        });
+        closeBtn.addEventListener('mouseleave', () => {
+          closeBtn.style.background = '#64748b';
+          closeBtn.style.transform = 'translateY(0)';
+        });
+      }
+      if (confirmBtn) {
+        confirmBtn.addEventListener('mouseenter', () => {
+          if (!confirmBtn.disabled) {
+            confirmBtn.style.background = '#008a73';
+            confirmBtn.style.transform = 'translateY(-1px)';
+          }
+        });
+        confirmBtn.addEventListener('mouseleave', () => {
+          if (!confirmBtn.disabled) {
+            confirmBtn.style.background = '#00a389';
+            confirmBtn.style.transform = 'translateY(0)';
+          }
+        });
+      }
       
       // Close on backdrop click
       modal.addEventListener('click', (e) => {
@@ -935,13 +840,6 @@
         return;
       }
       
-      // Include calculated price from pricing estimate API
-      const priceEstimate = this.lastPriceEstimate;
-      const amountMinor = priceEstimate?.total_minor || null;
-      const pricingRuleId = priceEstimate?.rule_id || null;
-      const pricingType = priceEstimate?.pricing_type || null;
-      const currency = priceEstimate?.currency || "TRY";
-      
       const payload = {
         ...(checkinDate ? { checkin_date: checkinDate } : {}),  // Legacy backward compatibility
         ...(checkoutDate ? { checkout_date: checkoutDate } : {}),  // Legacy backward compatibility
@@ -958,11 +856,6 @@
         terms_consent: termsConsent,
         disclosure_consent: disclosureConsent,
         ...(this.captchaToken ? { captcha_token: this.captchaToken } : {}),
-        // Include pricing information from estimate API
-        ...(amountMinor !== null ? { amount_minor: amountMinor } : {}),
-        ...(pricingRuleId ? { pricing_rule_id: pricingRuleId } : {}),
-        ...(pricingType ? { pricing_type: pricingType } : {}),
-        currency: currency,
         guest: {
           name: fullName,
           full_name: fullName,
@@ -990,10 +883,16 @@
       }
 
       // Log payload for debugging
-      console.log("Submitting reservation payload:", JSON.stringify(payload, null, 2));
+      console.log("=== SUBMITTING RESERVATION ===");
+      console.log("Payload:", JSON.stringify(payload, null, 2));
+      console.log("API Base:", this.options.apiBase);
+      console.log("Access Token:", this.accessToken ? "Present" : "Missing");
       
       try {
-        const response = await fetch(new URL("/public/widget/reservations", this.options.apiBase).toString(), {
+        const url = new URL("/public/widget/reservations", this.options.apiBase).toString();
+        console.log("Request URL:", url);
+        
+        const response = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1003,6 +902,9 @@
           credentials: "include",
           body: JSON.stringify(payload),
         });
+        
+        console.log("Response status:", response.status, response.statusText);
+        console.log("Response headers:", Object.fromEntries(response.headers.entries()));
         if (!response.ok) {
           let body = {};
           let errorText = "";
@@ -1068,14 +970,6 @@
             end_datetime: endDtISO,
             checkin_date: checkinDate || (startDtISO ? new Date(startDtISO).toISOString().split('T')[0] : null), // Legacy compatibility
             checkout_date: checkoutDate || (endDtISO ? new Date(endDtISO).toISOString().split('T')[0] : null), // Legacy compatibility
-            // Include pricing information
-            price_estimate: priceEstimate || null,
-            amount_minor: amountMinor,
-            amount_formatted: priceEstimate?.total_formatted || null,
-            duration_hours: priceEstimate?.duration_hours || null,
-            pricing_type: pricingType,
-            currency: currency,
-            luggage_count: luggageCount,
           },
           bubbles: true,
         }));
