@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   User, Package, MapPin, DollarSign, FileText, CheckCircle2, Loader2, Eye, Briefcase, ChevronRight, Phone, Mail, Calendar, CreditCard
@@ -15,6 +15,7 @@ import { pricingService, type PriceEstimateResponse } from "../../services/publi
 import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { Modal } from "../../components/common/Modal";
+import { ContractViewerModal } from "../../components/common/ContractViewerModal";
 import { getErrorMessage } from "../../lib/httpError";
 import { DateTimeField } from "../../components/ui/DateField";
 
@@ -79,8 +80,6 @@ export function SelfServiceReservationPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [hasReadKvkk, setHasReadKvkk] = useState(false);
   const [hasReadTerms, setHasReadTerms] = useState(false);
-  const kvkkScrollRef = useRef<HTMLDivElement>(null);
-  const termsScrollRef = useRef<HTMLDivElement>(null);
 
   const { messages, push } = useToast();
 
@@ -181,24 +180,6 @@ export function SelfServiceReservationPage() {
       setReturnLoading(false);
     }
   };
-
-  const handleKvkkScroll = useCallback(() => {
-    const el = kvkkScrollRef.current;
-    if (!el) return;
-    if (Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 10 && !hasReadKvkk) {
-      setHasReadKvkk(true);
-      setKvkkAccepted(true);
-    }
-  }, [hasReadKvkk]);
-
-  const handleTermsScroll = useCallback(() => {
-    const el = termsScrollRef.current;
-    if (!el) return;
-    if (Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 10 && !hasReadTerms) {
-      setHasReadTerms(true);
-      setTermsAccepted(true);
-    }
-  }, [hasReadTerms]);
 
   const formatPrice = (minor: number) => `${(minor / 100).toFixed(2)} ₺`;
 
@@ -790,27 +771,25 @@ export function SelfServiceReservationPage() {
       </div>
 
       {/* Modals */}
-      <Modal isOpen={showKvkkModal} onClose={() => setShowKvkkModal(false)} title="KVKK Aydınlatma Metni" width="600px">
-        <ContractContent
-          scrollRef={kvkkScrollRef}
-          onScroll={handleKvkkScroll}
-          hasRead={hasReadKvkk}
-          content={kvkkContent}
-          onAccept={() => { setKvkkAccepted(true); setHasReadKvkk(true); setShowKvkkModal(false); }}
-          onClose={() => setShowKvkkModal(false)}
-        />
-      </Modal>
+      <ContractViewerModal
+        isOpen={showKvkkModal}
+        onClose={() => setShowKvkkModal(false)}
+        onAccept={() => { setKvkkAccepted(true); setHasReadKvkk(true); }}
+        title="KVKK Aydınlatma Metni"
+        content={kvkkContent}
+        requireScroll={true}
+        showAcceptButton={true}
+      />
 
-      <Modal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} title="Kullanım Şartları" width="600px">
-        <ContractContent
-          scrollRef={termsScrollRef}
-          onScroll={handleTermsScroll}
-          hasRead={hasReadTerms}
-          content={termsContent}
-          onAccept={() => { setTermsAccepted(true); setHasReadTerms(true); setShowTermsModal(false); }}
-          onClose={() => setShowTermsModal(false)}
-        />
-      </Modal>
+      <ContractViewerModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={() => { setTermsAccepted(true); setHasReadTerms(true); }}
+        title="Kullanım Şartları"
+        content={termsContent}
+        requireScroll={true}
+        showAcceptButton={true}
+      />
 
       <Modal isOpen={handoverModalOpen} onClose={() => setHandoverModalOpen(false)} title="Teslim Al" width="480px">
         <ModalForm
@@ -962,43 +941,6 @@ function InfoBox({ label, value, mono }: { label: string; value: string; mono?: 
       <span style={{ display: "block", fontSize: "11px", color: "#64748b", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</span>
       <span style={{ fontSize: "15px", fontWeight: 700, color: "#0f172a", fontFamily: mono ? "monospace" : "inherit" }}>{value}</span>
     </div>
-  );
-}
-
-function ContractContent({ scrollRef, onScroll, hasRead, content, onAccept, onClose }: {
-  scrollRef: React.RefObject<HTMLDivElement | null>; onScroll: () => void; hasRead: boolean; content: string; onAccept: () => void; onClose: () => void;
-}) {
-  return (
-    <>
-      <div
-        ref={scrollRef}
-        onScroll={onScroll}
-        style={{ maxHeight: "360px", overflowY: "auto", padding: "20px", background: "#f8fafc", borderRadius: "14px", marginBottom: "20px" }}
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
-      {!hasRead && <p style={{ textAlign: "center", fontSize: "13px", color: "#f59e0b", marginBottom: "16px" }}>↓ Sözleşmeyi sonuna kadar okuyun</p>}
-      <div style={{ display: "flex", gap: "12px" }}>
-        <button
-          onClick={onAccept}
-          disabled={!hasRead}
-          style={{
-            flex: 1,
-            padding: "14px",
-            borderRadius: "12px",
-            border: "none",
-            background: hasRead ? "#22c55e" : "#94a3b8",
-            color: "white",
-            fontWeight: 600,
-            cursor: hasRead ? "pointer" : "not-allowed",
-          }}
-        >
-          Okudum, Onaylıyorum
-        </button>
-        <button onClick={onClose} style={{ padding: "14px 24px", borderRadius: "12px", border: "2px solid #e2e8f0", background: "white", color: "#64748b", fontWeight: 600, cursor: "pointer" }}>
-          Kapat
-        </button>
-      </div>
-    </>
   );
 }
 
