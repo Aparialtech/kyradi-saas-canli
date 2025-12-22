@@ -1,4 +1,4 @@
-/* Kyradi Reserve Widget - Professional SaaS Design */
+/* Kyradi Reserve Widget - Premium SaaS Design */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after {
@@ -8,32 +8,32 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN CONTAINER - Premium wide layout
+   MAIN CONTAINER - Full width premium layout
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   width: 100%;
-  max-width: 960px;
+  max-width: 1100px;
   margin: 0 auto;
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 10px 40px rgba(0,0,0,0.08);
+  border-radius: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02), 0 20px 60px rgba(0,0,0,0.08);
   overflow: visible;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   HEADER - Clean professional header
+   HEADER
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__title {
-  padding: 24px 32px;
-  font-size: clamp(20px, 2.5vw, 26px);
+  padding: 28px 40px;
+  font-size: 28px;
   font-weight: 800;
   color: #0f172a;
-  background: linear-gradient(to bottom, #ffffff, #f8fafc);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border-bottom: 1px solid #e2e8f0;
-  border-radius: 16px 16px 0 0;
+  border-radius: 20px 20px 0 0;
   position: relative;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .kyradi-reserve__title::before {
@@ -42,23 +42,23 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
-  border-radius: 16px 16px 0 0;
+  height: 5px;
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 40%, #ec4899 70%, #f43f5e 100%);
+  border-radius: 20px 20px 0 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════
    FORM CONTAINER
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__form {
-  padding: 32px;
+  padding: 40px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 36px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   FIELDSET - Section cards
+   FIELDSET
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__fieldset {
   border: none;
@@ -69,40 +69,56 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   LEGEND - Section titles
+   LEGEND - Beautiful section headers
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__legend {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #334155;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #e2e8f0;
+  gap: 14px;
   width: 100%;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f1f5f9;
+  position: relative;
 }
 
 .kyradi-reserve__legend::before {
   content: '';
-  display: inline-block;
-  width: 4px;
-  height: 18px;
-  background: linear-gradient(180deg, #3b82f6, #8b5cf6);
-  border-radius: 2px;
+  display: block;
+  width: 5px;
+  height: 28px;
+  background: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%);
+  border-radius: 3px;
   flex-shrink: 0;
 }
 
+.kyradi-reserve__legend::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 120px;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 1px;
+}
+
+.kyradi-reserve__legend span,
+.kyradi-reserve__legend {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 /* ═══════════════════════════════════════════════════════════════
-   GRID - 3 column responsive grid
+   GRID - Wide 3 column layout
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: 24px;
   width: 100%;
   min-width: 0;
 }
@@ -110,9 +126,9 @@
 .kyradi-reserve__grid--full {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .kyradi-reserve__grid--full > label {
@@ -125,7 +141,7 @@
 .kyradi-reserve__form label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   width: 100%;
 }
@@ -139,25 +155,25 @@
 
 .kyradi-reserve__required {
   color: #ef4444;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   INPUTS - Clean modern inputs
+   INPUTS
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__form input,
 .kyradi-reserve__form select,
 .kyradi-reserve__form textarea {
   width: 100%;
   min-width: 0;
-  height: 44px;
-  padding: 0 14px;
-  font-size: 14px;
+  height: 48px;
+  padding: 0 16px;
+  font-size: 15px;
   font-family: inherit;
   color: #1e293b;
   background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
   outline: none;
   transition: all 0.2s ease;
 }
@@ -173,7 +189,7 @@
 .kyradi-reserve__form textarea:focus {
   border-color: #3b82f6;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
 .kyradi-reserve__form input::placeholder {
@@ -183,76 +199,102 @@
 .kyradi-reserve__form select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
-  background-position: right 12px center;
+  background-position: right 14px center;
   background-repeat: no-repeat;
-  background-size: 18px;
-  padding-right: 44px;
+  background-size: 20px;
+  padding-right: 48px;
   cursor: pointer;
 }
 
 .kyradi-reserve__form textarea {
   height: auto;
-  min-height: 100px;
-  padding: 14px;
+  min-height: 120px;
+  padding: 16px;
   resize: vertical;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
-/* Readonly price field */
+/* Price field - Premium style */
 .kyradi-reserve__readonly {
-  background: linear-gradient(135deg, #ecfdf5, #d1fae5) !important;
-  border-color: #6ee7b7 !important;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+  border: 2px solid #6ee7b7 !important;
   color: #047857 !important;
-  font-weight: 700 !important;
-  font-size: 16px !important;
+  font-weight: 800 !important;
+  font-size: 18px !important;
+  text-align: center;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   CONSENTS SECTION - Full width, proper text wrap
+   CONSENTS SECTION - Premium design
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__fieldset--consents {
-  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 28px;
   width: 100%;
   min-width: 0;
+}
+
+.kyradi-reserve__fieldset--consents .kyradi-reserve__legend {
+  margin-bottom: 20px;
+  padding-bottom: 14px;
 }
 
 .kyradi-reserve__consents-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
   width: 100%;
   min-width: 0;
 }
 
-/* Consent checkbox row */
+/* Consent card - Premium style */
 .kyradi-reserve__consent {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   gap: 14px;
-  padding: 16px 18px;
+  padding: 24px 20px;
   background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   width: 100%;
   min-width: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.kyradi-reserve__consent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  opacity: 0;
+  transition: opacity 0.25s ease;
 }
 
 .kyradi-reserve__consent:hover {
   border-color: #3b82f6;
   background: #f0f9ff;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+}
+
+.kyradi-reserve__consent:hover::before {
+  opacity: 1;
 }
 
 .kyradi-reserve__consent input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
   flex-shrink: 0;
   margin: 0;
   padding: 0;
@@ -263,23 +305,33 @@
 .kyradi-reserve__consent > span {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #334155;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #475569;
   word-break: normal;
   overflow-wrap: anywhere;
-  hyphens: auto;
 }
 
 .kyradi-reserve__contract-link {
-  color: #3b82f6;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff !important;
+  font-size: 12px;
+  font-weight: 700;
   text-decoration: none;
-  white-space: nowrap;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
 .kyradi-reserve__contract-link:hover {
-  text-decoration: underline;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  text-decoration: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -290,28 +342,29 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 52px;
-  padding: 0 32px;
-  font-size: 16px;
+  height: 56px;
+  padding: 0 40px;
+  font-size: 17px;
   font-weight: 700;
   font-family: inherit;
   color: #ffffff;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
   margin-top: 8px;
+  letter-spacing: 0.02em;
 }
 
 .kyradi-reserve__button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.45);
 }
 
 .kyradi-reserve__button:active {
-  transform: translateY(0);
+  transform: translateY(-1px);
 }
 
 .kyradi-reserve__button:disabled {
@@ -325,14 +378,14 @@
    ERROR MESSAGE
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__error {
-  padding: 14px 18px;
+  padding: 16px 20px;
   margin-top: 16px;
   font-size: 14px;
   font-weight: 500;
   color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 2px solid #fecaca;
+  border-radius: 12px;
   line-height: 1.5;
 }
 
@@ -344,26 +397,26 @@
    SUCCESS STATE
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__status {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   color: #059669;
   margin: 0;
 }
 
 .kyradi-reserve__muted {
   color: #64748b;
-  font-size: 15px;
+  font-size: 16px;
   margin-top: 8px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MODAL
+   MODAL - Premium contract modal
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__modal {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
   z-index: 10000;
   display: flex;
   align-items: center;
@@ -373,23 +426,34 @@
 
 .kyradi-reserve__modal > div {
   width: 100%;
-  max-width: 560px;
+  max-width: 640px;
   max-height: 85vh;
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .kyradi-reserve__modal h3 {
-  padding: 20px 24px;
-  font-size: 18px;
-  font-weight: 700;
+  padding: 24px 28px;
+  font-size: 20px;
+  font-weight: 800;
   color: #0f172a;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 2px solid #e2e8f0;
+  position: relative;
+}
+
+.kyradi-reserve__modal h3::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -397,18 +461,23 @@
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve--dark {
   background: #0f172a;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
 }
 
 .kyradi-reserve--dark .kyradi-reserve__title {
-  background: linear-gradient(to bottom, #1e293b, #0f172a);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   border-color: #334155;
   color: #f1f5f9;
 }
 
-.kyradi-reserve--dark .kyradi-reserve__legend {
-  color: #94a3b8;
+.kyradi-reserve--dark .kyradi-reserve__legend,
+.kyradi-reserve--dark .kyradi-reserve__legend span {
+  color: #e2e8f0;
   border-color: #334155;
+}
+
+.kyradi-reserve--dark .kyradi-reserve__legend::after {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
 }
 
 .kyradi-reserve--dark .kyradi-reserve__form label > span:first-child {
@@ -431,7 +500,7 @@
 }
 
 .kyradi-reserve--dark .kyradi-reserve__fieldset--consents {
-  background: linear-gradient(to bottom, #1e293b, #0f172a);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   border-color: #334155;
 }
 
@@ -450,21 +519,56 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE - TABLET (768px)
+   RESPONSIVE - TABLET
    ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .kyradi-reserve {
     max-width: 100%;
-    border-radius: 12px;
+    border-radius: 16px;
+  }
+  
+  .kyradi-reserve__title {
+    padding: 24px 28px;
+    font-size: 24px;
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .kyradi-reserve__title::before {
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .kyradi-reserve__form {
+    padding: 28px;
+    gap: 32px;
+  }
+  
+  .kyradi-reserve__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  
+  .kyradi-reserve__consents-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE - MOBILE
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .kyradi-reserve {
+    border-radius: 0;
+    box-shadow: none;
   }
   
   .kyradi-reserve__title {
     padding: 20px 24px;
-    border-radius: 12px 12px 0 0;
+    font-size: 20px;
+    border-radius: 0;
   }
   
   .kyradi-reserve__title::before {
-    border-radius: 12px 12px 0 0;
+    border-radius: 0;
   }
   
   .kyradi-reserve__form {
@@ -473,59 +577,44 @@
   }
   
   .kyradi-reserve__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE - MOBILE (520px)
-   ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 520px) {
-  .kyradi-reserve {
-    border-radius: 0;
-    box-shadow: none;
-  }
-  
-  .kyradi-reserve__title {
-    padding: 18px 20px;
-    font-size: 18px;
-    border-radius: 0;
-  }
-  
-  .kyradi-reserve__title::before {
-    border-radius: 0;
-  }
-  
-  .kyradi-reserve__form {
-    padding: 20px;
-    gap: 24px;
-  }
-  
-  .kyradi-reserve__grid {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 16px;
   }
   
   .kyradi-reserve__legend {
-    font-size: 12px;
-    margin-bottom: 16px;
+    font-size: 13px;
+    margin-bottom: 20px;
   }
   
   .kyradi-reserve__fieldset--consents {
-    padding: 18px;
+    padding: 20px;
+  }
+  
+  .kyradi-reserve__consents-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
   
   .kyradi-reserve__consent {
-    padding: 14px;
+    flex-direction: row;
+    text-align: left;
+    padding: 16px;
+    gap: 14px;
   }
   
   .kyradi-reserve__consent > span {
     font-size: 13px;
   }
   
+  .kyradi-reserve__contract-link {
+    margin-top: 0;
+    margin-left: auto;
+    padding: 6px 12px;
+    white-space: nowrap;
+  }
+  
   .kyradi-reserve__button {
-    height: 48px;
-    font-size: 15px;
+    height: 52px;
+    font-size: 16px;
   }
 }

@@ -363,15 +363,18 @@
               <div class="kyradi-reserve__consents-grid">
                 <label class="kyradi-reserve__consent">
                   <input type="checkbox" name="kvkk_consent" required data-contract-type="kvkk" />
-                  <span>KVKK metnini okudum, kabul ediyorum <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
+                  <span>KVKK Aydınlatma Metni <span class="kyradi-reserve__required">*</span></span>
+                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk">📄 Oku ve Onayla</a>
                 </label>
                 <label class="kyradi-reserve__consent">
                   <input type="checkbox" name="terms_consent" required data-contract-type="terms" />
-                  <span>Kullanım şartlarını kabul ediyorum <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
+                  <span>Kullanım Şartları <span class="kyradi-reserve__required">*</span></span>
+                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms">📄 Oku ve Onayla</a>
                 </label>
                 <label class="kyradi-reserve__consent">
                   <input type="checkbox" name="disclosure_consent" required data-contract-type="disclosure" />
-                  <span>Aydınlatma metnini onaylıyorum <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure">(Oku)</a> <span class="kyradi-reserve__required">*</span></span>
+                  <span>Aydınlatma Metni <span class="kyradi-reserve__required">*</span></span>
+                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure">📄 Oku ve Onayla</a>
                 </label>
               </div>
             </fieldset>
