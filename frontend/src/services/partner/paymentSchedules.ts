@@ -39,6 +39,10 @@ export interface PaymentTransfer {
   bank_account_holder?: string;
   bank_iban?: string;
   is_manual_request: boolean;
+  requested_by_id?: string;
+  requested_at?: string;
+  processed_by_id?: string;
+  processed_at?: string;
   notes?: string;
   error_message?: string;
   created_at: string;
@@ -209,6 +213,11 @@ export const paymentScheduleService = {
   async rejectTransfer(transferId: string, reason?: string): Promise<PaymentTransfer> {
     const params = reason ? `?reason=${encodeURIComponent(reason)}` : "";
     const response = await http.post<PaymentTransfer>(`/payment-schedules/transfers/${transferId}/reject${params}`);
+    return response.data;
+  },
+
+  async cancelTransfer(transferId: string): Promise<PaymentTransfer> {
+    const response = await http.post<PaymentTransfer>(`/payment-schedules/transfers/${transferId}/cancel`);
     return response.data;
   },
 

@@ -13,6 +13,8 @@ import {
   ArrowRight,
   CheckCircle,
   Eye,
+  XCircle,
+  User,
 } from "../../../lib/lucide";
 
 import {
@@ -79,6 +81,21 @@ export function TransfersPage() {
       setShowRequestModal(false);
       setRequestAmount("");
       setRequestNotes("");
+    },
+    onError: (error) => {
+      push({ type: "error", title: "Hata", description: getErrorMessage(error) });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (transferId: string) =>
+      paymentScheduleService.cancelTransfer(transferId),
+    onSuccess: () => {
+      push({ type: "success", title: "Başarılı", description: "Transfer iptal edildi." });
+      queryClient.invalidateQueries({ queryKey: ["payment-transfers"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-summary"] });
+      setShowDetailModal(false);
+      setSelectedTransfer(null);
     },
     onError: (error) => {
       push({ type: "error", title: "Hata", description: getErrorMessage(error) });
@@ -179,19 +196,35 @@ export function TransfersPage() {
       label: "İşlemler",
       render: (_value: unknown, row: PaymentTransfer) => {
         if (!row) return null;
+        const isPending = row.status === "pending";
         return (
-          <ModernButton
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedTransfer(row);
-              setShowDetailModal(true);
-            }}
-            leftIcon={<Eye className="h-4 w-4" />}
-          >
-            Detay
-          </ModernButton>
+          <div style={{ display: "flex", gap: "0.25rem" }}>
+            <ModernButton
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedTransfer(row);
+                setShowDetailModal(true);
+              }}
+              leftIcon={<Eye className="h-4 w-4" />}
+            >
+              Detay
+            </ModernButton>
+            {isPending && (
+              <ModernButton
+                variant="danger"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cancelMutation.mutate(row.id);
+                }}
+                leftIcon={<XCircle className="h-4 w-4" />}
+              >
+                İptal
+              </ModernButton>
+            )}
+          </div>
         );
       },
     },
@@ -495,9 +528,18 @@ export function TransfersPage() {
                   </span>
                 </div>
                 <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Oluşturulma</span>
+                  <span className={styles.detailLabel}>Gönderim Tarihi</span>
                   <span>{formatDate(selectedTransfer.created_at)}</span>
                 </div>
+                {selectedTransfer.requested_by_id && (
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>
+                      <User className="h-3 w-3" style={{ display: "inline", marginRight: 4 }} />
+                      Gönderen
+                    </span>
+                    <span>{selectedTransfer.requested_by_id.substring(0, 8)}...</span>
+                  </div>
+                )}
                 {selectedTransfer.transfer_date && (
                   <div className={styles.detailRow}>
                     <span className={styles.detailLabel}>Onay Tarihi</span>
@@ -516,9 +558,25 @@ export function TransfersPage() {
                     <span>{selectedTransfer.notes}</span>
                   </div>
                 )}
+                {selectedTransfer.error_message && (
+                  <div className={styles.detailRowFull} style={{ background: "#fef2f2", padding: "0.75rem", borderRadius: "0.5rem" }}>
+                    <span className={styles.detailLabel} style={{ color: "#dc2626" }}>İptal/Red Sebebi</span>
+                    <span style={{ color: "#dc2626" }}>{selectedTransfer.error_message}</span>
+                  </div>
+                )}
               </div>
 
-              <div className={styles.modalActions} style={{ justifyContent: "flex-end" }}>
+              <div className={styles.modalActions}>
+                {selectedTransfer.status === "pending" && (
+                  <ModernButton
+                    variant="danger"
+                    onClick={() => cancelMutation.mutate(selectedTransfer.id)}
+                    isLoading={cancelMutation.isPending}
+                    leftIcon={<XCircle className="h-4 w-4" />}
+                  >
+                    İptal Et
+                  </ModernButton>
+                )}
                 <ModernButton variant="ghost" onClick={() => setShowDetailModal(false)}>
                   Kapat
                 </ModernButton>

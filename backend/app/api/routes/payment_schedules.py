@@ -508,7 +508,7 @@ async def request_transfer(
         is_manual_request=True,
         requested_by_id=current_user.id,
         requested_at=datetime.now(timezone.utc),
-        notes=payload.notes or "[Komisyon Ödemesi] Partner -> Kyradi",
+        notes=payload.notes or None,  # Only user's note, no auto prefix
     )
     
     session.add(transfer)
@@ -722,6 +722,51 @@ async def reject_transfer(
         entity="payment_transfers",
         entity_id=transfer.id,
         meta={"reason": reason},
+    )
+    
+    await session.commit()
+    await session.refresh(transfer)
+    
+    return PaymentTransferRead.model_validate(transfer)
+
+
+@router.post("/transfers/{transfer_id}/cancel", response_model=PaymentTransferRead)
+async def cancel_transfer(
+    transfer_id: str,
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> PaymentTransferRead:
+    """Cancel own pending transfer (partner)."""
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant bilgisi bulunamadı.")
+    
+    stmt = select(PaymentTransfer).where(
+        PaymentTransfer.id == transfer_id,
+        PaymentTransfer.tenant_id == current_user.tenant_id,
+    )
+    transfer = (await session.execute(stmt)).scalar_one_or_none()
+    
+    if not transfer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer bulunamadı.")
+    
+    if transfer.status != TransferStatus.PENDING.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Sadece bekleyen transferler iptal edilebilir. Mevcut durum: {transfer.status}"
+        )
+    
+    transfer.status = TransferStatus.CANCELLED.value
+    transfer.error_message = "Partner tarafından iptal edildi"
+    transfer.processed_at = datetime.now(timezone.utc)
+    
+    await record_audit(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        action="payment_transfer.cancelled",
+        entity="payment_transfers",
+        entity_id=transfer.id,
+        meta={},
     )
     
     await session.commit()

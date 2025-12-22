@@ -520,6 +520,14 @@ export function AdminTransfersPage() {
                   <span>Partner ID</span>
                   <span className={styles.tenantId}>{selectedTransfer.tenant_id}</span>
                 </div>
+                {selectedTransfer.requested_by_id && (
+                  <div className={styles.detailRow}>
+                    <span>Gönderen Kullanıcı</span>
+                    <span style={{ fontFamily: "monospace", fontSize: "0.8rem" }}>
+                      {selectedTransfer.requested_by_id.substring(0, 12)}...
+                    </span>
+                  </div>
+                )}
                 <div className={styles.detailRow}>
                   <span>Talep Tarihi</span>
                   <span>{formatDate(selectedTransfer.created_at)}</span>
