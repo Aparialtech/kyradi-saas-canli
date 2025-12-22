@@ -170,7 +170,14 @@ export function PartnerOverview() {
 
   const activeReservations = summaryQuery.data?.active_reservations ?? 0;
   const occupancyPct = summaryQuery.data?.locker_occupancy_pct ?? 0;
-  const revenueMinor = summaryQuery.data?.today_revenue_minor ?? 0;
+  const todayRevenueMinor = summaryQuery.data?.today_revenue_minor ?? 0;
+
+  // Get total revenue from overview
+  const overviewQuery = useQuery({
+    queryKey: ["partner", "overview-summary"],
+    queryFn: () => partnerReportService.getPartnerOverview(),
+  });
+  const totalRevenueMinor = overviewQuery.data?.summary?.total_revenue_minor ?? 0;
 
   const currencyFormatter = useMemo(
     () =>
@@ -257,8 +264,14 @@ export function PartnerOverview() {
         icon: <MapPin className="h-[22px] w-[22px]" />,
       },
       {
+        label: "Toplam Gelir",
+        value: overviewQuery.isPending ? "..." : currencyFormatter.format(totalRevenueMinor / 100),
+        hint: "Tüm zamanların toplam geliri",
+        icon: <Wallet className="h-[22px] w-[22px]" />,
+      },
+      {
         label: t("partner.stats.revenueLabel"),
-        value: summaryQuery.isPending ? "..." : currencyFormatter.format(revenueMinor / 100),
+        value: summaryQuery.isPending ? "..." : currencyFormatter.format(todayRevenueMinor / 100),
         hint: t("partner.stats.revenueHint"),
         icon: <PiggyBank className="h-[22px] w-[22px]" />,
       },
@@ -299,7 +312,9 @@ export function PartnerOverview() {
     summaryQuery.isPending,
     activeReservations,
     occupancyPct,
-    revenueMinor,
+    todayRevenueMinor,
+    totalRevenueMinor,
+    overviewQuery.isPending,
     summaryQuery.data,
     locale,
     currencyFormatter,
