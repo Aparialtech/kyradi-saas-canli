@@ -40,6 +40,7 @@ import {
 import { LocationEditPage } from "../pages/partner/locations/LocationEditPage";
 import { UserEditPage } from "../pages/partner/users/UserEditPage";
 import { StaffAssignPage } from "../pages/partner/staff/StaffAssignPage";
+import { StaffEditPage } from "../pages/partner/staff/StaffEditPage";
 import { StorageEditPage } from "../pages/partner/storages/StorageEditPage";
 import { TicketsPage } from "../pages/partner/tickets/TicketsPage";
 import { TransfersPage } from "../pages/partner/transfers/TransfersPage";
@@ -111,6 +112,8 @@ export function AppRouter() {
             <Route path="users/new" element={<UserEditPage />} />
             <Route path="staff" element={<PartnerStaffPage />} />
             <Route path="staff/assign" element={<StaffAssignPage />} />
+            <Route path="staff/new" element={<StaffEditPage />} />
+            <Route path="staff/:id/edit" element={<StaffEditPage />} />
             <Route path="tickets" element={<TicketsPage />} />
             <Route path="pricing" element={<PartnerPricingPage />} />
             <Route path="pricing/new" element={<PricingEditPage />} />

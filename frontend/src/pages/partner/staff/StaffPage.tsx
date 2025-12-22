@@ -293,8 +293,8 @@ export function StaffPage() {
   });
 
   const handleNew = () => {
-    // Navigate to secure staff assignment page
-    navigate("/app/staff/assign");
+    // Navigate to staff edit page for new assignment
+    navigate("/app/staff/new");
   };
 
   const handleCloseForm = () => {
@@ -643,15 +643,7 @@ export function StaffPage() {
                     <ModernButton
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        setEditingStaff(row);
-                        reset({
-                          user_id: row.user_id,
-                          storage_ids: row.assigned_storage_ids,
-                          location_ids: row.assigned_location_ids,
-                        });
-                        setShowForm(true);
-                      }}
+                      onClick={() => navigate(`/app/staff/${row.id}/edit`)}
                       leftIcon={<Edit className="h-3 w-3" />}
                     >
                       {t("common.edit")}
