@@ -74,7 +74,10 @@ class TicketListResponse(BaseModel):
 async def list_tickets(
     status_filter: Optional[TicketStatus] = Query(None, alias="status"),
     priority_filter: Optional[TicketPriority] = Query(None, alias="priority"),
+    direction: Optional[str] = Query(None),  # "incoming" or "outgoing"
     search: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     current_user: User = Depends(require_tenant_operator),
@@ -82,13 +85,29 @@ async def list_tickets(
 ) -> TicketListResponse:
     """List tickets for the current tenant (partner view)."""
     
-    # Build query - partner only sees their own tickets
-    query = select(Ticket).where(
-        or_(
-            Ticket.tenant_id == current_user.tenant_id,
+    # Build query based on direction
+    if direction == "incoming":
+        # Incoming: Messages FROM admin TO this partner (target=partner, creator is not self)
+        query = select(Ticket).where(
+            and_(
+                Ticket.tenant_id == current_user.tenant_id,
+                Ticket.target.in_([TicketTarget.PARTNER, TicketTarget.ALL]),
+                Ticket.creator_id != current_user.id
+            )
+        )
+    elif direction == "outgoing":
+        # Outgoing: Messages created BY this partner (to admin)
+        query = select(Ticket).where(
             Ticket.creator_id == current_user.id
         )
-    )
+    else:
+        # No direction filter - show all related tickets
+        query = select(Ticket).where(
+            or_(
+                Ticket.tenant_id == current_user.tenant_id,
+                Ticket.creator_id == current_user.id
+            )
+        )
     
     # Apply filters
     if status_filter:
@@ -103,21 +122,31 @@ async def list_tickets(
                 Ticket.message.ilike(search_term)
             )
         )
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            query = query.where(Ticket.created_at >= start_dt)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            query = query.where(Ticket.created_at <= end_dt)
+        except ValueError:
+            pass
     
     # Count total
     count_query = select(func.count()).select_from(query.subquery())
     total = (await session.execute(count_query)).scalar() or 0
     
-    # Count unread
+    # Count unread (only for incoming messages)
     unread_query = select(func.count()).select_from(
         select(Ticket).where(
             and_(
-                or_(
-                    Ticket.tenant_id == current_user.tenant_id,
-                    Ticket.creator_id == current_user.id
-                ),
-                Ticket.read_at.is_(None),
-                Ticket.creator_id != current_user.id  # Only count tickets not created by self
+                Ticket.tenant_id == current_user.tenant_id,
+                Ticket.target.in_([TicketTarget.PARTNER, TicketTarget.ALL]),
+                Ticket.creator_id != current_user.id,
+                Ticket.read_at.is_(None)
             )
         ).subquery()
     )
@@ -331,6 +360,8 @@ async def list_all_tickets(
     status_filter: Optional[TicketStatus] = Query(None, alias="status"),
     priority_filter: Optional[TicketPriority] = Query(None, alias="priority"),
     target_filter: Optional[TicketTarget] = Query(None, alias="target"),
+    direction: Optional[str] = Query(None),  # "incoming" or "outgoing"
+    tenant_id: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
@@ -339,7 +370,23 @@ async def list_all_tickets(
 ) -> TicketListResponse:
     """List all tickets (admin view)."""
     
-    query = select(Ticket)
+    # Build query based on direction
+    if direction == "incoming":
+        # Incoming: Messages FROM partners TO admin (target=admin)
+        query = select(Ticket).where(
+            Ticket.target.in_([TicketTarget.ADMIN, TicketTarget.ALL])
+        )
+    elif direction == "outgoing":
+        # Outgoing: Messages FROM admin TO partners (target=partner, created by admin)
+        query = select(Ticket).where(
+            and_(
+                Ticket.target.in_([TicketTarget.PARTNER, TicketTarget.ALL]),
+                Ticket.creator_id == current_user.id
+            )
+        )
+    else:
+        # No direction filter - show all tickets
+        query = select(Ticket)
     
     # Apply filters
     if status_filter:
@@ -348,6 +395,8 @@ async def list_all_tickets(
         query = query.where(Ticket.priority == priority_filter)
     if target_filter:
         query = query.where(Ticket.target == target_filter)
+    if tenant_id:
+        query = query.where(Ticket.tenant_id == tenant_id)
     if search:
         search_term = f"%{search}%"
         query = query.where(
