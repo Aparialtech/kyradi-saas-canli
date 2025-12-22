@@ -517,7 +517,13 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
         {/* Source */}
         {reservation.origin && (
           <div style={{ fontSize: "0.75rem", color: "#64748b", textAlign: "right" }}>
-            Kaynak: {new URL(reservation.origin).hostname}
+            Kaynak: {(() => {
+              try {
+                return new URL(reservation.origin).hostname;
+              } catch {
+                return reservation.origin;
+              }
+            })()}
           </div>
         )}
       </div>
