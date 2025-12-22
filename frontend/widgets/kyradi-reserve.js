@@ -84,7 +84,8 @@
         }
       });
 
-      this.renderPopup();
+      // Don't render popup content initially - only when opened
+      // This prevents day numbers from appearing in DOM before needed
     }
 
     toggle() {
@@ -100,6 +101,12 @@
     close() {
       this.isOpen = false;
       this.popup.classList.remove('kyradi-dtpicker__popup--open');
+      // Clear popup content when closed to prevent any DOM bleed-through
+      setTimeout(() => {
+        if (!this.isOpen) {
+          this.popup.innerHTML = '';
+        }
+      }, 200); // Wait for animation to complete
     }
 
     renderPopup() {

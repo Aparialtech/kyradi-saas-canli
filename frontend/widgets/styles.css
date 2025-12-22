@@ -233,6 +233,22 @@
   padding: 20px;
   width: 100%;
   min-width: 0;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+}
+
+/* Hide all checkbox inputs inside consent cards completely */
+.kyradi-reserve__consent-card input[type="checkbox"] {
+  display: none !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  clip: rect(0, 0, 0, 0) !important;
+  overflow: hidden !important;
 }
 
 .kyradi-reserve__fieldset--consents .kyradi-reserve__legend {
@@ -265,6 +281,8 @@
   gap: 12px;
   width: 100%;
   min-width: 0;
+  position: relative;
+  z-index: 2;
 }
 
 /* Contract Card - New Design */
@@ -279,6 +297,9 @@
   transition: all 0.2s ease;
   width: 100%;
   min-width: 0;
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
 }
 
 .kyradi-reserve__consent-card:hover {
@@ -1062,14 +1083,15 @@
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  z-index: 1000;
+  z-index: 9999;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-8px);
+  pointer-events: none;
+  transform: translateY(-8px) scale(0.95);
   transition: all 0.2s ease;
   min-width: 300px;
   overflow: hidden;
@@ -1078,7 +1100,8 @@
 .kyradi-dtpicker__popup--open {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
 }
 
 .kyradi-dtpicker__header {
