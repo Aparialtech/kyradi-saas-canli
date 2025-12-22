@@ -167,6 +167,13 @@
       this.options = {};
       this.accessToken = null;
       this.captchaToken = null;
+      // Contract acceptance state: { opened: boolean, accepted: boolean }
+      this.contractState = {
+        kvkk: { opened: false, accepted: false },
+        terms: { opened: false, accepted: false },
+        disclosure: { opened: false, accepted: false }
+      };
+      this.currentContractType = null;
     }
 
     connectedCallback() {
@@ -357,41 +364,72 @@
               </div>
             </fieldset>
             
-            <!-- Onaylar -->
+            <!-- Onaylar - Strict Contract Acceptance -->
             <fieldset class="kyradi-reserve__fieldset kyradi-reserve__fieldset--consents">
               <legend class="kyradi-reserve__legend">${this.t("consents")}</legend>
+              <div class="kyradi-reserve__consents-info">
+                <span class="kyradi-reserve__consents-hint">📋 Devam etmek için tüm sözleşmeleri açıp en alta kadar kaydırarak onaylayın.</span>
+              </div>
               <div class="kyradi-reserve__consents-grid">
-                <label class="kyradi-reserve__consent">
-                  <input type="checkbox" name="kvkk_consent" required data-contract-type="kvkk" />
-                  <span>KVKK Metni <span class="kyradi-reserve__required">*</span></span>
-                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk">Oku</a>
-                </label>
-                <label class="kyradi-reserve__consent">
-                  <input type="checkbox" name="terms_consent" required data-contract-type="terms" />
-                  <span>Kullanım Şartları <span class="kyradi-reserve__required">*</span></span>
-                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms">Oku</a>
-                </label>
-                <label class="kyradi-reserve__consent">
-                  <input type="checkbox" name="disclosure_consent" required data-contract-type="disclosure" />
-                  <span>Aydınlatma Metni <span class="kyradi-reserve__required">*</span></span>
-                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure">Oku</a>
-                </label>
+                <div class="kyradi-reserve__consent-card" data-contract="kvkk">
+                  <div class="kyradi-reserve__consent-header">
+                    <span class="kyradi-reserve__consent-icon" data-status="pending">○</span>
+                    <span class="kyradi-reserve__consent-title">KVKK Metni <span class="kyradi-reserve__required">*</span></span>
+                  </div>
+                  <button type="button" class="kyradi-reserve__consent-btn" data-contract-type="kvkk">
+                    <span class="kyradi-reserve__consent-btn-text">Oku ve Onayla</span>
+                    <span class="kyradi-reserve__consent-btn-arrow">→</span>
+                  </button>
+                  <input type="checkbox" name="kvkk_consent" required data-contract-type="kvkk" style="display:none;" />
+                </div>
+                <div class="kyradi-reserve__consent-card" data-contract="terms">
+                  <div class="kyradi-reserve__consent-header">
+                    <span class="kyradi-reserve__consent-icon" data-status="pending">○</span>
+                    <span class="kyradi-reserve__consent-title">Kullanım Şartları <span class="kyradi-reserve__required">*</span></span>
+                  </div>
+                  <button type="button" class="kyradi-reserve__consent-btn" data-contract-type="terms">
+                    <span class="kyradi-reserve__consent-btn-text">Oku ve Onayla</span>
+                    <span class="kyradi-reserve__consent-btn-arrow">→</span>
+                  </button>
+                  <input type="checkbox" name="terms_consent" required data-contract-type="terms" style="display:none;" />
+                </div>
+                <div class="kyradi-reserve__consent-card" data-contract="disclosure">
+                  <div class="kyradi-reserve__consent-header">
+                    <span class="kyradi-reserve__consent-icon" data-status="pending">○</span>
+                    <span class="kyradi-reserve__consent-title">Aydınlatma Metni <span class="kyradi-reserve__required">*</span></span>
+                  </div>
+                  <button type="button" class="kyradi-reserve__consent-btn" data-contract-type="disclosure">
+                    <span class="kyradi-reserve__consent-btn-text">Oku ve Onayla</span>
+                    <span class="kyradi-reserve__consent-btn-arrow">→</span>
+                  </button>
+                  <input type="checkbox" name="disclosure_consent" required data-contract-type="disclosure" style="display:none;" />
+                </div>
               </div>
             </fieldset>
             
-            <!-- Contract Modal - Premium Design -->
+            <!-- Contract Modal - Scroll-to-Accept Design -->
             <div class="kyradi-reserve__modal" id="contract-modal" style="display: none;">
-              <div>
-                <h3 id="contract-modal-title">Sözleşme</h3>
-                <div class="kyradi-reserve__modal-content" id="contract-modal-content"></div>
+              <div class="kyradi-reserve__modal-container">
+                <div class="kyradi-reserve__modal-header">
+                  <h3 id="contract-modal-title">Sözleşme</h3>
+                  <button type="button" id="contract-modal-close-x" class="kyradi-reserve__modal-close-x">✕</button>
+                </div>
+                <div class="kyradi-reserve__modal-body">
+                  <div class="kyradi-reserve__modal-content" id="contract-modal-content"></div>
+                </div>
+                <div class="kyradi-reserve__modal-scroll-indicator" id="contract-scroll-indicator">
+                  <span class="kyradi-reserve__scroll-text" id="contract-scroll-text">↓ Okumak için kaydırın</span>
+                  <div class="kyradi-reserve__scroll-progress">
+                    <div class="kyradi-reserve__scroll-bar" id="contract-scroll-bar"></div>
+                  </div>
+                </div>
                 <div class="kyradi-reserve__modal-footer">
-                  <label class="kyradi-reserve__modal-accept">
-                    <input type="checkbox" id="contract-modal-accept" />
-                    <span>✓ Yukarıdaki metni okudum ve kabul ediyorum</span>
-                  </label>
+                  <div class="kyradi-reserve__modal-status" id="contract-modal-status">
+                    <span class="kyradi-reserve__status-icon" id="contract-status-icon">○</span>
+                    <span class="kyradi-reserve__status-text" id="contract-status-text">En alta kaydırarak onaylayın</span>
+                  </div>
                   <div class="kyradi-reserve__modal-buttons">
                     <button type="button" id="contract-modal-close" class="kyradi-reserve__modal-btn kyradi-reserve__modal-btn--secondary">Kapat</button>
-                    <button type="button" id="contract-modal-confirm" class="kyradi-reserve__modal-btn kyradi-reserve__modal-btn--primary" disabled>✓ Onayla</button>
                   </div>
                 </div>
               </div>
@@ -559,15 +597,21 @@
         console.warn('Failed to fetch legal texts:', err);
       }
       
-      const contractLinks = this.querySelectorAll('.kyradi-reserve__contract-link');
+      // Contract modal elements
+      const contractBtns = this.querySelectorAll('.kyradi-reserve__consent-btn');
       const modal = this.querySelector('#contract-modal');
       const modalTitle = this.querySelector('#contract-modal-title');
       const modalContent = this.querySelector('#contract-modal-content');
-      const modalAccept = this.querySelector('#contract-modal-accept');
       const modalClose = this.querySelector('#contract-modal-close');
-      const modalConfirm = this.querySelector('#contract-modal-confirm');
+      const modalCloseX = this.querySelector('#contract-modal-close-x');
+      const scrollIndicator = this.querySelector('#contract-scroll-indicator');
+      const scrollText = this.querySelector('#contract-scroll-text');
+      const scrollBar = this.querySelector('#contract-scroll-bar');
+      const statusIcon = this.querySelector('#contract-status-icon');
+      const statusText = this.querySelector('#contract-status-text');
+      const submitBtn = this.querySelector('.kyradi-reserve__button');
       
-      if (!modal || !modalTitle || !modalContent || !modalAccept || !modalClose || !modalConfirm) return;
+      if (!modal || !modalTitle || !modalContent) return;
       
       const contractTexts = {
         kvkk: legalTexts.kvkk_text || this.kvkkText || 'KVKK metni yüklenemedi.',
@@ -577,78 +621,224 @@
       
       const contractTitles = {
         kvkk: 'KVKK Aydınlatma Metni',
-        terms: 'Depo Kullanım Şartları',
+        terms: 'Kullanım Şartları',
         disclosure: 'Aydınlatma Metni'
       };
       
-      contractLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          const contractType = link.getAttribute('data-contract-type');
-          modalTitle.textContent = contractTitles[contractType] || 'Sözleşme';
-          modalContent.textContent = contractTexts[contractType] || 'Metin yüklenemedi.';
-          modalAccept.checked = false;
-          modalConfirm.disabled = true;
-          modalConfirm.style.opacity = '0.5';
-          modal.style.display = 'flex';
-        });
-      });
+      // Update submit button state based on all contracts
+      const updateSubmitButton = () => {
+        const allAccepted = Object.values(this.contractState).every(c => c.accepted);
+        if (submitBtn) {
+          submitBtn.disabled = !allAccepted;
+          submitBtn.style.opacity = allAccepted ? '1' : '0.5';
+          submitBtn.style.cursor = allAccepted ? 'pointer' : 'not-allowed';
+        }
+        // Update hint visibility
+        const hint = this.querySelector('.kyradi-reserve__consents-hint');
+        if (hint) {
+          hint.style.display = allAccepted ? 'none' : 'flex';
+        }
+      };
       
-      modalAccept.addEventListener('change', () => {
-        modalConfirm.disabled = !modalAccept.checked;
-        modalConfirm.style.opacity = modalAccept.checked ? '1' : '0.5';
-        modalConfirm.style.cursor = modalAccept.checked ? 'pointer' : 'not-allowed';
-      });
-      
-      modalClose.addEventListener('click', () => {
-        modal.style.display = 'none';
-      });
-      
-      modalConfirm.addEventListener('click', () => {
-        if (!modalAccept.checked) return;
-        const contractType = modalTitle.textContent.includes('KVKK') ? 'kvkk' : 
-                           modalTitle.textContent.includes('Şartlar') ? 'terms' : 'disclosure';
+      // Update contract card UI
+      const updateContractCard = (contractType) => {
+        const card = this.querySelector(`.kyradi-reserve__consent-card[data-contract="${contractType}"]`);
+        if (!card) return;
+        
+        const icon = card.querySelector('.kyradi-reserve__consent-icon');
+        const btn = card.querySelector('.kyradi-reserve__consent-btn');
+        const btnText = btn?.querySelector('.kyradi-reserve__consent-btn-text');
+        const state = this.contractState[contractType];
+        
+        if (state.accepted) {
+          icon.textContent = '✓';
+          icon.setAttribute('data-status', 'accepted');
+          card.classList.add('kyradi-reserve__consent-card--accepted');
+          if (btnText) btnText.textContent = 'Onaylandı';
+          if (btn) {
+            btn.classList.add('kyradi-reserve__consent-btn--accepted');
+          }
+        } else if (state.opened) {
+          icon.textContent = '◐';
+          icon.setAttribute('data-status', 'opened');
+          card.classList.add('kyradi-reserve__consent-card--opened');
+          if (btnText) btnText.textContent = 'Devam Et';
+        }
+        
+        // Update hidden checkbox
         const checkbox = this.querySelector(`input[name="${contractType}_consent"]`);
         if (checkbox) {
-          checkbox.checked = true;
+          checkbox.checked = state.accepted;
         }
+      };
+      
+      // Handle scroll in modal content
+      const handleScroll = () => {
+        if (!this.currentContractType || !modalContent) return;
+        
+        const { scrollTop, scrollHeight, clientHeight } = modalContent;
+        const scrollPercent = scrollHeight > clientHeight 
+          ? Math.min(100, (scrollTop / (scrollHeight - clientHeight)) * 100)
+          : 100;
+        
+        // Update scroll bar progress
+        if (scrollBar) {
+          scrollBar.style.width = `${scrollPercent}%`;
+        }
+        
+        // Check if near bottom (threshold: 8px)
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 8;
+        
+        if (isAtBottom && !this.contractState[this.currentContractType].accepted) {
+          // Auto-accept when scrolled to bottom
+          this.contractState[this.currentContractType].accepted = true;
+          
+          // Update UI
+          if (scrollText) {
+            scrollText.textContent = '✓ Sözleşme onaylandı';
+            scrollText.classList.add('kyradi-reserve__scroll-text--accepted');
+          }
+          if (statusIcon) {
+            statusIcon.textContent = '✓';
+            statusIcon.classList.add('kyradi-reserve__status-icon--accepted');
+          }
+          if (statusText) {
+            statusText.textContent = 'Sözleşme onaylandı!';
+            statusText.classList.add('kyradi-reserve__status-text--accepted');
+          }
+          if (scrollIndicator) {
+            scrollIndicator.classList.add('kyradi-reserve__modal-scroll-indicator--accepted');
+          }
+          
+          // Update card and submit button
+          updateContractCard(this.currentContractType);
+          updateSubmitButton();
+        } else if (!isAtBottom) {
+          // Update scroll hint
+          if (scrollText && !this.contractState[this.currentContractType].accepted) {
+            const remaining = Math.ceil(100 - scrollPercent);
+            scrollText.textContent = `↓ Okumak için kaydırın (${remaining}% kaldı)`;
+          }
+        }
+      };
+      
+      // Open contract modal
+      const openContract = (contractType) => {
+        this.currentContractType = contractType;
+        this.contractState[contractType].opened = true;
+        
+        // Set modal content
+        modalTitle.textContent = contractTitles[contractType] || 'Sözleşme';
+        modalContent.textContent = contractTexts[contractType] || 'Metin yüklenemedi.';
+        
+        // Reset scroll state
+        modalContent.scrollTop = 0;
+        
+        // Update UI based on current state
+        const isAccepted = this.contractState[contractType].accepted;
+        
+        if (scrollText) {
+          scrollText.textContent = isAccepted ? '✓ Sözleşme onaylandı' : '↓ Okumak için kaydırın';
+          scrollText.classList.toggle('kyradi-reserve__scroll-text--accepted', isAccepted);
+        }
+        if (scrollBar) {
+          scrollBar.style.width = isAccepted ? '100%' : '0%';
+        }
+        if (statusIcon) {
+          statusIcon.textContent = isAccepted ? '✓' : '○';
+          statusIcon.classList.toggle('kyradi-reserve__status-icon--accepted', isAccepted);
+        }
+        if (statusText) {
+          statusText.textContent = isAccepted ? 'Sözleşme onaylandı!' : 'En alta kaydırarak onaylayın';
+          statusText.classList.toggle('kyradi-reserve__status-text--accepted', isAccepted);
+        }
+        if (scrollIndicator) {
+          scrollIndicator.classList.toggle('kyradi-reserve__modal-scroll-indicator--accepted', isAccepted);
+        }
+        
+        // Update card (mark as opened)
+        updateContractCard(contractType);
+        
+        // Show modal
+        modal.style.display = 'flex';
+        
+        // Focus modal for accessibility
+        modalContent.focus();
+        
+        // Check if content doesn't need scrolling (short text)
+        setTimeout(() => {
+          if (modalContent.scrollHeight <= modalContent.clientHeight && !isAccepted) {
+            // Auto-accept if no scrolling needed
+            this.contractState[contractType].accepted = true;
+            if (scrollText) {
+              scrollText.textContent = '✓ Sözleşme onaylandı';
+              scrollText.classList.add('kyradi-reserve__scroll-text--accepted');
+            }
+            if (statusIcon) {
+              statusIcon.textContent = '✓';
+              statusIcon.classList.add('kyradi-reserve__status-icon--accepted');
+            }
+            if (statusText) {
+              statusText.textContent = 'Sözleşme onaylandı!';
+              statusText.classList.add('kyradi-reserve__status-text--accepted');
+            }
+            if (scrollIndicator) {
+              scrollIndicator.classList.add('kyradi-reserve__modal-scroll-indicator--accepted');
+            }
+            updateContractCard(contractType);
+            updateSubmitButton();
+          }
+        }, 100);
+      };
+      
+      // Close modal
+      const closeModal = () => {
         modal.style.display = 'none';
+        this.currentContractType = null;
+      };
+      
+      // Attach event listeners to contract buttons
+      contractBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const contractType = btn.getAttribute('data-contract-type');
+          openContract(contractType);
+        });
       });
       
-      // Add hover effects to buttons
-      const closeBtn = modalClose;
-      const confirmBtn = modalConfirm;
-      if (closeBtn) {
-        closeBtn.addEventListener('mouseenter', () => {
-          closeBtn.style.background = '#475569';
-          closeBtn.style.transform = 'translateY(-1px)';
-        });
-        closeBtn.addEventListener('mouseleave', () => {
-          closeBtn.style.background = '#64748b';
-          closeBtn.style.transform = 'translateY(0)';
-        });
+      // Scroll listener for modal content
+      if (modalContent) {
+        modalContent.addEventListener('scroll', handleScroll, { passive: true });
+        // Touch scroll support
+        modalContent.addEventListener('touchmove', () => {
+          requestAnimationFrame(handleScroll);
+        }, { passive: true });
       }
-      if (confirmBtn) {
-        confirmBtn.addEventListener('mouseenter', () => {
-          if (!confirmBtn.disabled) {
-            confirmBtn.style.background = '#008a73';
-            confirmBtn.style.transform = 'translateY(-1px)';
-          }
-        });
-        confirmBtn.addEventListener('mouseleave', () => {
-          if (!confirmBtn.disabled) {
-            confirmBtn.style.background = '#00a389';
-            confirmBtn.style.transform = 'translateY(0)';
-          }
-        });
+      
+      // Close button listeners
+      if (modalClose) {
+        modalClose.addEventListener('click', closeModal);
+      }
+      if (modalCloseX) {
+        modalCloseX.addEventListener('click', closeModal);
       }
       
       // Close on backdrop click
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-          modal.style.display = 'none';
+          closeModal();
         }
       });
+      
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+          closeModal();
+        }
+      });
+      
+      // Initial submit button state (disabled until all contracts accepted)
+      updateSubmitButton();
     }
 
     validateForm(form) {
