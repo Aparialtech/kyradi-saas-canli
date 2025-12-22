@@ -186,11 +186,21 @@ async def partner_summary(
     )
     cancelled_reservations = await _safe_scalar(session, cancelled_res_stmt, 0, "cancelled_reservations")
 
-    revenue_stmt = select(func.coalesce(func.sum(Payment.amount_minor), 0)).where(
+    # Total revenue (all time)
+    total_revenue_stmt = select(func.coalesce(func.sum(Payment.amount_minor), 0)).where(
         Payment.tenant_id == tenant_id,
         Payment.status == PaymentStatus.PAID.value,
     )
-    revenue_minor = await _safe_scalar(session, revenue_stmt, 0, "revenue_minor")
+    total_revenue_minor = await _safe_scalar(session, total_revenue_stmt, 0, "total_revenue_minor")
+
+    # Today's revenue (only payments from today)
+    today_start = datetime.combine(datetime.now(timezone.utc).date(), time.min, tzinfo=timezone.utc)
+    today_revenue_stmt = select(func.coalesce(func.sum(Payment.amount_minor), 0)).where(
+        Payment.tenant_id == tenant_id,
+        Payment.status == PaymentStatus.PAID.value,
+        Payment.paid_at >= today_start,
+    )
+    today_revenue_minor = await _safe_scalar(session, today_revenue_stmt, 0, "today_revenue_minor")
 
     try:
         exports_today = await report_exports_last24h(session, tenant_id)
@@ -263,7 +273,7 @@ async def partner_summary(
     return PartnerSummary(
         active_reservations=int(active_reservations or 0),
         locker_occupancy_pct=occupancy_pct,
-        today_revenue_minor=int(revenue_minor or 0),
+        today_revenue_minor=int(today_revenue_minor or 0),
         total_reservations=int(total_reservations or 0),
         report_exports_today=exports_today,
         storage_used_mb=storage_used_mb,
@@ -272,7 +282,7 @@ async def partner_summary(
         report_exports_reset_at=report_reset_at,
         report_exports_remaining=report_remaining,
         self_service_remaining=self_service_remaining,
-        total_revenue=int(revenue_minor or 0),
+        total_revenue=int(total_revenue_minor or 0),
         cancelled_reservations=int(cancelled_reservations or 0),
         monthly_revenue=[],
         monthly_reservations=[],

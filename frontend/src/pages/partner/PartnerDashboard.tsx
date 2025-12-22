@@ -171,13 +171,7 @@ export function PartnerOverview() {
   const activeReservations = summaryQuery.data?.active_reservations ?? 0;
   const occupancyPct = summaryQuery.data?.locker_occupancy_pct ?? 0;
   const todayRevenueMinor = summaryQuery.data?.today_revenue_minor ?? 0;
-
-  // Get total revenue from overview
-  const overviewQuery = useQuery({
-    queryKey: ["partner", "overview-summary"],
-    queryFn: () => partnerReportService.getPartnerOverview(),
-  });
-  const totalRevenueMinor = overviewQuery.data?.summary?.total_revenue_minor ?? 0;
+  const totalRevenueMinor = summaryQuery.data?.total_revenue ?? 0;
 
   const currencyFormatter = useMemo(
     () =>
@@ -265,7 +259,7 @@ export function PartnerOverview() {
       },
       {
         label: "Toplam Gelir",
-        value: overviewQuery.isPending ? "..." : currencyFormatter.format(totalRevenueMinor / 100),
+        value: summaryQuery.isPending ? "..." : currencyFormatter.format(totalRevenueMinor / 100),
         hint: "Tüm zamanların toplam geliri",
         icon: <Wallet className="h-[22px] w-[22px]" />,
       },
@@ -314,7 +308,6 @@ export function PartnerOverview() {
     occupancyPct,
     todayRevenueMinor,
     totalRevenueMinor,
-    overviewQuery.isPending,
     summaryQuery.data,
     locale,
     currencyFormatter,

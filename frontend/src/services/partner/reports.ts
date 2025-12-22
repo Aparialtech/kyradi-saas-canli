@@ -10,6 +10,7 @@ export interface PartnerSummary {
   active_reservations: number;
   locker_occupancy_pct: number;
   today_revenue_minor: number;
+  total_revenue: number;
   total_reservations: number;
   report_exports_today: number;
   storage_used_mb: number;
