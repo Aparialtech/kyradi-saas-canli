@@ -8,6 +8,7 @@ import { AuthProvider } from "./context/AuthContext.tsx";
 import { LocaleProvider } from "./context/LocaleContext.tsx";
 import "./index.css";
 import "./styles/ui.css";
+import "react-day-picker/src/style.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {

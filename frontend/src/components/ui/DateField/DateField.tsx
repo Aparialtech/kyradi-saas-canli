@@ -5,7 +5,7 @@ import { tr } from 'date-fns/locale';
 import { format, parse, isValid, startOfDay, setHours, setMinutes } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
-import { Calendar, Clock, X, ChevronLeft, ChevronRight } from '../../../lib/lucide';
+import { Calendar, Clock, X } from '../../../lib/lucide';
 import styles from './DateField.module.css';
 
 // ============================================================
@@ -165,7 +165,7 @@ function PortalPopover({ isOpen, anchorRef, children, className, onClose }: Port
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
     const popoverHeight = popoverRef.current?.offsetHeight || 400;
-    const popoverWidth = popoverRef.current?.offsetWidth || 300;
+    const popoverWidth = popoverRef.current?.offsetWidth || 340;
     
     // Check if mobile
     const mobile = viewportWidth <= 640;
@@ -197,7 +197,7 @@ function PortalPopover({ isOpen, anchorRef, children, className, onClose }: Port
       left = 20;
     }
     
-    setPosition({ top, left, width: Math.max(rect.width, 300) });
+    setPosition({ top, left, width: Math.max(rect.width, 340) });
   }, [anchorRef]);
 
   // Update position on open and resize/scroll
@@ -258,7 +258,8 @@ function PortalPopover({ isOpen, anchorRef, children, className, onClose }: Port
         position: 'fixed',
         top: position.top,
         left: position.left,
-        minWidth: position.width,
+        minWidth: 340,
+        maxWidth: 'calc(100vw - 40px)',
       };
 
   return createPortal(
@@ -431,45 +432,20 @@ export const DateField = React.forwardRef<HTMLInputElement, DateFieldProps>(
           anchorRef={inputWrapperRef}
           onClose={() => setIsOpen(false)}
         >
-          <DayPicker
-            mode="single"
-            selected={selectedDate}
-            onSelect={handleDaySelect}
-            locale={tr}
-            weekStartsOn={1}
-            disabled={[
-              ...(minDate ? [{ before: minDate }] : []),
-              ...(maxDate ? [{ after: maxDate }] : []),
-            ]}
-            showOutsideDays
-            classNames={{
-              root: styles.calendar,
-              months: styles.months,
-              month: styles.month,
-              caption: styles.caption,
-              caption_label: styles.captionLabel,
-              nav: styles.nav,
-              nav_button: styles.navButton,
-              nav_button_previous: styles.navButtonPrev,
-              nav_button_next: styles.navButtonNext,
-              table: styles.table,
-              head_row: styles.headRow,
-              head_cell: styles.headCell,
-              row: styles.row,
-              cell: styles.cell,
-              day: styles.day,
-              day_selected: styles.daySelected,
-              day_today: styles.dayToday,
-              day_outside: styles.dayOutside,
-              day_disabled: styles.dayDisabled,
-              day_hidden: styles.dayHidden,
-            }}
-            components={{
-              Chevron: (props) => props.orientation === 'left' 
-                ? <ChevronLeft className="h-4 w-4" /> 
-                : <ChevronRight className="h-4 w-4" />,
-            }}
-          />
+          <div className={styles.calendarWrapper}>
+            <DayPicker
+              mode="single"
+              selected={selectedDate}
+              onSelect={handleDaySelect}
+              locale={tr}
+              weekStartsOn={1}
+              disabled={[
+                ...(minDate ? [{ before: minDate }] : []),
+                ...(maxDate ? [{ after: maxDate }] : []),
+              ]}
+              showOutsideDays
+            />
+          </div>
           
           <div className={styles.footer}>
             <button
@@ -490,14 +466,9 @@ export const DateField = React.forwardRef<HTMLInputElement, DateFieldProps>(
         </PortalPopover>
 
         {(error || helperText) && (
-          <motion.p
-            className={clsx(styles.helperText, { [styles.errorText]: !!error })}
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
+          <p className={clsx(styles.helperText, { [styles.errorText]: !!error })}>
             {error || helperText}
-          </motion.p>
+          </p>
         )}
       </div>
     );
@@ -676,45 +647,20 @@ export const DateTimeField = React.forwardRef<HTMLInputElement, DateTimeFieldPro
         >
           <div className={styles.datetimeGrid}>
             <div className={styles.calendarSection}>
-              <DayPicker
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDaySelect}
-                locale={tr}
-                weekStartsOn={1}
-                disabled={[
-                  ...(minDate ? [{ before: minDate }] : []),
-                  ...(maxDate ? [{ after: maxDate }] : []),
-                ]}
-                showOutsideDays
-                classNames={{
-                  root: styles.calendar,
-                  months: styles.months,
-                  month: styles.month,
-                  caption: styles.caption,
-                  caption_label: styles.captionLabel,
-                  nav: styles.nav,
-                  nav_button: styles.navButton,
-                  nav_button_previous: styles.navButtonPrev,
-                  nav_button_next: styles.navButtonNext,
-                  table: styles.table,
-                  head_row: styles.headRow,
-                  head_cell: styles.headCell,
-                  row: styles.row,
-                  cell: styles.cell,
-                  day: styles.day,
-                  day_selected: styles.daySelected,
-                  day_today: styles.dayToday,
-                  day_outside: styles.dayOutside,
-                  day_disabled: styles.dayDisabled,
-                  day_hidden: styles.dayHidden,
-                }}
-                components={{
-                  Chevron: (props) => props.orientation === 'left' 
-                    ? <ChevronLeft className="h-4 w-4" /> 
-                    : <ChevronRight className="h-4 w-4" />,
-                }}
-              />
+              <div className={styles.calendarWrapper}>
+                <DayPicker
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDaySelect}
+                  locale={tr}
+                  weekStartsOn={1}
+                  disabled={[
+                    ...(minDate ? [{ before: minDate }] : []),
+                    ...(maxDate ? [{ after: maxDate }] : []),
+                  ]}
+                  showOutsideDays
+                />
+              </div>
             </div>
 
             <div className={styles.timeSection}>
@@ -784,14 +730,9 @@ export const DateTimeField = React.forwardRef<HTMLInputElement, DateTimeFieldPro
         </PortalPopover>
 
         {(error || helperText) && (
-          <motion.p
-            className={clsx(styles.helperText, { [styles.errorText]: !!error })}
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
+          <p className={clsx(styles.helperText, { [styles.errorText]: !!error })}>
             {error || helperText}
-          </motion.p>
+          </p>
         )}
       </div>
     );
@@ -929,49 +870,21 @@ export const DateRangeField: React.FC<DateRangeFieldProps> = ({
           <button type="button" onClick={() => handlePreset('year')}>Son 1 Yıl</button>
         </div>
 
-        <DayPicker
-          mode="range"
-          selected={range}
-          onSelect={handleRangeSelect}
-          locale={tr}
-          weekStartsOn={1}
-          numberOfMonths={2}
-          disabled={[
-            ...(minDate ? [{ before: minDate }] : []),
-            ...(maxDate ? [{ after: maxDate }] : []),
-          ]}
-          showOutsideDays
-          classNames={{
-            root: styles.calendar,
-            months: styles.monthsRange,
-            month: styles.month,
-            caption: styles.caption,
-            caption_label: styles.captionLabel,
-            nav: styles.nav,
-            nav_button: styles.navButton,
-            nav_button_previous: styles.navButtonPrev,
-            nav_button_next: styles.navButtonNext,
-            table: styles.table,
-            head_row: styles.headRow,
-            head_cell: styles.headCell,
-            row: styles.row,
-            cell: styles.cell,
-            day: styles.day,
-            day_selected: styles.daySelected,
-            day_today: styles.dayToday,
-            day_outside: styles.dayOutside,
-            day_disabled: styles.dayDisabled,
-            day_hidden: styles.dayHidden,
-            day_range_start: styles.dayRangeStart,
-            day_range_end: styles.dayRangeEnd,
-            day_range_middle: styles.dayRangeMiddle,
-          }}
-          components={{
-            Chevron: (props) => props.orientation === 'left' 
-              ? <ChevronLeft className="h-4 w-4" /> 
-              : <ChevronRight className="h-4 w-4" />,
-          }}
-        />
+        <div className={styles.calendarWrapper}>
+          <DayPicker
+            mode="range"
+            selected={range}
+            onSelect={handleRangeSelect}
+            locale={tr}
+            weekStartsOn={1}
+            numberOfMonths={2}
+            disabled={[
+              ...(minDate ? [{ before: minDate }] : []),
+              ...(maxDate ? [{ after: maxDate }] : []),
+            ]}
+            showOutsideDays
+          />
+        </div>
         
         <div className={styles.footer}>
           <button
@@ -992,14 +905,9 @@ export const DateRangeField: React.FC<DateRangeFieldProps> = ({
       </PortalPopover>
 
       {(error || helperText) && (
-        <motion.p
-          className={clsx(styles.helperText, { [styles.errorText]: !!error })}
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-        >
+        <p className={clsx(styles.helperText, { [styles.errorText]: !!error })}>
           {error || helperText}
-        </motion.p>
+        </p>
       )}
     </div>
   );
@@ -1156,14 +1064,9 @@ export const TimeField = React.forwardRef<HTMLInputElement, TimeFieldProps>(
         </PortalPopover>
 
         {error && (
-          <motion.p
-            className={clsx(styles.helperText, styles.errorText)}
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
+          <p className={clsx(styles.helperText, styles.errorText)}>
             {error}
-          </motion.p>
+          </p>
         )}
       </div>
     );
