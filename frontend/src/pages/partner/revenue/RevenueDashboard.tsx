@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { 
@@ -18,7 +18,7 @@ import {
   YAxis,
   CartesianGrid
 } from "recharts";
-import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon, Calendar, Clock } from "../../../lib/lucide";
+import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon, Calendar, Clock, ChevronLeft, ChevronRight } from "../../../lib/lucide";
 import { revenueService, type PaymentModeRevenue, type RevenueHistoryResponse } from "../../../services/partner/revenue";
 import { locationService } from "../../../services/partner/locations";
 import { storageService } from "../../../services/partner/storages";
@@ -43,6 +43,10 @@ export function RevenueDashboard() {
   const [storageFilter, setStorageFilter] = useState<string>("");
   const [chartType, setChartType] = useState<ChartType>('bar');
   const [granularity, setGranularity] = useState<"daily" | "weekly" | "monthly">("daily");
+  
+  // Pagination state for history table
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
 
   // Fetch locations for filter
   const locationsQuery = useQuery({
@@ -97,6 +101,19 @@ export function RevenueDashboard() {
 
   const chartData = prepareChartData(paymentModeQuery.data);
   const totalTransactions = paymentModeQuery.data?.reduce((sum, item) => sum + item.transaction_count, 0) || 0;
+
+  // Paginate history data
+  const paginatedHistoryItems = useMemo(() => {
+    const items = historyQuery.data?.items ?? [];
+    const start = (historyPage - 1) * historyPageSize;
+    const end = start + historyPageSize;
+    return items.slice(start, end);
+  }, [historyQuery.data?.items, historyPage, historyPageSize]);
+
+  const historyTotalPages = useMemo(() => {
+    const total = historyQuery.data?.items?.length ?? 0;
+    return Math.ceil(total / historyPageSize);
+  }, [historyQuery.data?.items?.length, historyPageSize]);
 
   // Export payment mode data to CSV
   const handleExportPaymentModeCSV = () => {
@@ -844,7 +861,7 @@ export function RevenueDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {historyQuery.data?.items.map((item, index) => (
+                  {paginatedHistoryItems.map((item, index) => (
                     <motion.tr
                       key={item.date}
                       initial={{ opacity: 0, y: 10 }}
@@ -887,6 +904,99 @@ export function RevenueDashboard() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {historyTotalPages > 1 && (
+              <div style={{ 
+                marginTop: 'var(--space-4)', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                padding: 'var(--space-3)',
+                borderTop: '1px solid var(--border-primary)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                    Sayfa başına:
+                  </span>
+                  <select
+                    value={historyPageSize}
+                    onChange={(e) => {
+                      setHistoryPageSize(Number(e.target.value));
+                      setHistoryPage(1);
+                    }}
+                    style={{
+                      padding: 'var(--space-1) var(--space-2)',
+                      border: '1px solid var(--border-primary)',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      fontSize: 'var(--text-sm)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                    Toplam {historyQuery.data?.items?.length ?? 0} kayıt
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <button
+                    onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                    disabled={historyPage === 1}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '36px',
+                      height: '36px',
+                      border: '1px solid var(--border-primary)',
+                      borderRadius: 'var(--radius-md)',
+                      background: historyPage === 1 ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                      color: historyPage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                      cursor: historyPage === 1 ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  
+                  <span style={{ 
+                    padding: '0 var(--space-3)', 
+                    fontSize: 'var(--text-sm)', 
+                    color: 'var(--text-primary)',
+                    fontWeight: 'var(--font-medium)'
+                  }}>
+                    {historyPage} / {historyTotalPages}
+                  </span>
+                  
+                  <button
+                    onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
+                    disabled={historyPage === historyTotalPages}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '36px',
+                      height: '36px',
+                      border: '1px solid var(--border-primary)',
+                      borderRadius: 'var(--radius-md)',
+                      background: historyPage === historyTotalPages ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                      color: historyPage === historyTotalPages ? 'var(--text-muted)' : 'var(--text-primary)',
+                      cursor: historyPage === historyTotalPages ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </ModernCard>
