@@ -2,11 +2,13 @@
 
 .tableContainer {
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
   border-radius: var(--radius-xl);
   background: var(--bg-primary);
   border: 1px solid var(--border-primary);
   box-shadow: var(--shadow-md);
+  /* Ensure no stacking context issues */
+  position: relative;
 }
 
 [data-theme="dark"] .tableContainer {
@@ -17,7 +19,9 @@
 
 .tableWrapper {
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: auto;
+  max-height: 70vh;
+  border-radius: var(--radius-xl);
 }
 
 .tableWrapper::-webkit-scrollbar {
@@ -59,8 +63,15 @@
 .stickyHeader {
   position: sticky;
   top: 0;
-  z-index: var(--z-sticky);
+  /* Use a lower z-index that doesn't conflict with modals/drawers */
+  z-index: 10;
   backdrop-filter: blur(var(--blur-md));
+  /* Ensure solid background so content doesn't show through */
+  background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .stickyHeader {
+  background: rgba(17, 17, 17, 0.95);
 }
 
 .th {

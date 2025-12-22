@@ -415,11 +415,11 @@ export function LocationsPage() {
         </Card>
       </motion.div>
 
-      {/* Location Detail Panel */}
+      {/* Location Detail Panel - Using Portal */}
       <AnimatePresence>
         {selectedLocation && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop - z-index above sticky headers */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -429,10 +429,11 @@ export function LocationsPage() {
                 position: 'fixed',
                 inset: 0,
                 background: 'rgba(0, 0, 0, 0.5)',
-                zIndex: 998,
+                zIndex: 'var(--z-modal-backdrop, 1040)',
+                backdropFilter: 'blur(4px)',
               }}
             />
-            {/* Panel */}
+            {/* Panel - z-index above backdrop and sticky headers */}
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -446,11 +447,12 @@ export function LocationsPage() {
                 width: '100%',
                 maxWidth: '480px',
                 background: 'var(--bg-primary)',
-                boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.15)',
-                zIndex: 999,
+                boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.2)',
+                zIndex: 'var(--z-modal, 1050)',
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
+                isolation: 'isolate',
               }}
             >
               {/* Panel Header */}
