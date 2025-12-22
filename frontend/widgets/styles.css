@@ -955,6 +955,16 @@
   width: 100%;
 }
 
+/* Hide the original input inside the wrapper - only show the display input */
+.kyradi-dtpicker > input.kyradi-reserve__datetime-input,
+.kyradi-dtpicker > input[name="start_datetime"],
+.kyradi-dtpicker > input[name="end_datetime"] {
+  display: none !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  pointer-events: none !important;
+}
+
 .kyradi-dtpicker__display {
   width: 100%;
   padding: 12px 14px;
