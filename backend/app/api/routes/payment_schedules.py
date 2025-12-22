@@ -56,21 +56,21 @@ class PaymentScheduleUpdate(BaseModel):
 class PaymentScheduleRead(BaseModel):
     id: str
     tenant_id: str
-    is_enabled: bool
-    period_type: str
-    custom_days: Optional[int]
-    min_transfer_amount: Decimal
-    commission_rate: Decimal
-    bank_name: Optional[str]
-    bank_account_holder: Optional[str]
-    bank_iban: Optional[str]
-    bank_swift: Optional[str]
-    next_payment_date: Optional[datetime]
-    last_payment_date: Optional[datetime]
-    partner_can_request: bool
-    admin_notes: Optional[str]
-    created_at: datetime
-    updated_at: Optional[datetime]
+    is_enabled: bool = True
+    period_type: str = "monthly"
+    custom_days: Optional[int] = None
+    min_transfer_amount: Decimal = Decimal("10.00")
+    commission_rate: Decimal = Decimal("0.05")
+    bank_name: Optional[str] = None
+    bank_account_holder: Optional[str] = None
+    bank_iban: Optional[str] = None
+    bank_swift: Optional[str] = None
+    next_payment_date: Optional[datetime] = None
+    last_payment_date: Optional[datetime] = None
+    partner_can_request: bool = True
+    admin_notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
