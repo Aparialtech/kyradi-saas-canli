@@ -1,21 +1,18 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  DollarSign,
   Send,
   Clock,
   Loader2,
-  AlertCircle,
   CreditCard,
   RefreshCw,
   CheckCircle,
   XCircle,
   Zap,
-  Info,
   Eye,
-  Play,
-  Ban,
+  Check,
+  X,
 } from "../../../lib/lucide";
 
 import {
@@ -24,19 +21,21 @@ import {
   type TransferStatus,
 } from "../../../services/partner/paymentSchedules";
 import { useToast } from "../../../hooks/useToast";
-import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
+import { usePagination, Pagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 import { Badge } from "../../../components/ui/Badge";
 
-const statusConfig: Record<TransferStatus, { label: string; color: "success" | "warning" | "danger" | "info" | "neutral" }> = {
-  pending: { label: "Beklemede", color: "warning" },
+import styles from "./AdminTransfersPage.module.css";
+
+const statusConfig: Record<string, { label: string; color: "success" | "warning" | "danger" | "info" | "neutral" }> = {
+  pending: { label: "Onay Bekliyor", color: "warning" },
   processing: { label: "İşleniyor", color: "info" },
-  completed: { label: "Tamamlandı", color: "success" },
+  completed: { label: "Onaylandı", color: "success" },
   failed: { label: "Başarısız", color: "danger" },
-  cancelled: { label: "İptal", color: "neutral" },
+  cancelled: { label: "Reddedildi", color: "neutral" },
 };
 
 export function AdminTransfersPage() {
@@ -46,8 +45,9 @@ export function AdminTransfersPage() {
 
   const [statusFilter, setStatusFilter] = useState<TransferStatus | "">("");
   const [selectedTransfer, setSelectedTransfer] = useState<PaymentTransfer | null>(null);
-  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
   // Queries
@@ -67,17 +67,17 @@ export function AdminTransfersPage() {
   });
 
   // Mutations
-  const processMutation = useMutation({
+  const approveMutation = useMutation({
     mutationFn: (transferId: string) =>
       paymentScheduleService.processTransferWithMagicPay(transferId),
     onSuccess: (data) => {
       push({
         type: "success",
-        title: "Transfer İşlendi",
+        title: "Transfer Onaylandı",
         description: `İşlem No: ${data.transaction_id}`,
       });
       queryClient.invalidateQueries({ queryKey: ["admin-payment-transfers"] });
-      setShowProcessModal(false);
+      setShowApproveModal(false);
       setSelectedTransfer(null);
     },
     onError: (error) => {
@@ -89,40 +89,26 @@ export function AdminTransfersPage() {
     mutationFn: ({ transferId, reason }: { transferId: string; reason?: string }) =>
       paymentScheduleService.rejectTransfer(transferId, reason),
     onSuccess: () => {
-      push({ type: "success", title: "Başarılı", description: "Transfer reddedildi." });
+      push({ type: "success", title: "Transfer Reddedildi" });
       queryClient.invalidateQueries({ queryKey: ["admin-payment-transfers"] });
       setShowRejectModal(false);
-      setSelectedTransfer(null);
       setRejectReason("");
+      setSelectedTransfer(null);
     },
     onError: (error) => {
       push({ type: "error", title: "Hata", description: getErrorMessage(error) });
     },
   });
 
-  const handleProcess = useCallback(() => {
-    if (selectedTransfer) {
-      processMutation.mutate(selectedTransfer.id);
-    }
-  }, [selectedTransfer, processMutation]);
-
-  const handleReject = useCallback(() => {
-    if (selectedTransfer) {
-      rejectMutation.mutate({
-        transferId: selectedTransfer.id,
-        reason: rejectReason || undefined,
-      });
-    }
-  }, [selectedTransfer, rejectReason, rejectMutation]);
-
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (amount == null || isNaN(amount)) return "₺0,00";
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
       currency: "TRY",
     }).format(amount);
   };
 
-  const formatDate = (dateString?: string) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("tr-TR", {
       year: "numeric",
@@ -137,20 +123,21 @@ export function AdminTransfersPage() {
   const paginationMeta = useMemo(() => {
     if (!transfersQuery.data?.meta) return calculatePaginationMeta(0, page, pageSize);
     return {
-      total: transfersQuery.data.meta.total,
-      page: transfersQuery.data.meta.page,
-      pageSize: transfersQuery.data.meta.pageSize,
-      totalPages: transfersQuery.data.meta.totalPages,
+      total: transfersQuery.data.meta.total || 0,
+      page: transfersQuery.data.meta.page || 1,
+      pageSize: transfersQuery.data.meta.pageSize || 10,
+      totalPages: transfersQuery.data.meta.totalPages || 1,
     };
   }, [transfersQuery.data?.meta, page, pageSize]);
 
   // Stats
   const stats = useMemo(() => {
-    const allTransfers = transfers.filter((t) => t != null);
+    const validTransfers = transfers.filter((t) => t != null);
     return {
-      pending: allTransfers.filter((t) => t?.status === "pending").length,
-      total: allTransfers.reduce((sum, t) => sum + (t?.net_amount || 0), 0),
-      completed: allTransfers.filter((t) => t?.status === "completed").reduce((sum, t) => sum + (t?.net_amount || 0), 0),
+      pendingCount: validTransfers.filter((t) => t?.status === "pending").length,
+      pendingAmount: validTransfers.filter((t) => t?.status === "pending").reduce((sum, t) => sum + (t?.gross_amount || 0), 0),
+      completedAmount: validTransfers.filter((t) => t?.status === "completed").reduce((sum, t) => sum + (t?.gross_amount || 0), 0),
+      totalAmount: validTransfers.reduce((sum, t) => sum + (t?.gross_amount || 0), 0),
     };
   }, [transfers]);
 
@@ -164,33 +151,19 @@ export function AdminTransfersPage() {
     },
     {
       key: "tenant_id",
-      label: "Tenant",
+      label: "Partner",
       render: (row: PaymentTransfer) => (
-        <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
+        <span className={styles.tenantId}>
           {row?.tenant_id ? `${row.tenant_id.substring(0, 8)}...` : "-"}
         </span>
       ),
     },
     {
       key: "gross_amount",
-      label: "Brüt Tutar",
-      render: (row: PaymentTransfer) => row ? formatCurrency(row.gross_amount || 0) : "-",
-    },
-    {
-      key: "commission_amount",
-      label: "Komisyon",
+      label: "Tutar",
       render: (row: PaymentTransfer) => (
-        <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>
-          {row ? formatCurrency(row.commission_amount || 0) : "-"}
-        </span>
-      ),
-    },
-    {
-      key: "net_amount",
-      label: "Net Tutar",
-      render: (row: PaymentTransfer) => (
-        <span style={{ fontWeight: 600, color: "var(--color-success)" }}>
-          {row ? formatCurrency(row.net_amount || 0) : "-"}
+        <span style={{ fontWeight: 600, color: "#dc2626" }}>
+          {row ? formatCurrency(row.gross_amount) : "-"}
         </span>
       ),
     },
@@ -199,16 +172,16 @@ export function AdminTransfersPage() {
       label: "Durum",
       render: (row: PaymentTransfer) => {
         if (!row) return <Badge variant="neutral">-</Badge>;
-        const config = statusConfig[row.status as keyof typeof statusConfig] || { label: row.status || "Bilinmiyor", color: "neutral" as const };
+        const config = statusConfig[row.status] || { label: row.status || "Bilinmiyor", color: "neutral" as const };
         return <Badge variant={config.color}>{config.label}</Badge>;
       },
     },
     {
-      key: "bank_iban",
-      label: "IBAN",
+      key: "notes",
+      label: "Not",
       render: (row: PaymentTransfer) => (
-        <span style={{ fontFamily: "monospace", fontSize: "0.7rem" }}>
-          {row?.bank_iban ? `${row.bank_iban.substring(0, 10)}...` : "-"}
+        <span className={styles.noteCell}>
+          {row?.notes || "-"}
         </span>
       ),
     },
@@ -218,7 +191,7 @@ export function AdminTransfersPage() {
       render: (row: PaymentTransfer) => {
         if (!row) return null;
         return (
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <div className={styles.actionButtons}>
             {row.status === "pending" && (
               <>
                 <ModernButton
@@ -226,11 +199,11 @@ export function AdminTransfersPage() {
                   size="sm"
                   onClick={() => {
                     setSelectedTransfer(row);
-                    setShowProcessModal(true);
+                    setShowApproveModal(true);
                   }}
-                  leftIcon={<Play className="h-3 w-3" />}
+                  leftIcon={<Check className="h-3 w-3" />}
                 >
-                  İşle
+                  Onayla
                 </ModernButton>
                 <ModernButton
                   variant="danger"
@@ -239,22 +212,23 @@ export function AdminTransfersPage() {
                     setSelectedTransfer(row);
                     setShowRejectModal(true);
                   }}
-                  leftIcon={<Ban className="h-3 w-3" />}
+                  leftIcon={<X className="h-3 w-3" />}
                 >
                   Reddet
                 </ModernButton>
               </>
             )}
-            {row.status !== "pending" && (
-              <ModernButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedTransfer(row)}
-                leftIcon={<Eye className="h-3 w-3" />}
-              >
-                Detay
-              </ModernButton>
-            )}
+            <ModernButton
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedTransfer(row);
+                setShowDetailModal(true);
+              }}
+              leftIcon={<Eye className="h-3 w-3" />}
+            >
+              Detay
+            </ModernButton>
           </div>
         );
       },
@@ -264,246 +238,96 @@ export function AdminTransfersPage() {
   const magicPayStatus = magicPayStatusQuery.data;
 
   return (
-    <div style={{ padding: "var(--space-6)" }}>
-      <style>{`
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.2); }
-          50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
-        }
-        .magicpay-header {
-          background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-          color: white;
-          border-radius: var(--radius-xl);
-          padding: var(--space-5);
-          position: relative;
-          overflow: hidden;
-        }
-        .magicpay-header::before {
-          content: '';
-          position: absolute;
-          top: -50%;
-          right: -50%;
-          width: 100%;
-          height: 100%;
-          background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        }
-        .stat-card {
-          transition: all 0.2s ease;
-        }
-        .stat-card:hover {
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-lg);
-        }
-      `}</style>
-
+    <div className={styles.container}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{ marginBottom: "var(--space-6)" }}
+        className={styles.header}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
+        <div className={styles.headerContent}>
           <div>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-              Transfer Yönetimi
-            </h1>
-            <p style={{ color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>
-              Partner komisyon transferlerini MagicPay ile yönetin
-            </p>
+            <h1 className={styles.title}>Komisyon Transferleri</h1>
+            <p className={styles.subtitle}>Partnerlerden gelen komisyon ödemelerini yönetin ve onaylayın</p>
           </div>
+          <Badge variant={magicPayStatus?.is_demo_mode ? "warning" : "success"}>
+            <Zap className="h-3 w-3" style={{ marginRight: 4 }} />
+            {magicPayStatus?.is_demo_mode ? "MagicPay Demo" : "MagicPay Aktif"}
+          </Badge>
         </div>
       </motion.div>
 
-      {/* MagicPay Status */}
-      {magicPayStatus && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="magicpay-header"
-          style={{ marginBottom: "var(--space-6)" }}
-        >
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-4)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "var(--radius-lg)",
-                    background: "rgba(255,255,255,0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Zap className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>
-                    {magicPayStatus.gateway_name}
-                  </h2>
-                  <p style={{ margin: "var(--space-1) 0 0", opacity: 0.9, fontSize: "0.875rem" }}>
-                    Ödeme Gateway Entegrasyonu
-                  </p>
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ margin: 0, opacity: 0.8, fontSize: "0.75rem" }}>Durum</p>
-                  <Badge variant={magicPayStatus.is_demo_mode ? "warning" : "success"}>
-                    {magicPayStatus.is_demo_mode ? "Demo Mod" : "Aktif"}
-                  </Badge>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ margin: 0, opacity: 0.8, fontSize: "0.75rem" }}>API Key</p>
-                  <Badge variant={magicPayStatus.api_key_configured ? "success" : "neutral"}>
-                    {magicPayStatus.api_key_configured ? "Yapılandırıldı" : "Yapılandırılmadı"}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            
-            {magicPayStatus.is_demo_mode && (
-              <div
-                style={{
-                  marginTop: "var(--space-4)",
-                  padding: "var(--space-3)",
-                  background: "rgba(255,255,255,0.15)",
-                  borderRadius: "var(--radius-md)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                }}
-              >
-                <Info className="h-4 w-4" />
-                <span style={{ fontSize: "0.875rem" }}>
-                  Demo modunda tüm transferler simüle edilir. Gerçek para transferi yapılmaz.
-                </span>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
-
       {/* Stats Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "var(--space-4)",
-          marginBottom: "var(--space-6)",
-        }}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className={styles.statsGrid}
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15 }}
-        >
-          <Card className="stat-card">
-            <CardBody>
-              <div style={{ textAlign: "center" }}>
-                <Clock
-                  className="h-8 w-8"
-                  style={{ margin: "0 auto var(--space-2)", color: "var(--color-warning)" }}
-                />
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                  Bekleyen Transfer
-                </p>
-                <p style={{ fontSize: "2rem", fontWeight: 700, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
-                  {stats.pending}
-                </p>
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
+        <Card className={styles.statCard}>
+          <div className={styles.statContent}>
+            <div className={styles.statIcon} style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" }}>
+              <Clock className="h-6 w-6" style={{ color: "white" }} />
+            </div>
+            <div>
+              <p className={styles.statLabel}>Onay Bekleyen</p>
+              <p className={styles.statValue} style={{ color: "#d97706" }}>{stats.pendingCount} adet</p>
+              <p className={styles.statSubvalue}>{formatCurrency(stats.pendingAmount)}</p>
+            </div>
+          </div>
+        </Card>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="stat-card">
-            <CardBody>
-              <div style={{ textAlign: "center" }}>
-                <DollarSign
-                  className="h-8 w-8"
-                  style={{ margin: "0 auto var(--space-2)", color: "var(--color-primary)" }}
-                />
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                  Bu Sayfa Toplamı
-                </p>
-                <p style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
-                  {formatCurrency(stats.total)}
-                </p>
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
+        <Card className={styles.statCard}>
+          <div className={styles.statContent}>
+            <div className={styles.statIcon} style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
+              <CheckCircle className="h-6 w-6" style={{ color: "white" }} />
+            </div>
+            <div>
+              <p className={styles.statLabel}>Alınan Komisyon</p>
+              <p className={styles.statValue} style={{ color: "#059669" }}>{formatCurrency(stats.completedAmount)}</p>
+            </div>
+          </div>
+        </Card>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.25 }}
-        >
-          <Card className="stat-card">
-            <CardBody>
-              <div style={{ textAlign: "center" }}>
-                <CheckCircle
-                  className="h-8 w-8"
-                  style={{ margin: "0 auto var(--space-2)", color: "var(--color-success)" }}
-                />
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                  Tamamlanan
-                </p>
-                <p style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-success)", margin: "var(--space-1) 0 0" }}>
-                  {formatCurrency(stats.completed)}
-                </p>
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
-      </div>
+        <Card className={styles.statCard}>
+          <div className={styles.statContent}>
+            <div className={styles.statIcon} style={{ background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)" }}>
+              <CreditCard className="h-6 w-6" style={{ color: "white" }} />
+            </div>
+            <div>
+              <p className={styles.statLabel}>Toplam İşlem</p>
+              <p className={styles.statValue} style={{ color: "#4f46e5" }}>{formatCurrency(stats.totalAmount)}</p>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
 
       {/* Transfers Table */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.2 }}
       >
         <Card>
           <CardHeader>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "wrap", gap: "var(--space-3)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <CreditCard className="h-5 w-5" />
-                <span>Tüm Transferler</span>
-              </div>
-              <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+            <div className={styles.tableHeader}>
+              <h2 className={styles.tableTitle}>Tüm Transferler</h2>
+              <div className={styles.tableActions}>
                 <select
                   value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value as TransferStatus | "");
-                    setPage(1);
-                  }}
-                  style={{
-                    padding: "var(--space-2) var(--space-3)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--border-color)",
-                    background: "var(--bg-primary)",
-                    fontSize: "0.875rem",
-                  }}
+                  onChange={(e) => setStatusFilter(e.target.value as TransferStatus | "")}
+                  className={styles.filterSelect}
                 >
                   <option value="">Tüm Durumlar</option>
-                  <option value="pending">Beklemede</option>
-                  <option value="processing">İşleniyor</option>
-                  <option value="completed">Tamamlandı</option>
-                  <option value="failed">Başarısız</option>
-                  <option value="cancelled">İptal</option>
+                  <option value="pending">Onay Bekliyor</option>
+                  <option value="completed">Onaylandı</option>
+                  <option value="cancelled">Reddedildi</option>
                 </select>
                 <ModernButton
                   variant="ghost"
-                  onClick={() => queryClient.invalidateQueries({ queryKey: ["admin-payment-transfers"] })}
-                  leftIcon={<RefreshCw className="h-4 w-4" />}
+                  size="sm"
+                  onClick={() => transfersQuery.refetch()}
+                  leftIcon={<RefreshCw className={`h-4 w-4 ${transfersQuery.isFetching ? "animate-spin" : ""}`} />}
                 >
                   Yenile
                 </ModernButton>
@@ -512,390 +336,216 @@ export function AdminTransfersPage() {
           </CardHeader>
           <CardBody noPadding>
             {transfersQuery.isLoading ? (
-              <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8)" }}>
-                <Loader2 className="h-8 w-8" style={{ animation: "spin 1s linear infinite" }} />
-              </div>
-            ) : transfersQuery.isError ? (
-              <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-danger)" }}>
-                <AlertCircle className="h-8 w-8" style={{ margin: "0 auto var(--space-2)" }} />
-                <p>Veriler yüklenirken hata oluştu.</p>
+              <div className={styles.emptyState}>
+                <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--color-primary)" }} />
+                <p>Yükleniyor...</p>
               </div>
             ) : transfers.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--text-muted)" }}>
-                <CreditCard className="h-12 w-12" style={{ margin: "0 auto var(--space-4)", opacity: 0.5 }} />
-                <p style={{ margin: 0 }}>Henüz transfer talebi bulunmuyor.</p>
+              <div className={styles.emptyState}>
+                <Send className="h-12 w-12" style={{ color: "var(--text-tertiary)" }} />
+                <p>Henüz komisyon transferi bulunmuyor</p>
               </div>
             ) : (
-              <ModernTable
-                columns={columns}
-                data={transfers}
-                loading={transfersQuery.isLoading}
-                striped
-                hoverable
-                stickyHeader
-                showRowNumbers
-                pagination={paginationMeta}
-                onPageChange={setPage}
-                onPageSizeChange={setPageSize}
-              />
+              <>
+                <ModernTable
+                  columns={columns}
+                  data={transfers.filter(t => t != null)}
+                />
+                <div className={styles.paginationWrapper}>
+                  <Pagination
+                    meta={paginationMeta}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                  />
+                </div>
+              </>
             )}
           </CardBody>
         </Card>
       </motion.div>
 
-      {/* Process Modal */}
+      {/* Approve Modal */}
       <AnimatePresence>
-        {showProcessModal && selectedTransfer && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1000,
-              padding: "var(--space-4)",
-            }}
-            onClick={() => setShowProcessModal(false)}
+        {showApproveModal && selectedTransfer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={styles.modalOverlay}
+            onClick={() => setShowApproveModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              style={{
-                background: "var(--bg-primary)",
-                borderRadius: "var(--radius-xl)",
-                padding: "var(--space-6)",
-                width: "100%",
-                maxWidth: "450px",
-                boxShadow: "var(--shadow-xl)",
-              }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
+              className={styles.modal}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "var(--radius-lg)",
-                    background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Zap className="h-6 w-6" style={{ color: "white" }} />
+              <div className={styles.modalCenter}>
+                <div className={styles.modalIconLarge} style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
+                  <CheckCircle className="h-8 w-8" style={{ color: "white" }} />
                 </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>
-                    MagicPay ile İşle
-                  </h3>
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--text-secondary)" }}>
-                    Transfer işlemini başlat
-                  </p>
+                <h3 className={styles.modalTitle}>Transferi Onayla</h3>
+                <p className={styles.modalSubtitle}>Bu komisyon ödemesini onaylamak istediğinizden emin misiniz?</p>
+              </div>
+
+              <div className={styles.approveDetails}>
+                <div className={styles.detailRow}>
+                  <span>Tutar</span>
+                  <span className={styles.approveAmount}>{formatCurrency(selectedTransfer.gross_amount)}</span>
+                </div>
+                <div className={styles.detailRow}>
+                  <span>Partner</span>
+                  <span className={styles.tenantId}>{selectedTransfer.tenant_id?.substring(0, 12)}...</span>
                 </div>
               </div>
 
-              <div
-                style={{
-                  background: "var(--bg-secondary)",
-                  borderRadius: "var(--radius-lg)",
-                  padding: "var(--space-4)",
-                  marginBottom: "var(--space-4)",
-                }}
-              >
-                <h4 style={{ margin: "0 0 var(--space-3)", fontSize: "0.875rem", fontWeight: 600 }}>
-                  Transfer Detayları
-                </h4>
-                <div style={{ display: "grid", gap: "var(--space-2)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>Brüt Tutar:</span>
-                    <span style={{ fontSize: "0.875rem" }}>{formatCurrency(selectedTransfer.gross_amount)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>Komisyon:</span>
-                    <span style={{ fontSize: "0.875rem", color: "var(--color-danger)" }}>
-                      -{formatCurrency(selectedTransfer.commission_amount)}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      paddingTop: "var(--space-2)",
-                      borderTop: "1px solid var(--border-color)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    <span>Net Tutar:</span>
-                    <span style={{ color: "var(--color-success)" }}>
-                      {formatCurrency(selectedTransfer.net_amount)}
-                    </span>
-                  </div>
-                </div>
-                
-                {selectedTransfer.bank_iban && (
-                  <div style={{ marginTop: "var(--space-3)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--border-color)" }}>
-                    <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-secondary)" }}>Hedef IBAN:</p>
-                    <p style={{ margin: "var(--space-1) 0 0", fontFamily: "monospace", fontSize: "0.8rem" }}>
-                      {selectedTransfer.bank_iban}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Demo Warning */}
-              {magicPayStatus?.is_demo_mode && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-2)",
-                    padding: "var(--space-3)",
-                    background: "rgba(245, 158, 11, 0.1)",
-                    border: "1px solid rgba(245, 158, 11, 0.3)",
-                    borderRadius: "var(--radius-md)",
-                    marginBottom: "var(--space-4)",
-                  }}
-                >
-                  <AlertCircle className="h-4 w-4" style={{ color: "#f59e0b", flexShrink: 0 }} />
-                  <span style={{ fontSize: "0.8rem", color: "#d97706" }}>
-                    Demo modunda gerçek para transferi yapılmaz. İşlem simüle edilecektir.
-                  </span>
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end" }}>
-                <ModernButton variant="ghost" onClick={() => setShowProcessModal(false)}>
+              <div className={styles.modalActions}>
+                <ModernButton variant="ghost" onClick={() => setShowApproveModal(false)} style={{ flex: 1 }}>
                   İptal
                 </ModernButton>
                 <ModernButton
                   variant="primary"
-                  onClick={handleProcess}
-                  isLoading={processMutation.isPending}
-                  leftIcon={<Send className="h-4 w-4" />}
+                  onClick={() => approveMutation.mutate(selectedTransfer.id)}
+                  isLoading={approveMutation.isPending}
+                  leftIcon={<Check className="h-4 w-4" />}
+                  style={{ flex: 1 }}
                 >
-                  Transferi İşle
+                  Onayla
                 </ModernButton>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* Reject Modal */}
       <AnimatePresence>
         {showRejectModal && selectedTransfer && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1000,
-              padding: "var(--space-4)",
-            }}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={styles.modalOverlay}
             onClick={() => setShowRejectModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              style={{
-                background: "var(--bg-primary)",
-                borderRadius: "var(--radius-xl)",
-                padding: "var(--space-6)",
-                width: "100%",
-                maxWidth: "400px",
-                boxShadow: "var(--shadow-xl)",
-              }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
+              className={styles.modal}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "var(--radius-lg)",
-                    background: "var(--color-danger)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <XCircle className="h-6 w-6" style={{ color: "white" }} />
+              <div className={styles.modalCenter}>
+                <div className={styles.modalIconLarge} style={{ background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" }}>
+                  <XCircle className="h-8 w-8" style={{ color: "white" }} />
                 </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>
-                    Transfer Reddet
-                  </h3>
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--text-secondary)" }}>
-                    {formatCurrency(selectedTransfer.net_amount)} tutarındaki transfer
-                  </p>
-                </div>
+                <h3 className={styles.modalTitle}>Transferi Reddet</h3>
+                <p className={styles.modalSubtitle}>Bu komisyon ödemesini reddetmek istediğinizden emin misiniz?</p>
               </div>
 
-              <div style={{ marginBottom: "var(--space-4)" }}>
-                <label style={{ display: "block", marginBottom: "var(--space-2)", fontWeight: 500 }}>
-                  Red Gerekçesi (Opsiyonel)
-                </label>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Red Nedeni (Opsiyonel)</label>
                 <textarea
+                  placeholder="Red nedeninizi yazın..."
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Reddetme nedeninizi yazın..."
-                  style={{
-                    width: "100%",
-                    padding: "var(--space-3)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--border-color)",
-                    resize: "vertical",
-                    minHeight: "80px",
-                    fontFamily: "inherit",
-                    fontSize: "0.875rem",
-                  }}
+                  className={styles.textarea}
                 />
               </div>
 
-              <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end" }}>
-                <ModernButton variant="ghost" onClick={() => setShowRejectModal(false)}>
+              <div className={styles.modalActions}>
+                <ModernButton variant="ghost" onClick={() => setShowRejectModal(false)} style={{ flex: 1 }}>
                   İptal
                 </ModernButton>
                 <ModernButton
                   variant="danger"
-                  onClick={handleReject}
+                  onClick={() => rejectMutation.mutate({ transferId: selectedTransfer.id, reason: rejectReason })}
                   isLoading={rejectMutation.isPending}
-                  leftIcon={<Ban className="h-4 w-4" />}
+                  leftIcon={<X className="h-4 w-4" />}
+                  style={{ flex: 1 }}
                 >
                   Reddet
                 </ModernButton>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Transfer Detail Modal */}
+      {/* Detail Modal */}
       <AnimatePresence>
-        {selectedTransfer && !showProcessModal && !showRejectModal && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1000,
-              padding: "var(--space-4)",
-            }}
-            onClick={() => setSelectedTransfer(null)}
+        {showDetailModal && selectedTransfer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={styles.modalOverlay}
+            onClick={() => setShowDetailModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              style={{
-                background: "var(--bg-primary)",
-                borderRadius: "var(--radius-xl)",
-                padding: "var(--space-6)",
-                width: "100%",
-                maxWidth: "500px",
-                boxShadow: "var(--shadow-xl)",
-              }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
+              className={styles.modal}
+              style={{ maxWidth: "500px" }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
-                <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>
-                  Transfer Detayları
-                </h3>
-                <Badge variant={statusConfig[selectedTransfer.status].color}>
-                  {statusConfig[selectedTransfer.status].label}
+              <div className={styles.detailHeader}>
+                <h3 className={styles.modalTitle}>Transfer Detayı</h3>
+                <Badge variant={statusConfig[selectedTransfer.status]?.color || "neutral"}>
+                  {statusConfig[selectedTransfer.status]?.label || selectedTransfer.status}
                 </Badge>
               </div>
 
-              <div
-                style={{
-                  background: "var(--bg-secondary)",
-                  borderRadius: "var(--radius-lg)",
-                  padding: "var(--space-4)",
-                }}
-              >
-                <div style={{ display: "grid", gap: "var(--space-3)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-secondary)" }}>Transfer ID:</span>
-                    <span style={{ fontFamily: "monospace", fontSize: "0.8rem" }}>{selectedTransfer.id}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-secondary)" }}>Oluşturulma:</span>
-                    <span>{formatDate(selectedTransfer.created_at)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-secondary)" }}>Brüt Tutar:</span>
-                    <span>{formatCurrency(selectedTransfer.gross_amount)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-secondary)" }}>Komisyon:</span>
-                    <span style={{ color: "var(--color-primary)" }}>
-                      {formatCurrency(selectedTransfer.commission_amount)}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}>
-                    <span>Net Tutar:</span>
-                    <span style={{ color: "var(--color-success)" }}>
-                      {formatCurrency(selectedTransfer.net_amount)}
-                    </span>
-                  </div>
-                  {selectedTransfer.bank_iban && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "var(--text-secondary)" }}>IBAN:</span>
-                      <span style={{ fontFamily: "monospace", fontSize: "0.8rem" }}>
-                        {selectedTransfer.bank_iban}
-                      </span>
-                    </div>
-                  )}
-                  {selectedTransfer.reference_id && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "var(--text-secondary)" }}>Referans:</span>
-                      <span style={{ fontFamily: "monospace", fontSize: "0.8rem" }}>
-                        {selectedTransfer.reference_id}
-                      </span>
-                    </div>
-                  )}
-                  {selectedTransfer.transfer_date && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "var(--text-secondary)" }}>Transfer Tarihi:</span>
-                      <span>{formatDate(selectedTransfer.transfer_date)}</span>
-                    </div>
-                  )}
-                  {selectedTransfer.notes && (
-                    <div style={{ marginTop: "var(--space-2)", paddingTop: "var(--space-2)", borderTop: "1px solid var(--border-color)" }}>
-                      <span style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>Notlar:</span>
-                      <p style={{ margin: "var(--space-1) 0 0", fontSize: "0.875rem", whiteSpace: "pre-wrap" }}>
-                        {selectedTransfer.notes}
-                      </p>
-                    </div>
-                  )}
-                  {selectedTransfer.error_message && (
-                    <div style={{ marginTop: "var(--space-2)", paddingTop: "var(--space-2)", borderTop: "1px solid var(--border-color)" }}>
-                      <span style={{ color: "var(--color-danger)", fontSize: "0.75rem" }}>Hata Mesajı:</span>
-                      <p style={{ margin: "var(--space-1) 0 0", fontSize: "0.875rem", color: "var(--color-danger)" }}>
-                        {selectedTransfer.error_message}
-                      </p>
-                    </div>
-                  )}
+              <div className={styles.detailGrid}>
+                <div className={styles.detailRow}>
+                  <span>Tutar</span>
+                  <span style={{ fontWeight: 700, color: "#dc2626", fontSize: "1.125rem" }}>
+                    {formatCurrency(selectedTransfer.gross_amount)}
+                  </span>
                 </div>
+                <div className={styles.detailRow}>
+                  <span>Partner ID</span>
+                  <span className={styles.tenantId}>{selectedTransfer.tenant_id}</span>
+                </div>
+                <div className={styles.detailRow}>
+                  <span>Talep Tarihi</span>
+                  <span>{formatDate(selectedTransfer.created_at)}</span>
+                </div>
+                {selectedTransfer.transfer_date && (
+                  <div className={styles.detailRow}>
+                    <span>İşlem Tarihi</span>
+                    <span>{formatDate(selectedTransfer.transfer_date)}</span>
+                  </div>
+                )}
+                {selectedTransfer.reference_id && (
+                  <div className={styles.detailRow}>
+                    <span>Referans No</span>
+                    <span style={{ fontFamily: "monospace" }}>{selectedTransfer.reference_id}</span>
+                  </div>
+                )}
+                {selectedTransfer.notes && (
+                  <div className={styles.detailRowFull}>
+                    <span>Not</span>
+                    <p>{selectedTransfer.notes}</p>
+                  </div>
+                )}
+                {selectedTransfer.error_message && (
+                  <div className={styles.errorBox}>
+                    <span>Red Nedeni</span>
+                    <p>{selectedTransfer.error_message}</p>
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-                <ModernButton variant="ghost" onClick={() => setSelectedTransfer(null)}>
+              <div className={styles.modalActions} style={{ justifyContent: "flex-end" }}>
+                <ModernButton variant="ghost" onClick={() => setShowDetailModal(false)}>
                   Kapat
                 </ModernButton>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

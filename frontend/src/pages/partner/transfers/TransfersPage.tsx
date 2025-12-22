@@ -6,17 +6,13 @@ import {
   Send,
   Clock,
   Loader2,
-  AlertCircle,
-  Calendar,
   CreditCard,
-  Building2,
   RefreshCw,
   Zap,
   Info,
   ArrowRight,
-  Wallet,
-  PieChart,
   CheckCircle,
+  Eye,
 } from "../../../lib/lucide";
 
 import {
@@ -25,7 +21,7 @@ import {
   type TransferStatus,
 } from "../../../services/partner/paymentSchedules";
 import { useToast } from "../../../hooks/useToast";
-import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
+import { usePagination, Pagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { ModernButton } from "../../../components/ui/ModernButton";
@@ -33,12 +29,14 @@ import { ModernTable, type ModernTableColumn } from "../../../components/ui/Mode
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { Badge } from "../../../components/ui/Badge";
 
-const statusConfig: Record<TransferStatus, { label: string; color: "success" | "warning" | "danger" | "info" | "neutral" }> = {
+import styles from "./TransfersPage.module.css";
+
+const statusConfig: Record<string, { label: string; color: "success" | "warning" | "danger" | "info" | "neutral" }> = {
   pending: { label: "Beklemede", color: "warning" },
   processing: { label: "İşleniyor", color: "info" },
-  completed: { label: "Ödendi", color: "success" },
+  completed: { label: "Onaylandı", color: "success" },
   failed: { label: "Başarısız", color: "danger" },
-  cancelled: { label: "İptal", color: "neutral" },
+  cancelled: { label: "İptal Edildi", color: "neutral" },
 };
 
 export function TransfersPage() {
@@ -48,20 +46,12 @@ export function TransfersPage() {
 
   const [statusFilter, setStatusFilter] = useState<TransferStatus | "">("");
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedTransfer, setSelectedTransfer] = useState<PaymentTransfer | null>(null);
   const [requestAmount, setRequestAmount] = useState("");
   const [requestNotes, setRequestNotes] = useState("");
 
   // Queries
-  const scheduleQuery = useQuery({
-    queryKey: ["payment-schedule"],
-    queryFn: () => paymentScheduleService.getMySchedule(),
-  });
-
-  const balanceQuery = useQuery({
-    queryKey: ["payment-balance"],
-    queryFn: () => paymentScheduleService.getBalance(),
-  });
-
   const commissionQuery = useQuery({
     queryKey: ["commission-summary"],
     queryFn: () => paymentScheduleService.getCommissionSummary(),
@@ -96,7 +86,6 @@ export function TransfersPage() {
   });
 
   const handleRequestTransfer = useCallback(() => {
-    // Handle both comma and dot as decimal separator (Turkish locale uses comma)
     const normalizedAmount = requestAmount.replace(",", ".");
     const amount = parseFloat(normalizedAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -109,19 +98,15 @@ export function TransfersPage() {
     });
   }, [requestAmount, requestNotes, requestMutation, push]);
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (amount == null || isNaN(amount)) return "₺0,00";
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
       currency: "TRY",
     }).format(amount);
   };
 
-  // Parse amount handling Turkish comma decimal separator
-  const parseAmount = (value: string): number => {
-    return parseFloat(value.replace(",", "."));
-  };
-
-  const formatDate = (dateString?: string) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("tr-TR", {
       year: "numeric",
@@ -136,25 +121,38 @@ export function TransfersPage() {
   const paginationMeta = useMemo(() => {
     if (!transfersQuery.data?.meta) return calculatePaginationMeta(0, page, pageSize);
     return {
-      total: transfersQuery.data.meta.total,
-      page: transfersQuery.data.meta.page,
-      pageSize: transfersQuery.data.meta.pageSize,
-      totalPages: transfersQuery.data.meta.totalPages,
+      total: transfersQuery.data.meta.total || 0,
+      page: transfersQuery.data.meta.page || 1,
+      pageSize: transfersQuery.data.meta.pageSize || 10,
+      totalPages: transfersQuery.data.meta.totalPages || 1,
     };
   }, [transfersQuery.data?.meta, page, pageSize]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const validTransfers = transfers.filter((t) => t != null);
+    return {
+      totalSent: validTransfers.reduce((sum, t) => sum + (t?.gross_amount || 0), 0),
+      pending: validTransfers.filter((t) => t?.status === "pending").reduce((sum, t) => sum + (t?.gross_amount || 0), 0),
+      completed: validTransfers.filter((t) => t?.status === "completed").reduce((sum, t) => sum + (t?.gross_amount || 0), 0),
+      count: validTransfers.length,
+    };
+  }, [transfers]);
 
   const columns: ModernTableColumn<PaymentTransfer>[] = [
     {
       key: "created_at",
       label: "Tarih",
-      render: (row: PaymentTransfer) => row ? formatDate(row.created_at) : "-",
+      render: (row: PaymentTransfer) => (
+        <span style={{ fontSize: "0.875rem" }}>{row ? formatDate(row.created_at) : "-"}</span>
+      ),
     },
     {
       key: "gross_amount",
-      label: "Komisyon Tutarı",
+      label: "Tutar",
       render: (row: PaymentTransfer) => (
         <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>
-          {row ? formatCurrency(row.gross_amount || 0) : "-"}
+          {row ? formatCurrency(row.gross_amount) : "-"}
         </span>
       ),
     },
@@ -163,97 +161,61 @@ export function TransfersPage() {
       label: "Durum",
       render: (row: PaymentTransfer) => {
         if (!row) return <Badge variant="neutral">-</Badge>;
-        const config = statusConfig[row.status as TransferStatus] || { label: row.status || "Bilinmiyor", color: "neutral" as const };
+        const config = statusConfig[row.status] || { label: row.status || "Bilinmiyor", color: "neutral" as const };
         return <Badge variant={config.color}>{config.label}</Badge>;
       },
     },
     {
-      key: "transfer_date",
-      label: "Ödeme Tarihi",
-      render: (row: PaymentTransfer) => row ? formatDate(row.transfer_date) : "-",
-    },
-    {
-      key: "reference_id",
-      label: "Referans No",
+      key: "notes",
+      label: "Not",
       render: (row: PaymentTransfer) => (
-        <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
-          {row?.reference_id || "-"}
+        <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+          {row?.notes || "-"}
         </span>
       ),
     },
+    {
+      key: "actions",
+      label: "İşlemler",
+      render: (row: PaymentTransfer) => {
+        if (!row) return null;
+        return (
+          <ModernButton
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedTransfer(row);
+              setShowDetailModal(true);
+            }}
+            leftIcon={<Eye className="h-4 w-4" />}
+          >
+            Detay
+          </ModernButton>
+        );
+      },
+    },
   ];
 
-  const balance = balanceQuery.data;
-  const schedule = scheduleQuery.data;
   const commission = commissionQuery.data;
 
   return (
-    <div style={{ padding: "var(--space-6)" }}>
-      <style>{`
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
-          50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
-        }
-        .commission-card {
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-          color: white;
-          border-radius: var(--radius-xl);
-          padding: var(--space-6);
-          position: relative;
-          overflow: hidden;
-        }
-        .commission-card::before {
-          content: '';
-          position: absolute;
-          top: -50%;
-          right: -50%;
-          width: 100%;
-          height: 100%;
-          background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        }
-        .magicpay-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-          color: white;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-        .stat-card {
-          transition: all 0.2s ease;
-        }
-        .stat-card:hover {
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-lg);
-        }
-        .paid-card {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        }
-      `}</style>
-
+    <div className={styles.container}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{ marginBottom: "var(--space-6)" }}
+        className={styles.header}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
+        <div className={styles.headerContent}>
           <div>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-              Kyradi Komisyon Ödemeleri
-            </h1>
-            <p style={{ color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>
-              Kyradi'ye borçlu olduğunuz komisyon tutarlarını görüntüleyin ve ödeyin
-            </p>
+            <h1 className={styles.title}>Komisyon Ödemeleri</h1>
+            <p className={styles.subtitle}>Kyradi'ye borçlu olduğunuz komisyonları ödeyin ve takip edin</p>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-            <div className="magicpay-badge">
-              <Zap className="h-4 w-4" />
+          <div className={styles.headerActions}>
+            <Badge variant="info">
+              <Zap className="h-3 w-3" style={{ marginRight: 4 }} />
               MagicPay Demo
-            </div>
+            </Badge>
             <ModernButton
               variant="primary"
               size="lg"
@@ -266,501 +228,215 @@ export function TransfersPage() {
         </div>
       </motion.div>
 
-      {/* Commission Summary Card - Borç Durumu */}
+      {/* Stats Cards */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="commission-card"
-        style={{ marginBottom: "var(--space-6)" }}
+        className={styles.statsGrid}
       >
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
-            <Wallet className="h-6 w-6" />
-            <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>Kyradi'ye Borçlu Olduğunuz Komisyon</span>
-          </div>
-          
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-4)" }}>
-            <div>
-              <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Toplam Komisyon Borcu</p>
-              <p style={{ fontSize: "2rem", fontWeight: 700, margin: "var(--space-1) 0 0" }}>
-                {formatCurrency(commission?.total_commission || 0)}
-              </p>
+        <Card className={styles.statCard}>
+          <div className={styles.statContent}>
+            <div className={styles.statIcon} style={{ background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" }}>
+              <DollarSign className="h-6 w-6" style={{ color: "white" }} />
             </div>
             <div>
-              <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Ödenmemiş Tutar</p>
-              <p style={{ fontSize: "1.75rem", fontWeight: 700, margin: "var(--space-1) 0 0" }}>
+              <p className={styles.statLabel}>Kalan Borç</p>
+              <p className={styles.statValue} style={{ color: "#dc2626" }}>
                 {formatCurrency(commission?.available_commission || 0)}
               </p>
             </div>
-            <div>
-              <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Ödeme Bekleyen</p>
-              <p style={{ fontSize: "1.25rem", fontWeight: 600, margin: "var(--space-1) 0 0" }}>
-                {formatCurrency(commission?.pending_commission || 0)}
-              </p>
+          </div>
+        </Card>
+
+        <Card className={styles.statCard}>
+          <div className={styles.statContent}>
+            <div className={styles.statIcon} style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" }}>
+              <Clock className="h-6 w-6" style={{ color: "white" }} />
             </div>
             <div>
-              <p style={{ opacity: 0.8, fontSize: "0.875rem", margin: 0 }}>Ödenen Toplam</p>
-              <p style={{ fontSize: "1.25rem", fontWeight: 600, margin: "var(--space-1) 0 0" }}>
-                {formatCurrency(commission?.transferred_commission || 0)}
+              <p className={styles.statLabel}>Onay Bekleyen</p>
+              <p className={styles.statValue} style={{ color: "#d97706" }}>
+                {formatCurrency(stats.pending)}
               </p>
             </div>
           </div>
-          
-          {commission && commission.reservation_count > 0 && (
-            <div style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "0.875rem", opacity: 0.9 }}>
-                <PieChart className="h-4 w-4" />
-                {commission.reservation_count} rezervasyondan hesaplanan
-              </span>
+        </Card>
+
+        <Card className={styles.statCard}>
+          <div className={styles.statContent}>
+            <div className={styles.statIcon} style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
+              <CheckCircle className="h-6 w-6" style={{ color: "white" }} />
             </div>
-          )}
-        </div>
-      </motion.div>
-
-      {/* Stats Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "var(--space-4)",
-          marginBottom: "var(--space-6)",
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15 }}
-        >
-          <Card className="stat-card">
-            <CardBody>
-              <div style={{ textAlign: "center" }}>
-                <DollarSign
-                  className="h-8 w-8"
-                  style={{ margin: "0 auto var(--space-2)", color: "#dc2626" }}
-                />
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                  Ödenmemiş Borç
-                </p>
-                <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#dc2626", margin: "var(--space-1) 0 0" }}>
-                  {formatCurrency(balance?.available_balance || 0)}
-                </p>
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="stat-card">
-            <CardBody>
-              <div style={{ textAlign: "center" }}>
-                <Clock
-                  className="h-8 w-8"
-                  style={{ margin: "0 auto var(--space-2)", color: "var(--color-warning)" }}
-                />
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                  Ödeme Bekliyor
-                </p>
-                <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
-                  {formatCurrency(balance?.pending_transfers || 0)}
-                </p>
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.25 }}
-        >
-          <Card className="stat-card">
-            <CardBody>
-              <div style={{ textAlign: "center" }}>
-                <CheckCircle
-                  className="h-8 w-8"
-                  style={{ margin: "0 auto var(--space-2)", color: "var(--color-success)" }}
-                />
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                  Toplam Ödenen
-                </p>
-                <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-success)", margin: "var(--space-1) 0 0" }}>
-                  {formatCurrency(balance?.total_transferred || 0)}
-                </p>
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="stat-card">
-            <CardBody>
-              <div style={{ textAlign: "center" }}>
-                <Calendar
-                  className="h-8 w-8"
-                  style={{ margin: "0 auto var(--space-2)", color: "var(--color-info)" }}
-                />
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                  Sonraki Ödeme Tarihi
-                </p>
-                <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)", margin: "var(--space-1) 0 0" }}>
-                  {balance?.next_scheduled_date
-                    ? new Date(balance.next_scheduled_date).toLocaleDateString("tr-TR")
-                    : "Belirlenmedi"}
-                </p>
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Commission Rate Info */}
-      {schedule && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-        >
-          <Card style={{ marginBottom: "var(--space-6)" }}>
-            <CardHeader>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <Building2 className="h-5 w-5" />
-                <span>Komisyon Bilgileri</span>
-              </div>
-            </CardHeader>
-            <CardBody>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: "var(--space-4)",
-                }}
-              >
-                <div>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Sistem Durumu</p>
-                  <Badge variant={schedule.is_enabled ? "success" : "neutral"}>
-                    {schedule.is_enabled ? "Aktif" : "Pasif"}
-                  </Badge>
-                </div>
-                <div>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Ödeme Periyodu</p>
-                  <p style={{ fontWeight: 500, margin: "var(--space-1) 0 0" }}>
-                    {schedule.period_type === "daily" && "Günlük"}
-                    {schedule.period_type === "weekly" && "Haftalık"}
-                    {schedule.period_type === "biweekly" && "2 Haftalık"}
-                    {schedule.period_type === "monthly" && "Aylık"}
-                    {schedule.period_type === "custom" && `${schedule.custom_days} Gün`}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Kyradi Komisyon Oranı</p>
-                  <p style={{ fontWeight: 600, fontSize: "1.25rem", color: "#dc2626", margin: "var(--space-1) 0 0" }}>
-                    %{(schedule.commission_rate * 100).toFixed(2)}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Min. Ödeme Tutarı</p>
-                  <p style={{ fontWeight: 500, margin: "var(--space-1) 0 0" }}>
-                    {formatCurrency(schedule.min_transfer_amount)}
-                  </p>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Demo Mode Info */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <div
-          style={{
-            background: "linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)",
-            border: "1px solid rgba(139, 92, 246, 0.3)",
-            borderRadius: "var(--radius-lg)",
-            padding: "var(--space-4)",
-            marginBottom: "var(--space-6)",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-3)",
-          }}
-        >
-          <Info className="h-5 w-5" style={{ color: "#8b5cf6", flexShrink: 0 }} />
-          <div>
-            <p style={{ margin: 0, fontWeight: 600, color: "#7c3aed" }}>
-              MagicPay Demo Modu Aktif
-            </p>
-            <p style={{ margin: "var(--space-1) 0 0", fontSize: "0.875rem", color: "var(--text-secondary)" }}>
-              Şu anda demo modunda çalışıyorsunuz. Ödeme işlemleri simüle edilmektedir.
-              Gerçek API entegrasyonu yapıldığında komisyon ödemeleri otomatik olarak işlenecektir.
-            </p>
+            <div>
+              <p className={styles.statLabel}>Onaylanan</p>
+              <p className={styles.statValue} style={{ color: "#059669" }}>
+                {formatCurrency(stats.completed)}
+              </p>
+            </div>
           </div>
-        </div>
+        </Card>
+
+        <Card className={styles.statCard}>
+          <div className={styles.statContent}>
+            <div className={styles.statIcon} style={{ background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)" }}>
+              <CreditCard className="h-6 w-6" style={{ color: "white" }} />
+            </div>
+            <div>
+              <p className={styles.statLabel}>Toplam Gönderim</p>
+              <p className={styles.statValue} style={{ color: "#4f46e5" }}>
+                {stats.count} işlem
+              </p>
+            </div>
+          </div>
+        </Card>
       </motion.div>
 
-      {/* Payment History */}
+      {/* Demo Info */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.45 }}
+        transition={{ delay: 0.2 }}
+        className={styles.infoBox}
+      >
+        <Info className="h-5 w-5" style={{ color: "#6366f1", flexShrink: 0 }} />
+        <p>
+          <strong style={{ color: "#6366f1" }}>Demo Modu:</strong> Komisyon ödemeleri şu anda demo modunda çalışmaktadır. 
+          Gönderdiğiniz ödemeler admin panelde görünecek ve onaylanması gerekecektir.
+        </p>
+      </motion.div>
+
+      {/* Transfers Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
       >
         <Card>
           <CardHeader>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "wrap", gap: "var(--space-3)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <CreditCard className="h-5 w-5" />
-                <span>Ödeme Geçmişi</span>
-              </div>
-              <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+            <div className={styles.tableHeader}>
+              <h2 className={styles.tableTitle}>Ödeme Geçmişi</h2>
+              <div className={styles.tableActions}>
                 <select
                   value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value as TransferStatus | "");
-                    setPage(1);
-                  }}
-                  style={{
-                    padding: "var(--space-2) var(--space-3)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--border-color)",
-                    background: "var(--bg-primary)",
-                    fontSize: "0.875rem",
-                  }}
+                  onChange={(e) => setStatusFilter(e.target.value as TransferStatus | "")}
+                  className={styles.filterSelect}
                 >
                   <option value="">Tüm Durumlar</option>
                   <option value="pending">Beklemede</option>
-                  <option value="processing">İşleniyor</option>
-                  <option value="completed">Ödendi</option>
-                  <option value="failed">Başarısız</option>
-                  <option value="cancelled">İptal</option>
+                  <option value="completed">Onaylandı</option>
+                  <option value="cancelled">İptal Edildi</option>
                 </select>
                 <ModernButton
                   variant="ghost"
-                  onClick={() => {
-                    queryClient.invalidateQueries({ queryKey: ["payment-transfers"] });
-                    queryClient.invalidateQueries({ queryKey: ["commission-summary"] });
-                    queryClient.invalidateQueries({ queryKey: ["payment-balance"] });
-                  }}
-                  leftIcon={<RefreshCw className="h-4 w-4" />}
+                  size="sm"
+                  onClick={() => transfersQuery.refetch()}
+                  leftIcon={<RefreshCw className={`h-4 w-4 ${transfersQuery.isFetching ? "animate-spin" : ""}`} />}
                 >
                   Yenile
-                </ModernButton>
-                <ModernButton
-                  variant="primary"
-                  onClick={() => setShowRequestModal(true)}
-                  leftIcon={<Send className="h-4 w-4" />}
-                >
-                  Komisyon Öde
                 </ModernButton>
               </div>
             </div>
           </CardHeader>
           <CardBody noPadding>
             {transfersQuery.isLoading ? (
-              <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8)" }}>
-                <Loader2 className="h-8 w-8" style={{ animation: "spin 1s linear infinite" }} />
-              </div>
-            ) : transfersQuery.isError ? (
-              <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-danger)" }}>
-                <AlertCircle className="h-8 w-8" style={{ margin: "0 auto var(--space-2)" }} />
-                <p>Veriler yüklenirken hata oluştu.</p>
+              <div className={styles.emptyState}>
+                <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--color-primary)" }} />
+                <p>Yükleniyor...</p>
               </div>
             ) : transfers.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--text-muted)" }}>
-                <CreditCard className="h-12 w-12" style={{ margin: "0 auto var(--space-4)", opacity: 0.5 }} />
-                <p style={{ margin: 0 }}>Henüz ödeme kaydı bulunmuyor.</p>
+              <div className={styles.emptyState}>
+                <Send className="h-12 w-12" style={{ color: "var(--text-tertiary)" }} />
+                <p>Henüz komisyon ödemesi bulunmuyor</p>
                 <ModernButton
                   variant="primary"
-                  size="sm"
                   onClick={() => setShowRequestModal(true)}
                   leftIcon={<Send className="h-4 w-4" />}
-                  style={{ marginTop: "var(--space-4)" }}
                 >
-                  İlk Komisyon Ödemesini Yap
+                  İlk Ödemenizi Yapın
                 </ModernButton>
               </div>
             ) : (
-              <ModernTable
-                columns={columns}
-                data={transfers}
-                loading={transfersQuery.isLoading}
-                striped
-                hoverable
-                stickyHeader
-                showRowNumbers
-                pagination={paginationMeta}
-                onPageChange={setPage}
-                onPageSizeChange={setPageSize}
-              />
+              <>
+                <ModernTable
+                  columns={columns}
+                  data={transfers.filter(t => t != null)}
+                />
+                <div className={styles.paginationWrapper}>
+                  <Pagination
+                    meta={paginationMeta}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                  />
+                </div>
+              </>
             )}
           </CardBody>
         </Card>
       </motion.div>
 
-      {/* Payment Modal */}
+      {/* Request Modal */}
       <AnimatePresence>
         {showRequestModal && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1000,
-              padding: "var(--space-4)",
-            }}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={styles.modalOverlay}
             onClick={() => setShowRequestModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              style={{
-                background: "var(--bg-primary)",
-                borderRadius: "var(--radius-xl)",
-                padding: "var(--space-6)",
-                width: "100%",
-                maxWidth: "450px",
-                boxShadow: "var(--shadow-xl)",
-              }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
+              className={styles.modal}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "var(--radius-lg)",
-                    background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+              <div className={styles.modalHeader}>
+                <div className={styles.modalIcon} style={{ background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)" }}>
                   <Send className="h-6 w-6" style={{ color: "white" }} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>
-                    Kyradi'ye Komisyon Öde
-                  </h3>
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--text-secondary)" }}>
-                    Borçlu olduğunuz komisyonu ödeyin
-                  </p>
+                  <h3 className={styles.modalTitle}>Komisyon Öde</h3>
+                  <p className={styles.modalSubtitle}>Kyradi'ye komisyon ödemesi yapın</p>
                 </div>
               </div>
 
-              {/* Outstanding Balance Highlight */}
-              {commission && (
-                <div
-                  style={{
-                    background: "linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(185, 28, 28, 0.1) 100%)",
-                    border: "1px solid rgba(220, 38, 38, 0.3)",
-                    borderRadius: "var(--radius-lg)",
-                    padding: "var(--space-4)",
-                    marginBottom: "var(--space-4)",
-                    textAlign: "center",
-                  }}
-                >
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--text-secondary)" }}>
-                    Ödenmemiş Komisyon Borcu
-                  </p>
-                  <p style={{ margin: "var(--space-1) 0 0", fontSize: "1.75rem", fontWeight: 700, color: "#dc2626" }}>
-                    {formatCurrency(commission.available_commission)}
-                  </p>
-                </div>
-              )}
+              {/* Remaining Balance */}
+              <div className={styles.balanceBox}>
+                <p className={styles.balanceLabel}>Kalan Borç</p>
+                <p className={styles.balanceValue}>
+                  {formatCurrency(commission?.available_commission || 0)}
+                </p>
+              </div>
 
-              <div style={{ marginBottom: "var(--space-4)" }}>
-                <label style={{ display: "block", marginBottom: "var(--space-2)", fontWeight: 500 }}>
-                  Ödeme Tutarı (TL) *
-                </label>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Ödeme Tutarı (TL) *</label>
                 <ModernInput
-                  type="number"
+                  type="text"
+                  placeholder="Örn: 100,00"
                   value={requestAmount}
                   onChange={(e) => setRequestAmount(e.target.value)}
-                  placeholder={`Ödemek istediğiniz tutar`}
-                  fullWidth
                 />
-                {commission && requestAmount && parseAmount(requestAmount) > commission.available_commission && (
-                  <p style={{ margin: "var(--space-2) 0 0", fontSize: "0.75rem", color: "var(--color-warning)" }}>
-                    Borç tutarından fazla ödeme yapamazsınız.
-                  </p>
-                )}
               </div>
 
-              <div style={{ marginBottom: "var(--space-4)" }}>
-                <label style={{ display: "block", marginBottom: "var(--space-2)", fontWeight: 500 }}>
-                  Not (Opsiyonel)
-                </label>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Not (Opsiyonel)</label>
                 <textarea
+                  placeholder="Ödeme ile ilgili notunuz..."
                   value={requestNotes}
                   onChange={(e) => setRequestNotes(e.target.value)}
-                  placeholder="Ödeme ile ilgili notunuz..."
-                  style={{
-                    width: "100%",
-                    padding: "var(--space-3)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--border-color)",
-                    resize: "vertical",
-                    minHeight: "80px",
-                    fontFamily: "inherit",
-                    fontSize: "0.875rem",
-                  }}
+                  className={styles.textarea}
                 />
               </div>
 
-              {requestAmount && parseAmount(requestAmount) > 0 && (
-                <div
-                  style={{
-                    background: "var(--bg-secondary)",
-                    padding: "var(--space-4)",
-                    borderRadius: "var(--radius-lg)",
-                    marginBottom: "var(--space-4)",
-                  }}
-                >
-                  <p style={{ margin: "0 0 var(--space-3)", fontWeight: 600, fontSize: "0.875rem" }}>
-                    Ödeme Özeti
-                  </p>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}>
-                    <span>Kyradi'ye Ödenecek:</span>
-                    <span style={{ color: "#dc2626", fontSize: "1.125rem" }}>
-                      {formatCurrency(parseAmount(requestAmount))}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* MagicPay Demo Badge */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                  padding: "var(--space-2) var(--space-3)",
-                  background: "rgba(139, 92, 246, 0.1)",
-                  borderRadius: "var(--radius-md)",
-                  marginBottom: "var(--space-4)",
-                }}
-              >
-                <Zap className="h-4 w-4" style={{ color: "#8b5cf6" }} />
-                <span style={{ fontSize: "0.75rem", color: "#7c3aed" }}>
-                  MagicPay Demo - Ödeme simüle edilecektir
-                </span>
+              {/* Demo Info */}
+              <div className={styles.demoInfo}>
+                <Zap className="h-4 w-4" style={{ color: "#6366f1" }} />
+                <span>Demo modunda ödeme simüle edilecektir</span>
               </div>
 
-              <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end" }}>
+              <div className={styles.modalActions}>
                 <ModernButton variant="ghost" onClick={() => setShowRequestModal(false)}>
                   İptal
                 </ModernButton>
@@ -768,14 +444,79 @@ export function TransfersPage() {
                   variant="primary"
                   onClick={handleRequestTransfer}
                   isLoading={requestMutation.isPending}
-                  disabled={!requestAmount || parseAmount(requestAmount) <= 0}
+                  disabled={!requestAmount || parseFloat(requestAmount.replace(",", ".")) <= 0}
                   leftIcon={<ArrowRight className="h-4 w-4" />}
                 >
                   Ödemeyi Gönder
                 </ModernButton>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {showDetailModal && selectedTransfer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={styles.modalOverlay}
+            onClick={() => setShowDetailModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className={styles.modal}
+            >
+              <div className={styles.detailHeader}>
+                <h3 className={styles.modalTitle}>Ödeme Detayı</h3>
+                <Badge variant={statusConfig[selectedTransfer.status]?.color || "neutral"}>
+                  {statusConfig[selectedTransfer.status]?.label || selectedTransfer.status}
+                </Badge>
+              </div>
+
+              <div className={styles.detailGrid}>
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>Tutar</span>
+                  <span className={styles.detailValue} style={{ color: "#dc2626", fontWeight: 600 }}>
+                    {formatCurrency(selectedTransfer.gross_amount)}
+                  </span>
+                </div>
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>Oluşturulma</span>
+                  <span>{formatDate(selectedTransfer.created_at)}</span>
+                </div>
+                {selectedTransfer.transfer_date && (
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Onay Tarihi</span>
+                    <span>{formatDate(selectedTransfer.transfer_date)}</span>
+                  </div>
+                )}
+                {selectedTransfer.reference_id && (
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Referans No</span>
+                    <span style={{ fontFamily: "monospace" }}>{selectedTransfer.reference_id}</span>
+                  </div>
+                )}
+                {selectedTransfer.notes && (
+                  <div className={styles.detailRowFull}>
+                    <span className={styles.detailLabel}>Not</span>
+                    <span>{selectedTransfer.notes}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.modalActions} style={{ justifyContent: "flex-end" }}>
+                <ModernButton variant="ghost" onClick={() => setShowDetailModal(false)}>
+                  Kapat
+                </ModernButton>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
