@@ -16,6 +16,298 @@
     document.head.appendChild(link);
   }
 
+  // ============================================================
+  // CUSTOM DATE TIME PICKER FOR WIDGET
+  // ============================================================
+  const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  const TR_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+
+  class KyradiDateTimePicker {
+    constructor(input, options = {}) {
+      this.input = input;
+      this.options = {
+        minDate: options.minDate || null,
+        onChange: options.onChange || null,
+        ...options
+      };
+      this.isOpen = false;
+      this.currentMonth = new Date();
+      this.selectedDate = null;
+      this.selectedHour = 12;
+      this.selectedMinute = 0;
+      
+      this.init();
+    }
+
+    init() {
+      // Create wrapper
+      this.wrapper = document.createElement('div');
+      this.wrapper.className = 'kyradi-dtpicker';
+      this.input.parentNode.insertBefore(this.wrapper, this.input);
+      this.wrapper.appendChild(this.input);
+
+      // Create display input (readonly, shows formatted date)
+      this.displayInput = document.createElement('input');
+      this.displayInput.type = 'text';
+      this.displayInput.className = 'kyradi-dtpicker__display';
+      this.displayInput.placeholder = 'gg.aa.yyyy ss:dd';
+      this.displayInput.readOnly = true;
+      this.wrapper.insertBefore(this.displayInput, this.input);
+
+      // Hide original input
+      this.input.style.display = 'none';
+
+      // Create popup
+      this.popup = document.createElement('div');
+      this.popup.className = 'kyradi-dtpicker__popup';
+      this.wrapper.appendChild(this.popup);
+
+      // Parse initial value
+      if (this.input.value) {
+        const date = new Date(this.input.value);
+        if (!isNaN(date.getTime())) {
+          this.selectedDate = date;
+          this.selectedHour = date.getHours();
+          this.selectedMinute = date.getMinutes();
+          this.currentMonth = new Date(date);
+          this.updateDisplay();
+        }
+      }
+
+      // Event listeners
+      this.displayInput.addEventListener('click', () => this.toggle());
+      this.displayInput.addEventListener('focus', () => this.open());
+      
+      document.addEventListener('click', (e) => {
+        if (!this.wrapper.contains(e.target)) {
+          this.close();
+        }
+      });
+
+      this.renderPopup();
+    }
+
+    toggle() {
+      this.isOpen ? this.close() : this.open();
+    }
+
+    open() {
+      this.isOpen = true;
+      this.popup.classList.add('kyradi-dtpicker__popup--open');
+      this.renderPopup();
+    }
+
+    close() {
+      this.isOpen = false;
+      this.popup.classList.remove('kyradi-dtpicker__popup--open');
+    }
+
+    renderPopup() {
+      const year = this.currentMonth.getFullYear();
+      const month = this.currentMonth.getMonth();
+      
+      this.popup.innerHTML = `
+        <div class="kyradi-dtpicker__header">
+          <button type="button" class="kyradi-dtpicker__nav" data-action="prev-month">‹</button>
+          <span class="kyradi-dtpicker__title">${TR_MONTHS[month]} ${year}</span>
+          <button type="button" class="kyradi-dtpicker__nav" data-action="next-month">›</button>
+        </div>
+        <div class="kyradi-dtpicker__calendar">
+          <div class="kyradi-dtpicker__weekdays">
+            ${TR_DAYS.map(d => `<span>${d}</span>`).join('')}
+          </div>
+          <div class="kyradi-dtpicker__days">
+            ${this.renderDays(year, month)}
+          </div>
+        </div>
+        <div class="kyradi-dtpicker__time">
+          <span class="kyradi-dtpicker__time-label">Saat:</span>
+          <select class="kyradi-dtpicker__hour">
+            ${Array.from({length: 24}, (_, i) => 
+              `<option value="${i}" ${i === this.selectedHour ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`
+            ).join('')}
+          </select>
+          <span>:</span>
+          <select class="kyradi-dtpicker__minute">
+            ${Array.from({length: 12}, (_, i) => i * 5).map(m => 
+              `<option value="${m}" ${m === this.selectedMinute ? 'selected' : ''}>${String(m).padStart(2, '0')}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="kyradi-dtpicker__footer">
+          <button type="button" class="kyradi-dtpicker__btn" data-action="now">Şimdi</button>
+          <button type="button" class="kyradi-dtpicker__btn kyradi-dtpicker__btn--clear" data-action="clear">Temizle</button>
+        </div>
+      `;
+
+      // Bind events
+      this.popup.querySelector('[data-action="prev-month"]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.currentMonth.setMonth(this.currentMonth.getMonth() - 1);
+        this.renderPopup();
+      });
+
+      this.popup.querySelector('[data-action="next-month"]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.currentMonth.setMonth(this.currentMonth.getMonth() + 1);
+        this.renderPopup();
+      });
+
+      this.popup.querySelectorAll('.kyradi-dtpicker__day:not(.kyradi-dtpicker__day--disabled)').forEach(day => {
+        day.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const date = parseInt(day.dataset.date);
+          this.selectDate(date);
+        });
+      });
+
+      this.popup.querySelector('.kyradi-dtpicker__hour').addEventListener('change', (e) => {
+        this.selectedHour = parseInt(e.target.value);
+        this.updateValue();
+      });
+
+      this.popup.querySelector('.kyradi-dtpicker__minute').addEventListener('change', (e) => {
+        this.selectedMinute = parseInt(e.target.value);
+        this.updateValue();
+      });
+
+      this.popup.querySelector('[data-action="now"]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const now = new Date();
+        this.selectedDate = now;
+        this.selectedHour = now.getHours();
+        this.selectedMinute = Math.floor(now.getMinutes() / 5) * 5;
+        this.currentMonth = new Date(now);
+        this.updateValue();
+        this.renderPopup();
+        this.close();
+      });
+
+      this.popup.querySelector('[data-action="clear"]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.selectedDate = null;
+        this.input.value = '';
+        this.displayInput.value = '';
+        if (this.options.onChange) this.options.onChange(null);
+        this.close();
+      });
+    }
+
+    renderDays(year, month) {
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDay = (firstDay.getDay() + 6) % 7; // Monday = 0
+      const daysInMonth = lastDay.getDate();
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const minDate = this.options.minDate ? new Date(this.options.minDate) : null;
+      if (minDate) minDate.setHours(0, 0, 0, 0);
+
+      let html = '';
+      
+      // Empty cells for days before month starts
+      for (let i = 0; i < startDay; i++) {
+        html += '<span class="kyradi-dtpicker__day kyradi-dtpicker__day--empty"></span>';
+      }
+      
+      // Days of month
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(year, month, d);
+        const isToday = date.getTime() === today.getTime();
+        const isSelected = this.selectedDate && 
+          date.getFullYear() === this.selectedDate.getFullYear() &&
+          date.getMonth() === this.selectedDate.getMonth() &&
+          date.getDate() === this.selectedDate.getDate();
+        const isDisabled = minDate && date < minDate;
+        
+        let classes = 'kyradi-dtpicker__day';
+        if (isToday) classes += ' kyradi-dtpicker__day--today';
+        if (isSelected) classes += ' kyradi-dtpicker__day--selected';
+        if (isDisabled) classes += ' kyradi-dtpicker__day--disabled';
+        
+        html += `<span class="${classes}" data-date="${d}">${d}</span>`;
+      }
+      
+      return html;
+    }
+
+    selectDate(day) {
+      this.selectedDate = new Date(
+        this.currentMonth.getFullYear(),
+        this.currentMonth.getMonth(),
+        day,
+        this.selectedHour,
+        this.selectedMinute
+      );
+      this.updateValue();
+      this.renderPopup();
+    }
+
+    updateValue() {
+      if (!this.selectedDate) return;
+      
+      const date = new Date(this.selectedDate);
+      date.setHours(this.selectedHour, this.selectedMinute, 0, 0);
+      
+      // Set ISO value for form submission
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      this.input.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+      this.updateDisplay();
+      
+      if (this.options.onChange) {
+        this.options.onChange(this.input.value);
+      }
+    }
+
+    updateDisplay() {
+      if (!this.selectedDate) {
+        this.displayInput.value = '';
+        return;
+      }
+      
+      const date = new Date(this.selectedDate);
+      date.setHours(this.selectedHour, this.selectedMinute);
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      this.displayInput.value = `${day}.${month}.${year} ${hours}:${minutes}`;
+    }
+
+    setValue(value) {
+      if (!value) {
+        this.selectedDate = null;
+        this.input.value = '';
+        this.displayInput.value = '';
+        return;
+      }
+      
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        this.selectedDate = date;
+        this.selectedHour = date.getHours();
+        this.selectedMinute = date.getMinutes();
+        this.currentMonth = new Date(date);
+        this.updateValue();
+      }
+    }
+  }
+
   const translations = {
     "tr-tr": {
       title: "Rezervasyon Formu",
@@ -326,11 +618,11 @@
               <div class="kyradi-reserve__grid">
                 <label>
                   <span>${this.t("checkinDateTime")} <span class="kyradi-reserve__required">*</span></span>
-                  <input type="datetime-local" name="start_datetime" required min="${minDateTime}" />
+                  <input type="text" name="start_datetime" class="kyradi-reserve__datetime-input" required data-min="${minDateTime}" placeholder="gg.aa.yyyy ss:dd" autocomplete="off" />
                 </label>
                 <label>
                   <span>${this.t("checkoutDateTime")} <span class="kyradi-reserve__required">*</span></span>
-                  <input type="datetime-local" name="end_datetime" required min="${minDateTime}" />
+                  <input type="text" name="end_datetime" class="kyradi-reserve__datetime-input" required data-min="${minDateTime}" placeholder="gg.aa.yyyy ss:dd" autocomplete="off" />
                 </label>
                 <label>
                   <span>${this.t("luggageCount")} <span class="kyradi-reserve__required">*</span></span>
@@ -451,6 +743,25 @@
         }
         this.submitForm(new FormData(form));
       });
+
+      // Initialize custom date-time pickers
+      const startInput = this.querySelector('input[name="start_datetime"]');
+      const endInput = this.querySelector('input[name="end_datetime"]');
+      const minDate = new Date();
+      
+      if (startInput) {
+        this.startPicker = new KyradiDateTimePicker(startInput, {
+          minDate: minDate,
+          onChange: () => this.calculatePrice()
+        });
+      }
+      
+      if (endInput) {
+        this.endPicker = new KyradiDateTimePicker(endInput, {
+          minDate: minDate,
+          onChange: () => this.calculatePrice()
+        });
+      }
 
       // Handle id_type selection to show/hide TC No or Passport fields
       const idTypeSelect = this.querySelector('select[name="id_type"]');

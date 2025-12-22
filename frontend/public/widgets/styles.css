@@ -945,3 +945,258 @@
     flex: 1;
   }
 }
+
+/* ============================================================
+   CUSTOM DATE TIME PICKER
+   ============================================================ */
+
+.kyradi-dtpicker {
+  position: relative;
+  width: 100%;
+}
+
+.kyradi-dtpicker__display {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 15px;
+  color: #1e293b;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.kyradi-dtpicker__display:hover {
+  border-color: #cbd5e1;
+}
+
+.kyradi-dtpicker__display:focus {
+  outline: none;
+  border-color: #00a389;
+  box-shadow: 0 0 0 3px rgba(0, 163, 137, 0.15);
+}
+
+.kyradi-dtpicker__display::placeholder {
+  color: #94a3b8;
+}
+
+.kyradi-dtpicker__popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s ease;
+  min-width: 300px;
+  overflow: hidden;
+}
+
+.kyradi-dtpicker__popup--open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.kyradi-dtpicker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.kyradi-dtpicker__nav {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kyradi-dtpicker__nav:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.kyradi-dtpicker__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.kyradi-dtpicker__calendar {
+  padding: 12px 16px;
+}
+
+.kyradi-dtpicker__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.kyradi-dtpicker__weekdays span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: center;
+  text-transform: uppercase;
+  padding: 4px 0;
+}
+
+.kyradi-dtpicker__days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.kyradi-dtpicker__day {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kyradi-dtpicker__day:hover:not(.kyradi-dtpicker__day--disabled):not(.kyradi-dtpicker__day--empty) {
+  background: #f1f5f9;
+}
+
+.kyradi-dtpicker__day--empty {
+  cursor: default;
+}
+
+.kyradi-dtpicker__day--today {
+  border: 2px solid #00a389;
+  font-weight: 700;
+}
+
+.kyradi-dtpicker__day--selected {
+  background: linear-gradient(135deg, #00a389 0%, #059669 100%) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.kyradi-dtpicker__day--disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.kyradi-dtpicker__time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+}
+
+.kyradi-dtpicker__time-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.kyradi-dtpicker__hour,
+.kyradi-dtpicker__minute {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  background: white;
+  cursor: pointer;
+  min-width: 60px;
+}
+
+.kyradi-dtpicker__hour:focus,
+.kyradi-dtpicker__minute:focus {
+  outline: none;
+  border-color: #00a389;
+  box-shadow: 0 0 0 2px rgba(0, 163, 137, 0.15);
+}
+
+.kyradi-dtpicker__time span {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.kyradi-dtpicker__footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.kyradi-dtpicker__btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: linear-gradient(135deg, #00a389 0%, #059669 100%);
+  color: white;
+}
+
+.kyradi-dtpicker__btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 163, 137, 0.3);
+}
+
+.kyradi-dtpicker__btn--clear {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.kyradi-dtpicker__btn--clear:hover {
+  background: #e2e8f0;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .kyradi-dtpicker__popup {
+    position: fixed;
+    top: auto !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 20px 20px 0 0;
+    min-width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .kyradi-dtpicker__day {
+    font-size: 15px;
+  }
+}
