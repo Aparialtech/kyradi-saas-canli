@@ -15,6 +15,10 @@ import {
   Eye,
   XCircle,
   User,
+  Search,
+  Filter,
+  X,
+  Download,
 } from "../../../lib/lucide";
 
 import {
@@ -30,6 +34,7 @@ import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { Badge } from "../../../components/ui/Badge";
+import { DateField } from "../../../components/ui/DateField";
 
 import styles from "./TransfersPage.module.css";
 
@@ -47,6 +52,10 @@ export function TransfersPage() {
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
   const [statusFilter, setStatusFilter] = useState<TransferStatus | "">("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<PaymentTransfer | null>(null);
@@ -134,16 +143,57 @@ export function TransfersPage() {
     });
   };
 
-  const transfers = transfersQuery.data?.data || [];
+  const rawTransfers = transfersQuery.data?.data || [];
+  
+  // Filter transfers by search term and date range
+  const transfers = useMemo(() => {
+    let filtered = rawTransfers;
+    
+    // Search filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter((t) => {
+        if (!t) return false;
+        const amount = (t.gross_amount || 0).toString();
+        const notes = (t.notes || "").toLowerCase();
+        const refId = (t.reference_id || "").toLowerCase();
+        const id = (t.id || "").toLowerCase();
+        return amount.includes(term) || notes.includes(term) || refId.includes(term) || id.includes(term);
+      });
+    }
+    
+    // Date from filter
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      filtered = filtered.filter((t) => {
+        if (!t?.created_at) return false;
+        return new Date(t.created_at) >= fromDate;
+      });
+    }
+    
+    // Date to filter
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((t) => {
+        if (!t?.created_at) return false;
+        return new Date(t.created_at) <= toDate;
+      });
+    }
+    
+    return filtered;
+  }, [rawTransfers, searchTerm, dateFrom, dateTo]);
+  
   const paginationMeta = useMemo(() => {
-    if (!transfersQuery.data?.meta) return calculatePaginationMeta(0, page, pageSize);
+    if (!transfersQuery.data?.meta) return calculatePaginationMeta(transfers.length, page, pageSize);
     return {
-      total: transfersQuery.data.meta.total || 0,
+      total: transfers.length,
       page: transfersQuery.data.meta.page || 1,
       pageSize: transfersQuery.data.meta.pageSize || 10,
-      totalPages: transfersQuery.data.meta.totalPages || 1,
+      totalPages: Math.ceil(transfers.length / pageSize) || 1,
     };
-  }, [transfersQuery.data?.meta, page, pageSize]);
+  }, [transfersQuery.data?.meta, transfers.length, page, pageSize]);
 
   // Stats
   const stats = useMemo(() => {
@@ -349,18 +399,51 @@ export function TransfersPage() {
         <Card>
           <CardHeader>
             <div className={styles.tableHeader}>
-              <h2 className={styles.tableTitle}>Ödeme Geçmişi</h2>
+              <div>
+                <h2 className={styles.tableTitle}>Ödeme Geçmişi</h2>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                  {transfers.length} / {rawTransfers.length} kayıt gösteriliyor
+                </p>
+              </div>
               <div className={styles.tableActions}>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as TransferStatus | "")}
-                  className={styles.filterSelect}
+                <ModernButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  leftIcon={<Filter className="h-4 w-4" />}
                 >
-                  <option value="">Tüm Durumlar</option>
-                  <option value="pending">Beklemede</option>
-                  <option value="completed">Onaylandı</option>
-                  <option value="cancelled">İptal Edildi</option>
-                </select>
+                  {showFilters ? "Filtreleri Gizle" : "Filtreler"}
+                </ModernButton>
+                {transfers.length > 0 && (
+                  <ModernButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (!transfers.length) return;
+                      const headers = ["Tarih", "Tutar (TL)", "Durum", "Not", "Referans No"];
+                      const rows = transfers.filter(t => t).map((t) => [
+                        formatDate(t.created_at),
+                        (t.gross_amount || 0).toFixed(2),
+                        statusConfig[t.status]?.label || t.status,
+                        t.notes || "-",
+                        t.reference_id || "-",
+                      ]);
+                      const csvContent = [headers.join(";"), ...rows.map(row => row.join(";"))].join("\n");
+                      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8" });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.download = `komisyon_odemeleri_${new Date().toISOString().split("T")[0]}.csv`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    }}
+                    leftIcon={<Download className="h-4 w-4" />}
+                  >
+                    CSV
+                  </ModernButton>
+                )}
                 <ModernButton
                   variant="ghost"
                   size="sm"
@@ -371,6 +454,150 @@ export function TransfersPage() {
                 </ModernButton>
               </div>
             </div>
+            
+            {/* Search and Filters */}
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <div style={{ 
+                    marginTop: 'var(--space-4)',
+                    padding: 'var(--space-4)',
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--radius-lg)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--space-4)'
+                  }}>
+                    {/* Search Row */}
+                    <div style={{ position: 'relative' }}>
+                      <Search 
+                        className="h-4 w-4" 
+                        style={{ 
+                          position: 'absolute', 
+                          left: '12px', 
+                          top: '50%', 
+                          transform: 'translateY(-50%)',
+                          color: 'var(--text-tertiary)'
+                        }} 
+                      />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Tutar, not veya referans no ile ara..."
+                        style={{
+                          width: '100%',
+                          padding: '10px 36px 10px 40px',
+                          borderRadius: 'var(--radius-lg)',
+                          border: '1.5px solid var(--border-primary)',
+                          background: 'var(--bg-primary)',
+                          fontSize: 'var(--text-sm)',
+                          color: 'var(--text-primary)',
+                        }}
+                      />
+                      {searchTerm && (
+                        <button
+                          onClick={() => setSearchTerm("")}
+                          style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            padding: '4px',
+                            cursor: 'pointer',
+                            color: 'var(--text-tertiary)',
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Filter Grid */}
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+                      gap: 'var(--space-4)',
+                      alignItems: 'end'
+                    }}>
+                      {/* Status Filter */}
+                      <div>
+                        <label style={{ 
+                          display: 'block', 
+                          marginBottom: 'var(--space-2)', 
+                          fontSize: 'var(--text-sm)', 
+                          fontWeight: 500,
+                          color: 'var(--text-secondary)'
+                        }}>
+                          Durum
+                        </label>
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value as TransferStatus | "")}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            height: '42px',
+                            borderRadius: 'var(--radius-lg)',
+                            border: '1.5px solid var(--border-primary)',
+                            background: 'var(--bg-primary)',
+                            fontSize: 'var(--text-sm)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <option value="">Tüm Durumlar</option>
+                          <option value="pending">Beklemede</option>
+                          <option value="processing">İşleniyor</option>
+                          <option value="completed">Onaylandı</option>
+                          <option value="failed">Başarısız</option>
+                          <option value="cancelled">İptal Edildi</option>
+                        </select>
+                      </div>
+                      
+                      {/* Date From */}
+                      <DateField
+                        label="Başlangıç Tarihi"
+                        value={dateFrom}
+                        onChange={(value) => setDateFrom(value || "")}
+                        fullWidth
+                      />
+                      
+                      {/* Date To */}
+                      <DateField
+                        label="Bitiş Tarihi"
+                        value={dateTo}
+                        onChange={(value) => setDateTo(value || "")}
+                        fullWidth
+                      />
+                      
+                      {/* Clear Filters */}
+                      {(searchTerm || statusFilter || dateFrom || dateTo) && (
+                        <ModernButton
+                          variant="ghost"
+                          onClick={() => {
+                            setSearchTerm("");
+                            setStatusFilter("");
+                            setDateFrom("");
+                            setDateTo("");
+                          }}
+                          leftIcon={<X className="h-4 w-4" />}
+                          style={{ height: '42px' }}
+                        >
+                          Temizle
+                        </ModernButton>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </CardHeader>
           <CardBody noPadding>
             {transfersQuery.isLoading ? (
