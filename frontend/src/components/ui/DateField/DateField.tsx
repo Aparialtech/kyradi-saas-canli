@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { DayPicker, type DateRange } from 'react-day-picker';
 import { tr } from 'date-fns/locale';
 import { format, parse, isValid, startOfDay, setHours, setMinutes } from 'date-fns';
@@ -134,6 +135,165 @@ function formatToISO(date: Date | undefined, includeTime: boolean = false): stri
 }
 
 // ============================================================
+// PORTAL POPOVER COMPONENT
+// ============================================================
+
+interface PopoverPosition {
+  top: number;
+  left: number;
+  width: number;
+}
+
+interface PortalPopoverProps {
+  isOpen: boolean;
+  anchorRef: React.RefObject<HTMLElement | null>;
+  children: React.ReactNode;
+  className?: string;
+  onClose: () => void;
+}
+
+function PortalPopover({ isOpen, anchorRef, children, className, onClose }: PortalPopoverProps) {
+  const [position, setPosition] = useState<PopoverPosition>({ top: 0, left: 0, width: 300 });
+  const [isMobile, setIsMobile] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Calculate position based on anchor element
+  const updatePosition = useCallback(() => {
+    if (!anchorRef.current) return;
+    
+    const rect = anchorRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const popoverHeight = popoverRef.current?.offsetHeight || 400;
+    const popoverWidth = popoverRef.current?.offsetWidth || 300;
+    
+    // Check if mobile
+    const mobile = viewportWidth <= 640;
+    setIsMobile(mobile);
+    
+    if (mobile) {
+      // Mobile: full width bottom sheet
+      setPosition({ top: 0, left: 0, width: viewportWidth });
+      return;
+    }
+    
+    // Calculate top position - prefer below, flip to above if needed
+    let top = rect.bottom + 8;
+    if (top + popoverHeight > viewportHeight - 20) {
+      // Not enough space below, try above
+      top = rect.top - popoverHeight - 8;
+      if (top < 20) {
+        // Not enough space above either, position at bottom with scroll
+        top = Math.max(20, viewportHeight - popoverHeight - 20);
+      }
+    }
+    
+    // Calculate left position - align to input left, but don't overflow right
+    let left = rect.left;
+    if (left + popoverWidth > viewportWidth - 20) {
+      left = viewportWidth - popoverWidth - 20;
+    }
+    if (left < 20) {
+      left = 20;
+    }
+    
+    setPosition({ top, left, width: Math.max(rect.width, 300) });
+  }, [anchorRef]);
+
+  // Update position on open and resize/scroll
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    updatePosition();
+    
+    const handleUpdate = () => updatePosition();
+    window.addEventListener('resize', handleUpdate);
+    window.addEventListener('scroll', handleUpdate, true);
+    
+    return () => {
+      window.removeEventListener('resize', handleUpdate);
+      window.removeEventListener('scroll', handleUpdate, true);
+    };
+  }, [isOpen, updatePosition]);
+
+  // Handle click outside
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        popoverRef.current && 
+        !popoverRef.current.contains(e.target as Node) &&
+        anchorRef.current &&
+        !anchorRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+    
+    // Delay to avoid immediate close on open click
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+    
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose, anchorRef]);
+
+  if (!isOpen) return null;
+
+  const popoverStyle: React.CSSProperties = isMobile
+    ? {
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        top: 'auto',
+        maxHeight: '80vh',
+        borderRadius: '16px 16px 0 0',
+      }
+    : {
+        position: 'fixed',
+        top: position.top,
+        left: position.left,
+        minWidth: position.width,
+      };
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop for mobile */}
+          {isMobile && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className={styles.backdrop}
+              onClick={onClose}
+            />
+          )}
+          <motion.div
+            ref={popoverRef}
+            initial={{ opacity: 0, y: isMobile ? 20 : -8, scale: isMobile ? 1 : 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: isMobile ? 20 : -8, scale: isMobile ? 1 : 0.96 }}
+            transition={{ duration: 0.15 }}
+            className={clsx(styles.popover, className)}
+            style={popoverStyle}
+          >
+            {children}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+}
+
+// ============================================================
 // DATE FIELD (Date only)
 // ============================================================
 
@@ -160,7 +320,7 @@ export const DateField = React.forwardRef<HTMLInputElement, DateFieldProps>(
   ) => {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
+    const inputWrapperRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Sync external value to input
@@ -168,17 +328,6 @@ export const DateField = React.forwardRef<HTMLInputElement, DateFieldProps>(
       const date = parseToDate(value);
       setInputValue(formatToDisplay(date));
     }, [value]);
-
-    // Handle outside clicks
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     // Handle input change (typing)
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,10 +373,7 @@ export const DateField = React.forwardRef<HTMLInputElement, DateFieldProps>(
     const selectedDate = parseToDate(value);
 
     return (
-      <div
-        ref={containerRef}
-        className={clsx(styles.container, { [styles.fullWidth]: fullWidth }, className)}
-      >
+      <div className={clsx(styles.container, { [styles.fullWidth]: fullWidth }, className)}>
         {label && (
           <label className={styles.label} htmlFor={id}>
             {label}
@@ -236,6 +382,7 @@ export const DateField = React.forwardRef<HTMLInputElement, DateFieldProps>(
         )}
 
         <div
+          ref={inputWrapperRef}
           className={clsx(
             styles.inputWrapper,
             styles[`inputWrapper--${size}`],
@@ -279,74 +426,68 @@ export const DateField = React.forwardRef<HTMLInputElement, DateFieldProps>(
           )}
         </div>
 
-        <AnimatePresence>
-          {isOpen && !disabled && (
-            <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.96 }}
-              transition={{ duration: 0.15 }}
-              className={styles.popover}
+        <PortalPopover
+          isOpen={isOpen && !disabled}
+          anchorRef={inputWrapperRef}
+          onClose={() => setIsOpen(false)}
+        >
+          <DayPicker
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleDaySelect}
+            locale={tr}
+            weekStartsOn={1}
+            disabled={[
+              ...(minDate ? [{ before: minDate }] : []),
+              ...(maxDate ? [{ after: maxDate }] : []),
+            ]}
+            showOutsideDays
+            classNames={{
+              root: styles.calendar,
+              months: styles.months,
+              month: styles.month,
+              caption: styles.caption,
+              caption_label: styles.captionLabel,
+              nav: styles.nav,
+              nav_button: styles.navButton,
+              nav_button_previous: styles.navButtonPrev,
+              nav_button_next: styles.navButtonNext,
+              table: styles.table,
+              head_row: styles.headRow,
+              head_cell: styles.headCell,
+              row: styles.row,
+              cell: styles.cell,
+              day: styles.day,
+              day_selected: styles.daySelected,
+              day_today: styles.dayToday,
+              day_outside: styles.dayOutside,
+              day_disabled: styles.dayDisabled,
+              day_hidden: styles.dayHidden,
+            }}
+            components={{
+              Chevron: (props) => props.orientation === 'left' 
+                ? <ChevronLeft className="h-4 w-4" /> 
+                : <ChevronRight className="h-4 w-4" />,
+            }}
+          />
+          
+          <div className={styles.footer}>
+            <button
+              type="button"
+              className={styles.footerButton}
+              onClick={handleToday}
             >
-              <DayPicker
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDaySelect}
-                locale={tr}
-                weekStartsOn={1}
-                disabled={[
-                  ...(minDate ? [{ before: minDate }] : []),
-                  ...(maxDate ? [{ after: maxDate }] : []),
-                ]}
-                showOutsideDays
-                classNames={{
-                  root: styles.calendar,
-                  months: styles.months,
-                  month: styles.month,
-                  caption: styles.caption,
-                  caption_label: styles.captionLabel,
-                  nav: styles.nav,
-                  nav_button: styles.navButton,
-                  nav_button_previous: styles.navButtonPrev,
-                  nav_button_next: styles.navButtonNext,
-                  table: styles.table,
-                  head_row: styles.headRow,
-                  head_cell: styles.headCell,
-                  row: styles.row,
-                  cell: styles.cell,
-                  day: styles.day,
-                  day_selected: styles.daySelected,
-                  day_today: styles.dayToday,
-                  day_outside: styles.dayOutside,
-                  day_disabled: styles.dayDisabled,
-                  day_hidden: styles.dayHidden,
-                }}
-                components={{
-                  Chevron: (props) => props.orientation === 'left' 
-                    ? <ChevronLeft className="h-4 w-4" /> 
-                    : <ChevronRight className="h-4 w-4" />,
-                }}
-              />
-              
-              <div className={styles.footer}>
-                <button
-                  type="button"
-                  className={styles.footerButton}
-                  onClick={handleToday}
-                >
-                  Bugün
-                </button>
-                <button
-                  type="button"
-                  className={clsx(styles.footerButton, styles.footerButtonOutline)}
-                  onClick={handleClear}
-                >
-                  Temizle
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Bugün
+            </button>
+            <button
+              type="button"
+              className={clsx(styles.footerButton, styles.footerButtonOutline)}
+              onClick={(e) => { e.stopPropagation(); handleClear(e); setIsOpen(false); }}
+            >
+              Temizle
+            </button>
+          </div>
+        </PortalPopover>
 
         {(error || helperText) && (
           <motion.p
@@ -394,7 +535,7 @@ export const DateTimeField = React.forwardRef<HTMLInputElement, DateTimeFieldPro
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
     const [selectedTime, setSelectedTime] = useState({ hours: 12, minutes: 0 });
-    const containerRef = useRef<HTMLDivElement>(null);
+    const inputWrapperRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Sync external value to input
@@ -410,17 +551,6 @@ export const DateTimeField = React.forwardRef<HTMLInputElement, DateTimeFieldPro
         setInputValue('');
       }
     }, [value]);
-
-    // Handle outside clicks
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     // Handle input change (typing)
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -485,10 +615,7 @@ export const DateTimeField = React.forwardRef<HTMLInputElement, DateTimeFieldPro
     const minutes = Array.from({ length: 60 / minuteStep }, (_, i) => i * minuteStep);
 
     return (
-      <div
-        ref={containerRef}
-        className={clsx(styles.container, { [styles.fullWidth]: fullWidth }, className)}
-      >
+      <div className={clsx(styles.container, { [styles.fullWidth]: fullWidth }, className)}>
         {label && (
           <label className={styles.label} htmlFor={id}>
             {label}
@@ -497,6 +624,7 @@ export const DateTimeField = React.forwardRef<HTMLInputElement, DateTimeFieldPro
         )}
 
         <div
+          ref={inputWrapperRef}
           className={clsx(
             styles.inputWrapper,
             styles[`inputWrapper--${size}`],
@@ -540,125 +668,120 @@ export const DateTimeField = React.forwardRef<HTMLInputElement, DateTimeFieldPro
           )}
         </div>
 
-        <AnimatePresence>
-          {isOpen && !disabled && (
-            <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.96 }}
-              transition={{ duration: 0.15 }}
-              className={clsx(styles.popover, styles.popoverWide)}
-            >
-              <div className={styles.datetimeGrid}>
-                <div className={styles.calendarSection}>
-                  <DayPicker
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleDaySelect}
-                    locale={tr}
-                    weekStartsOn={1}
-                    disabled={[
-                      ...(minDate ? [{ before: minDate }] : []),
-                      ...(maxDate ? [{ after: maxDate }] : []),
-                    ]}
-                    showOutsideDays
-                    classNames={{
-                      root: styles.calendar,
-                      months: styles.months,
-                      month: styles.month,
-                      caption: styles.caption,
-                      caption_label: styles.captionLabel,
-                      nav: styles.nav,
-                      nav_button: styles.navButton,
-                      nav_button_previous: styles.navButtonPrev,
-                      nav_button_next: styles.navButtonNext,
-                      table: styles.table,
-                      head_row: styles.headRow,
-                      head_cell: styles.headCell,
-                      row: styles.row,
-                      cell: styles.cell,
-                      day: styles.day,
-                      day_selected: styles.daySelected,
-                      day_today: styles.dayToday,
-                      day_outside: styles.dayOutside,
-                      day_disabled: styles.dayDisabled,
-                      day_hidden: styles.dayHidden,
-                    }}
-                    components={{
-                      Chevron: (props) => props.orientation === 'left' 
-                        ? <ChevronLeft className="h-4 w-4" /> 
-                        : <ChevronRight className="h-4 w-4" />,
-                    }}
-                  />
-                </div>
+        <PortalPopover
+          isOpen={isOpen && !disabled}
+          anchorRef={inputWrapperRef}
+          onClose={() => setIsOpen(false)}
+          className={styles.popoverWide}
+        >
+          <div className={styles.datetimeGrid}>
+            <div className={styles.calendarSection}>
+              <DayPicker
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDaySelect}
+                locale={tr}
+                weekStartsOn={1}
+                disabled={[
+                  ...(minDate ? [{ before: minDate }] : []),
+                  ...(maxDate ? [{ after: maxDate }] : []),
+                ]}
+                showOutsideDays
+                classNames={{
+                  root: styles.calendar,
+                  months: styles.months,
+                  month: styles.month,
+                  caption: styles.caption,
+                  caption_label: styles.captionLabel,
+                  nav: styles.nav,
+                  nav_button: styles.navButton,
+                  nav_button_previous: styles.navButtonPrev,
+                  nav_button_next: styles.navButtonNext,
+                  table: styles.table,
+                  head_row: styles.headRow,
+                  head_cell: styles.headCell,
+                  row: styles.row,
+                  cell: styles.cell,
+                  day: styles.day,
+                  day_selected: styles.daySelected,
+                  day_today: styles.dayToday,
+                  day_outside: styles.dayOutside,
+                  day_disabled: styles.dayDisabled,
+                  day_hidden: styles.dayHidden,
+                }}
+                components={{
+                  Chevron: (props) => props.orientation === 'left' 
+                    ? <ChevronLeft className="h-4 w-4" /> 
+                    : <ChevronRight className="h-4 w-4" />,
+                }}
+              />
+            </div>
 
-                <div className={styles.timeSection}>
-                  <div className={styles.timeHeader}>
-                    <Clock className="h-4 w-4" />
-                    <span>Saat Seçin</span>
-                  </div>
-                  
-                  <div className={styles.timeSelectors}>
-                    <div className={styles.timeColumn}>
-                      <span className={styles.timeColumnLabel}>Saat</span>
-                      <div className={styles.timeScroller}>
-                        {hours.map((h) => (
-                          <button
-                            key={h}
-                            type="button"
-                            className={clsx(styles.timeOption, {
-                              [styles.timeOptionSelected]: h === selectedTime.hours,
-                            })}
-                            onClick={() => handleTimeChange('hours', h)}
-                          >
-                            {h.toString().padStart(2, '0')}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className={styles.timeSeparator}>:</div>
-                    
-                    <div className={styles.timeColumn}>
-                      <span className={styles.timeColumnLabel}>Dakika</span>
-                      <div className={styles.timeScroller}>
-                        {minutes.map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            className={clsx(styles.timeOption, {
-                              [styles.timeOptionSelected]: m === selectedTime.minutes,
-                            })}
-                            onClick={() => handleTimeChange('minutes', m)}
-                          >
-                            {m.toString().padStart(2, '0')}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div className={styles.timeSection}>
+              <div className={styles.timeHeader}>
+                <Clock className="h-4 w-4" />
+                <span>Saat Seçin</span>
               </div>
               
-              <div className={styles.footer}>
-                <button
-                  type="button"
-                  className={styles.footerButton}
-                  onClick={handleNow}
-                >
-                  Şimdi
-                </button>
-                <button
-                  type="button"
-                  className={clsx(styles.footerButton, styles.footerButtonOutline)}
-                  onClick={handleClear}
-                >
-                  Temizle
-                </button>
+              <div className={styles.timeSelectors}>
+                <div className={styles.timeColumn}>
+                  <span className={styles.timeColumnLabel}>Saat</span>
+                  <div className={styles.timeScroller}>
+                    {hours.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        className={clsx(styles.timeOption, {
+                          [styles.timeOptionSelected]: h === selectedTime.hours,
+                        })}
+                        onClick={() => handleTimeChange('hours', h)}
+                      >
+                        {h.toString().padStart(2, '0')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className={styles.timeSeparator}>:</div>
+                
+                <div className={styles.timeColumn}>
+                  <span className={styles.timeColumnLabel}>Dakika</span>
+                  <div className={styles.timeScroller}>
+                    {minutes.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        className={clsx(styles.timeOption, {
+                          [styles.timeOptionSelected]: m === selectedTime.minutes,
+                        })}
+                        onClick={() => handleTimeChange('minutes', m)}
+                      >
+                        {m.toString().padStart(2, '0')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+          
+          <div className={styles.footer}>
+            <button
+              type="button"
+              className={styles.footerButton}
+              onClick={handleNow}
+            >
+              Şimdi
+            </button>
+            <button
+              type="button"
+              className={clsx(styles.footerButton, styles.footerButtonOutline)}
+              onClick={(e) => { e.stopPropagation(); handleClear(e); setIsOpen(false); }}
+            >
+              Temizle
+            </button>
+          </div>
+        </PortalPopover>
 
         {(error || helperText) && (
           <motion.p
@@ -699,24 +822,13 @@ export const DateRangeField: React.FC<DateRangeFieldProps> = ({
   className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const inputWrapperRef = useRef<HTMLDivElement>(null);
 
   const startDate = parseToDate(startValue);
   const endDate = parseToDate(endValue);
 
   const range: DateRange | undefined =
     startDate || endDate ? { from: startDate, to: endDate } : undefined;
-
-  // Handle outside clicks
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Handle range selection
   const handleRangeSelect = (range: DateRange | undefined) => {
@@ -733,7 +845,7 @@ export const DateRangeField: React.FC<DateRangeFieldProps> = ({
   // Quick presets
   const handlePreset = (preset: 'today' | 'week' | 'month' | 'year') => {
     const now = new Date();
-    let start = new Date();
+    const start = new Date();
     
     switch (preset) {
       case 'today':
@@ -756,10 +868,7 @@ export const DateRangeField: React.FC<DateRangeFieldProps> = ({
   };
 
   return (
-    <div
-      ref={containerRef}
-      className={clsx(styles.container, { [styles.fullWidth]: fullWidth }, className)}
-    >
+    <div className={clsx(styles.container, { [styles.fullWidth]: fullWidth }, className)}>
       {label && (
         <label className={styles.label}>
           {label}
@@ -768,6 +877,7 @@ export const DateRangeField: React.FC<DateRangeFieldProps> = ({
       )}
 
       <div
+        ref={inputWrapperRef}
         className={clsx(
           styles.rangeInputWrapper,
           styles[`inputWrapper--${size}`],
@@ -806,85 +916,80 @@ export const DateRangeField: React.FC<DateRangeFieldProps> = ({
         )}
       </div>
 
-      <AnimatePresence>
-        {isOpen && !disabled && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            transition={{ duration: 0.15 }}
-            className={clsx(styles.popover, styles.popoverRange)}
-          >
-            <div className={styles.presets}>
-              <button type="button" onClick={() => handlePreset('today')}>Bugün</button>
-              <button type="button" onClick={() => handlePreset('week')}>Son 7 Gün</button>
-              <button type="button" onClick={() => handlePreset('month')}>Son 30 Gün</button>
-              <button type="button" onClick={() => handlePreset('year')}>Son 1 Yıl</button>
-            </div>
+      <PortalPopover
+        isOpen={isOpen && !disabled}
+        anchorRef={inputWrapperRef}
+        onClose={() => setIsOpen(false)}
+        className={styles.popoverRange}
+      >
+        <div className={styles.presets}>
+          <button type="button" onClick={() => handlePreset('today')}>Bugün</button>
+          <button type="button" onClick={() => handlePreset('week')}>Son 7 Gün</button>
+          <button type="button" onClick={() => handlePreset('month')}>Son 30 Gün</button>
+          <button type="button" onClick={() => handlePreset('year')}>Son 1 Yıl</button>
+        </div>
 
-            <DayPicker
-              mode="range"
-              selected={range}
-              onSelect={handleRangeSelect}
-              locale={tr}
-              weekStartsOn={1}
-              numberOfMonths={2}
-              disabled={[
-                ...(minDate ? [{ before: minDate }] : []),
-                ...(maxDate ? [{ after: maxDate }] : []),
-              ]}
-              showOutsideDays
-              classNames={{
-                root: styles.calendar,
-                months: styles.monthsRange,
-                month: styles.month,
-                caption: styles.caption,
-                caption_label: styles.captionLabel,
-                nav: styles.nav,
-                nav_button: styles.navButton,
-                nav_button_previous: styles.navButtonPrev,
-                nav_button_next: styles.navButtonNext,
-                table: styles.table,
-                head_row: styles.headRow,
-                head_cell: styles.headCell,
-                row: styles.row,
-                cell: styles.cell,
-                day: styles.day,
-                day_selected: styles.daySelected,
-                day_today: styles.dayToday,
-                day_outside: styles.dayOutside,
-                day_disabled: styles.dayDisabled,
-                day_hidden: styles.dayHidden,
-                day_range_start: styles.dayRangeStart,
-                day_range_end: styles.dayRangeEnd,
-                day_range_middle: styles.dayRangeMiddle,
-              }}
-              components={{
-                Chevron: (props) => props.orientation === 'left' 
-                  ? <ChevronLeft className="h-4 w-4" /> 
-                  : <ChevronRight className="h-4 w-4" />,
-              }}
-            />
-            
-            <div className={styles.footer}>
-              <button
-                type="button"
-                className={clsx(styles.footerButton, styles.footerButtonOutline)}
-                onClick={handleClear}
-              >
-                Temizle
-              </button>
-              <button
-                type="button"
-                className={styles.footerButton}
-                onClick={() => setIsOpen(false)}
-              >
-                Uygula
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <DayPicker
+          mode="range"
+          selected={range}
+          onSelect={handleRangeSelect}
+          locale={tr}
+          weekStartsOn={1}
+          numberOfMonths={2}
+          disabled={[
+            ...(minDate ? [{ before: minDate }] : []),
+            ...(maxDate ? [{ after: maxDate }] : []),
+          ]}
+          showOutsideDays
+          classNames={{
+            root: styles.calendar,
+            months: styles.monthsRange,
+            month: styles.month,
+            caption: styles.caption,
+            caption_label: styles.captionLabel,
+            nav: styles.nav,
+            nav_button: styles.navButton,
+            nav_button_previous: styles.navButtonPrev,
+            nav_button_next: styles.navButtonNext,
+            table: styles.table,
+            head_row: styles.headRow,
+            head_cell: styles.headCell,
+            row: styles.row,
+            cell: styles.cell,
+            day: styles.day,
+            day_selected: styles.daySelected,
+            day_today: styles.dayToday,
+            day_outside: styles.dayOutside,
+            day_disabled: styles.dayDisabled,
+            day_hidden: styles.dayHidden,
+            day_range_start: styles.dayRangeStart,
+            day_range_end: styles.dayRangeEnd,
+            day_range_middle: styles.dayRangeMiddle,
+          }}
+          components={{
+            Chevron: (props) => props.orientation === 'left' 
+              ? <ChevronLeft className="h-4 w-4" /> 
+              : <ChevronRight className="h-4 w-4" />,
+          }}
+        />
+        
+        <div className={styles.footer}>
+          <button
+            type="button"
+            className={clsx(styles.footerButton, styles.footerButtonOutline)}
+            onClick={handleClear}
+          >
+            Temizle
+          </button>
+          <button
+            type="button"
+            className={styles.footerButton}
+            onClick={() => setIsOpen(false)}
+          >
+            Uygula
+          </button>
+        </div>
+      </PortalPopover>
 
       {(error || helperText) && (
         <motion.p
@@ -936,20 +1041,9 @@ export const TimeField = React.forwardRef<HTMLInputElement, TimeFieldProps>(
     ref
   ) => {
     const [isOpen, setIsOpen] = useState(false);
-    const containerRef = useRef<HTMLDivElement>(null);
+    const inputWrapperRef = useRef<HTMLDivElement>(null);
 
     const [hours, minutes] = (value || '00:00').split(':').map(Number);
-
-    // Handle outside clicks
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     const handleTimeChange = (type: 'hours' | 'minutes', val: number) => {
       const newHours = type === 'hours' ? val : hours;
@@ -961,10 +1055,7 @@ export const TimeField = React.forwardRef<HTMLInputElement, TimeFieldProps>(
     const minuteOptions = Array.from({ length: 12 }, (_, i) => i * 5);
 
     return (
-      <div
-        ref={containerRef}
-        className={clsx(styles.container, className)}
-      >
+      <div className={clsx(styles.container, className)}>
         {label && (
           <label className={styles.label} htmlFor={id}>
             {label}
@@ -973,6 +1064,7 @@ export const TimeField = React.forwardRef<HTMLInputElement, TimeFieldProps>(
         )}
 
         <div
+          ref={inputWrapperRef}
           className={clsx(
             styles.inputWrapper,
             styles[`inputWrapper--${size}`],
@@ -1006,67 +1098,62 @@ export const TimeField = React.forwardRef<HTMLInputElement, TimeFieldProps>(
           />
         </div>
 
-        <AnimatePresence>
-          {isOpen && !disabled && (
-            <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.96 }}
-              transition={{ duration: 0.15 }}
-              className={clsx(styles.popover, styles.popoverTime)}
+        <PortalPopover
+          isOpen={isOpen && !disabled}
+          anchorRef={inputWrapperRef}
+          onClose={() => setIsOpen(false)}
+          className={styles.popoverTime}
+        >
+          <div className={styles.timeSelectors}>
+            <div className={styles.timeColumn}>
+              <span className={styles.timeColumnLabel}>Saat</span>
+              <div className={styles.timeScroller}>
+                {hourOptions.map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    className={clsx(styles.timeOption, {
+                      [styles.timeOptionSelected]: h === hours,
+                    })}
+                    onClick={() => handleTimeChange('hours', h)}
+                  >
+                    {h.toString().padStart(2, '0')}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className={styles.timeSeparator}>:</div>
+            
+            <div className={styles.timeColumn}>
+              <span className={styles.timeColumnLabel}>Dakika</span>
+              <div className={styles.timeScroller}>
+                {minuteOptions.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={clsx(styles.timeOption, {
+                      [styles.timeOptionSelected]: m === minutes,
+                    })}
+                    onClick={() => handleTimeChange('minutes', m)}
+                  >
+                    {m.toString().padStart(2, '0')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <div className={styles.footer}>
+            <button
+              type="button"
+              className={styles.footerButton}
+              onClick={() => setIsOpen(false)}
             >
-              <div className={styles.timeSelectors}>
-                <div className={styles.timeColumn}>
-                  <span className={styles.timeColumnLabel}>Saat</span>
-                  <div className={styles.timeScroller}>
-                    {hourOptions.map((h) => (
-                      <button
-                        key={h}
-                        type="button"
-                        className={clsx(styles.timeOption, {
-                          [styles.timeOptionSelected]: h === hours,
-                        })}
-                        onClick={() => handleTimeChange('hours', h)}
-                      >
-                        {h.toString().padStart(2, '0')}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className={styles.timeSeparator}>:</div>
-                
-                <div className={styles.timeColumn}>
-                  <span className={styles.timeColumnLabel}>Dakika</span>
-                  <div className={styles.timeScroller}>
-                    {minuteOptions.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        className={clsx(styles.timeOption, {
-                          [styles.timeOptionSelected]: m === minutes,
-                        })}
-                        onClick={() => handleTimeChange('minutes', m)}
-                      >
-                        {m.toString().padStart(2, '0')}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              <div className={styles.footer}>
-                <button
-                  type="button"
-                  className={styles.footerButton}
-                  onClick={() => setIsOpen(false)}
-                >
-                  Tamam
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Tamam
+            </button>
+          </div>
+        </PortalPopover>
 
         {error && (
           <motion.p
@@ -1084,4 +1171,3 @@ export const TimeField = React.forwardRef<HTMLInputElement, TimeFieldProps>(
 );
 
 TimeField.displayName = 'TimeField';
-
