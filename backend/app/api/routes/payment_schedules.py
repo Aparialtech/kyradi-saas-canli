@@ -557,23 +557,23 @@ async def get_commission_summary(
     stmt = select(
         func.coalesce(func.sum(Settlement.kyradi_commission_minor), 0).label("total_commission"),
         func.count(Settlement.id).label("count"),
-        func.min(Settlement.period_start).label("period_start"),
-        func.max(Settlement.period_end).label("period_end"),
+        func.min(Settlement.created_at).label("period_start"),
+        func.max(Settlement.created_at).label("period_end"),
     ).where(Settlement.tenant_id == current_user.tenant_id)
     
     result = (await session.execute(stmt)).one()
     total_commission_minor = result.total_commission or 0
     total_commission = Decimal(str(total_commission_minor)) / Decimal("100")
     
-    # Pending transfers (net_amount)
-    stmt = select(func.coalesce(func.sum(PaymentTransfer.net_amount), 0)).where(
+    # Pending transfers (gross_amount - commission goes to Kyradi)
+    stmt = select(func.coalesce(func.sum(PaymentTransfer.gross_amount), 0)).where(
         PaymentTransfer.tenant_id == current_user.tenant_id,
         PaymentTransfer.status == TransferStatus.PENDING.value,
     )
     pending = (await session.execute(stmt)).scalar() or Decimal("0.00")
     
     # Already transferred (completed)
-    stmt = select(func.coalesce(func.sum(PaymentTransfer.net_amount), 0)).where(
+    stmt = select(func.coalesce(func.sum(PaymentTransfer.gross_amount), 0)).where(
         PaymentTransfer.tenant_id == current_user.tenant_id,
         PaymentTransfer.status == TransferStatus.COMPLETED.value,
     )
