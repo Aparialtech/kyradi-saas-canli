@@ -54,6 +54,8 @@ export function ReportsAnalyticsPage() {
       }),
   });
 
+  const [occupancyLocationFilter, setOccupancyLocationFilter] = useState<string>("");
+  
   const storageUsageQuery = useQuery({
     queryKey: ["partner", "storage-usage", dateFrom, dateTo],
     queryFn: () =>
@@ -98,13 +100,31 @@ export function ReportsAnalyticsPage() {
     });
   }, [trendQuery.data, locale]);
 
+  // Get unique locations for filter dropdown
+  const occupancyLocations = useMemo(() => {
+    if (!storageUsageQuery.data) return [];
+    const locations = new Set(storageUsageQuery.data.map(item => item.location_name));
+    return Array.from(locations).sort();
+  }, [storageUsageQuery.data]);
+
   const occupancyData = useMemo(() => {
     if (!storageUsageQuery.data) return [];
-    return storageUsageQuery.data.map((item) => ({
-      label: `${item.location_name} / ${item.storage_code}`,
+    let data = storageUsageQuery.data;
+    
+    // Filter by location if selected
+    if (occupancyLocationFilter) {
+      data = data.filter(item => item.location_name === occupancyLocationFilter);
+    }
+    
+    return data.map((item) => ({
+      label: item.storage_code,
       occupancy_rate: item.occupancy_rate ?? 0,
+      location_name: item.location_name,
+      reservations: item.reservations,
+      storage_id: item.storage_id,
+      total_revenue_minor: item.total_revenue_minor,
     }));
-  }, [storageUsageQuery.data]);
+  }, [storageUsageQuery.data, occupancyLocationFilter]);
 
   return (
     <div style={{ padding: 'var(--space-8)', maxWidth: '1600px', margin: '0 auto' }}>
@@ -554,12 +574,44 @@ export function ReportsAnalyticsPage() {
             </ModernCard>
 
             <ModernCard variant="glass" padding="lg" style={{ gridColumn: 'span 1' }}>
-              <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-                Lokasyon Doluluk Oranları
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                  Depo Doluluk Oranları
+                </h3>
+                <select
+                  value={occupancyLocationFilter}
+                  onChange={(e) => setOccupancyLocationFilter(e.target.value)}
+                  style={{
+                    padding: 'var(--space-2) var(--space-3)',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                    fontSize: 'var(--text-sm)',
+                    minWidth: '150px',
+                  }}
+                >
+                  <option value="">Tüm Lokasyonlar</option>
+                  {occupancyLocations.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
+              </div>
               <div style={{ height: '350px', minHeight: '350px', minWidth: 0 }}>
                 {storageUsageQuery.isLoading ? (
                   <div className="shimmer" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)" }} />
+                ) : occupancyData.length === 0 ? (
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    height: '100%',
+                    color: 'var(--text-tertiary)'
+                  }}>
+                    <BarChart3 className="h-12 w-12" style={{ opacity: 0.3, marginBottom: 'var(--space-3)' }} />
+                    <p style={{ fontSize: 'var(--text-sm)' }}>Bu lokasyonda veri bulunamadı</p>
+                  </div>
                 ) : (
                   <OccupancyBarChart data={occupancyData} />
                 )}

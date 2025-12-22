@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { AlertCircle, Edit, Trash2, Phone, Clock, Plus } from "../../../lib/lucide";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, Edit, Trash2, Phone, Clock, Plus, Search, X, MapPin, Info } from "../../../lib/lucide";
 
 import { locationService, type Location } from "../../../services/partner/locations";
 import { quotaService } from "../../../services/partner/reports";
@@ -24,6 +24,8 @@ export function LocationsPage() {
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["locations"],
@@ -60,25 +62,52 @@ export function LocationsPage() {
     }
   }, [t, deleteMutation]);
 
-  // Paginate data client-side
-  const paginatedData = useMemo(() => {
+  // Filter data by search term
+  const filteredData = useMemo(() => {
     const allData = data ?? [];
+    if (!searchTerm.trim()) return allData;
+    
+    const term = searchTerm.toLowerCase();
+    return allData.filter((location) =>
+      location.name.toLowerCase().includes(term) ||
+      (location.address && location.address.toLowerCase().includes(term)) ||
+      (location.phone_number && location.phone_number.includes(term))
+    );
+  }, [data, searchTerm]);
+
+  // Paginate filtered data
+  const paginatedData = useMemo(() => {
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
-    return allData.slice(start, end);
-  }, [data, page, pageSize]);
+    return filteredData.slice(start, end);
+  }, [filteredData, page, pageSize]);
 
   const paginationMeta = useMemo(() => {
-    return calculatePaginationMeta(data?.length ?? 0, page, pageSize);
-  }, [data?.length, page, pageSize]);
+    return calculatePaginationMeta(filteredData.length, page, pageSize);
+  }, [filteredData.length, page, pageSize]);
 
   // Table columns - memoized to prevent recreation on every render
   const columns: ModernTableColumn<Location>[] = useMemo(() => [
     {
       key: 'name',
       label: t("locations.name"),
-      render: (value) => (
-        <strong style={{ fontSize: '0.9375rem', fontWeight: 600 }}>{value}</strong>
+      render: (value, location) => (
+        <button
+          onClick={() => setSelectedLocation(location)}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+            textAlign: 'left',
+          }}
+        >
+          <Info className="h-4 w-4" style={{ color: 'var(--primary-500)', flexShrink: 0 }} />
+          <strong style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--primary-600)' }}>{value}</strong>
+        </button>
       ),
     },
     {
@@ -255,13 +284,81 @@ export function LocationsPage() {
         </motion.div>
       )}
 
-      {/* Action Button */}
+      {/* Search & Action Bar */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15, duration: 0.4 }}
-        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'flex-end' }}
+        style={{ 
+          marginBottom: 'var(--space-6)', 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 'var(--space-4)',
+          flexWrap: 'wrap',
+        }}
       >
+        {/* Search Input */}
+        <div style={{ 
+          position: 'relative', 
+          flex: '1 1 300px',
+          maxWidth: '400px',
+        }}>
+          <Search 
+            className="h-5 w-5" 
+            style={{ 
+              position: 'absolute', 
+              left: 'var(--space-3)', 
+              top: '50%', 
+              transform: 'translateY(-50%)',
+              color: 'var(--text-tertiary)',
+              pointerEvents: 'none',
+            }} 
+          />
+          <input
+            type="text"
+            placeholder="Lokasyon ara (isim, adres, telefon)..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1); // Reset to first page on search
+            }}
+            style={{
+              width: '100%',
+              padding: 'var(--space-3) var(--space-4) var(--space-3) var(--space-10)',
+              border: '1.5px solid var(--border-primary)',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              fontSize: 'var(--text-base)',
+              transition: 'all 0.2s ease',
+            }}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              style={{
+                position: 'absolute',
+                right: 'var(--space-3)',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'var(--bg-secondary)',
+                border: 'none',
+                borderRadius: 'var(--radius-full)',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--text-tertiary)',
+              }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        
         <Button variant="primary" size="lg" onClick={handleNew}>
           <Plus className="h-4 w-4" style={{ marginRight: 'var(--space-2)' }} />
           {t("locations.newLocation")}
@@ -277,7 +374,9 @@ export function LocationsPage() {
         <Card variant="elevated" padding="none">
           <CardHeader
             title={t("locations.listTitle")}
-            description={t("locations.listSubtitle", { count: data?.length ?? 0 })}
+            description={searchTerm 
+              ? `${filteredData.length} / ${data?.length ?? 0} ${t("common.records")} (filtrelendi)`
+              : t("locations.listSubtitle", { count: data?.length ?? 0 })}
           />
           <CardBody noPadding>
             {isError ? (
@@ -315,6 +414,235 @@ export function LocationsPage() {
           </CardBody>
         </Card>
       </motion.div>
+
+      {/* Location Detail Panel */}
+      <AnimatePresence>
+        {selectedLocation && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedLocation(null)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(0, 0, 0, 0.5)',
+                zIndex: 998,
+              }}
+            />
+            {/* Panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              style={{
+                position: 'fixed',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: '100%',
+                maxWidth: '480px',
+                background: 'var(--bg-primary)',
+                boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.15)',
+                zIndex: 999,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Panel Header */}
+              <div style={{
+                padding: 'var(--space-6)',
+                borderBottom: '1px solid var(--border-primary)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: 'var(--space-4)',
+              }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                    {selectedLocation.name}
+                  </h2>
+                  <p style={{ margin: 'var(--space-1) 0 0', color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+                    Lokasyon Detayları
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedLocation(null)}
+                  style={{
+                    background: 'var(--bg-secondary)',
+                    border: 'none',
+                    borderRadius: 'var(--radius-full)',
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'var(--text-tertiary)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Panel Content */}
+              <div style={{ flex: 1, overflow: 'auto', padding: 'var(--space-6)' }}>
+                {/* Address Section */}
+                {selectedLocation.address && (
+                  <div style={{ marginBottom: 'var(--space-6)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                      <MapPin className="h-5 w-5" style={{ color: 'var(--primary-500)' }} />
+                      <span style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>Adres</span>
+                    </div>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6, paddingLeft: 'var(--space-7)' }}>
+                      {selectedLocation.address}
+                    </p>
+                  </div>
+                )}
+
+                {/* Phone Section */}
+                {selectedLocation.phone_number && (
+                  <div style={{ marginBottom: 'var(--space-6)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                      <Phone className="h-5 w-5" style={{ color: 'var(--primary-500)' }} />
+                      <span style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>Telefon</span>
+                    </div>
+                    <a 
+                      href={`tel:${selectedLocation.phone_number}`}
+                      style={{ 
+                        color: 'var(--primary-600)', 
+                        textDecoration: 'none',
+                        paddingLeft: 'var(--space-7)',
+                        display: 'block',
+                      }}
+                    >
+                      {selectedLocation.phone_number}
+                    </a>
+                  </div>
+                )}
+
+                {/* Working Hours Section */}
+                {selectedLocation.working_hours && typeof selectedLocation.working_hours === 'object' && (
+                  <div style={{ marginBottom: 'var(--space-6)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+                      <Clock className="h-5 w-5" style={{ color: 'var(--primary-500)' }} />
+                      <span style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>Çalışma Saatleri</span>
+                    </div>
+                    <div style={{ paddingLeft: 'var(--space-7)' }}>
+                      {(() => {
+                        const hours = selectedLocation.working_hours as Record<string, { open: string; close: string }>;
+                        const dayNames: Record<string, string> = {
+                          monday: 'Pazartesi',
+                          tuesday: 'Salı',
+                          wednesday: 'Çarşamba',
+                          thursday: 'Perşembe',
+                          friday: 'Cuma',
+                          saturday: 'Cumartesi',
+                          sunday: 'Pazar',
+                        };
+                        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                        
+                        return days.map(day => {
+                          const dayHours = hours[day];
+                          return (
+                            <div 
+                              key={day}
+                              style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between',
+                                padding: 'var(--space-2) 0',
+                                borderBottom: '1px solid var(--border-secondary)',
+                              }}
+                            >
+                              <span style={{ color: 'var(--text-secondary)' }}>{dayNames[day]}</span>
+                              <span style={{ 
+                                color: dayHours?.open ? 'var(--success-600)' : 'var(--text-muted)',
+                                fontWeight: dayHours?.open ? 'var(--font-medium)' : 'normal',
+                              }}>
+                                {dayHours?.open ? `${dayHours.open} - ${dayHours.close}` : 'Kapalı'}
+                              </span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Coordinates Section */}
+                {selectedLocation.lat != null && selectedLocation.lon != null && (
+                  <div style={{ marginBottom: 'var(--space-6)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                      <MapPin className="h-5 w-5" style={{ color: 'var(--primary-500)' }} />
+                      <span style={{ fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>Koordinatlar</span>
+                    </div>
+                    <div style={{ paddingLeft: 'var(--space-7)' }}>
+                      <code style={{ 
+                        background: 'var(--bg-secondary)', 
+                        padding: 'var(--space-2) var(--space-3)',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: 'var(--text-sm)',
+                        color: 'var(--text-secondary)',
+                      }}>
+                        {selectedLocation.lat.toFixed(6)}, {selectedLocation.lon.toFixed(6)}
+                      </code>
+                      <a
+                        href={`https://www.google.com/maps?q=${selectedLocation.lat},${selectedLocation.lon}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-block',
+                          marginLeft: 'var(--space-3)',
+                          color: 'var(--primary-600)',
+                          fontSize: 'var(--text-sm)',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Haritada Göster →
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Panel Footer */}
+              <div style={{
+                padding: 'var(--space-4) var(--space-6)',
+                borderTop: '1px solid var(--border-primary)',
+                display: 'flex',
+                gap: 'var(--space-3)',
+              }}>
+                <Button 
+                  variant="primary" 
+                  onClick={() => {
+                    handleEdit(selectedLocation);
+                    setSelectedLocation(null);
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  <Edit className="h-4 w-4" style={{ marginRight: 'var(--space-2)' }} />
+                  Düzenle
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    handleDelete(selectedLocation);
+                    setSelectedLocation(null);
+                  }}
+                  style={{ color: 'var(--danger-500)' }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

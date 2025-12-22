@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { storageService, type Storage, type StorageStatus } from "../../../services/partner/storages";
+import { storageService, type Storage, type StorageStatus, type StorageTodayOccupancy } from "../../../services/partner/storages";
 import { locationService } from "../../../services/partner/locations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -43,6 +43,23 @@ export function LockersPage() {
     },
     retryDelay: 1000,
   });
+  
+  // Fetch today's occupancy data for all storages
+  const todayOccupancyQuery = useQuery({
+    queryKey: ["storages-today-occupancy"],
+    queryFn: () => storageService.getTodayOccupancy(),
+    retry: 1,
+    staleTime: 60000, // Refresh every minute
+  });
+  
+  // Create a map for quick lookup of today's occupancy
+  const todayOccupancyMap = useMemo(() => {
+    const map = new Map<string, StorageTodayOccupancy>();
+    if (todayOccupancyQuery.data) {
+      todayOccupancyQuery.data.forEach(item => map.set(item.storage_id, item));
+    }
+    return map;
+  }, [todayOccupancyQuery.data]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => storageService.remove(id),
@@ -255,13 +272,23 @@ export function LockersPage() {
                             </div>
                           </td>
                           <td>
-                            <Badge variant={
-                              storage.status === 'idle' ? 'success' :
-                              storage.status === 'occupied' ? 'danger' :
-                              storage.status === 'reserved' ? 'warning' : 'neutral'
-                            }>
-                              {t(`storages.status.${storage.status}`)}
-                            </Badge>
+                            {(() => {
+                              const todayData = todayOccupancyMap.get(storage.id);
+                              const isOccupiedToday = todayData?.is_occupied_today ?? (storage.status === 'occupied' || storage.status === 'reserved');
+                              
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+                                  <Badge variant={isOccupiedToday ? 'danger' : 'success'}>
+                                    {isOccupiedToday ? '🔴 Bugün Dolu' : '🟢 Bugün Boş'}
+                                  </Badge>
+                                  {todayData && todayData.active_reservation_count > 0 && (
+                                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                                      {todayData.active_reservation_count} aktif rezervasyon
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td>
                             {storage.last_seen_at

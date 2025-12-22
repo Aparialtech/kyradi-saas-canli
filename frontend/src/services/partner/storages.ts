@@ -49,9 +49,25 @@ export interface StorageCalendarResponse {
   days: StorageCalendarDay[];
 }
 
+export interface StorageTodayOccupancy {
+  storage_id: string;
+  storage_code: string;
+  location_id: string;
+  is_occupied_today: boolean;
+  active_reservation_count: number;
+}
+
 export const storageService = {
   async list(status?: StorageStatus): Promise<Storage[]> {
     const response = await http.get<Storage[]>("/storages", { params: status ? { status } : undefined });
+    return response.data;
+  },
+  async getTodayOccupancy(): Promise<StorageTodayOccupancy[]> {
+    // Get today's calendar for all storages to determine current occupancy
+    const today = new Date().toISOString().split('T')[0];
+    const response = await http.get<StorageTodayOccupancy[]>("/storages/today-occupancy", { 
+      params: { date: today } 
+    });
     return response.data;
   },
   async get(id: string): Promise<Storage> {
