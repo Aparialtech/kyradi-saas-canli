@@ -657,7 +657,7 @@ async def process_transfer_with_magicpay(
     transfer.reference_id = demo_reference_id
     transfer.processed_by_id = current_user.id
     transfer.processed_at = datetime.now(timezone.utc)
-    transfer.notes = f"{transfer.notes or ''}\n[MagicPay DEMO] Transaction: {demo_transaction_id}".strip()
+    # Don't append transaction info to notes - keep only user's original note
     
     await record_audit(
         session,
