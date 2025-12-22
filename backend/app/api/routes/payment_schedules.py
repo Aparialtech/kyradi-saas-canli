@@ -91,23 +91,27 @@ class PaymentTransferUpdate(BaseModel):
 class PaymentTransferRead(BaseModel):
     id: str
     tenant_id: str
-    schedule_id: Optional[str]
+    schedule_id: Optional[str] = None
     gross_amount: Decimal
     commission_amount: Decimal
     net_amount: Decimal
     status: str
-    transfer_date: Optional[datetime]
-    reference_id: Optional[str]
-    period_start: Optional[datetime]
-    period_end: Optional[datetime]
-    bank_name: Optional[str]
-    bank_account_holder: Optional[str]
-    bank_iban: Optional[str]
-    is_manual_request: bool
-    notes: Optional[str]
-    error_message: Optional[str]
-    created_at: datetime
-    updated_at: Optional[datetime]
+    transfer_date: Optional[datetime] = None
+    reference_id: Optional[str] = None
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
+    bank_name: Optional[str] = None
+    bank_account_holder: Optional[str] = None
+    bank_iban: Optional[str] = None
+    is_manual_request: bool = False
+    notes: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    requested_by_id: Optional[str] = None
+    requested_at: Optional[datetime] = None
+    processed_by_id: Optional[str] = None
+    processed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
