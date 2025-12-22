@@ -96,7 +96,9 @@ export function TransfersPage() {
   });
 
   const handleRequestTransfer = useCallback(() => {
-    const amount = parseFloat(requestAmount);
+    // Handle both comma and dot as decimal separator (Turkish locale uses comma)
+    const normalizedAmount = requestAmount.replace(",", ".");
+    const amount = parseFloat(normalizedAmount);
     if (isNaN(amount) || amount <= 0) {
       push({ type: "error", title: "Hata", description: "Geçerli bir tutar girin." });
       return;
@@ -112,6 +114,11 @@ export function TransfersPage() {
       style: "currency",
       currency: "TRY",
     }).format(amount);
+  };
+
+  // Parse amount handling Turkish comma decimal separator
+  const parseAmount = (value: string): number => {
+    return parseFloat(value.replace(",", "."));
   };
 
   const formatDate = (dateString?: string) => {
@@ -685,7 +692,7 @@ export function TransfersPage() {
                   placeholder={`Ödemek istediğiniz tutar`}
                   fullWidth
                 />
-                {commission && requestAmount && parseFloat(requestAmount) > commission.available_commission && (
+                {commission && requestAmount && parseAmount(requestAmount) > commission.available_commission && (
                   <p style={{ margin: "var(--space-2) 0 0", fontSize: "0.75rem", color: "var(--color-warning)" }}>
                     Borç tutarından fazla ödeme yapamazsınız.
                   </p>
@@ -713,7 +720,7 @@ export function TransfersPage() {
                 />
               </div>
 
-              {requestAmount && parseFloat(requestAmount) > 0 && (
+              {requestAmount && parseAmount(requestAmount) > 0 && (
                 <div
                   style={{
                     background: "var(--bg-secondary)",
@@ -728,7 +735,7 @@ export function TransfersPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}>
                     <span>Kyradi'ye Ödenecek:</span>
                     <span style={{ color: "#dc2626", fontSize: "1.125rem" }}>
-                      {formatCurrency(parseFloat(requestAmount))}
+                      {formatCurrency(parseAmount(requestAmount))}
                     </span>
                   </div>
                 </div>
@@ -760,7 +767,7 @@ export function TransfersPage() {
                   variant="primary"
                   onClick={handleRequestTransfer}
                   isLoading={requestMutation.isPending}
-                  disabled={!requestAmount || parseFloat(requestAmount) <= 0}
+                  disabled={!requestAmount || parseAmount(requestAmount) <= 0}
                   leftIcon={<ArrowRight className="h-4 w-4" />}
                 >
                   Ödemeyi Gönder
