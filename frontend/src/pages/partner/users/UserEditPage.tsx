@@ -16,19 +16,23 @@ import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
 
+const VALID_ROLES = ["storage_operator", "hotel_manager", "accounting", "staff", "tenant_admin"] as const;
+
 const formSchema = z.object({
   name: z.string().min(2, "İsim en az 2 karakter olmalı"),
   email: z.string().email("Geçerli bir e-posta adresi girin"),
   phone_number: z.string().optional(),
-  role: z.enum(["operator", "manager", "admin"]),
+  role: z.enum(VALID_ROLES),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 const ROLE_LABELS: Record<string, string> = {
-  operator: "Operatör",
-  manager: "Yönetici",
-  admin: "Admin",
+  storage_operator: "Depo Görevlisi",
+  hotel_manager: "Otel Yöneticisi",
+  accounting: "Muhasebe",
+  staff: "Personel",
+  tenant_admin: "Tenant Admin",
 };
 
 export function UserEditPage() {
@@ -57,18 +61,22 @@ export function UserEditPage() {
       name: "",
       email: "",
       phone_number: "",
-      role: "operator",
+      role: "storage_operator",
     },
   });
 
   // Populate form when user data loads
   useEffect(() => {
     if (user) {
+      // Map role to valid role if needed
+      const validRole = VALID_ROLES.includes(user.role as typeof VALID_ROLES[number]) 
+        ? user.role as typeof VALID_ROLES[number]
+        : "storage_operator";
       reset({
-        name: user.name,
+        name: user.name || "",
         email: user.email,
         phone_number: user.phone_number || "",
-        role: (user.role as "operator" | "manager" | "admin") || "operator",
+        role: validRole,
       });
     }
   }, [user, reset]);
