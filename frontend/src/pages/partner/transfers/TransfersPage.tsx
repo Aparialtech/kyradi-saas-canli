@@ -143,14 +143,14 @@ export function TransfersPage() {
     {
       key: "created_at",
       label: "Tarih",
-      render: (row: PaymentTransfer) => (
+      render: (_value: unknown, row: PaymentTransfer) => (
         <span style={{ fontSize: "0.875rem" }}>{row ? formatDate(row.created_at) : "-"}</span>
       ),
     },
     {
       key: "gross_amount",
       label: "Tutar",
-      render: (row: PaymentTransfer) => (
+      render: (_value: unknown, row: PaymentTransfer) => (
         <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>
           {row ? formatCurrency(row.gross_amount) : "-"}
         </span>
@@ -159,7 +159,7 @@ export function TransfersPage() {
     {
       key: "status",
       label: "Durum",
-      render: (row: PaymentTransfer) => {
+      render: (_value: unknown, row: PaymentTransfer) => {
         if (!row) return <Badge variant="neutral">-</Badge>;
         const config = statusConfig[row.status] || { label: row.status || "Bilinmiyor", color: "neutral" as const };
         return <Badge variant={config.color}>{config.label}</Badge>;
@@ -168,7 +168,7 @@ export function TransfersPage() {
     {
       key: "notes",
       label: "Not",
-      render: (row: PaymentTransfer) => (
+      render: (_value: unknown, row: PaymentTransfer) => (
         <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
           {row?.notes || "-"}
         </span>
@@ -177,13 +177,14 @@ export function TransfersPage() {
     {
       key: "actions",
       label: "İşlemler",
-      render: (row: PaymentTransfer) => {
+      render: (_value: unknown, row: PaymentTransfer) => {
         if (!row) return null;
         return (
           <ModernButton
             variant="ghost"
             size="sm"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setSelectedTransfer(row);
               setShowDetailModal(true);
             }}

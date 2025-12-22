@@ -145,14 +145,14 @@ export function AdminTransfersPage() {
     {
       key: "created_at",
       label: "Tarih",
-      render: (row: PaymentTransfer) => (
+      render: (_value: unknown, row: PaymentTransfer) => (
         <span style={{ fontSize: "0.875rem" }}>{row ? formatDate(row.created_at) : "-"}</span>
       ),
     },
     {
       key: "tenant_id",
       label: "Partner",
-      render: (row: PaymentTransfer) => (
+      render: (_value: unknown, row: PaymentTransfer) => (
         <span className={styles.tenantId}>
           {row?.tenant_id ? `${row.tenant_id.substring(0, 8)}...` : "-"}
         </span>
@@ -161,7 +161,7 @@ export function AdminTransfersPage() {
     {
       key: "gross_amount",
       label: "Tutar",
-      render: (row: PaymentTransfer) => (
+      render: (_value: unknown, row: PaymentTransfer) => (
         <span style={{ fontWeight: 600, color: "#dc2626" }}>
           {row ? formatCurrency(row.gross_amount) : "-"}
         </span>
@@ -170,7 +170,7 @@ export function AdminTransfersPage() {
     {
       key: "status",
       label: "Durum",
-      render: (row: PaymentTransfer) => {
+      render: (_value: unknown, row: PaymentTransfer) => {
         if (!row) return <Badge variant="neutral">-</Badge>;
         const config = statusConfig[row.status] || { label: row.status || "Bilinmiyor", color: "neutral" as const };
         return <Badge variant={config.color}>{config.label}</Badge>;
@@ -179,7 +179,7 @@ export function AdminTransfersPage() {
     {
       key: "notes",
       label: "Not",
-      render: (row: PaymentTransfer) => (
+      render: (_value: unknown, row: PaymentTransfer) => (
         <span className={styles.noteCell}>
           {row?.notes || "-"}
         </span>
@@ -188,12 +188,24 @@ export function AdminTransfersPage() {
     {
       key: "actions",
       label: "İşlemler",
-      render: (row: PaymentTransfer) => {
+      render: (_value: unknown, row: PaymentTransfer) => {
         if (!row) return null;
         const isPending = row.status === "pending";
         return (
           <div className={styles.actionButtons}>
-            {isPending ? (
+            <ModernButton
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedTransfer(row);
+                setShowDetailModal(true);
+              }}
+              leftIcon={<Eye className="h-3 w-3" />}
+            >
+              Detay
+            </ModernButton>
+            {isPending && (
               <>
                 <ModernButton
                   variant="primary"
@@ -220,23 +232,7 @@ export function AdminTransfersPage() {
                   Reddet
                 </ModernButton>
               </>
-            ) : (
-              <Badge variant={statusConfig[row.status]?.color || "neutral"}>
-                {statusConfig[row.status]?.label || row.status}
-              </Badge>
             )}
-            <ModernButton
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedTransfer(row);
-                setShowDetailModal(true);
-              }}
-              leftIcon={<Eye className="h-3 w-3" />}
-            >
-              Detay
-            </ModernButton>
           </div>
         );
       },
@@ -554,7 +550,33 @@ export function AdminTransfersPage() {
                 )}
               </div>
 
-              <div className={styles.modalActions} style={{ justifyContent: "flex-end" }}>
+              <div className={styles.modalActions}>
+                {selectedTransfer.status === "pending" && (
+                  <>
+                    <ModernButton
+                      variant="primary"
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        setShowApproveModal(true);
+                      }}
+                      leftIcon={<Check className="h-4 w-4" />}
+                      style={{ flex: 1 }}
+                    >
+                      Onayla
+                    </ModernButton>
+                    <ModernButton
+                      variant="danger"
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        setShowRejectModal(true);
+                      }}
+                      leftIcon={<X className="h-4 w-4" />}
+                      style={{ flex: 1 }}
+                    >
+                      Reddet
+                    </ModernButton>
+                  </>
+                )}
                 <ModernButton variant="ghost" onClick={() => setShowDetailModal(false)}>
                   Kapat
                 </ModernButton>
