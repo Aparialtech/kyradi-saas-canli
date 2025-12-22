@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   Copy,
   Check,
+  FileText,
 } from "../../lib/lucide";
 
 import { env } from "../../config/env";
@@ -29,6 +30,7 @@ import { getErrorMessage } from "../../lib/httpError";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ModernButton } from "../../components/ui/ModernButton";
 import { ModernInput } from "../../components/ui/ModernInput";
+import { ModernCard } from "../../components/ui/ModernCard";
 
 declare global {
   interface Window {
@@ -37,6 +39,17 @@ declare global {
       mount: () => void;
     };
   }
+}
+
+// Responsive hook
+function useWindowSize() {
+  const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  useEffect(() => {
+    const handleResize = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  return size;
 }
 
 const buildSnippet = (
@@ -55,9 +68,9 @@ const buildSnippet = (
 <kyradi-reserve></kyradi-reserve>`;
 
 const steps = [
-  { id: 1, title: "Kişisel Bilgiler", icon: User },
-  { id: 2, title: "Rezervasyon Bilgileri", icon: Calendar },
-  { id: 3, title: "Bavul & Sözleşme", icon: Package },
+  { id: 1, title: "Kişisel Bilgiler", shortTitle: "Kişisel", icon: User, description: "İletişim bilgilerinizi girin" },
+  { id: 2, title: "Rezervasyon Bilgileri", shortTitle: "Tarihler", icon: Calendar, description: "Tarih ve saat seçin" },
+  { id: 3, title: "Bavul & Sözleşme", shortTitle: "Onay", icon: Package, description: "Bilgileri tamamlayın" },
 ];
 
 interface FormData {
@@ -75,6 +88,10 @@ interface FormData {
 }
 
 export function WidgetPreviewPage() {
+  const { width } = useWindowSize();
+  const isMobile = width < 768;
+  const isTablet = width >= 768 && width < 1024;
+  
   const { messages, push } = useToast();
   const [snippet, setSnippet] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -179,380 +196,691 @@ export function WidgetPreviewPage() {
     } catch { push({ title: "Kopyalama başarısız", type: "error" }); }
   };
 
+  // Styles
+  const containerStyle: React.CSSProperties = {
+    padding: isMobile ? "var(--space-4)" : isTablet ? "var(--space-6)" : "var(--space-8)",
+    maxWidth: "900px",
+    margin: "0 auto",
+    minHeight: "100vh",
+    background: "var(--bg-primary)",
+  };
+
+  const headerStyle: React.CSSProperties = {
+    marginBottom: isMobile ? "var(--space-6)" : "var(--space-8)",
+    textAlign: "center",
+  };
+
   return (
-    <div className="page-container">
+    <div style={containerStyle}>
       <ToastContainer messages={messages} />
       
-      {/* Page Header */}
-      <header className="page-header">
-        <h1 className="page-title">Online Rezervasyon Formu</h1>
-        <p className="page-subtitle">Web sitenize entegre edeceğiniz rezervasyon formunu test edin.</p>
-      </header>
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={headerStyle}
+      >
+        <div style={{ 
+          display: "inline-flex", 
+          alignItems: "center", 
+          justifyContent: "center",
+          width: isMobile ? "64px" : "80px",
+          height: isMobile ? "64px" : "80px",
+          borderRadius: "var(--radius-2xl)",
+          background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+          marginBottom: "var(--space-4)",
+          boxShadow: "0 8px 32px rgba(59, 130, 246, 0.25)",
+        }}>
+          <FileText style={{ width: isMobile ? "28px" : "36px", height: isMobile ? "28px" : "36px", color: "white" }} />
+        </div>
+        <h1 style={{ 
+          fontSize: isMobile ? "var(--text-2xl)" : "var(--text-3xl)",
+          fontWeight: "var(--font-black)",
+          color: "var(--text-primary)",
+          margin: "0 0 var(--space-2) 0",
+          background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}>
+          Online Rezervasyon Formu
+        </h1>
+        <p style={{ 
+          fontSize: isMobile ? "var(--text-sm)" : "var(--text-base)", 
+          color: "var(--text-tertiary)", 
+          margin: 0,
+          maxWidth: "500px",
+          marginLeft: "auto",
+          marginRight: "auto",
+          lineHeight: 1.6,
+        }}>
+          Web sitenize entegre edeceğiniz rezervasyon formunu test edin
+        </p>
+      </motion.div>
 
-      {/* Main Content */}
-      <div className="page-content">
-        {/* Stepper */}
-        <div className="stepper-container">
+      {/* Progress Steps */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        style={{ marginBottom: "var(--space-6)" }}
+      >
+        <div style={{
+          display: "flex",
+          alignItems: isMobile ? "flex-start" : "center",
+          justifyContent: "center",
+          gap: isMobile ? "var(--space-2)" : "var(--space-4)",
+          padding: isMobile ? "var(--space-3)" : "var(--space-4)",
+          background: "var(--bg-secondary)",
+          borderRadius: "var(--radius-xl)",
+          border: "1px solid var(--border-primary)",
+          flexDirection: isMobile ? "column" : "row",
+        }}>
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isActive = activeStep === step.id;
             const isCompleted = activeStep > step.id;
+            
             return (
-              <div key={step.id} className="stepper-item">
-                <motion.div
+              <div 
+                key={step.id} 
+                style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "var(--space-3)",
+                  width: isMobile ? "100%" : "auto",
+                }}
+              >
+                <motion.button
+                  onClick={() => isCompleted && setActiveStep(step.id)}
                   animate={{ scale: isActive ? 1.05 : 1 }}
-                  className={`stepper-circle ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-3)",
+                    padding: isMobile ? "var(--space-3)" : "var(--space-2) var(--space-4)",
+                    background: isActive 
+                      ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
+                      : isCompleted 
+                      ? "rgba(34, 197, 94, 0.1)" 
+                      : "transparent",
+                    border: isActive ? "none" : isCompleted ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid var(--border-secondary)",
+                    borderRadius: "var(--radius-lg)",
+                    cursor: isCompleted ? "pointer" : "default",
+                    transition: "all 0.3s",
+                    flex: isMobile ? 1 : "none",
+                    boxShadow: isActive ? "0 4px 12px rgba(59, 130, 246, 0.3)" : "none",
+                  }}
                 >
-                  {isCompleted ? <Check className="stepper-icon" /> : <Icon className="stepper-icon" />}
-                </motion.div>
-                <div className="stepper-text">
-                  <span className={`stepper-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
-                    Adım {step.id}
-                  </span>
-                  <span className={`stepper-title ${isActive || isCompleted ? 'active' : ''}`}>
-                    {step.title}
-                  </span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`stepper-line ${isCompleted ? 'completed' : ''}`} />
+                  <div style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "var(--radius-full)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: isActive ? "rgba(255,255,255,0.2)" : isCompleted ? "rgba(34, 197, 94, 0.15)" : "var(--bg-tertiary)",
+                    flexShrink: 0,
+                  }}>
+                    {isCompleted ? (
+                      <Check style={{ width: "18px", height: "18px", color: "#16a34a" }} />
+                    ) : (
+                      <Icon style={{ width: "18px", height: "18px", color: isActive ? "white" : "var(--text-tertiary)" }} />
+                    )}
+                  </div>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ 
+                      fontSize: "10px", 
+                      fontWeight: 600, 
+                      color: isActive ? "rgba(255,255,255,0.8)" : isCompleted ? "#16a34a" : "var(--text-tertiary)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}>
+                      Adım {step.id}
+                    </div>
+                    <div style={{ 
+                      fontSize: "var(--text-sm)", 
+                      fontWeight: 600, 
+                      color: isActive ? "white" : isCompleted ? "var(--text-primary)" : "var(--text-secondary)",
+                    }}>
+                      {isMobile ? step.shortTitle : step.title}
+                    </div>
+                  </div>
+                </motion.button>
+                
+                {index < steps.length - 1 && !isMobile && (
+                  <div style={{
+                    width: "40px",
+                    height: "2px",
+                    background: isCompleted ? "#16a34a" : "var(--border-secondary)",
+                    borderRadius: "2px",
+                    transition: "background 0.3s",
+                  }} />
                 )}
               </div>
             );
           })}
         </div>
+      </motion.div>
 
-        {/* Form Card */}
-        <div className="form-card">
-          <div className="form-card-header">
-            <h2>{steps[activeStep - 1].title}</h2>
-            <p>
-              {activeStep === 1 && "İletişim bilgilerinizi girin"}
-              {activeStep === 2 && "Tarih ve saat seçin"}
-              {activeStep === 3 && "Bavul bilgilerini girin ve sözleşmeleri onaylayın"}
-            </p>
+      {/* Form Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <ModernCard variant="elevated" padding="none" style={{ 
+          overflow: "hidden",
+          border: "1px solid var(--border-primary)",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+        }}>
+          {/* Card Header */}
+          <div style={{
+            padding: isMobile ? "var(--space-4)" : "var(--space-5)",
+            background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+            color: "white",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+              <div style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "var(--radius-lg)",
+                background: "rgba(255,255,255,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {(() => {
+                  const StepIcon = steps[activeStep - 1].icon;
+                  return <StepIcon style={{ width: "20px", height: "20px", color: "white" }} />;
+                })()}
+              </div>
+              <div>
+                <h2 style={{ fontSize: isMobile ? "var(--text-lg)" : "var(--text-xl)", fontWeight: 700, margin: 0 }}>
+                  {steps[activeStep - 1].title}
+                </h2>
+                <p style={{ fontSize: "var(--text-sm)", opacity: 0.9, margin: "4px 0 0" }}>
+                  {steps[activeStep - 1].description}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <AnimatePresence mode="wait">
-            {activeStep === 1 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="form-step">
-                <div className="form-fields">
-                  <ModernInput label="Ad Soyad" value={formData.fullName} onChange={(e) => updateField("fullName", e.target.value)} placeholder="Adınız ve soyadınız" leftIcon={<User className="input-icon" />} fullWidth required />
-                  <ModernInput label="E-posta" type="email" value={formData.email} onChange={(e) => updateField("email", e.target.value)} placeholder="ornek@email.com" leftIcon={<Mail className="input-icon" />} fullWidth required />
-                  <ModernInput label="Telefon" type="tel" value={formData.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+90 5XX XXX XX XX" leftIcon={<Phone className="input-icon" />} fullWidth required />
-                </div>
-              </motion.div>
-            )}
+          {/* Form Content */}
+          <div style={{ padding: isMobile ? "var(--space-4)" : "var(--space-6)" }}>
+            <AnimatePresence mode="wait">
+              {/* Step 1: Personal Info */}
+              {activeStep === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}
+                >
+                  <ModernInput
+                    label="Ad Soyad *"
+                    value={formData.fullName}
+                    onChange={(e) => updateField("fullName", e.target.value)}
+                    placeholder="Adınız ve soyadınız"
+                    leftIcon={<User style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+                  <ModernInput
+                    label="E-posta *"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => updateField("email", e.target.value)}
+                    placeholder="ornek@email.com"
+                    leftIcon={<Mail style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+                  <ModernInput
+                    label="Telefon *"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                    placeholder="+90 5XX XXX XX XX"
+                    leftIcon={<Phone style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+                </motion.div>
+              )}
 
-            {activeStep === 2 && (
-              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="form-step">
-                <div className="form-fields">
-                  <ModernInput label="Bırakış Tarihi & Saati" type="datetime-local" value={formData.checkIn} onChange={(e) => updateField("checkIn", e.target.value)} leftIcon={<Clock className="input-icon" />} fullWidth required />
-                  <ModernInput label="Alış Tarihi & Saati" type="datetime-local" value={formData.checkOut} onChange={(e) => updateField("checkOut", e.target.value)} leftIcon={<Clock className="input-icon" />} fullWidth required />
+              {/* Step 2: Dates */}
+              {activeStep === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}
+                >
+                  <ModernInput
+                    label="Bırakış Tarihi & Saati *"
+                    type="datetime-local"
+                    value={formData.checkIn}
+                    onChange={(e) => updateField("checkIn", e.target.value)}
+                    leftIcon={<Clock style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+                  <ModernInput
+                    label="Alış Tarihi & Saati *"
+                    type="datetime-local"
+                    value={formData.checkOut}
+                    onChange={(e) => updateField("checkOut", e.target.value)}
+                    leftIcon={<Clock style={{ width: "16px", height: "16px" }} />}
+                    fullWidth
+                    required
+                  />
+                  
                   {formData.checkIn && formData.checkOut && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="duration-badge">
-                      <CheckCircle2 className="duration-icon" />
-                      <span>Süre: {(() => {
-                        const hours = Math.round((new Date(formData.checkOut).getTime() - new Date(formData.checkIn).getTime()) / (1000 * 60 * 60));
-                        const days = Math.floor(hours / 24);
-                        if (hours <= 0) return "Geçersiz";
-                        if (days > 0) return `${days} gün ${hours % 24} saat`;
-                        return `${hours} saat`;
-                      })()}</span>
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-3)",
+                        padding: "var(--space-4)",
+                        background: "linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)",
+                        borderRadius: "var(--radius-lg)",
+                        border: "1px solid rgba(34, 197, 94, 0.2)",
+                      }}
+                    >
+                      <CheckCircle2 style={{ width: "24px", height: "24px", color: "#16a34a", flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "#16a34a" }}>
+                          Süre Hesaplandı
+                        </div>
+                        <div style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--text-primary)" }}>
+                          {(() => {
+                            const hours = Math.round((new Date(formData.checkOut).getTime() - new Date(formData.checkIn).getTime()) / (1000 * 60 * 60));
+                            const days = Math.floor(hours / 24);
+                            if (hours <= 0) return "Geçersiz tarih aralığı";
+                            if (days > 0) return `${days} gün ${hours % 24} saat`;
+                            return `${hours} saat`;
+                          })()}
+                        </div>
+                      </div>
                     </motion.div>
                   )}
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {activeStep === 3 && (
-              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="form-step">
-                <div className="form-fields-grid">
-                  <ModernInput label="Bavul Sayısı" type="number" min={1} max={10} value={formData.baggageCount.toString()} onChange={(e) => updateField("baggageCount", parseInt(e.target.value) || 1)} leftIcon={<Briefcase className="input-icon" />} fullWidth />
-                  <ModernInput label="Bavul Tipi" value={formData.baggageType} onChange={(e) => updateField("baggageType", e.target.value)} placeholder="Kabin" leftIcon={<Package className="input-icon" />} fullWidth />
-                  <ModernInput label="Ağırlık (kg)" type="number" value={formData.weightKg} onChange={(e) => updateField("weightKg", e.target.value)} placeholder="15" leftIcon={<Weight className="input-icon" />} fullWidth />
-                </div>
-                <div className="form-textarea-wrapper">
-                  <label>Notlar (Opsiyonel)</label>
-                  <textarea value={formData.notes} onChange={(e) => updateField("notes", e.target.value)} placeholder="Özel istekleriniz..." rows={2} />
-                </div>
-                <div className="agreements-section">
-                  <div className="agreements-header"><Shield className="agreements-icon" /><span>Sözleşmeler</span></div>
-                  <div className={`agreement-box ${formData.kvkkAccepted ? 'accepted' : ''}`}>
-                    <div className="agreement-title"><span>KVKK Aydınlatma Metni</span>{formData.kvkkAccepted && <CheckCircle2 className="check-icon" />}</div>
-                    {!kvkkScrolled && <p className="scroll-hint">↓ Sözleşmeyi sonuna kadar okuyun - otomatik onaylanacak</p>}
-                    <div ref={kvkkRef} onScroll={handleKvkkScroll} className="agreement-content">
-                      <p><strong>1. VERİ SORUMLUSU</strong></p>
-                      <p>Kişisel verileriniz, 6698 sayılı Kişisel Verilerin Korunması Kanunu uyarınca veri sorumlusu sıfatıyla Kyradi tarafından işlenmektedir.</p>
-                      <p><strong>2. İŞLENEN KİŞİSEL VERİLER</strong></p>
-                      <p>Rezervasyon sürecinde ad, soyad, telefon numarası, e-posta adresi gibi kişisel verileriniz işlenmektedir.</p>
-                      <p><strong>3. İŞLEME AMAÇLARI</strong></p>
-                      <p>Kişisel verileriniz rezervasyon yönetimi, müşteri hizmetleri, yasal yükümlülüklerin yerine getirilmesi ve hizmet kalitesinin artırılması amaçlarıyla işlenmektedir.</p>
-                      <p><strong>4. VERİ GÜVENLİĞİ</strong></p>
-                      <p>Kişisel verileriniz, teknik ve idari güvenlik önlemleri alınarak korunmaktadır. Verileriniz üçüncü kişilerle paylaşılmamaktadır.</p>
-                      <p><strong>5. HAKLARINIZ</strong></p>
-                      <p>KVKK'nın 11. maddesi uyarınca kişisel verileriniz hakkında bilgi talep etme, düzeltme, silme, itiraz etme ve şikayet etme haklarınız bulunmaktadır.</p>
-                      <p style={{marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', textAlign: 'center', color: '#16a34a', fontWeight: 600}}>✓ Sözleşmenin sonuna ulaştınız</p>
+              {/* Step 3: Baggage & Agreements */}
+              {activeStep === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}
+                >
+                  {/* Baggage Fields */}
+                  <div style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", 
+                    gap: "var(--space-3)" 
+                  }}>
+                    <ModernInput
+                      label="Bavul Sayısı"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={formData.baggageCount.toString()}
+                      onChange={(e) => updateField("baggageCount", parseInt(e.target.value) || 1)}
+                      leftIcon={<Briefcase style={{ width: "16px", height: "16px" }} />}
+                      fullWidth
+                    />
+                    <ModernInput
+                      label="Bavul Tipi"
+                      value={formData.baggageType}
+                      onChange={(e) => updateField("baggageType", e.target.value)}
+                      placeholder="Kabin / Büyük"
+                      leftIcon={<Package style={{ width: "16px", height: "16px" }} />}
+                      fullWidth
+                    />
+                    <ModernInput
+                      label="Ağırlık (kg)"
+                      type="number"
+                      value={formData.weightKg}
+                      onChange={(e) => updateField("weightKg", e.target.value)}
+                      placeholder="15"
+                      leftIcon={<Weight style={{ width: "16px", height: "16px" }} />}
+                      fullWidth
+                    />
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label style={{ 
+                      display: "block", 
+                      marginBottom: "var(--space-2)", 
+                      fontWeight: 600, 
+                      fontSize: "var(--text-sm)", 
+                      color: "var(--text-primary)" 
+                    }}>
+                      Notlar (Opsiyonel)
+                    </label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => updateField("notes", e.target.value)}
+                      placeholder="Özel istekleriniz..."
+                      rows={2}
+                      style={{
+                        width: "100%",
+                        padding: "var(--space-3)",
+                        borderRadius: "var(--radius-lg)",
+                        border: "1px solid var(--border-primary)",
+                        background: "var(--bg-tertiary)",
+                        fontSize: "var(--text-sm)",
+                        fontFamily: "inherit",
+                        resize: "none",
+                        color: "var(--text-primary)",
+                      }}
+                    />
+                  </div>
+
+                  {/* Agreements Section */}
+                  <div style={{
+                    padding: "var(--space-4)",
+                    background: "var(--bg-secondary)",
+                    borderRadius: "var(--radius-xl)",
+                    border: "1px solid var(--border-primary)",
+                  }}>
+                    <div style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      gap: "var(--space-2)", 
+                      marginBottom: "var(--space-4)" 
+                    }}>
+                      <Shield style={{ width: "20px", height: "20px", color: "#3b82f6" }} />
+                      <span style={{ fontSize: "var(--text-base)", fontWeight: 600, color: "var(--text-primary)" }}>
+                        Sözleşmeler
+                      </span>
+                    </div>
+
+                    {/* KVKK */}
+                    <div style={{
+                      padding: "var(--space-3)",
+                      background: formData.kvkkAccepted ? "rgba(34, 197, 94, 0.05)" : "var(--bg-tertiary)",
+                      borderRadius: "var(--radius-lg)",
+                      border: formData.kvkkAccepted ? "2px solid #22c55e" : "1px solid var(--border-primary)",
+                      marginBottom: "var(--space-3)",
+                      transition: "all 0.3s",
+                    }}>
+                      <div style={{ 
+                        display: "flex", 
+                        justifyContent: "space-between", 
+                        alignItems: "center", 
+                        marginBottom: "var(--space-2)" 
+                      }}>
+                        <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text-primary)" }}>
+                          KVKK Aydınlatma Metni
+                        </span>
+                        {formData.kvkkAccepted && <CheckCircle2 style={{ width: "20px", height: "20px", color: "#16a34a" }} />}
+                      </div>
+                      {!kvkkScrolled && (
+                        <div style={{
+                          fontSize: "var(--text-xs)",
+                          color: "#3b82f6",
+                          padding: "var(--space-2) var(--space-3)",
+                          background: "rgba(59, 130, 246, 0.1)",
+                          borderRadius: "var(--radius-md)",
+                          marginBottom: "var(--space-2)",
+                        }}>
+                          ↓ Sonuna kadar kaydırın - otomatik onaylanacak
+                        </div>
+                      )}
+                      <div
+                        ref={kvkkRef}
+                        onScroll={handleKvkkScroll}
+                        style={{
+                          height: "100px",
+                          overflowY: "auto",
+                          padding: "var(--space-3)",
+                          background: "white",
+                          borderRadius: "var(--radius-md)",
+                          fontSize: "var(--text-xs)",
+                          lineHeight: 1.6,
+                          color: "var(--text-secondary)",
+                          border: "1px solid var(--border-secondary)",
+                        }}
+                      >
+                        <p style={{ margin: "0 0 8px" }}><strong>1. VERİ SORUMLUSU</strong></p>
+                        <p style={{ margin: "0 0 8px" }}>Kişisel verileriniz, 6698 sayılı KVKK uyarınca veri sorumlusu sıfatıyla Kyradi tarafından işlenmektedir.</p>
+                        <p style={{ margin: "0 0 8px" }}><strong>2. İŞLENEN VERİLER</strong></p>
+                        <p style={{ margin: "0 0 8px" }}>Rezervasyon sürecinde ad, soyad, telefon, e-posta gibi kişisel verileriniz işlenmektedir.</p>
+                        <p style={{ margin: "0 0 8px" }}><strong>3. AMAÇLAR</strong></p>
+                        <p style={{ margin: "0 0 8px" }}>Verileriniz rezervasyon yönetimi ve müşteri hizmetleri amaçlarıyla işlenmektedir.</p>
+                        <p style={{ margin: "16px 0 0", paddingTop: "8px", borderTop: "1px dashed #e2e8f0", textAlign: "center", color: "#16a34a", fontWeight: 600 }}>
+                          ✓ Sözleşmenin sonuna ulaştınız
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Terms */}
+                    <div style={{
+                      padding: "var(--space-3)",
+                      background: formData.termsAccepted ? "rgba(34, 197, 94, 0.05)" : "var(--bg-tertiary)",
+                      borderRadius: "var(--radius-lg)",
+                      border: formData.termsAccepted ? "2px solid #22c55e" : "1px solid var(--border-primary)",
+                      transition: "all 0.3s",
+                    }}>
+                      <div style={{ 
+                        display: "flex", 
+                        justifyContent: "space-between", 
+                        alignItems: "center", 
+                        marginBottom: "var(--space-2)" 
+                      }}>
+                        <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text-primary)" }}>
+                          Kullanım Şartları
+                        </span>
+                        {formData.termsAccepted && <CheckCircle2 style={{ width: "20px", height: "20px", color: "#16a34a" }} />}
+                      </div>
+                      {!termsScrolled && (
+                        <div style={{
+                          fontSize: "var(--text-xs)",
+                          color: "#3b82f6",
+                          padding: "var(--space-2) var(--space-3)",
+                          background: "rgba(59, 130, 246, 0.1)",
+                          borderRadius: "var(--radius-md)",
+                          marginBottom: "var(--space-2)",
+                        }}>
+                          ↓ Sonuna kadar kaydırın - otomatik onaylanacak
+                        </div>
+                      )}
+                      <div
+                        ref={termsRef}
+                        onScroll={handleTermsScroll}
+                        style={{
+                          height: "100px",
+                          overflowY: "auto",
+                          padding: "var(--space-3)",
+                          background: "white",
+                          borderRadius: "var(--radius-md)",
+                          fontSize: "var(--text-xs)",
+                          lineHeight: 1.6,
+                          color: "var(--text-secondary)",
+                          border: "1px solid var(--border-secondary)",
+                        }}
+                      >
+                        <p style={{ margin: "0 0 8px" }}><strong>1. HİZMET KAPSAMI</strong></p>
+                        <p style={{ margin: "0 0 8px" }}>Bu platform, bavul depolama hizmetleri için rezervasyon yapmanıza olanak sağlar.</p>
+                        <p style={{ margin: "0 0 8px" }}><strong>2. KULLANICI YÜKÜMLÜLÜKLERİ</strong></p>
+                        <p style={{ margin: "0 0 8px" }}>Kullanıcılar, doğru ve güncel bilgi sağlamakla yükümlüdür.</p>
+                        <p style={{ margin: "0 0 8px" }}><strong>3. ÖDEME VE İPTAL</strong></p>
+                        <p style={{ margin: "0 0 8px" }}>Rezervasyon ücretleri belirtilen kurallara göre hesaplanır.</p>
+                        <p style={{ margin: "16px 0 0", paddingTop: "8px", borderTop: "1px dashed #e2e8f0", textAlign: "center", color: "#16a34a", fontWeight: 600 }}>
+                          ✓ Sözleşmenin sonuna ulaştınız
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className={`agreement-box ${formData.termsAccepted ? 'accepted' : ''}`}>
-                    <div className="agreement-title"><span>Kullanım Şartları</span>{formData.termsAccepted && <CheckCircle2 className="check-icon" />}</div>
-                    {!termsScrolled && <p className="scroll-hint">↓ Sözleşmeyi sonuna kadar okuyun - otomatik onaylanacak</p>}
-                    <div ref={termsRef} onScroll={handleTermsScroll} className="agreement-content">
-                      <p><strong>1. HİZMET KAPSAMI</strong></p>
-                      <p>Bu platform, bavul depolama hizmetleri için rezervasyon yapmanıza olanak sağlar. Hizmetler, belirtilen koşullar ve sınırlamalar dahilinde sunulmaktadır.</p>
-                      <p><strong>2. KULLANICI YÜKÜMLÜLÜKLERİ</strong></p>
-                      <p>Kullanıcılar, doğru ve güncel bilgi sağlamakla yükümlüdür. Yanlış bilgi verilmesi durumunda hizmet reddedilebilir.</p>
-                      <p><strong>3. ÖDEME VE İPTAL</strong></p>
-                      <p>Rezervasyon ücretleri belirtilen fiyatlandırma kurallarına göre hesaplanır. İptal koşulları rezervasyon sırasında belirtilir.</p>
-                      <p><strong>4. SORUMLULUK SINIRLAMASI</strong></p>
-                      <p>Platform, bavulların kaybolması, hasar görmesi veya çalınması durumunda sınırlı sorumluluk taşır. Detaylar için lütfen hizmet sağlayıcıyla iletişime geçin.</p>
-                      <p><strong>5. GİZLİLİK</strong></p>
-                      <p>Kişisel verileriniz KVKK uyarınca korunmakta ve yalnızca belirtilen amaçlar doğrultusunda kullanılmaktadır.</p>
-                      <p style={{marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', textAlign: 'center', color: '#16a34a', fontWeight: 600}}>✓ Sözleşmenin sonuna ulaştınız</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-          <div className="form-navigation">
-            <ModernButton variant="ghost" onClick={handlePrev} disabled={activeStep === 1} leftIcon={<ChevronLeft className="btn-icon" />}>Geri</ModernButton>
+          {/* Form Navigation */}
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: isMobile ? "var(--space-4)" : "var(--space-4) var(--space-6)",
+            borderTop: "1px solid var(--border-secondary)",
+            background: "var(--bg-secondary)",
+            gap: "var(--space-3)",
+          }}>
+            <ModernButton
+              variant="ghost"
+              onClick={handlePrev}
+              disabled={activeStep === 1}
+              leftIcon={<ChevronLeft style={{ width: "18px", height: "18px" }} />}
+              style={{ flex: isMobile ? 1 : "none" }}
+            >
+              Geri
+            </ModernButton>
+            
             {activeStep < 3 ? (
-              <ModernButton variant="primary" onClick={handleNext} disabled={!canProceed()} rightIcon={<ChevronRight className="btn-icon" />}>İleri</ModernButton>
+              <ModernButton
+                variant="primary"
+                onClick={handleNext}
+                disabled={!canProceed()}
+                rightIcon={<ChevronRight style={{ width: "18px", height: "18px" }} />}
+                style={{ flex: isMobile ? 1 : "none" }}
+              >
+                İleri
+              </ModernButton>
             ) : (
-              <ModernButton variant="primary" onClick={handleSubmit} disabled={!canProceed()} leftIcon={<CheckCircle2 className="btn-icon" />}>Rezervasyonu Tamamla</ModernButton>
+              <ModernButton
+                variant="primary"
+                onClick={handleSubmit}
+                disabled={!canProceed()}
+                leftIcon={<CheckCircle2 style={{ width: "18px", height: "18px" }} />}
+                style={{ flex: isMobile ? 1 : "none" }}
+              >
+                Rezervasyonu Tamamla
+              </ModernButton>
             )}
           </div>
-        </div>
+        </ModernCard>
+      </motion.div>
 
-        {/* Embed Code */}
-        <div className="embed-section">
-          <div className="embed-header">
-            <div className="embed-title-wrapper">
-              <div className="embed-icon-wrapper"><Code className="embed-icon" /></div>
-              <div><h3>Embed Kodu</h3><p>Web sitenize ekleyin</p></div>
+      {/* Embed Code Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        style={{ marginTop: "var(--space-6)" }}
+      >
+        <ModernCard variant="glass" padding="md" style={{ 
+          border: "1px solid var(--border-primary)",
+        }}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "var(--space-3)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+              <div style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "var(--radius-lg)",
+                background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <Code style={{ width: "20px", height: "20px", color: "white" }} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: "var(--text-base)", fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>
+                  Embed Kodu
+                </h3>
+                <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", margin: 0 }}>
+                  Web sitenize ekleyin
+                </p>
+              </div>
             </div>
-            <div className="embed-actions">
-              <ModernButton variant="ghost" size="sm" onClick={() => setShowEmbedCode(!showEmbedCode)}>{showEmbedCode ? "Gizle" : "Göster"}</ModernButton>
-              {showEmbedCode && <ModernButton variant="outline" size="sm" onClick={copySnippet} leftIcon={copied ? <Check className="btn-icon-sm" /> : <Copy className="btn-icon-sm" />}>{copied ? "Kopyalandı" : "Kopyala"}</ModernButton>}
+            
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              <ModernButton
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEmbedCode(!showEmbedCode)}
+              >
+                {showEmbedCode ? "Gizle" : "Göster"}
+              </ModernButton>
+              {showEmbedCode && (
+                <ModernButton
+                  variant="outline"
+                  size="sm"
+                  onClick={copySnippet}
+                  leftIcon={copied ? <Check style={{ width: "14px", height: "14px" }} /> : <Copy style={{ width: "14px", height: "14px" }} />}
+                >
+                  {copied ? "Kopyalandı" : "Kopyala"}
+                </ModernButton>
+              )}
             </div>
           </div>
+          
           {showEmbedCode && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="embed-content">
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              style={{ marginTop: "var(--space-4)" }}
+            >
               {tenantQuery.isLoading ? (
-                <div className="embed-loading"><Loader2 className="spinner" /></div>
+                <div style={{ textAlign: "center", padding: "var(--space-4)" }}>
+                  <Loader2 style={{ width: "24px", height: "24px", animation: "spin 1s linear infinite", color: "var(--primary)" }} />
+                </div>
               ) : tenantQuery.isError ? (
-                <div className="embed-error"><AlertCircle /><p>{getErrorMessage(tenantQuery.error)}</p></div>
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "var(--space-2)", 
+                  padding: "var(--space-4)", 
+                  color: "#dc2626" 
+                }}>
+                  <AlertCircle style={{ width: "20px", height: "20px" }} />
+                  <p style={{ margin: 0 }}>{getErrorMessage(tenantQuery.error)}</p>
+                </div>
               ) : (
-                <textarea readOnly value={snippet} rows={5} onFocus={(e) => e.currentTarget.select()} />
+                <textarea
+                  readOnly
+                  value={snippet}
+                  rows={5}
+                  onFocus={(e) => e.currentTarget.select()}
+                  style={{
+                    width: "100%",
+                    padding: "var(--space-3)",
+                    borderRadius: "var(--radius-lg)",
+                    border: "1px solid var(--border-primary)",
+                    background: "var(--bg-tertiary)",
+                    fontFamily: "monospace",
+                    fontSize: "var(--text-xs)",
+                    resize: "none",
+                    color: "var(--text-primary)",
+                  }}
+                />
               )}
             </motion.div>
           )}
-        </div>
-      </div>
+        </ModernCard>
+      </motion.div>
 
       <style>{`
-        .page-container {
-          width: 100%;
-          min-width: 0;
-          min-height: 100%;
-          background: var(--bg-primary);
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
-        .page-header {
-          padding: 28px 32px;
-          border-bottom: 1px solid var(--border-primary);
-          background: var(--bg-secondary);
-        }
-        .page-title {
-          font-size: clamp(22px, 3vw, 28px);
-          font-weight: 700;
-          color: var(--text-primary);
-          margin: 0 0 8px 0;
-          line-height: 1.3;
-          overflow-wrap: anywhere;
-        }
-        .page-subtitle {
-          font-size: 14px;
-          color: var(--text-tertiary);
-          margin: 0;
-          line-height: 1.5;
-        }
-        .page-content {
-          padding: 28px 32px;
-          max-width: 640px;
-          margin: 0 auto;
-        }
-        @media (max-width: 768px) {
-          .page-content { padding: 16px; max-width: 100%; }
-        }
-        
-        /* Stepper */
-        .stepper-container {
-          display: flex;
-          align-items: flex-start;
-          justify-content: center;
-          gap: 8px;
-          margin-bottom: 24px;
-          padding: 16px;
-          background: var(--bg-secondary);
-          border-radius: 12px;
-          border: 1px solid var(--border-primary);
-          flex-wrap: wrap;
-        }
-        .stepper-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .stepper-circle {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #f1f5f9;
-          border: 2px solid #e2e8f0;
-          flex-shrink: 0;
-          transition: all 0.3s;
-        }
-        .stepper-circle.active {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          border: none;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-        .stepper-circle.completed {
-          background: linear-gradient(135deg, #16a34a, #15803d);
-          border: none;
-        }
-        .stepper-circle .stepper-icon {
-          width: 18px;
-          height: 18px;
-          color: #94a3b8;
-        }
-        .stepper-circle.active .stepper-icon,
-        .stepper-circle.completed .stepper-icon {
-          color: white;
-        }
-        .stepper-text {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-        .stepper-step {
-          font-size: 11px;
-          font-weight: 600;
-          color: #94a3b8;
-        }
-        .stepper-step.active { color: #3b82f6; }
-        .stepper-step.completed { color: #16a34a; }
-        .stepper-title {
-          font-size: 12px;
-          font-weight: 500;
-          color: var(--text-tertiary);
-          white-space: nowrap;
-        }
-        .stepper-title.active { color: var(--text-primary); font-weight: 600; }
-        .stepper-line {
-          width: 32px;
-          height: 2px;
-          background: #e2e8f0;
-          border-radius: 2px;
-          flex-shrink: 0;
-        }
-        .stepper-line.completed { background: #16a34a; }
-        @media (max-width: 600px) {
-          .stepper-container { flex-direction: column; align-items: stretch; }
-          .stepper-item { justify-content: flex-start; }
-          .stepper-line { width: 2px; height: 20px; margin-left: 19px; }
-        }
-        
-        /* Form Card */
-        .form-card {
-          background: white;
-          border-radius: 12px;
-          border: 1px solid var(--border-primary);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-          overflow: hidden;
-          margin-bottom: 20px;
-        }
-        .form-card-header {
-          padding: 16px 20px;
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          color: white;
-        }
-        .form-card-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
-        .form-card-header p { font-size: 12px; opacity: 0.9; margin: 4px 0 0; }
-        .form-step { padding: 20px; }
-        .form-fields { display: flex; flex-direction: column; gap: 16px; }
-        .form-fields-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
-        .form-textarea-wrapper { margin-bottom: 16px; }
-        .form-textarea-wrapper label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: var(--text-primary); }
-        .form-textarea-wrapper textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: 14px; font-family: inherit; resize: none; }
-        .form-navigation { display: flex; justify-content: space-between; padding: 14px 20px; border-top: 1px solid #e2e8f0; background: #f8fafc; }
-        .input-icon { width: 16px; height: 16px; }
-        .btn-icon { width: 16px; height: 16px; }
-        .btn-icon-sm { width: 14px; height: 14px; }
-        
-        /* Duration Badge */
-        .duration-badge {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 16px;
-          background: #f0fdf4;
-          border-radius: 10px;
-          border: 1px solid #bbf7d0;
-          font-size: 14px;
-          font-weight: 500;
-          color: #16a34a;
-        }
-        .duration-icon { width: 20px; height: 20px; color: #16a34a; }
-        
-        /* Agreements */
-        .agreements-section { margin-top: 16px; }
-        .agreements-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 15px; font-weight: 600; color: var(--text-primary); }
-        .agreements-icon { width: 18px; height: 18px; color: #3b82f6; }
-        .agreement-box { padding: 14px; background: #f8fafc; border-radius: 12px; border: 2px solid #e2e8f0; margin-bottom: 14px; transition: all 0.3s; }
-        .agreement-box.accepted { background: #f0fdf4; border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1); }
-        .agreement-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; font-weight: 600; }
-        .check-icon { width: 20px; height: 20px; color: #16a34a; }
-        .scroll-hint { font-size: 12px; color: #3b82f6; margin: 0 0 10px; font-weight: 500; background: #eff6ff; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
-        .scroll-hint::before { content: '📜'; }
-        .agreement-content { 
-          height: 120px; 
-          overflow-y: scroll; 
-          padding: 12px; 
-          background: white; 
-          border-radius: 8px; 
-          font-size: 12px; 
-          line-height: 1.6; 
-          color: #475569;
-          border: 1px solid #e2e8f0;
-        }
-        .agreement-content::-webkit-scrollbar { width: 8px; }
-        .agreement-content::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
-        .agreement-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .agreement-content::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .agreement-content p { margin: 0 0 10px; }
-        .agreement-content p:last-child { margin: 0; }
-        
-        /* Embed Section */
-        .embed-section { padding: 16px; background: var(--bg-secondary); border-radius: 10px; border: 1px solid var(--border-primary); }
-        .embed-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .embed-title-wrapper { display: flex; align-items: center; gap: 12px; }
-        .embed-icon-wrapper { width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #3b82f6, #2563eb); display: flex; align-items: center; justify-content: center; }
-        .embed-icon { width: 18px; height: 18px; color: white; }
-        .embed-title-wrapper h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-primary); }
-        .embed-title-wrapper p { font-size: 12px; color: var(--text-tertiary); margin: 0; }
-        .embed-actions { display: flex; gap: 8px; }
-        .embed-content { margin-top: 16px; }
-        .embed-content textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f1f5f9; font-family: monospace; font-size: 12px; resize: none; }
-        .embed-loading { text-align: center; padding: 16px; }
-        .embed-error { text-align: center; padding: 16px; color: #dc2626; }
-        .spinner { width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
