@@ -103,15 +103,48 @@ export interface ReservationListResponse {
 }
 
 export const reservationService = {
+  /**
+   * List all reservations (combines widget + normal reservations)
+   */
   async list(params?: { status?: string; from?: string; to?: string }): Promise<Reservation[]> {
-    const response = await http.get<Reservation[]>("/reservations", {
+    // Fetch widget reservations
+    const widgetResponse = await http.get<{ items: Reservation[] }>("/partners/widget-reservations", {
+      params: {
+        status: params?.status,
+        date_from: params?.from,
+        date_to: params?.to,
+      },
+    });
+    
+    // Fetch normal reservations
+    const normalResponse = await http.get<Reservation[]>("/reservations", {
       params: {
         status: params?.status,
         from: params?.from,
         to: params?.to,
       },
     });
-    return response.data;
+    
+    // Combine both lists and sort by created_at desc
+    const widgetReservations = (widgetResponse.data.items || []).map(r => ({
+      ...r,
+      origin: r.origin || 'widget'
+    }));
+    const normalReservations = (normalResponse.data || []).map(r => ({
+      ...r,
+      origin: r.origin || 'panel'
+    }));
+    
+    const allReservations = [...widgetReservations, ...normalReservations];
+    
+    // Sort by created_at descending
+    allReservations.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA;
+    });
+    
+    return allReservations;
   },
 
   async createManual(payload: ManualReservationCreate): Promise<Reservation> {
