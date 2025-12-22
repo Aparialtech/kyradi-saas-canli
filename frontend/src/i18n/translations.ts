@@ -484,8 +484,8 @@ export const translations = {
     // Staff page translations
     "staff.title": "Çalışanlar",
     "staff.subtitle": "Bu oteldeki personel atamalarını yönetin. Personellere depo ve lokasyon erişimi tanımlayın.",
-    "staff.newAssignment": "Yeni Eleman Ataması",
-    "staff.editAssignment": "Eleman Atamasını Düzenle",
+    "staff.newAssignment": "Yeni Çalışan Ata",
+    "staff.editAssignment": "Çalışan Düzenle",
     "staff.formSubtitle": "Personeli seçin ve erişim yetkisi vereceğiniz depo/lokasyonları belirleyin.",
     "staff.personnel": "Personel",
     "staff.selectPlaceholder": "Seçiniz",
