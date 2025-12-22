@@ -431,14 +431,14 @@ export function PartnerOverview() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7, duration: 0.4 }}
         >
-          <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+          <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)', width: '100%' }}>
             <h3 style={{ marginTop: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
               {t("partner.assistant.title")}
             </h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-4)' }}>
               {t("partner.assistant.subtitle")}
             </p>
-            <div>
+            <div style={{ width: '100%' }}>
               <KyradiChat
                 apiBase={env.API_URL}
                 tenantId={user.tenant_id}

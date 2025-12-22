@@ -110,15 +110,17 @@ const baseStyles = `
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
+  padding: 20px;
   width: 100%;
-  max-width: 480px;
-  max-height: calc(100vh - 100px);
-  height: 100%;
+  max-width: 100%;
+  min-height: 500px;
+  max-height: calc(100vh - 200px);
+  height: auto;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background-color: #ffffff;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 .kyradi-chat--dark {
   background-color: #101828;
@@ -163,8 +165,8 @@ const baseStyles = `
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: calc(100vh - 250px);
-  min-height: 0;
+  min-height: 300px;
+  max-height: 450px;
   overflow-y: auto;
   padding-right: 4px;
   scroll-behavior: smooth;
