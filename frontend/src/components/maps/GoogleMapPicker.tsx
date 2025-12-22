@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from '@react-google-maps/api';
-import { Loader2, MapPin, Search } from '../../lib/lucide';
+import { Loader2, MapPin, Search, AlertTriangle, Edit } from '../../lib/lucide';
 
 const libraries: ("places")[] = ['places'];
 
@@ -28,6 +28,224 @@ interface GoogleMapPickerProps {
   apiKey?: string;
 }
 
+// Manual coordinate input fallback component
+function ManualCoordinateInput({ 
+  onLocationSelect, 
+  initialLat, 
+  initialLng 
+}: {
+  onLocationSelect: GoogleMapPickerProps['onLocationSelect'];
+  initialLat?: number;
+  initialLng?: number;
+}) {
+  const [lat, setLat] = useState(initialLat?.toString() || '');
+  const [lng, setLng] = useState(initialLng?.toString() || '');
+  const [address, setAddress] = useState('');
+
+  const handleApply = () => {
+    const latNum = parseFloat(lat);
+    const lngNum = parseFloat(lng);
+    
+    if (!isNaN(latNum) && !isNaN(lngNum)) {
+      onLocationSelect({
+        lat: latNum,
+        lng: lngNum,
+        address: address || undefined,
+      });
+    }
+  };
+
+  const openInGoogleMaps = () => {
+    const latNum = parseFloat(lat);
+    const lngNum = parseFloat(lng);
+    if (!isNaN(latNum) && !isNaN(lngNum)) {
+      window.open(`https://www.google.com/maps?q=${latNum},${lngNum}`, '_blank');
+    }
+  };
+
+  return (
+    <div style={{
+      width: '100%',
+      background: 'var(--bg-tertiary)',
+      borderRadius: 'var(--radius-lg)',
+      border: '2px dashed var(--border-primary)',
+      padding: 'var(--space-6)',
+    }}>
+      <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+        <div style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: 'var(--radius-full)',
+          background: 'linear-gradient(135deg, var(--warning-100) 0%, var(--warning-200) 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto var(--space-4)',
+        }}>
+          <AlertTriangle className="h-8 w-8" style={{ color: 'var(--warning-600)' }} />
+        </div>
+        <h3 style={{ 
+          margin: '0 0 var(--space-2)', 
+          fontSize: 'var(--text-lg)', 
+          fontWeight: 'var(--font-semibold)',
+          color: 'var(--text-primary)'
+        }}>
+          Harita Kullanılamıyor
+        </h3>
+        <p style={{ 
+          margin: 0, 
+          color: 'var(--text-secondary)', 
+          fontSize: 'var(--text-sm)',
+          maxWidth: '350px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
+        }}>
+          Google Maps API etkin değil. Koordinatları manuel olarak girebilir veya Google Maps'ten kopyalayabilirsiniz.
+        </p>
+      </div>
+
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gap: 'var(--space-4)',
+        marginBottom: 'var(--space-4)',
+      }}>
+        <div>
+          <label style={{ 
+            display: 'block', 
+            fontSize: 'var(--text-sm)', 
+            fontWeight: 'var(--font-medium)', 
+            color: 'var(--text-secondary)',
+            marginBottom: 'var(--space-2)'
+          }}>
+            Enlem (Latitude)
+          </label>
+          <input
+            type="text"
+            value={lat}
+            onChange={(e) => setLat(e.target.value)}
+            placeholder="41.0082"
+            style={{
+              width: '100%',
+              padding: 'var(--space-3)',
+              border: '1.5px solid var(--border-primary)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-primary)',
+              fontSize: 'var(--text-sm)',
+              fontFamily: 'monospace',
+            }}
+          />
+        </div>
+        <div>
+          <label style={{ 
+            display: 'block', 
+            fontSize: 'var(--text-sm)', 
+            fontWeight: 'var(--font-medium)', 
+            color: 'var(--text-secondary)',
+            marginBottom: 'var(--space-2)'
+          }}>
+            Boylam (Longitude)
+          </label>
+          <input
+            type="text"
+            value={lng}
+            onChange={(e) => setLng(e.target.value)}
+            placeholder="28.9784"
+            style={{
+              width: '100%',
+              padding: 'var(--space-3)',
+              border: '1.5px solid var(--border-primary)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-primary)',
+              fontSize: 'var(--text-sm)',
+              fontFamily: 'monospace',
+            }}
+          />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: 'var(--text-sm)', 
+          fontWeight: 'var(--font-medium)', 
+          color: 'var(--text-secondary)',
+          marginBottom: 'var(--space-2)'
+        }}>
+          Adres (Opsiyonel)
+        </label>
+        <input
+          type="text"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Tam adres..."
+          style={{
+            width: '100%',
+            padding: 'var(--space-3)',
+            border: '1.5px solid var(--border-primary)',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-primary)',
+            fontSize: 'var(--text-sm)',
+          }}
+        />
+      </div>
+
+      <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
+        <button
+          type="button"
+          onClick={handleApply}
+          disabled={!lat || !lng}
+          style={{
+            padding: 'var(--space-3) var(--space-6)',
+            background: 'var(--primary-500)',
+            color: 'white',
+            border: 'none',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 'var(--font-medium)',
+            cursor: 'pointer',
+            opacity: !lat || !lng ? 0.5 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+          }}
+        >
+          <MapPin className="h-4 w-4" />
+          Koordinatları Uygula
+        </button>
+        {lat && lng && (
+          <button
+            type="button"
+            onClick={openInGoogleMaps}
+            style={{
+              padding: 'var(--space-3) var(--space-4)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border-primary)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-sm)',
+              cursor: 'pointer',
+            }}
+          >
+            Haritada Gör →
+          </button>
+        )}
+      </div>
+
+      <div style={{ 
+        marginTop: 'var(--space-4)', 
+        padding: 'var(--space-3)',
+        background: 'var(--bg-secondary)',
+        borderRadius: 'var(--radius-md)',
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-tertiary)',
+      }}>
+        <strong>İpucu:</strong> Google Maps'te bir konuma sağ tıklayıp koordinatları kopyalayabilirsiniz.
+      </div>
+    </div>
+  );
+}
+
 export function GoogleMapPicker({ 
   onLocationSelect, 
   initialLat, 
@@ -35,6 +253,7 @@ export function GoogleMapPicker({
   apiKey 
 }: GoogleMapPickerProps) {
   const mapApiKey = apiKey || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const [useManualEntry, setUseManualEntry] = useState(false);
   
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: mapApiKey,
@@ -135,50 +354,62 @@ export function GoogleMapPicker({
     mapRef.current = map;
   }, []);
 
+  // No API key - show manual entry
   if (!mapApiKey) {
     return (
-      <div style={{
-        width: '100%',
-        height: '350px',
-        background: 'var(--bg-tertiary)',
-        borderRadius: 'var(--radius-lg)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: '2px dashed var(--border-primary)',
-        flexDirection: 'column',
-        gap: 'var(--space-2)'
-      }}>
-        <MapPin className="h-12 w-12" style={{ color: 'var(--text-tertiary)' }} />
-        <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', maxWidth: '250px' }}>
-          Google Maps API key yapılandırılmamış. Lütfen Vercel Environment Variables'a ekleyin.
-        </p>
+      <ManualCoordinateInput 
+        onLocationSelect={onLocationSelect}
+        initialLat={initialLat}
+        initialLng={initialLng}
+      />
+    );
+  }
+
+  // User chose manual entry
+  if (useManualEntry) {
+    return (
+      <div>
+        <ManualCoordinateInput 
+          onLocationSelect={onLocationSelect}
+          initialLat={initialLat}
+          initialLng={initialLng}
+        />
+        <button
+          type="button"
+          onClick={() => setUseManualEntry(false)}
+          style={{
+            marginTop: 'var(--space-3)',
+            padding: 'var(--space-2) var(--space-4)',
+            background: 'transparent',
+            color: 'var(--primary-600)',
+            border: 'none',
+            fontSize: 'var(--text-sm)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+          }}
+        >
+          ← Haritaya Dön
+        </button>
       </div>
     );
   }
 
+  // Load error - show manual entry with option
   if (loadError) {
     return (
-      <div style={{
-        width: '100%',
-        height: '350px',
-        background: '#fef2f2',
-        borderRadius: 'var(--radius-lg)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: '2px dashed #dc2626',
-        flexDirection: 'column',
-        gap: 'var(--space-2)'
-      }}>
-        <MapPin className="h-12 w-12" style={{ color: '#dc2626' }} />
-        <p style={{ color: '#dc2626', textAlign: 'center', maxWidth: '250px' }}>
-          Harita yüklenirken hata oluştu. API key'i kontrol edin.
-        </p>
+      <div>
+        <ManualCoordinateInput 
+          onLocationSelect={onLocationSelect}
+          initialLat={initialLat}
+          initialLng={initialLng}
+        />
       </div>
     );
   }
 
+  // Loading
   if (!isLoaded) {
     return (
       <div style={{
@@ -200,12 +431,38 @@ export function GoogleMapPicker({
 
   return (
     <div style={{ position: 'relative' }}>
+      {/* Manual Entry Toggle */}
+      <button
+        type="button"
+        onClick={() => setUseManualEntry(true)}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          zIndex: 10,
+          padding: 'var(--space-2) var(--space-3)',
+          background: 'white',
+          border: '1px solid var(--border-primary)',
+          borderRadius: 'var(--radius-md)',
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-secondary)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-1)',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        }}
+      >
+        <Edit className="h-3 w-3" />
+        Manuel Giriş
+      </button>
+
       {/* Search Box */}
       <div style={{ 
         position: 'absolute', 
         top: '10px', 
         left: '10px', 
-        right: '10px',
+        width: 'calc(100% - 120px)',
         zIndex: 10,
       }}>
         <Autocomplete
