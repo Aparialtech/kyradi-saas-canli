@@ -518,7 +518,11 @@ export function DemoFlowPage() {
                 max-width: 100%;
               }
               /* Let widget CSS handle all internal styling */
-              .widget-preview .kyradi-reserve__form input,
+              .widget-preview .kyradi-reserve__form input[type="text"],
+              .widget-preview .kyradi-reserve__form input[type="email"],
+              .widget-preview .kyradi-reserve__form input[type="tel"],
+              .widget-preview .kyradi-reserve__form input[type="number"],
+              .widget-preview .kyradi-reserve__form input[type="datetime-local"],
               .widget-preview .kyradi-reserve__form select,
               .widget-preview .kyradi-reserve__form textarea {
                 display: block !important;
@@ -526,15 +530,9 @@ export function DemoFlowPage() {
                 visibility: visible !important;
                 opacity: 1 !important;
               }
-              .widget-preview .kyradi-reserve__fieldset {
-                display: block !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-              }
-              .widget-preview .kyradi-reserve__legend {
-                display: block !important;
-                visibility: visible !important;
-                opacity: 1 !important;
+              /* Keep consent checkboxes hidden */
+              .widget-preview .kyradi-reserve__form input[type="checkbox"][name$="_consent"] {
+                display: none !important;
               }
               @media (max-width: 768px) {
                 .widget-preview {
