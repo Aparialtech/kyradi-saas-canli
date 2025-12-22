@@ -162,7 +162,7 @@ export function TransfersPage() {
       key: "status",
       label: "Durum",
       render: (row: PaymentTransfer) => {
-        const config = statusConfig[row.status];
+        const config = statusConfig[row.status as TransferStatus] || { label: row.status || "Bilinmiyor", color: "neutral" as const };
         return <Badge variant={config.color}>{config.label}</Badge>;
       },
     },
