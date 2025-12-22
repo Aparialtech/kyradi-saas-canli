@@ -190,14 +190,16 @@ export function AdminTransfersPage() {
       label: "İşlemler",
       render: (row: PaymentTransfer) => {
         if (!row) return null;
+        const isPending = row.status === "pending";
         return (
           <div className={styles.actionButtons}>
-            {row.status === "pending" && (
+            {isPending ? (
               <>
                 <ModernButton
                   variant="primary"
                   size="sm"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setSelectedTransfer(row);
                     setShowApproveModal(true);
                   }}
@@ -208,7 +210,8 @@ export function AdminTransfersPage() {
                 <ModernButton
                   variant="danger"
                   size="sm"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setSelectedTransfer(row);
                     setShowRejectModal(true);
                   }}
@@ -217,11 +220,16 @@ export function AdminTransfersPage() {
                   Reddet
                 </ModernButton>
               </>
+            ) : (
+              <Badge variant={statusConfig[row.status]?.color || "neutral"}>
+                {statusConfig[row.status]?.label || row.status}
+              </Badge>
             )}
             <ModernButton
               variant="ghost"
               size="sm"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setSelectedTransfer(row);
                 setShowDetailModal(true);
               }}
@@ -350,6 +358,13 @@ export function AdminTransfersPage() {
                 <ModernTable
                   columns={columns}
                   data={transfers.filter(t => t != null)}
+                  showRowNumbers
+                  pagination={paginationMeta}
+                  onRowClick={(row) => {
+                    setSelectedTransfer(row);
+                    setShowDetailModal(true);
+                  }}
+                  hoverable
                 />
                 <div className={styles.paginationWrapper}>
                   <Pagination

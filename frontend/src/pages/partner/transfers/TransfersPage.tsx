@@ -361,6 +361,13 @@ export function TransfersPage() {
                 <ModernTable
                   columns={columns}
                   data={transfers.filter(t => t != null)}
+                  showRowNumbers
+                  pagination={paginationMeta}
+                  onRowClick={(row) => {
+                    setSelectedTransfer(row);
+                    setShowDetailModal(true);
+                  }}
+                  hoverable
                 />
                 <div className={styles.paginationWrapper}>
                   <Pagination
