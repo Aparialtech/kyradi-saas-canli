@@ -71,6 +71,7 @@ class Storage(IdentifiedMixin, TimestampMixin, Base):
     status: Mapped[StorageStatus] = mapped_column(String(32), default=StorageStatus.IDLE.value, nullable=False)
     last_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), default=None)
     capacity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    working_hours: Mapped[Optional[dict]] = mapped_column(JSON, default=None)  # Müsaitlik saatleri
 
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="storages")
     location: Mapped[Location] = relationship("Location", back_populates="storages")

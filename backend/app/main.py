@@ -156,6 +156,7 @@ async def ensure_critical_schema() -> None:
     critical_ddl = [
         # Storage columns
         "ALTER TABLE storages ADD COLUMN IF NOT EXISTS capacity INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE storages ADD COLUMN IF NOT EXISTS working_hours JSONB",
         # Tenant columns
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS legal_name VARCHAR(255)",

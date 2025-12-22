@@ -2,6 +2,22 @@ import { http } from "../../lib/http";
 
 export type StorageStatus = "idle" | "occupied" | "reserved" | "faulty";
 
+export interface DayHours {
+  open: string;
+  close: string;
+  is_open: boolean;
+}
+
+export interface WorkingHours {
+  monday?: DayHours;
+  tuesday?: DayHours;
+  wednesday?: DayHours;
+  thursday?: DayHours;
+  friday?: DayHours;
+  saturday?: DayHours;
+  sunday?: DayHours;
+}
+
 export interface Storage {
   id: string;
   location_id: string;
@@ -9,12 +25,14 @@ export interface Storage {
   status: StorageStatus;
   last_seen_at?: string | null;
   created_at: string;
+  working_hours?: WorkingHours | null;
 }
 
 export interface StoragePayload {
   location_id: string;
   code: string;
   status: StorageStatus;
+  working_hours?: WorkingHours | null;
 }
 
 export interface StorageCalendarDay {

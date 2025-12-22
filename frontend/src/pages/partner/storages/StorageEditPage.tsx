@@ -3,9 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, HardDrive, MapPin, Search, Save, Loader2, Calendar, CheckCircle, XCircle } from "../../../lib/lucide";
+import { ArrowLeft, HardDrive, MapPin, Search, Save, Loader2, Calendar, CheckCircle, XCircle, Clock } from "../../../lib/lucide";
 
-import { storageService, type StoragePayload, type StorageCalendarDay } from "../../../services/partner/storages";
+import { storageService, type StoragePayload, type StorageCalendarDay, type WorkingHours, type DayHours } from "../../../services/partner/storages";
 import { locationService } from "../../../services/partner/locations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -14,6 +14,28 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
+
+const DAYS_OF_WEEK = [
+  { key: "monday", label: "Pazartesi" },
+  { key: "tuesday", label: "Salı" },
+  { key: "wednesday", label: "Çarşamba" },
+  { key: "thursday", label: "Perşembe" },
+  { key: "friday", label: "Cuma" },
+  { key: "saturday", label: "Cumartesi" },
+  { key: "sunday", label: "Pazar" },
+] as const;
+
+const DEFAULT_DAY_HOURS: DayHours = { open: "09:00", close: "18:00", is_open: true };
+
+const getDefaultWorkingHours = (): WorkingHours => ({
+  monday: { ...DEFAULT_DAY_HOURS },
+  tuesday: { ...DEFAULT_DAY_HOURS },
+  wednesday: { ...DEFAULT_DAY_HOURS },
+  thursday: { ...DEFAULT_DAY_HOURS },
+  friday: { ...DEFAULT_DAY_HOURS },
+  saturday: { open: "10:00", close: "16:00", is_open: true },
+  sunday: { open: "10:00", close: "16:00", is_open: false },
+});
 
 export function StorageEditPage() {
   const { t } = useTranslation();
@@ -25,6 +47,7 @@ export function StorageEditPage() {
   
   const [locationSearchTerm, setLocationSearchTerm] = useState("");
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [workingHours, setWorkingHours] = useState<WorkingHours>(getDefaultWorkingHours());
 
   // Calendar date range (next 14 days)
   const calendarRange = useMemo(() => {
@@ -84,8 +107,22 @@ export function StorageEditPage() {
       if (location) {
         setLocationSearchTerm(location.name);
       }
+      // Set working hours
+      if (storageQuery.data.working_hours) {
+        setWorkingHours(storageQuery.data.working_hours);
+      }
     }
   }, [storageQuery.data, locationsQuery.data, reset]);
+
+  const handleDayChange = useCallback((day: keyof WorkingHours, field: keyof DayHours, value: string | boolean) => {
+    setWorkingHours(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value,
+      },
+    }));
+  }, []);
 
   const locationOptions = useMemo(() => {
     return (locationsQuery.data ?? []).map((location) => ({ 
@@ -132,10 +169,14 @@ export function StorageEditPage() {
       push({ title: t("storages.locationRequired"), type: "error" });
       return;
     }
+    const payload: StoragePayload = {
+      ...values,
+      working_hours: workingHours,
+    };
     if (isNew) {
-      await createMutation.mutateAsync(values);
+      await createMutation.mutateAsync(payload);
     } else {
-      await updateMutation.mutateAsync(values);
+      await updateMutation.mutateAsync(payload);
     }
   });
 
@@ -454,6 +495,112 @@ export function StorageEditPage() {
                   <option value="reserved">{t("storages.status.reserved")}</option>
                   <option value="faulty">{t("storages.status.faulty")}</option>
                 </select>
+              </div>
+
+              {/* Working Hours */}
+              <div>
+                <label style={{ 
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  fontSize: "var(--text-sm)", 
+                  fontWeight: 600, 
+                  color: "var(--text-secondary)",
+                  marginBottom: "var(--space-3)"
+                }}>
+                  <Clock className="h-4 w-4" style={{ color: "var(--primary)" }} />
+                  Müsaitlik Saatleri
+                </label>
+                
+                <div style={{ 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  gap: "var(--space-2)",
+                  background: "var(--bg-secondary)",
+                  borderRadius: "var(--radius-lg)",
+                  padding: "var(--space-4)",
+                  border: "1px solid var(--border-secondary)",
+                }}>
+                  {DAYS_OF_WEEK.map(({ key, label }) => {
+                    const dayHours = workingHours[key as keyof WorkingHours];
+                    return (
+                      <div 
+                        key={key}
+                        style={{ 
+                          display: "grid", 
+                          gridTemplateColumns: "100px 1fr 80px 80px",
+                          gap: "var(--space-3)",
+                          alignItems: "center",
+                          padding: "var(--space-2) 0",
+                          borderBottom: key !== "sunday" ? "1px solid var(--border-secondary)" : "none",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                          <input
+                            type="checkbox"
+                            checked={dayHours?.is_open ?? true}
+                            onChange={(e) => handleDayChange(key as keyof WorkingHours, "is_open", e.target.checked)}
+                            style={{ 
+                              width: "16px", 
+                              height: "16px",
+                              accentColor: "var(--primary)",
+                            }}
+                          />
+                          <span style={{ 
+                            fontSize: "var(--text-sm)", 
+                            fontWeight: 500,
+                            color: dayHours?.is_open ? "var(--text-primary)" : "var(--text-tertiary)",
+                          }}>
+                            {label}
+                          </span>
+                        </div>
+                        
+                        <div style={{ 
+                          fontSize: "var(--text-xs)", 
+                          color: "var(--text-tertiary)",
+                          textAlign: "center",
+                        }}>
+                          {dayHours?.is_open ? "" : "Kapalı"}
+                        </div>
+                        
+                        <input
+                          type="time"
+                          value={dayHours?.open ?? "09:00"}
+                          onChange={(e) => handleDayChange(key as keyof WorkingHours, "open", e.target.value)}
+                          disabled={!dayHours?.is_open}
+                          style={{
+                            padding: "var(--space-2)",
+                            border: "1px solid var(--border-primary)",
+                            borderRadius: "var(--radius-md)",
+                            background: dayHours?.is_open ? "var(--bg-tertiary)" : "var(--bg-secondary)",
+                            color: "var(--text-primary)",
+                            fontSize: "var(--text-sm)",
+                            opacity: dayHours?.is_open ? 1 : 0.5,
+                          }}
+                        />
+                        
+                        <input
+                          type="time"
+                          value={dayHours?.close ?? "18:00"}
+                          onChange={(e) => handleDayChange(key as keyof WorkingHours, "close", e.target.value)}
+                          disabled={!dayHours?.is_open}
+                          style={{
+                            padding: "var(--space-2)",
+                            border: "1px solid var(--border-primary)",
+                            borderRadius: "var(--radius-md)",
+                            background: dayHours?.is_open ? "var(--bg-tertiary)" : "var(--bg-secondary)",
+                            color: "var(--text-primary)",
+                            fontSize: "var(--text-sm)",
+                            opacity: dayHours?.is_open ? 1 : 0.5,
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <p style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginTop: "var(--space-2)" }}>
+                  Deponun açık olduğu gün ve saatleri belirleyin
+                </p>
               </div>
 
               {/* Actions */}
