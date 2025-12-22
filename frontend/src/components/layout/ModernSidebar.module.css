@@ -8,7 +8,7 @@
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(var(--blur-sm));
-  z-index: var(--z-sticky);
+  z-index: var(--z-fixed);
 }
 
 @media (min-width: 1024px) {
@@ -24,7 +24,7 @@
   bottom: 0;
   height: 100vh;
   width: 280px;
-  z-index: 1000; /* Higher z-index to ensure it's above other content */
+  z-index: var(--z-fixed); /* Use standardized z-index for fixed elements */
   pointer-events: auto; /* Ensure sidebar is clickable */
   
   /* Glassmorphism Effect */
@@ -313,14 +313,11 @@
     position: fixed;
     top: var(--space-4);
     left: var(--space-4);
-    z-index: calc(var(--z-fixed) + 1);
+    z-index: calc(var(--z-fixed) + 2);
     background: var(--glass-bg);
     backdrop-filter: blur(var(--blur-xl));
     box-shadow: var(--shadow-xl);
-  }
-  
-  .sidebarOpen ~ .toggleButton {
-    left: calc(280px + var(--space-4));
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 

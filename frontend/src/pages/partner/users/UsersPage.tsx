@@ -19,6 +19,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
+import { useConfirm } from "../../../components/common/ConfirmDialog";
 import type { UserRole } from "../../../types/auth";
 import { useAuth } from "../../../context/AuthContext";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -58,6 +59,7 @@ export function UsersPage() {
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const { user: currentUser } = useAuth();
+  const confirmDialog = useConfirm();
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [resetUser, setResetUser] = useState<TenantUser | null>(null);
@@ -663,8 +665,16 @@ export function UsersPage() {
                           variant="danger"
                           size="sm"
                           disabled={isCurrentUser}
-                          onClick={() => {
-                            if (!isCurrentUser && confirm(`${row.email} kullanıcısını pasifleştirmek istediğinize emin misiniz?`)) {
+                          onClick={async () => {
+                            if (isCurrentUser) return;
+                            const confirmed = await confirmDialog({
+                              title: 'Kullanıcı Pasifleştirme',
+                              message: `${row.email} kullanıcısını pasifleştirmek istediğinize emin misiniz?`,
+                              confirmText: 'Pasifleştir',
+                              cancelText: 'İptal',
+                              variant: 'warning',
+                            });
+                            if (confirmed) {
                               deactivateMutation.mutate(row.id);
                             }
                           }}

@@ -12,6 +12,7 @@ import { usePagination, calculatePaginationMeta, Pagination } from "../../../com
 import { StorageCalendarModal } from "../../../components/storages/StorageCalendarModal";
 import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useConfirm } from "../../../components/common/ConfirmDialog";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { Badge } from "../../../components/ui/Badge";
@@ -22,6 +23,7 @@ export function LockersPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
+  const confirm = useConfirm();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [locationFilter, setLocationFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -320,8 +322,15 @@ export function LockersPage() {
                               <ModernButton
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => {
-                                  if (confirm(t("common.confirmDelete"))) {
+                                onClick={async () => {
+                                  const confirmed = await confirm({
+                                    title: 'Depo Silme',
+                                    message: `${storage.code} kodlu depoyu silmek istediğinize emin misiniz?`,
+                                    confirmText: 'Sil',
+                                    cancelText: 'İptal',
+                                    variant: 'danger',
+                                  });
+                                  if (confirmed) {
                                     deleteMutation.mutate(storage.id);
                                   }
                                 }}

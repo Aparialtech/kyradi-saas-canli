@@ -17,13 +17,16 @@ import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { ModernButton } from "../../../components/ui/ModernButton";
+import { ModernSelect } from "../../../components/ui/ModernSelect";
 import { DateField } from "../../../components/ui/DateField";
+import { useConfirm } from "../../../components/common/ConfirmDialog";
 
 
 export function ReservationsPage() {
   const { messages, push } = useToast();
   const { t, locale } = useTranslation();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterFrom, setFilterFrom] = useState<string>("");
   const [filterTo, setFilterTo] = useState<string>("");
@@ -238,41 +241,31 @@ export function ReservationsPage() {
           />
         </div>
 
-        <div style={{ marginBottom: 'var(--space-4)', display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center" }}>
-          <select 
-            value={filterStatus} 
+        <div style={{ marginBottom: 'var(--space-4)', display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "flex-end" }}>
+          <ModernSelect
+            value={filterStatus}
             onChange={(event) => setFilterStatus(event.target.value)}
-            style={{
-              padding: 'var(--space-2) var(--space-3)',
-              border: '1px solid var(--border-primary)',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--bg-tertiary)',
-              color: 'var(--text-primary)',
-            }}
-          >
-            <option value="">{t("reservations.filter.all")}</option>
-            <option value="reserved">{t("reservations.filter.reserved")}</option>
-            <option value="confirmed">Onaylandı</option>
-            <option value="active">{t("reservations.filter.active")}</option>
-            <option value="completed">{t("reservations.filter.completed")}</option>
-            <option value="cancelled">{t("reservations.filter.cancelled")}</option>
-            <option value="no_show">{t("reservations.filter.noShow")}</option>
-          </select>
-          <select 
-            value={filterOrigin} 
+            options={[
+              { value: "", label: t("reservations.filter.all") },
+              { value: "reserved", label: t("reservations.filter.reserved") },
+              { value: "confirmed", label: "Onaylandı" },
+              { value: "active", label: t("reservations.filter.active") },
+              { value: "completed", label: t("reservations.filter.completed") },
+              { value: "cancelled", label: t("reservations.filter.cancelled") },
+              { value: "no_show", label: t("reservations.filter.noShow") },
+            ]}
+            size="sm"
+          />
+          <ModernSelect
+            value={filterOrigin}
             onChange={(event) => setFilterOrigin(event.target.value)}
-            style={{
-              padding: 'var(--space-2) var(--space-3)',
-              border: '1px solid var(--border-primary)',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--bg-tertiary)',
-              color: 'var(--text-primary)',
-            }}
-          >
-            <option value="widget">Widget</option>
-            <option value="panel">Panel</option>
-            <option value="api">API</option>
-          </select>
+            options={[
+              { value: "widget", label: "Widget" },
+              { value: "panel", label: "Panel" },
+              { value: "api", label: "API" },
+            ]}
+            size="sm"
+          />
           <DateField
             value={filterFrom}
             onChange={(value) => setFilterFrom(value || "")}
@@ -408,8 +401,15 @@ export function ReservationsPage() {
                       variant="primary"
                       title="Teslim Edildi / Tamamla"
                       disabled={row.status === 'completed' || row.status === 'cancelled'}
-                      onClick={() => {
-                        if (confirm('Teslim edildi olarak işaretle?')) {
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Teslim Onayı',
+                          message: 'Bu rezervasyonu teslim edildi olarak işaretlemek istediğinize emin misiniz?',
+                          confirmText: 'Teslim Edildi',
+                          cancelText: 'İptal',
+                          variant: 'success',
+                        });
+                        if (confirmed) {
                           completeReservationMutation.mutate(row.id);
                         }
                       }}
@@ -420,8 +420,15 @@ export function ReservationsPage() {
                       variant="danger"
                       title="Rezervasyonu İptal Et"
                       disabled={row.status === 'completed' || row.status === 'cancelled'}
-                      onClick={() => {
-                        if (confirm('İptal etmek istediğinize emin misiniz?')) {
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Rezervasyon İptali',
+                          message: 'Bu rezervasyonu iptal etmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+                          confirmText: 'İptal Et',
+                          cancelText: 'Vazgeç',
+                          variant: 'danger',
+                        });
+                        if (confirmed) {
                           cancelReservationMutation.mutate(row.id);
                         }
                       }}

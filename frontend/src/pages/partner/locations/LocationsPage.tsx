@@ -11,6 +11,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useConfirm } from "../../../components/common/ConfirmDialog";
 import { AlertTriangle } from "../../../lib/lucide";
 
 // UI Components
@@ -23,6 +24,7 @@ export function LocationsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
+  const confirm = useConfirm();
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -56,11 +58,18 @@ export function LocationsPage() {
     navigate(`/app/locations/${location.id}/edit`);
   }, [navigate]);
 
-  const handleDelete = useCallback((location: Location) => {
-    if (confirm(t("locations.confirmDelete", { name: location.name }))) {
+  const handleDelete = useCallback(async (location: Location) => {
+    const confirmed = await confirm({
+      title: 'Lokasyon Silme',
+      message: `${location.name} lokasyonunu silmek istediğinize emin misiniz? Bu lokasyona bağlı depolar da etkilenebilir.`,
+      confirmText: 'Sil',
+      cancelText: 'İptal',
+      variant: 'danger',
+    });
+    if (confirmed) {
       deleteMutation.mutate(location.id);
     }
-  }, [t, deleteMutation]);
+  }, [deleteMutation, confirm]);
 
   // Filter data by search term
   const filteredData = useMemo(() => {

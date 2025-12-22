@@ -12,4 +12,5 @@ export { LanguageSwitcher } from './LanguageSwitcher';
 export { PageHeader } from './PageHeader';
 export { PasswordStrength } from './PasswordStrength';
 export { Pagination, usePagination, calculatePaginationMeta, type PaginationMeta, type PaginationProps } from './Pagination';
+export { FilterBar, FilterItem, FilterDivider, type FilterBarProps, type FilterItemProps } from './FilterBar';
 
