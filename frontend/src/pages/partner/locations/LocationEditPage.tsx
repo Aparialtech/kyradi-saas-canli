@@ -19,6 +19,7 @@ import {
 
 import { locationService, type LocationPayload } from "../../../services/partner/locations";
 import { useToast } from "../../../hooks/useToast";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
 
@@ -71,6 +72,7 @@ const DAY_LABELS: Record<string, string> = {
 };
 
 export function LocationEditPage() {
+  const { t: _t } = useTranslation(); // Translation hook ready for i18n
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

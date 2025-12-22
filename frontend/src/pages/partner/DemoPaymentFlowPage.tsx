@@ -6,6 +6,7 @@ import { magicpayService } from "../../services/partner/magicpay";
 import { paymentService } from "../../services/partner/payments";
 import { http } from "../../lib/http";
 import { useToast } from "../../hooks/useToast";
+import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirm } from "../../components/common/ConfirmDialog";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
@@ -31,6 +32,7 @@ interface Reservation {
 }
 
 export function DemoPaymentFlowPage() {
+  const { t: _t } = useTranslation(); // Translation hook ready for i18n
   const { messages, push } = useToast();
   const confirmDialog = useConfirm();
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);

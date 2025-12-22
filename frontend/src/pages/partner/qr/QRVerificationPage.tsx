@@ -6,6 +6,7 @@ import { QrCode, CheckCircle2, XCircle } from "../../../lib/lucide";
 import { qrService, type QRVerifyResult } from "../../../services/partner/qr";
 import { reservationService } from "../../../services/partner/reservations";
 import { useToast } from "../../../hooks/useToast";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
 import { getErrorMessage } from "../../../lib/httpError";
@@ -35,6 +36,7 @@ const formatDateTime = (value?: string | null) => {
 };
 
 export function QRVerificationPage() {
+  const { t: _t } = useTranslation(); // Translation hook ready for i18n
   const [code, setCode] = useState("");
   const [result, setResult] = useState<QRVerifyResult | null>(null);
   const [loading, setLoading] = useState(false);

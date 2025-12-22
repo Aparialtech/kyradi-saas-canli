@@ -9,6 +9,7 @@ import { ArrowLeft, User, Mail, Phone, Save, X, Shield, CreditCard, MapPin, User
 
 import { userService, type TenantUserCreate, type TenantUserUpdate, type Gender } from "../../../services/partner/users";
 import { useToast } from "../../../hooks/useToast";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
 
@@ -54,6 +55,7 @@ const GENDER_LABELS: Record<string, string> = {
 };
 
 export function UserEditPage() {
+  const { t: _t } = useTranslation(); // Translation hook ready for i18n
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

@@ -27,6 +27,7 @@ import {
   type TransferStatus,
 } from "../../../services/partner/paymentSchedules";
 import { useToast } from "../../../hooks/useToast";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { usePagination, Pagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
 import { Card, CardHeader, CardBody } from "../../../components/ui/Card";
@@ -47,6 +48,7 @@ const statusConfig: Record<string, { label: string; color: "success" | "warning"
 };
 
 export function TransfersPage() {
+  const { t: _t } = useTranslation(); // Translation hook ready for i18n
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { page, pageSize, setPage, setPageSize } = usePagination(10);

@@ -21,6 +21,7 @@ import {
   type TicketDirection,
 } from "../../../services/partner/tickets";
 import { useToast } from "../../../hooks/useToast";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
@@ -64,6 +65,7 @@ const priorityVariants: Record<TicketPriority, "success" | "warning" | "info" | 
 type TabType = "incoming" | "outgoing";
 
 export function TicketsPage() {
+  const { t: _t } = useTranslation(); // Translation hook ready for i18n
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const [searchTerm, setSearchTerm] = useState("");

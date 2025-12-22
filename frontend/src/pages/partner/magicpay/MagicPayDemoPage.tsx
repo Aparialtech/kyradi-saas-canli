@@ -4,11 +4,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 
 import { magicpayService } from "../../../services/partner/magicpay";
 import { useToast } from "../../../hooks/useToast";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { useConfirm } from "../../../components/common/ConfirmDialog";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
 
 export function MagicPayDemoPage() {
+  const { t: _t } = useTranslation(); // Translation hook ready for i18n
   const { sessionId } = useParams<{ sessionId: string }>();
   const { messages, push } = useToast();
   const confirmDialog = useConfirm();
