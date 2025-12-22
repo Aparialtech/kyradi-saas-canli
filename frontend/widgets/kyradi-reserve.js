@@ -363,36 +363,36 @@
               <div class="kyradi-reserve__consents-grid">
                 <label class="kyradi-reserve__consent">
                   <input type="checkbox" name="kvkk_consent" required data-contract-type="kvkk" />
-                  <span>KVKK Aydınlatma Metni <span class="kyradi-reserve__required">*</span></span>
-                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk">📄 Oku ve Onayla</a>
+                  <span>KVKK Metni <span class="kyradi-reserve__required">*</span></span>
+                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="kvkk">Oku</a>
                 </label>
                 <label class="kyradi-reserve__consent">
                   <input type="checkbox" name="terms_consent" required data-contract-type="terms" />
                   <span>Kullanım Şartları <span class="kyradi-reserve__required">*</span></span>
-                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms">📄 Oku ve Onayla</a>
+                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="terms">Oku</a>
                 </label>
                 <label class="kyradi-reserve__consent">
                   <input type="checkbox" name="disclosure_consent" required data-contract-type="disclosure" />
                   <span>Aydınlatma Metni <span class="kyradi-reserve__required">*</span></span>
-                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure">📄 Oku ve Onayla</a>
+                  <a href="#" class="kyradi-reserve__contract-link" data-contract-type="disclosure">Oku</a>
                 </label>
               </div>
             </fieldset>
             
-            <!-- Contract Modal -->
+            <!-- Contract Modal - Premium Design -->
             <div class="kyradi-reserve__modal" id="contract-modal" style="display: none;">
               <div>
                 <h3 id="contract-modal-title">Sözleşme</h3>
-                <div id="contract-modal-content" style="max-height: 400px; overflow-y: auto; padding: 16px; background: #f8fafc; border-radius: 8px; margin: 16px 0; font-size: 13px; line-height: 1.7; color: #475569;"></div>
-                <div style="padding: 12px 16px; background: #f1f5f9; border-radius: 8px; margin-bottom: 16px;">
-                  <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: #475569;">
-                    <input type="checkbox" id="contract-modal-accept" style="width: 16px; height: 16px; accent-color: #10b981;" />
-                    <span>Okudum, kabul ediyorum</span>
+                <div class="kyradi-reserve__modal-content" id="contract-modal-content"></div>
+                <div class="kyradi-reserve__modal-footer">
+                  <label class="kyradi-reserve__modal-accept">
+                    <input type="checkbox" id="contract-modal-accept" />
+                    <span>✓ Yukarıdaki metni okudum ve kabul ediyorum</span>
                   </label>
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                  <button type="button" id="contract-modal-close" style="padding: 10px 20px; background: #64748b; border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; cursor: pointer;">Kapat</button>
-                  <button type="button" id="contract-modal-confirm" style="padding: 10px 20px; background: #10b981; border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; cursor: pointer; opacity: 0.5;" disabled>Kabul Et</button>
+                  <div class="kyradi-reserve__modal-buttons">
+                    <button type="button" id="contract-modal-close" class="kyradi-reserve__modal-btn kyradi-reserve__modal-btn--secondary">Kapat</button>
+                    <button type="button" id="contract-modal-confirm" class="kyradi-reserve__modal-btn kyradi-reserve__modal-btn--primary" disabled>✓ Onayla</button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-/* Kyradi Reserve Widget - Premium SaaS Design */
+/* Kyradi Reserve Widget - Premium Wide Layout */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after {
@@ -8,32 +8,32 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN CONTAINER - Full width premium layout
+   MAIN CONTAINER - ULTRA WIDE
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   width: 100%;
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.02), 0 20px 60px rgba(0,0,0,0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02), 0 12px 40px rgba(0,0,0,0.06);
   overflow: visible;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   HEADER
+   HEADER - Compact
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__title {
-  padding: 28px 40px;
-  font-size: 28px;
-  font-weight: 800;
+  padding: 20px 32px;
+  font-size: 22px;
+  font-weight: 700;
   color: #0f172a;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border-bottom: 1px solid #e2e8f0;
-  border-radius: 20px 20px 0 0;
+  border-radius: 16px 16px 0 0;
   position: relative;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .kyradi-reserve__title::before {
@@ -42,19 +42,19 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 40%, #ec4899 70%, #f43f5e 100%);
-  border-radius: 20px 20px 0 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  border-radius: 16px 16px 0 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   FORM CONTAINER
+   FORM CONTAINER - Compact vertical spacing
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__form {
-  padding: 40px;
+  padding: 28px 32px;
   display: flex;
   flex-direction: column;
-  gap: 36px;
+  gap: 24px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -69,15 +69,15 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   LEGEND - Beautiful section headers
+   LEGEND - Clean section headers
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__legend {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
   border-bottom: 2px solid #f1f5f9;
   position: relative;
 }
@@ -85,10 +85,10 @@
 .kyradi-reserve__legend::before {
   content: '';
   display: block;
-  width: 5px;
-  height: 28px;
+  width: 4px;
+  height: 20px;
   background: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%);
-  border-radius: 3px;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 
@@ -97,7 +97,7 @@
   position: absolute;
   bottom: -2px;
   left: 0;
-  width: 120px;
+  width: 80px;
   height: 2px;
   background: linear-gradient(90deg, #3b82f6, #8b5cf6);
   border-radius: 1px;
@@ -105,20 +105,20 @@
 
 .kyradi-reserve__legend span,
 .kyradi-reserve__legend {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
-  color: #1e293b;
+  color: #475569;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   GRID - Wide 3 column layout
+   GRID - 4 columns for ultra-wide
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
   width: 100%;
   min-width: 0;
 }
@@ -126,9 +126,9 @@
 .kyradi-reserve__grid--full {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 16px;
   width: 100%;
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
 .kyradi-reserve__grid--full > label {
@@ -136,21 +136,21 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   LABELS
+   LABELS - Compact
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__form label {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   min-width: 0;
   width: 100%;
 }
 
 .kyradi-reserve__form label > span:first-child {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: #475569;
-  line-height: 1.4;
+  color: #64748b;
+  line-height: 1.3;
 }
 
 .kyradi-reserve__required {
@@ -159,23 +159,23 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   INPUTS
+   INPUTS - Compact height
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__form input,
 .kyradi-reserve__form select,
 .kyradi-reserve__form textarea {
   width: 100%;
   min-width: 0;
-  height: 48px;
-  padding: 0 16px;
-  font-size: 15px;
+  height: 40px;
+  padding: 0 12px;
+  font-size: 14px;
   font-family: inherit;
   color: #1e293b;
   background: #f8fafc;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .kyradi-reserve__form input:hover,
@@ -189,7 +189,7 @@
 .kyradi-reserve__form textarea:focus {
   border-color: #3b82f6;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .kyradi-reserve__form input::placeholder {
@@ -199,102 +199,82 @@
 .kyradi-reserve__form select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
-  background-position: right 14px center;
+  background-position: right 10px center;
   background-repeat: no-repeat;
-  background-size: 20px;
-  padding-right: 48px;
+  background-size: 16px;
+  padding-right: 36px;
   cursor: pointer;
 }
 
 .kyradi-reserve__form textarea {
   height: auto;
-  min-height: 120px;
-  padding: 16px;
+  min-height: 70px;
+  padding: 10px 12px;
   resize: vertical;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
-/* Price field - Premium style */
+/* Price field */
 .kyradi-reserve__readonly {
   background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
-  border: 2px solid #6ee7b7 !important;
+  border: 1.5px solid #6ee7b7 !important;
   color: #047857 !important;
-  font-weight: 800 !important;
-  font-size: 18px !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
   text-align: center;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   CONSENTS SECTION - Premium design
+   CONSENTS SECTION - Horizontal 3-column
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__fieldset--consents {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 2px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 28px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
   width: 100%;
   min-width: 0;
 }
 
 .kyradi-reserve__fieldset--consents .kyradi-reserve__legend {
-  margin-bottom: 20px;
-  padding-bottom: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
 }
 
 .kyradi-reserve__consents-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 12px;
   width: 100%;
   min-width: 0;
 }
 
-/* Consent card - Premium style */
+/* Consent card - Horizontal compact */
 .kyradi-reserve__consent {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  text-align: center;
-  gap: 14px;
-  padding: 24px 20px;
+  gap: 10px;
+  padding: 12px 14px;
   background: #ffffff;
-  border: 2px solid #e2e8f0;
-  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
   width: 100%;
   min-width: 0;
-  position: relative;
-  overflow: hidden;
-}
-
-.kyradi-reserve__consent::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-  opacity: 0;
-  transition: opacity 0.25s ease;
 }
 
 .kyradi-reserve__consent:hover {
   border-color: #3b82f6;
   background: #f0f9ff;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
-}
-
-.kyradi-reserve__consent:hover::before {
-  opacity: 1;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
 .kyradi-reserve__consent input[type="checkbox"] {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
   flex-shrink: 0;
   margin: 0;
   padding: 0;
@@ -305,66 +285,66 @@
 .kyradi-reserve__consent > span {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
   color: #475569;
   word-break: normal;
   overflow-wrap: anywhere;
 }
 
 .kyradi-reserve__contract-link {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-top: 8px;
-  padding: 8px 16px;
+  padding: 6px 10px;
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff !important;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .kyradi-reserve__contract-link:hover {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
   text-decoration: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SUBMIT BUTTON
+   SUBMIT BUTTON - Compact
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__button {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 56px;
-  padding: 0 40px;
-  font-size: 17px;
+  height: 46px;
+  padding: 0 32px;
+  font-size: 15px;
   font-weight: 700;
   font-family: inherit;
   color: #ffffff;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   border: none;
-  border-radius: 14px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
-  margin-top: 8px;
-  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  margin-top: 4px;
 }
 
 .kyradi-reserve__button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
 .kyradi-reserve__button:active {
-  transform: translateY(-1px);
+  transform: translateY(0);
 }
 
 .kyradi-reserve__button:disabled {
@@ -378,15 +358,15 @@
    ERROR MESSAGE
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__error {
-  padding: 16px 20px;
-  margin-top: 16px;
-  font-size: 14px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #dc2626;
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  border: 2px solid #fecaca;
-  border-radius: 12px;
-  line-height: 1.5;
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-radius: 8px;
+  line-height: 1.4;
 }
 
 .kyradi-reserve__error:empty {
@@ -397,53 +377,68 @@
    SUCCESS STATE
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__status {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
   color: #059669;
   margin: 0;
 }
 
 .kyradi-reserve__muted {
   color: #64748b;
-  font-size: 16px;
-  margin-top: 8px;
+  font-size: 14px;
+  margin-top: 6px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MODAL - Premium contract modal
+   MODAL - Premium Professional Design
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve__modal {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(8px);
   z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+  animation: modalFadeIn 0.25s ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .kyradi-reserve__modal > div {
   width: 100%;
-  max-width: 640px;
+  max-width: 680px;
   max-height: 85vh;
   background: #ffffff;
   border-radius: 20px;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .kyradi-reserve__modal h3 {
-  padding: 24px 28px;
-  font-size: 20px;
-  font-weight: 800;
+  padding: 20px 24px;
+  font-size: 18px;
+  font-weight: 700;
   color: #0f172a;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .kyradi-reserve__modal h3::before {
@@ -456,12 +451,109 @@
   background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
 }
 
+.kyradi-reserve__modal h3::after {
+  content: '📄';
+  font-size: 20px;
+}
+
+/* Modal content area */
+.kyradi-reserve__modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  background: #ffffff;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #475569;
+}
+
+/* Modal footer */
+.kyradi-reserve__modal-footer {
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-top: 1px solid #e2e8f0;
+}
+
+.kyradi-reserve__modal-accept {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
+}
+
+.kyradi-reserve__modal-accept:hover {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.kyradi-reserve__modal-accept input {
+  width: 20px;
+  height: 20px;
+  accent-color: #10b981;
+  cursor: pointer;
+}
+
+.kyradi-reserve__modal-accept span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.kyradi-reserve__modal-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.kyradi-reserve__modal-btn {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.kyradi-reserve__modal-btn--secondary {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.kyradi-reserve__modal-btn--secondary:hover {
+  background: #cbd5e1;
+}
+
+.kyradi-reserve__modal-btn--primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.kyradi-reserve__modal-btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.kyradi-reserve__modal-btn--primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    DARK THEME
    ═══════════════════════════════════════════════════════════════ */
 .kyradi-reserve--dark {
   background: #0f172a;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
 }
 
 .kyradi-reserve--dark .kyradi-reserve__title {
@@ -472,7 +564,7 @@
 
 .kyradi-reserve--dark .kyradi-reserve__legend,
 .kyradi-reserve--dark .kyradi-reserve__legend span {
-  color: #e2e8f0;
+  color: #94a3b8;
   border-color: #334155;
 }
 
@@ -496,11 +588,11 @@
 .kyradi-reserve--dark .kyradi-reserve__form select:focus,
 .kyradi-reserve--dark .kyradi-reserve__form textarea:focus {
   border-color: #60a5fa;
-  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.15);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
 }
 
 .kyradi-reserve--dark .kyradi-reserve__fieldset--consents {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: #1e293b;
   border-color: #334155;
 }
 
@@ -519,51 +611,61 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE - TABLET
+   RESPONSIVE - LARGE TABLET (1200px)
    ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 1024px) {
-  .kyradi-reserve {
-    max-width: 100%;
-    border-radius: 16px;
-  }
-  
-  .kyradi-reserve__title {
-    padding: 24px 28px;
-    font-size: 24px;
-    border-radius: 16px 16px 0 0;
-  }
-  
-  .kyradi-reserve__title::before {
-    border-radius: 16px 16px 0 0;
-  }
-  
-  .kyradi-reserve__form {
-    padding: 28px;
-    gap: 32px;
-  }
-  
+@media (max-width: 1200px) {
   .kyradi-reserve__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-  }
-  
-  .kyradi-reserve__consents-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE - MOBILE
+   RESPONSIVE - TABLET (900px)
    ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 640px) {
+@media (max-width: 900px) {
+  .kyradi-reserve {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  
+  .kyradi-reserve__title {
+    padding: 16px 20px;
+    font-size: 18px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .kyradi-reserve__title::before {
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .kyradi-reserve__form {
+    padding: 20px;
+    gap: 20px;
+  }
+  
+  .kyradi-reserve__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  
+  .kyradi-reserve__consents-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE - MOBILE (600px)
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
   .kyradi-reserve {
     border-radius: 0;
     box-shadow: none;
   }
   
   .kyradi-reserve__title {
-    padding: 20px 24px;
-    font-size: 20px;
+    padding: 14px 16px;
+    font-size: 16px;
     border-radius: 0;
   }
   
@@ -572,49 +674,46 @@
   }
   
   .kyradi-reserve__form {
-    padding: 24px;
-    gap: 28px;
+    padding: 16px;
+    gap: 16px;
   }
   
   .kyradi-reserve__grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 10px;
   }
   
   .kyradi-reserve__legend {
-    font-size: 13px;
-    margin-bottom: 20px;
+    font-size: 11px;
+    margin-bottom: 12px;
   }
   
   .kyradi-reserve__fieldset--consents {
-    padding: 20px;
-  }
-  
-  .kyradi-reserve__consents-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    padding: 14px;
   }
   
   .kyradi-reserve__consent {
-    flex-direction: row;
-    text-align: left;
-    padding: 16px;
-    gap: 14px;
+    padding: 10px 12px;
+    gap: 8px;
   }
   
   .kyradi-reserve__consent > span {
-    font-size: 13px;
+    font-size: 11px;
   }
   
   .kyradi-reserve__contract-link {
-    margin-top: 0;
-    margin-left: auto;
-    padding: 6px 12px;
-    white-space: nowrap;
+    padding: 5px 8px;
+    font-size: 10px;
   }
   
   .kyradi-reserve__button {
-    height: 52px;
-    font-size: 16px;
+    height: 42px;
+    font-size: 14px;
+  }
+  
+  .kyradi-reserve__modal > div {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
   }
 }
