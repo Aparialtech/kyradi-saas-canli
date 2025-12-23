@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, Command, MapPin, Package, Calendar, Users, 
   DollarSign, Settings, BarChart3, FileText, LogOut,
-  Plus, Home, Building2, CreditCard, Shield, MessageSquare,
+  Plus, Home, Building2, CreditCard, MessageSquare,
   Receipt, RefreshCw, ClipboardList, Globe
 } from "../../lib/lucide";
 

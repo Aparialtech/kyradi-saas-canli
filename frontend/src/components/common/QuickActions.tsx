@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Command, Home, MapPin, Package, Calendar,
-  Users, DollarSign, Settings, BarChart3, FileText, Shield,
+  Users, DollarSign, Settings, BarChart3, FileText,
   Plus, ChevronRight, MessageSquare, CreditCard, Building2,
   Receipt, RefreshCw, ClipboardList, Globe
 } from "../../lib/lucide";
