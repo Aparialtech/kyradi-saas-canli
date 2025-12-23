@@ -139,10 +139,13 @@ async def startup_event() -> None:
     import os
     raw_email_provider = os.environ.get("EMAIL_PROVIDER", "NOT_SET")
     raw_resend_key = os.environ.get("RESEND_API_KEY", "NOT_SET")
+    raw_from_email = os.environ.get("SMTP_FROM_EMAIL", "NOT_SET")
     logger.info(f"📧 Email config debug:")
     logger.info(f"   - Raw EMAIL_PROVIDER env: '{raw_email_provider}'")
     logger.info(f"   - Raw RESEND_API_KEY env: {'SET ('+raw_resend_key[:10]+'...)' if raw_resend_key != 'NOT_SET' else 'NOT_SET'}")
+    logger.info(f"   - Raw SMTP_FROM_EMAIL env: '{raw_from_email}'")
     logger.info(f"   - Settings email_provider: '{settings.email_provider}'")
+    logger.info(f"   - Settings smtp_from_email: '{settings.smtp_from_email}'")
     
     if settings.email_provider.lower() == "resend":
         if settings.resend_api_key:

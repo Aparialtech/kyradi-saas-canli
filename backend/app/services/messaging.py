@@ -198,6 +198,7 @@ class EmailService:
             raise ValueError("Resend API key not configured. Set RESEND_API_KEY in environment variables.")
         
         from_email = settings.smtp_from_email or "noreply@kyradi.com"
+        logger.info(f"📧 Resend: Sending email from '{from_email}' to '{to_email}'")
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
