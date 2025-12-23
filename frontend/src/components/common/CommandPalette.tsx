@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, Command, MapPin, Package, Calendar, Users, 
   DollarSign, Settings, BarChart3, FileText, LogOut,
-  Plus, Home, Building2, CreditCard, Shield
+  Plus, Home, Building2, CreditCard, Shield, MessageSquare,
+  Receipt, RefreshCw, ClipboardList, Globe
 } from "../../lib/lucide";
 
 interface CommandItem {
@@ -15,6 +16,7 @@ interface CommandItem {
   action: () => void;
   keywords?: string[];
   category: 'navigation' | 'action' | 'settings';
+  shortcut?: string;
 }
 
 interface CommandPaletteProps {
@@ -46,14 +48,16 @@ export function CommandPalette({
     
     if (userRole === 'partner') {
       baseCommands.push(
+        // Navigasyon
         {
           id: 'nav-overview',
           label: 'Genel Bakış',
           description: 'Partner dashboard ana sayfa',
           icon: <Home className="h-4 w-4" />,
           action: () => navigate('/app'),
-          keywords: ['dashboard', 'ana', 'home', 'panel'],
+          keywords: ['dashboard', 'ana', 'home', 'panel', 'genel', 'bakış'],
           category: 'navigation',
+          shortcut: 'G H',
         },
         {
           id: 'nav-locations',
@@ -61,8 +65,9 @@ export function CommandPalette({
           description: 'Lokasyon yönetimi',
           icon: <MapPin className="h-4 w-4" />,
           action: () => navigate('/app/locations'),
-          keywords: ['location', 'yer', 'otel', 'mekan'],
+          keywords: ['location', 'yer', 'otel', 'mekan', 'konum', 'adres'],
           category: 'navigation',
+          shortcut: 'G L',
         },
         {
           id: 'nav-lockers',
@@ -70,17 +75,19 @@ export function CommandPalette({
           description: 'Depo/dolap yönetimi',
           icon: <Package className="h-4 w-4" />,
           action: () => navigate('/app/lockers'),
-          keywords: ['locker', 'storage', 'dolap', 'depo'],
+          keywords: ['locker', 'storage', 'dolap', 'depo', 'kasa'],
           category: 'navigation',
+          shortcut: 'G D',
         },
         {
           id: 'nav-reservations',
           label: 'Rezervasyonlar',
-          description: 'Rezervasyon listesi',
+          description: 'Rezervasyon listesi ve yönetimi',
           icon: <Calendar className="h-4 w-4" />,
           action: () => navigate('/app/reservations'),
-          keywords: ['reservation', 'booking', 'randevu'],
+          keywords: ['reservation', 'booking', 'randevu', 'kayıt'],
           category: 'navigation',
+          shortcut: 'G R',
         },
         {
           id: 'nav-staff',
@@ -88,26 +95,29 @@ export function CommandPalette({
           description: 'Personel yönetimi',
           icon: <Users className="h-4 w-4" />,
           action: () => navigate('/app/staff'),
-          keywords: ['staff', 'employee', 'personel', 'çalışan'],
+          keywords: ['staff', 'employee', 'personel', 'çalışan', 'eleman', 'kullanıcı'],
           category: 'navigation',
+          shortcut: 'G Ç',
         },
         {
           id: 'nav-pricing',
           label: 'Ücretlendirme',
-          description: 'Fiyat kuralları',
+          description: 'Fiyatlandırma kuralları',
           icon: <DollarSign className="h-4 w-4" />,
           action: () => navigate('/app/pricing'),
-          keywords: ['price', 'pricing', 'fiyat', 'ücret', 'tarife'],
+          keywords: ['price', 'pricing', 'fiyat', 'ücret', 'tarife', 'kural'],
           category: 'navigation',
+          shortcut: 'G P',
         },
         {
           id: 'nav-revenue',
           label: 'Gelir',
-          description: 'Gelir raporları',
+          description: 'Gelir raporları ve ödemeler',
           icon: <CreditCard className="h-4 w-4" />,
           action: () => navigate('/app/revenue'),
-          keywords: ['revenue', 'income', 'gelir', 'kazanç'],
+          keywords: ['revenue', 'income', 'gelir', 'kazanç', 'ödeme'],
           category: 'navigation',
+          shortcut: 'G G',
         },
         {
           id: 'nav-reports',
@@ -119,22 +129,59 @@ export function CommandPalette({
           category: 'navigation',
         },
         {
-          id: 'nav-settings',
-          label: 'Ayarlar',
-          description: 'Hesap ayarları',
-          icon: <Settings className="h-4 w-4" />,
-          action: () => navigate('/app/settings'),
-          keywords: ['settings', 'config', 'ayarlar', 'tercih'],
+          id: 'nav-tickets',
+          label: 'İletişim / Ticket',
+          description: 'Destek talepleri',
+          icon: <MessageSquare className="h-4 w-4" />,
+          action: () => navigate('/app/tickets'),
+          keywords: ['ticket', 'destek', 'iletişim', 'mesaj', 'yardım'],
           category: 'navigation',
         },
-        // Actions
+        {
+          id: 'nav-settings',
+          label: 'Ayarlar',
+          description: 'Hesap ve sistem ayarları',
+          icon: <Settings className="h-4 w-4" />,
+          action: () => navigate('/app/settings'),
+          keywords: ['settings', 'config', 'ayarlar', 'tercih', 'yapılandırma'],
+          category: 'navigation',
+          shortcut: 'G S',
+        },
+        // Hızlı İşlemler
         {
           id: 'action-new-reservation',
           label: 'Yeni Rezervasyon',
-          description: 'Manuel rezervasyon oluştur',
+          description: 'Hızlı rezervasyon oluştur',
           icon: <Plus className="h-4 w-4" />,
           action: () => navigate('/app/reservations?action=new'),
-          keywords: ['new', 'create', 'yeni', 'ekle', 'oluştur'],
+          keywords: ['new', 'create', 'yeni', 'ekle', 'oluştur', 'rezervasyon'],
+          category: 'action',
+        },
+        {
+          id: 'action-new-location',
+          label: 'Yeni Lokasyon',
+          description: 'Lokasyon ekle',
+          icon: <Plus className="h-4 w-4" />,
+          action: () => navigate('/app/locations?action=new'),
+          keywords: ['new', 'create', 'yeni', 'ekle', 'lokasyon'],
+          category: 'action',
+        },
+        {
+          id: 'action-new-locker',
+          label: 'Yeni Depo',
+          description: 'Depo ekle',
+          icon: <Plus className="h-4 w-4" />,
+          action: () => navigate('/app/lockers?action=new'),
+          keywords: ['new', 'create', 'yeni', 'ekle', 'depo'],
+          category: 'action',
+        },
+        {
+          id: 'action-new-staff',
+          label: 'Yeni Çalışan',
+          description: 'Personel ekle',
+          icon: <Plus className="h-4 w-4" />,
+          action: () => navigate('/app/staff?action=new'),
+          keywords: ['new', 'create', 'yeni', 'ekle', 'çalışan', 'personel'],
           category: 'action',
         },
       );
@@ -142,32 +189,129 @@ export function CommandPalette({
 
     if (userRole === 'admin') {
       baseCommands.push(
+        // Navigasyon
         {
           id: 'nav-admin',
-          label: 'Admin Panel',
-          description: 'Yönetim paneli',
-          icon: <Shield className="h-4 w-4" />,
+          label: 'Genel Bakış',
+          description: 'Admin ana sayfası',
+          icon: <Home className="h-4 w-4" />,
           action: () => navigate('/admin'),
-          keywords: ['admin', 'yönetim', 'panel'],
+          keywords: ['admin', 'yönetim', 'panel', 'dashboard', 'genel', 'bakış'],
+          category: 'navigation',
+          shortcut: 'G H',
+        },
+        {
+          id: 'nav-admin-reports',
+          label: 'Raporlar ve Analiz',
+          description: 'Sistem raporları ve analizler',
+          icon: <BarChart3 className="h-4 w-4" />,
+          action: () => navigate('/admin/reports'),
+          keywords: ['rapor', 'analiz', 'istatistik', 'report', 'analytics'],
+          category: 'navigation',
+          shortcut: 'G R',
+        },
+        {
+          id: 'nav-admin-invoice',
+          label: 'Fatura Oluştur',
+          description: 'Fatura oluşturma',
+          icon: <Receipt className="h-4 w-4" />,
+          action: () => navigate('/admin/invoice'),
+          keywords: ['fatura', 'invoice', 'oluştur', 'create'],
           category: 'navigation',
         },
         {
           id: 'nav-tenants',
           label: 'Oteller',
-          description: 'Tenant yönetimi',
+          description: 'Otel/tenant yönetimi',
           icon: <Building2 className="h-4 w-4" />,
           action: () => navigate('/admin/tenants'),
-          keywords: ['tenant', 'hotel', 'otel', 'müşteri'],
+          keywords: ['tenant', 'hotel', 'otel', 'müşteri', 'partner'],
+          category: 'navigation',
+          shortcut: 'G O',
+        },
+        {
+          id: 'nav-admin-revenue',
+          label: 'Global Gelir',
+          description: 'Tüm sistem gelir raporları',
+          icon: <Globe className="h-4 w-4" />,
+          action: () => navigate('/admin/revenue'),
+          keywords: ['gelir', 'revenue', 'global', 'kazanç', 'income'],
           category: 'navigation',
         },
         {
+          id: 'nav-admin-settlements',
+          label: 'Hakedişler',
+          description: 'Partner hakedişleri',
+          icon: <ClipboardList className="h-4 w-4" />,
+          action: () => navigate('/admin/settlements'),
+          keywords: ['hakediş', 'settlement', 'ödeme', 'partner'],
+          category: 'navigation',
+        },
+        {
+          id: 'nav-admin-transfers',
+          label: 'Transferler (MagicPay)',
+          description: 'Ödeme transferleri',
+          icon: <RefreshCw className="h-4 w-4" />,
+          action: () => navigate('/admin/transfers'),
+          keywords: ['transfer', 'magicpay', 'ödeme', 'payment'],
+          category: 'navigation',
+        },
+        {
+          id: 'nav-admin-users',
+          label: 'Kullanıcılar',
+          description: 'Sistem kullanıcı yönetimi',
+          icon: <Users className="h-4 w-4" />,
+          action: () => navigate('/admin/users'),
+          keywords: ['kullanıcı', 'user', 'admin', 'yönetici'],
+          category: 'navigation',
+          shortcut: 'G U',
+        },
+        {
+          id: 'nav-admin-tickets',
+          label: 'İletişim / Ticket',
+          description: 'Destek talepleri',
+          icon: <MessageSquare className="h-4 w-4" />,
+          action: () => navigate('/admin/tickets'),
+          keywords: ['ticket', 'destek', 'iletişim', 'mesaj', 'yardım'],
+          category: 'navigation',
+        },
+        {
+          id: 'nav-admin-settings',
+          label: 'Sistem Ayarları',
+          description: 'Genel sistem ayarları',
+          icon: <Settings className="h-4 w-4" />,
+          action: () => navigate('/admin/settings'),
+          keywords: ['ayar', 'settings', 'sistem', 'yapılandırma', 'config'],
+          category: 'navigation',
+          shortcut: 'G S',
+        },
+        {
           id: 'nav-audit',
-          label: 'Audit Logları',
-          description: 'Sistem logları',
+          label: 'Audit Log',
+          description: 'Sistem logları ve işlem geçmişi',
           icon: <FileText className="h-4 w-4" />,
           action: () => navigate('/admin/audit'),
-          keywords: ['audit', 'log', 'kayıt', 'iz'],
+          keywords: ['audit', 'log', 'kayıt', 'iz', 'geçmiş', 'tarihçe'],
           category: 'navigation',
+        },
+        // Hızlı İşlemler
+        {
+          id: 'action-new-tenant',
+          label: 'Yeni Otel Ekle',
+          description: 'Yeni otel/partner ekle',
+          icon: <Plus className="h-4 w-4" />,
+          action: () => navigate('/admin/tenants/new'),
+          keywords: ['new', 'create', 'yeni', 'ekle', 'otel', 'tenant'],
+          category: 'action',
+        },
+        {
+          id: 'action-new-user',
+          label: 'Yeni Kullanıcı Ekle',
+          description: 'Yeni sistem kullanıcısı ekle',
+          icon: <Plus className="h-4 w-4" />,
+          action: () => navigate('/admin/users/new'),
+          keywords: ['new', 'create', 'yeni', 'ekle', 'kullanıcı', 'user'],
+          category: 'action',
         },
       );
     }
@@ -324,7 +468,7 @@ export function CommandPalette({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ne yapmak istiyorsunuz?"
+                placeholder="Sayfa veya işlem ara..."
                 style={{
                   flex: 1,
                   border: 'none',
@@ -447,6 +591,18 @@ export function CommandPalette({
                                 </div>
                               )}
                             </div>
+                            {cmd.shortcut && (
+                              <kbd style={{
+                                padding: '2px 6px',
+                                backgroundColor: isSelected ? 'var(--primary-100)' : 'var(--bg-tertiary)',
+                                color: isSelected ? 'var(--primary)' : 'var(--text-tertiary)',
+                                borderRadius: '4px',
+                                fontSize: '0.65rem',
+                                fontFamily: 'inherit',
+                              }}>
+                                {cmd.shortcut}
+                              </kbd>
+                            )}
                             {isSelected && (
                               <div style={{
                                 fontSize: '0.7rem',
@@ -516,4 +672,3 @@ export function useCommandPalette() {
     toggle: () => setIsOpen(prev => !prev),
   };
 }
-
