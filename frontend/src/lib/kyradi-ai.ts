@@ -33,6 +33,8 @@ export interface UseKyradiAIParams {
   apiBase: string;
   tenantId?: string;
   userId: string;
+  userRole?: string;
+  panelType?: "partner" | "admin";
   locale?: string;
   token?: string;
   useAssistantEndpoint?: boolean;
@@ -82,6 +84,8 @@ export function useKyradiAI({
   apiBase,
   tenantId,
   userId,
+  userRole,
+  panelType,
   locale = "tr-TR",
   token,
   useAssistantEndpoint = true,

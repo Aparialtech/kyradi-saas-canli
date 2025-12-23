@@ -33,6 +33,8 @@ interface KyradiChatProps {
   apiBase: string;
   tenantId?: string;
   userId: string;
+  userRole?: string;
+  panelType?: "partner" | "admin";
   locale?: string;
   theme?: ChatTheme;
   useRag?: boolean;
@@ -384,6 +386,8 @@ export function KyradiChat({
   apiBase,
   tenantId,
   userId,
+  userRole,
+  panelType,
   locale = "tr-TR",
   theme = "light",
   useRag = false,
@@ -393,6 +397,8 @@ export function KyradiChat({
     apiBase,
     tenantId,
     userId,
+    userRole,
+    panelType,
     locale,
     useAssistantEndpoint,
   });

@@ -55,6 +55,9 @@ class ChatRequest(BaseModel):
     message: Optional[str] = Field(default=None, max_length=4000)  # Alias for prompt
     question: Optional[str] = Field(default=None, max_length=4000)  # Another alias
     tenant_id: Optional[str] = Field(default=None)  # For context
+    user_id: Optional[str] = Field(default=None)  # User ID for context
+    user_role: Optional[str] = Field(default=None)  # User role (tenant_admin, staff, etc.)
+    panel_type: Optional[str] = Field(default=None)  # Panel type (partner, admin)
     locale: Optional[str] = Field(default="tr-TR")
     
     @property
@@ -244,7 +247,30 @@ async def ai_assistant(payload: ChatRequest) -> ChatResponse:
                 request_id=request_id,
             )
         
-        result = await provider.chat(prompt)
+        # Build user context for better responses
+        user_context = []
+        if payload.panel_type:
+            user_context.append(f"Kullanıcı şu anda {payload.panel_type} panelinde.")
+        if payload.user_role:
+            role_names = {
+                "tenant_admin": "Otel Yöneticisi",
+                "hotel_manager": "Otel Müdürü",
+                "staff": "Personel",
+                "accounting": "Muhasebe",
+                "storage_operator": "Depo Görevlisi",
+                "super_admin": "Süper Admin",
+                "support": "Destek",
+            }
+            role_name = role_names.get(payload.user_role, payload.user_role)
+            user_context.append(f"Kullanıcının rolü: {role_name}")
+        
+        # Add context to prompt if available
+        enhanced_prompt = prompt
+        if user_context:
+            context_text = "\n".join(user_context)
+            enhanced_prompt = f"{context_text}\n\nKullanıcı sorusu: {prompt}"
+        
+        result = await provider.chat(enhanced_prompt)
         latency_ms = (time.perf_counter() - start_time) * 1000
         
         return ChatResponse(

@@ -122,7 +122,16 @@ export function FloatingChatWidget() {
 
   const tenantId = user?.tenant_id;
   const userId = user?.id;
+  const userRole = user?.role;
   const isEligible = !isLoading && Boolean(userId);
+  
+  // Determine panel type from pathname
+  const panelType = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith("/admin")) return "admin";
+    if (path.startsWith("/app")) return "partner";
+    return undefined;
+  }, [location.pathname]);
 
   const ariaLabel = useMemo(() => (open ? t("chat.close") : t("chat.open")), [open, t]);
 
@@ -188,6 +197,8 @@ export function FloatingChatWidget() {
             apiBase={env.API_URL}
             tenantId={tenantId || undefined}
             userId={userId}
+            userRole={userRole}
+            panelType={panelType}
             locale={locale}
             theme="light"
             useAssistantEndpoint={true}
