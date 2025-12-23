@@ -31,9 +31,19 @@ export function AdminReportsOverview() {
   // Calculate commission stats
   const commissionStats = useMemo(() => {
     const transfers = transfersQuery.data?.data || [];
-    const pendingCount = transfers.filter((t) => t?.status === "pending").length;
-    const pendingAmount = transfers.filter((t) => t?.status === "pending").reduce((sum, t) => sum + (t?.gross_amount || 0), 0);
-    const completedAmount = transfers.filter((t) => t?.status === "completed").reduce((sum, t) => sum + (t?.gross_amount || 0), 0);
+    const pendingTransfers = transfers.filter((t) => t?.status === "pending");
+    const completedTransfers = transfers.filter((t) => t?.status === "completed");
+    
+    const pendingCount = pendingTransfers.length;
+    const pendingAmount = pendingTransfers.reduce((sum, t) => {
+      const amount = Number(t?.gross_amount) || 0;
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+    const completedAmount = completedTransfers.reduce((sum, t) => {
+      const amount = Number(t?.gross_amount) || 0;
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+    
     return { pendingCount, pendingAmount, completedAmount };
   }, [transfersQuery.data?.data]);
 
@@ -45,21 +55,23 @@ export function AdminReportsOverview() {
     return map;
   }, [tenantsQuery.data]);
 
-  const formatCurrency = (minor: number) => {
+  const formatCurrency = (minor: number | null | undefined) => {
+    const safeValue = Number(minor) || 0;
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
       currency: "TRY",
       minimumFractionDigits: 2,
-    }).format(minor / 100);
+    }).format(safeValue / 100);
   };
 
   // For decimal values (transfer amounts are already in TL, not minor)
-  const formatCurrencyDecimal = (value: number) => {
+  const formatCurrencyDecimal = (value: number | null | undefined) => {
+    const safeValue = Number(value) || 0;
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
       currency: "TRY",
       minimumFractionDigits: 2,
-    }).format(value);
+    }).format(safeValue);
   };
 
   return (

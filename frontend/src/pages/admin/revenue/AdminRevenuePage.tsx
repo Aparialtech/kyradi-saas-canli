@@ -92,12 +92,13 @@ export function AdminRevenuePage() {
     return calculatePaginationMeta(allSettlements.length, page, pageSize);
   }, [allSettlements.length, page, pageSize]);
 
-  const formatCurrency = (minor: number) => {
+  const formatCurrency = (minor: number | null | undefined) => {
+    const safeValue = Number(minor) || 0;
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
       currency: "TRY",
       minimumFractionDigits: 2,
-    }).format(minor / 100);
+    }).format(safeValue / 100);
   };
 
   return (

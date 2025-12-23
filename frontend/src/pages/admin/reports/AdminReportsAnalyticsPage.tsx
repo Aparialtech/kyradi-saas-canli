@@ -96,12 +96,13 @@ export function AdminReportsAnalyticsPage() {
     return { totalRevenue, totalCommission };
   }, [trendsQuery.data]);
 
-  const formatCurrency = (minor: number) => {
+  const formatCurrency = (minor: number | null | undefined) => {
+    const safeValue = Number(minor) || 0;
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
       currency: "TRY",
       minimumFractionDigits: 2,
-    }).format(minor / 100);
+    }).format(safeValue / 100);
   };
 
   const handleExport = async () => {
