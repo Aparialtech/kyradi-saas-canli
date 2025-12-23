@@ -3,10 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Download, FileText, Calendar, Filter, CheckCircle2 } from "../../lib/lucide";
 import { ModernCard } from "../../components/ui/ModernCard";
 import { ModernButton } from "../../components/ui/ModernButton";
-import { useTranslation } from "../../hooks/useTranslation";
 
 export function ExportGuidePage() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
