@@ -473,8 +473,8 @@ async def reset_password(
     reset_token.is_used = True
     reset_token.used_at = datetime.now(timezone.utc)
     
-    # Set flag to require phone verification on next login
-    user.require_phone_verification_on_next_login = True
+    # Clear any existing phone verification requirement
+    user.require_phone_verification_on_next_login = False
     
     # Log in development mode (without password)
     is_development = settings.environment.lower() in {"local", "dev", "development"}
@@ -494,6 +494,6 @@ async def reset_password(
     await session.commit()
     
     return ResetPasswordResponse(
-        message="Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yaptığınızda telefonunuza bir doğrulama kodu gönderilecek.",
+        message="Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz.",
         success=True,
     )
