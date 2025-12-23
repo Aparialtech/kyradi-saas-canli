@@ -135,6 +135,26 @@ async def startup_event() -> None:
     if settings.environment.lower() in {"local", "dev"}:
         await init_db()
     
+    # Log Email configuration status (debug)
+    import os
+    raw_email_provider = os.environ.get("EMAIL_PROVIDER", "NOT_SET")
+    raw_resend_key = os.environ.get("RESEND_API_KEY", "NOT_SET")
+    logger.info(f"📧 Email config debug:")
+    logger.info(f"   - Raw EMAIL_PROVIDER env: '{raw_email_provider}'")
+    logger.info(f"   - Raw RESEND_API_KEY env: {'SET ('+raw_resend_key[:10]+'...)' if raw_resend_key != 'NOT_SET' else 'NOT_SET'}")
+    logger.info(f"   - Settings email_provider: '{settings.email_provider}'")
+    
+    if settings.email_provider.lower() == "resend":
+        if settings.resend_api_key:
+            logger.info(f"✅ Resend API key configured (starts with: {settings.resend_api_key[:10]}...)")
+        else:
+            logger.warning("⚠️ EMAIL_PROVIDER=resend but RESEND_API_KEY is missing!")
+    elif settings.email_provider.lower() == "smtp":
+        logger.info(f"📧 SMTP: {settings.smtp_host}:{settings.smtp_port}")
+    elif settings.email_provider.lower() == "log":
+        logger.warning("⚠️ Email provider is 'log' - emails will NOT be sent, only logged!")
+        logger.warning("   To fix: Set EMAIL_PROVIDER=resend and RESEND_API_KEY in Railway")
+    
     # Log AI configuration status
     # OpenAI API key'i değiştirmek için Railway'de OPENAI_API_KEY env değişkenini güncellemeniz yeterlidir.
     # Kod içinde hiçbir yerde key hard-coded değildir.
