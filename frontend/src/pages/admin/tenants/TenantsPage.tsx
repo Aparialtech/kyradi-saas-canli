@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, Edit, Building2, Loader2, AlertCircle, Users, UserPlus, Settings } from "../../../lib/lucide";
+import { Eye, Edit, Building2, Loader2, AlertCircle, Users, Settings } from "../../../lib/lucide";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";

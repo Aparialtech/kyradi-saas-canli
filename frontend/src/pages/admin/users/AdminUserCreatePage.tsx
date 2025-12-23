@@ -8,7 +8,6 @@ import {
   Save, 
   Mail, 
   Phone,
-  Building2,
   Shield,
   Loader2,
   Eye,
@@ -47,7 +46,7 @@ function generatePassword(length = 12): string {
 }
 
 export function AdminUserCreatePage() {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();

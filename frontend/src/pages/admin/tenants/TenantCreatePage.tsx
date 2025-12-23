@@ -12,7 +12,7 @@ import {
   Mail, 
   Globe,
   Palette,
-  Image as ImageIcon,
+  ImageIcon,
   Loader2
 } from "../../../lib/lucide";
 import { ModernCard } from "../../../components/ui/ModernCard";
@@ -55,7 +55,7 @@ const dayLabels: Record<string, string> = {
 };
 
 export function TenantCreatePage() {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
