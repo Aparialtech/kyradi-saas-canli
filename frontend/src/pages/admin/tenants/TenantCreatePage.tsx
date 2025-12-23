@@ -24,15 +24,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { getErrorMessage } from "../../../lib/httpError";
 import { useTranslation } from "../../../hooks/useTranslation";
 
-interface WorkingHours {
-  monday: { open: string; close: string; closed: boolean };
-  tuesday: { open: string; close: string; closed: boolean };
-  wednesday: { open: string; close: string; closed: boolean };
-  thursday: { open: string; close: string; closed: boolean };
-  friday: { open: string; close: string; closed: boolean };
-  saturday: { open: string; close: string; closed: boolean };
-  sunday: { open: string; close: string; closed: boolean };
-}
+type WorkingHours = Record<string, { open: string; close: string; closed: boolean }>;
 
 const defaultWorkingHours: WorkingHours = {
   monday: { open: "09:00", close: "18:00", closed: false },
@@ -161,7 +153,7 @@ export function TenantCreatePage() {
     setSlug(generatedSlug);
   };
 
-  const updateWorkingHours = (day: keyof WorkingHours, field: string, value: string | boolean) => {
+  const updateWorkingHours = (day: string, field: string, value: string | boolean) => {
     setWorkingHours((prev) => ({
       ...prev,
       [day]: {
@@ -476,7 +468,7 @@ export function TenantCreatePage() {
               Çalışma Saatleri
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-              {(Object.keys(workingHours) as Array<keyof WorkingHours>).map((day) => (
+              {Object.keys(workingHours).map((day) => (
                 <div
                   key={day}
                   style={{
