@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
@@ -68,6 +69,7 @@ const formatDateTime = (value?: string | null) => {
 
 export function TenantsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { messages, push } = useToast();
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
@@ -225,14 +227,10 @@ export function TenantsPage() {
               node: (
                 <ModernButton
                   variant="primary"
-                  onClick={() => {
-                    setEditingTenant(null);
-                    reset({ slug: "", name: "", plan: "standard", is_active: true, brand_color: "", logo_url: "" });
-                    setShowForm(true);
-                  }}
-                  leftIcon={<UserPlus className="h-4 w-4" />}
+                  onClick={() => navigate("/admin/tenants/new")}
+                  leftIcon={<Building2 className="h-4 w-4" />}
                 >
-                  {t("common.create")}
+                  Yeni Otel Ekle
                 </ModernButton>
               ),
             },

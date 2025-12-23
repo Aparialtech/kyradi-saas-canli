@@ -4,6 +4,7 @@ import { RequireAuth } from "../components/auth/RequireAuth";
 import {
   AdminDashboard,
   AdminTenantsPage,
+  AdminTenantCreatePage,
   AdminReportsOverview,
   AdminReportsAnalyticsPage,
   AdminInvoicePage,
@@ -11,6 +12,7 @@ import {
   AdminRevenuePage,
   AdminSettlementsPage,
   AdminUsersPage,
+  AdminUserCreatePage,
   AdminSettingsPage,
   AdminTransfersPage,
 } from "../pages/admin/AdminDashboard";
@@ -69,10 +71,12 @@ export function AppRouter() {
           <Route path="reports" element={<AdminReportsAnalyticsPage />} />
           <Route path="invoice" element={<AdminInvoicePage />} />
           <Route path="tenants" element={<AdminTenantsPage />} />
+          <Route path="tenants/new" element={<AdminTenantCreatePage />} />
           <Route path="revenue" element={<AdminRevenuePage />} />
           <Route path="settlements" element={<AdminSettlementsPage />} />
           <Route path="transfers" element={<AdminTransfersPage />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/new" element={<AdminUserCreatePage />} />
           <Route path="tickets" element={<AdminTicketsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key, Trash2, Copy, Eye } from "../../../lib/lucide";
@@ -42,6 +43,7 @@ const userRoleLabels: Record<UserRole, string> = {
 
 export function AdminUsersPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { messages, push } = useToast();
   const queryClient = useQueryClient();
   const confirmDialog = useConfirm();
@@ -303,13 +305,10 @@ export function AdminUsersPage() {
         </div>
         <ModernButton
           variant="primary"
-          onClick={() => {
-            setNewUser({ email: "", password: "", full_name: "", phone_number: "", role: "staff", is_active: true, tenant_id: "", auto_generate_password: false });
-            setShowCreateModal(true);
-          }}
+          onClick={() => navigate("/admin/users/new")}
           leftIcon={<UserPlus className="h-4 w-4" />}
         >
-          Yeni Kullanıcı
+          Yeni Kullanıcı Ekle
         </ModernButton>
       </motion.div>
 

@@ -30,10 +30,12 @@ export { AdminReportsOverview } from "./reports/AdminReportsOverview";
 export { AdminReportsAnalyticsPage } from "./reports/AdminReportsAnalyticsPage";
 export { AdminInvoicePage } from "./invoice/AdminInvoicePage";
 export { TenantsPage as AdminTenantsPage } from "./tenants/TenantsPage";
+export { TenantCreatePage as AdminTenantCreatePage } from "./tenants/TenantCreatePage";
 export { AdminAuditLogsPage as AdminAuditPage } from "./audit/AdminAuditLogsPage";
 export { AdminRevenuePage } from "./revenue/AdminRevenuePage";
 export { AdminSettlementsPage } from "./settlements/AdminSettlementsPage";
 export { AdminUsersPage } from "./users/AdminUsersPage";
+export { AdminUserCreatePage } from "./users/AdminUserCreatePage";
 export { AdminSettingsPage } from "./settings/AdminSettingsPage";
 export { AdminTransfersPage } from "./transfers/AdminTransfersPage";
 
