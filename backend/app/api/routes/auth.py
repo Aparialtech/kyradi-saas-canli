@@ -70,52 +70,9 @@ async def login(
             logger.warning(f"Login attempt for inactive tenant: {tenant.id} ({tenant.slug})")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu otel hesabı aktif değil. Lütfen yöneticinizle iletişime geçin.")
 
-    # Check if phone verification is required (first login after password reset)
+    # Clear any phone verification flag (feature disabled)
     if user.require_phone_verification_on_next_login:
-        # Check if user has phone number
-        if not user.phone_number:
-            logger.warning(f"User {user.email} requires phone verification but has no phone number")
-            # For now, allow login but log warning
-            # In production, you might want to require phone number before allowing password reset
-            user.require_phone_verification_on_next_login = False
-            user.last_login_at = datetime.now(timezone.utc)
-            await session.commit()
-            token = create_access_token(
-                subject=user.id,
-                tenant_id=token_tenant_id,
-                role=user.role,
-            )
-            return TokenResponse(access_token=token)
-        
-        # Create phone verification code
-        phone_verification = PhoneLoginVerification.create_verification(
-            user_id=user.id,
-            tenant_id=user.tenant_id,
-            expires_in_minutes=10,
-            max_attempts=5,
-        )
-        session.add(phone_verification)
-        await session.flush()
-        
-        # Send SMS
-        try:
-            await sms_service.send_login_verification_code(
-                to_phone=user.phone_number,
-                code=phone_verification.code,
-                locale="tr-TR",  # TODO: Get from request
-            )
-        except Exception as e:
-            logger.error(f"Failed to send login verification SMS to {user.phone_number}: {e}", exc_info=True)
-            # Don't fail the request, but log the error
-        
-        await session.commit()
-        
-        # Return verification required response
-        return TokenResponse(
-            access_token=None,
-            status="phone_verification_required",
-            verification_id=phone_verification.id,
-        )
+        user.require_phone_verification_on_next_login = False
     
     # Normal login flow
     user.last_login_at = datetime.now(timezone.utc)
