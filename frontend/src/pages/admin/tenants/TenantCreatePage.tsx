@@ -56,7 +56,6 @@ export function TenantCreatePage() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [plan, setPlan] = useState("standard");
-  const [isActive, setIsActive] = useState(true);
   const [brandColor, setBrandColor] = useState("#00a389");
   const [logoUrl, setLogoUrl] = useState("");
 
@@ -114,7 +113,7 @@ export function TenantCreatePage() {
       name: name.trim(),
       slug: slug.trim().toLowerCase(),
       plan,
-      is_active: isActive,
+      is_active: true,
       brand_color: brandColor || undefined,
       logo_url: logoUrl || undefined,
       legal_name: legalName || undefined,
@@ -297,16 +296,6 @@ export function TenantCreatePage() {
                   <option value="premium">Premium</option>
                   <option value="enterprise">Enterprise</option>
                 </select>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  style={{ width: "18px", height: "18px" }}
-                />
-                <label htmlFor="isActive" style={{ fontWeight: "var(--font-medium)" }}>Aktif</label>
               </div>
             </div>
           </ModernCard>
