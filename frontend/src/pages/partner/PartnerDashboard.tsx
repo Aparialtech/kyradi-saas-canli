@@ -35,7 +35,6 @@ import { Input, Textarea } from "../../components/ui/Input";
 import { PageHeader } from "../../components/common/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import buttonStyles from "../../components/ui/Button/Button.module.css";
 import { ReservationTrendChart } from "../../components/charts/ReservationTrendChart";
 import { RevenueDonutChart } from "../../components/charts/RevenueDonutChart";
 import { OccupancyBarChart } from "../../components/charts/OccupancyBarChart";
@@ -102,14 +101,12 @@ export function PartnerOverview() {
   const { messages, push } = useToast();
   const { user } = useAuth();
   const { t, locale } = useTranslation();
+  const navigate = useNavigate();
   const [supportModalOpen, setSupportModalOpen] = useState(false);
   const [supportTopic, setSupportTopic] = useState("plan_upgrade");
   const [supportMessage, setSupportMessage] = useState("");
   const [supportContact, setSupportContact] = useState(user?.email ?? "");
-  const exportGuideUrl = t("partner.warning.export.href");
-  const exportGuideHref = exportGuideUrl?.startsWith("http")
-    ? exportGuideUrl
-    : "https://docs.kyradi.com/guide/report-export";
+  const exportGuideHref = "/app/export-guide";
   
   const summaryQuery = useQuery<PartnerSummary, Error>({
     queryKey: ["partner", "summary"],
@@ -336,15 +333,12 @@ export function PartnerOverview() {
             {
               key: "docs",
               node: (
-                <a
-                  href={exportGuideHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${buttonStyles.button} ${buttonStyles["button--ghost"]} ${buttonStyles["button--md"]}`}
-                  style={{ textDecoration: "none" }}
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate(exportGuideHref)}
                 >
                   {t("partner.warning.export.label")}
-                </a>
+                </Button>
               ),
             },
           ]}
@@ -922,3 +916,4 @@ export { UsersPage as PartnerUsersPage } from "./users/UsersPage";
 export { DemoFlowPage } from "./DemoFlowPage";
 export { DemoPaymentFlowPage } from "./DemoPaymentFlowPage";
 export { PartnerSettingsPage } from "./settings/PartnerSettingsPage";
+export { ExportGuidePage } from "./ExportGuidePage";

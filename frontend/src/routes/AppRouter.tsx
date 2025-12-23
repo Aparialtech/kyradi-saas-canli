@@ -38,6 +38,7 @@ import {
   DemoFlowPage,
   DemoPaymentFlowPage,
   PartnerSettingsPage,
+  ExportGuidePage,
 } from "../pages/partner/PartnerDashboard";
 import { LocationEditPage } from "../pages/partner/locations/LocationEditPage";
 import { UserEditPage } from "../pages/partner/users/UserEditPage";
@@ -91,6 +92,7 @@ export function AppRouter() {
       >
         <Route path="/app" element={<PartnerDashboard />}>
           <Route index element={<PartnerOverview />} />
+          <Route path="export-guide" element={<ExportGuidePage />} />
           <Route path="locations" element={<PartnerLocationsPlaceholder />} />
           <Route path="locations/:id/edit" element={<LocationEditPage />} />
           <Route path="locations/new" element={<LocationEditPage />} />
