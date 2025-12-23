@@ -35,6 +35,7 @@ import { Input, Textarea } from "../../components/ui/Input";
 import { PageHeader } from "../../components/common/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import buttonStyles from "../../components/ui/Button/Button.module.css";
 import { ReservationTrendChart } from "../../components/charts/ReservationTrendChart";
 import { RevenueDonutChart } from "../../components/charts/RevenueDonutChart";
 import { OccupancyBarChart } from "../../components/charts/OccupancyBarChart";
@@ -335,12 +336,15 @@ export function PartnerOverview() {
             {
               key: "docs",
               node: (
-                <Button
-                  variant="ghost"
-                  onClick={() => window.open(exportGuideHref, "_blank", "noopener,noreferrer")}
+                <a
+                  href={exportGuideHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${buttonStyles.button} ${buttonStyles["button--ghost"]} ${buttonStyles["button--md"]}`}
+                  style={{ textDecoration: "none" }}
                 >
                   {t("partner.warning.export.label")}
-                </Button>
+                </a>
               ),
             },
           ]}
