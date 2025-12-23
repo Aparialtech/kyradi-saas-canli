@@ -330,7 +330,7 @@ export function useKyradiAI({
         throw err;
       }
     },
-    [endpoint, tenantId, userId, locale, token, useAssistantEndpoint],
+    [endpoint, tenantId, userId, userRole, panelType, locale, token, useAssistantEndpoint],
   );
 
   // Retry last failed request

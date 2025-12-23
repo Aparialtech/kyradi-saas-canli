@@ -9,18 +9,34 @@ import { MessageSquare, X } from "../lib/lucide";
 
 // Page context descriptions for AI assistant
 const pageContextMap: Record<string, { page: string; description: string; entityType?: string }> = {
+  // Partner Panel
   "/app": { page: "dashboard", description: "Ana panel - genel istatistikler ve özet" },
   "/app/locations": { page: "locations", description: "Lokasyonlar listesi", entityType: "location" },
   "/app/lockers": { page: "warehouses", description: "Depolar/Dolaplar listesi", entityType: "warehouse" },
   "/app/reservations": { page: "reservations", description: "Rezervasyonlar listesi", entityType: "reservation" },
-  "/app/qr-verification": { page: "qr-verification", description: "QR kod doğrulama sayfası" },
-  "/app/revenue-report": { page: "reports", description: "Gelir raporları ve analizler" },
+  "/app/qr": { page: "qr-verification", description: "QR kod doğrulama sayfası" },
+  "/app/reports": { page: "reports", description: "Gelir raporları ve analizler" },
+  "/app/revenue": { page: "revenue", description: "Gelir yönetimi" },
   "/app/settlements": { page: "settlements", description: "Hakedişler ve mutabakat" },
+  "/app/transfers": { page: "transfers", description: "Komisyon ödemeleri" },
   "/app/users": { page: "users", description: "Kullanıcı yönetimi", entityType: "user" },
   "/app/staff": { page: "staff", description: "Çalışan yönetimi", entityType: "staff" },
   "/app/pricing": { page: "pricing", description: "Ücretlendirme kuralları", entityType: "pricing" },
   "/app/tickets": { page: "tickets", description: "Destek talepleri / İletişim", entityType: "ticket" },
   "/app/settings": { page: "settings", description: "Hesap ve sistem ayarları" },
+  "/app/export-guide": { page: "export-guide", description: "Export rehberi" },
+  // Admin Panel
+  "/admin": { page: "admin-dashboard", description: "Admin ana panel - sistem geneli istatistikler" },
+  "/admin/reports": { page: "admin-reports", description: "Sistem raporları ve analizler" },
+  "/admin/invoice": { page: "admin-invoice", description: "Fatura oluşturma" },
+  "/admin/tenants": { page: "admin-tenants", description: "Otel/tenant yönetimi", entityType: "tenant" },
+  "/admin/revenue": { page: "admin-revenue", description: "Global gelir raporları" },
+  "/admin/settlements": { page: "admin-settlements", description: "Partner hakedişleri" },
+  "/admin/transfers": { page: "admin-transfers", description: "MagicPay transferleri" },
+  "/admin/users": { page: "admin-users", description: "Sistem kullanıcı yönetimi", entityType: "user" },
+  "/admin/tickets": { page: "admin-tickets", description: "Destek talepleri yönetimi", entityType: "ticket" },
+  "/admin/settings": { page: "admin-settings", description: "Sistem ayarları" },
+  "/admin/audit": { page: "admin-audit", description: "Sistem logları ve audit kayıtları" },
 };
 
 const floatingStyles = `
@@ -148,11 +164,11 @@ export function FloatingChatWidget() {
       };
     }
     
-    // Check for edit/detail pages with ID
-    const editMatch = path.match(/^\/app\/(\w+)\/([^/]+)\/(edit|new)$/);
+    // Check for edit/detail pages with ID (both /app and /admin)
+    const editMatch = path.match(/^\/(app|admin)\/(\w+)\/([^/]+)\/(edit|new)$/);
     if (editMatch) {
-      const [, section, entityId, action] = editMatch;
-      const baseContext = pageContextMap[`/app/${section}`];
+      const [, panel, section, entityId, action] = editMatch;
+      const baseContext = pageContextMap[`/${panel}/${section}`];
       return {
         currentPage: `${section}-${action}`,
         entityId: action === "new" ? undefined : entityId,
@@ -166,7 +182,7 @@ export function FloatingChatWidget() {
     
     // Partial match for parent routes
     for (const [key, value] of Object.entries(pageContextMap)) {
-      if (path.startsWith(key) && key !== "/app") {
+      if (path.startsWith(key) && key !== "/app" && key !== "/admin") {
         return {
           currentPage: value.page,
           entityType: value.entityType,
