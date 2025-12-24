@@ -222,7 +222,7 @@ export function TenantEditPage() {
     );
   }
 
-  const tenant = tenantQuery.data.tenant;
+  const tenant = tenantQuery.data;
 
   return (
     <div style={{ padding: "var(--space-6)", maxWidth: "1200px", margin: "0 auto" }}>

@@ -309,15 +309,20 @@ async def update_tenant(
     if metadata_to_update is not None:
         existing_metadata = dict(tenant.metadata_ or {})
         # Deep merge metadata dictionaries
-        if isinstance(metadata_to_update, dict):
-            for key, value in metadata_to_update.items():
+        def deep_merge(target: dict, source: dict) -> dict:
+            """Recursively merge source into target."""
+            for key, value in source.items():
                 if value is not None:
-                    if key in existing_metadata and isinstance(existing_metadata[key], dict) and isinstance(value, dict):
-                        # Deep merge nested dicts (e.g., contact, location)
-                        existing_metadata[key] = {**existing_metadata[key], **value}
+                    if key in target and isinstance(target[key], dict) and isinstance(value, dict):
+                        # Recursively merge nested dicts
+                        target[key] = deep_merge(target[key], value)
                     else:
                         # Replace or add the value
-                        existing_metadata[key] = value
+                        target[key] = value
+            return target
+        
+        if isinstance(metadata_to_update, dict):
+            existing_metadata = deep_merge(existing_metadata, metadata_to_update)
         tenant.metadata_ = existing_metadata if existing_metadata else None
     
     # Update other fields
