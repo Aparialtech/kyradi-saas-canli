@@ -18,6 +18,7 @@ import {
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
+import { GoogleMapPicker } from "../../../components/maps/GoogleMapPicker";
 import { adminTenantService, type TenantUpdatePayload } from "../../../services/admin/tenants";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -69,8 +70,8 @@ export function TenantEditPage() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
+  const [latitude, setLatitude] = useState<number | undefined>(undefined);
+  const [longitude, setLongitude] = useState<number | undefined>(undefined);
 
   // Working hours
   const [workingHours, setWorkingHours] = useState<WorkingHours>(defaultWorkingHours);
@@ -151,8 +152,8 @@ export function TenantEditPage() {
           address: address || undefined,
           city: city || undefined,
           district: district || undefined,
-          latitude: latitude ? parseFloat(latitude) : undefined,
-          longitude: longitude ? parseFloat(longitude) : undefined,
+          latitude: latitude,
+          longitude: longitude,
         },
         working_hours: workingHours,
         tax_number: taxNumber || undefined,
@@ -451,51 +452,50 @@ export function TenantEditPage() {
               Konum Bilgileri
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-              <ModernInput
-                label="Adres"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Tam adres"
-                fullWidth
+              <GoogleMapPicker
+                initialLat={latitude}
+                initialLng={longitude}
+                onLocationSelect={(location) => {
+                  setLatitude(location.lat);
+                  setLongitude(location.lng);
+                  if (location.address) {
+                    setAddress(location.address);
+                  }
+                  if (location.city) {
+                    setCity(location.city);
+                  }
+                  if (location.district) {
+                    setDistrict(location.district);
+                  }
+                }}
               />
+              <div>
+                <ModernInput
+                  label="Adres"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Tam adres (haritadan otomatik doldurulur)"
+                  fullWidth
+                />
+              </div>
               <div style={gridStyle}>
                 <ModernInput
                   label="Şehir"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="İstanbul"
+                  placeholder="İstanbul (haritadan otomatik doldurulur)"
                   fullWidth
                 />
                 <ModernInput
                   label="İlçe"
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
-                  placeholder="Beşiktaş"
-                  fullWidth
-                />
-              </div>
-              <div style={gridStyle}>
-                <ModernInput
-                  label="Enlem (Latitude)"
-                  type="number"
-                  step="any"
-                  value={latitude}
-                  onChange={(e) => setLatitude(e.target.value)}
-                  placeholder="41.0082"
-                  fullWidth
-                />
-                <ModernInput
-                  label="Boylam (Longitude)"
-                  type="number"
-                  step="any"
-                  value={longitude}
-                  onChange={(e) => setLongitude(e.target.value)}
-                  placeholder="28.9784"
+                  placeholder="Beşiktaş (haritadan otomatik doldurulur)"
                   fullWidth
                 />
               </div>
               <p style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", margin: 0 }}>
-                💡 İpucu: Google Maps'ten koordinatları alabilirsiniz
+                💡 Haritadan konum seçtiğinizde adres ve koordinatlar otomatik doldurulacak
               </p>
             </div>
           </ModernCard>
