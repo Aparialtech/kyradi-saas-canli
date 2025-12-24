@@ -316,23 +316,6 @@ export function TenantEditPage() {
                   <option value="enterprise">Enterprise</option>
                 </select>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", paddingTop: "var(--space-2)" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    style={{
-                      width: "20px",
-                      height: "20px",
-                      cursor: "pointer",
-                    }}
-                  />
-                  <span style={{ fontWeight: "var(--font-medium)", fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>
-                    Aktif
-                  </span>
-                </label>
-              </div>
             </div>
           </ModernCard>
 
