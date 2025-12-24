@@ -57,6 +57,7 @@ import {
 } from "../../lib/lucide";
 import { ticketService } from "../../services/partner/tickets";
 import { paymentScheduleService } from "../../services/partner/paymentSchedules";
+import { partnerSettingsService } from "../../services/partner/settings";
 
 const warningActions: Record<
   string,
@@ -752,6 +753,12 @@ export function PartnerDashboard() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  // Get tenant information for header
+  const tenantSettingsQuery = useQuery({
+    queryKey: ["partner", "settings"],
+    queryFn: () => partnerSettingsService.getSettings(),
+  });
+
   // Keyboard shortcut for Quick Actions (Cmd+K / Ctrl+K)
   useQuickActionsShortcut(useCallback(() => setQuickActionsOpen(true), []));
 
@@ -821,7 +828,9 @@ export function PartnerDashboard() {
         >
           {/* Modern Navbar */}
           <ModernNavbar
-            title="Partner Panel"
+            title={tenantSettingsQuery.data?.tenant_name 
+              ? `Partner Panel - ${tenantSettingsQuery.data.tenant_name}` 
+              : "Partner Panel"}
             userName={user?.email ?? 'Partner'}
             userRole="Partner"
             onLogout={logout}
