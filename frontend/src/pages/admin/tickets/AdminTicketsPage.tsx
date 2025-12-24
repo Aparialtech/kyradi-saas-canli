@@ -716,9 +716,28 @@ export function AdminTicketsPage() {
               </div>
               <div style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", textAlign: "right" }}>
                 <div>{formatDate(selectedTicket.created_at)}</div>
-                {selectedTicket.creator_email && (
+                {activeTab === "incoming" ? (
+                  // Gelen mesajlarda gönderen (partner)
+                  selectedTicket.creator_email && (
+                    <div style={{ marginTop: "var(--space-1)" }}>
+                      <div style={{ fontWeight: 600, marginBottom: "var(--space-1)" }}>Gönderen:</div>
+                      {selectedTicket.creator_email}
+                      {selectedTicket.tenant_name && (
+                        <div style={{ fontSize: "var(--text-xs)", marginTop: "2px" }}>
+                          ({selectedTicket.tenant_name})
+                        </div>
+                      )}
+                    </div>
+                  )
+                ) : (
+                  // Gönderilen mesajlarda alıcı (partner/tenant)
                   <div style={{ marginTop: "var(--space-1)" }}>
-                    {selectedTicket.creator_email}
+                    <div style={{ fontWeight: 600, marginBottom: "var(--space-1)" }}>Kime:</div>
+                    {selectedTicket.tenant_name || 
+                     (selectedTicket.target === "partner" ? "Partner" : 
+                      selectedTicket.target === "admin" ? "Admin" : 
+                      selectedTicket.target === "all" ? "Tümü" : 
+                      selectedTicket.target || "—")}
                   </div>
                 )}
               </div>

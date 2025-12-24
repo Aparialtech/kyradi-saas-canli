@@ -625,9 +625,22 @@ export function TicketsPage() {
               </div>
               <div style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", textAlign: "right" }}>
                 <div>{formatDate(selectedTicket.created_at)}</div>
-                {selectedTicket.creator_email && (
+                {activeTab === "incoming" ? (
+                  // Gelen mesajlarda gönderen
+                  selectedTicket.creator_email && (
+                    <div style={{ marginTop: "var(--space-1)" }}>
+                      <div style={{ fontWeight: 600, marginBottom: "var(--space-1)" }}>Gönderen:</div>
+                      {selectedTicket.creator_email}
+                    </div>
+                  )
+                ) : (
+                  // Gönderilen mesajlarda alıcı
                   <div style={{ marginTop: "var(--space-1)" }}>
-                    {selectedTicket.creator_email}
+                    <div style={{ fontWeight: 600, marginBottom: "var(--space-1)" }}>Kime:</div>
+                    {selectedTicket.target === "admin" ? "Admin" : 
+                     selectedTicket.target === "partner" ? "Partner" : 
+                     selectedTicket.target === "all" ? "Tümü" : 
+                     selectedTicket.target || "—"}
                   </div>
                 )}
               </div>
