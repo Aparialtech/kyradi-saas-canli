@@ -94,14 +94,17 @@ export function TenantEditPage() {
 
   // Load tenant data when available
   useEffect(() => {
-    if (tenantQuery.data?.tenant) {
-      const tenant = tenantQuery.data.tenant;
+    if (tenantQuery.data) {
+      const tenant = tenantQuery.data;
       setName(tenant.name || "");
       setPlan(tenant.plan || "standard");
       setIsActive(tenant.is_active ?? true);
       setBrandColor(tenant.brand_color || "#00a389");
       setLogoUrl(tenant.logo_url || "");
       setLegalName(tenant.legal_name || "");
+
+      // Metadata fields will be initialized as empty
+      // Backend will merge with existing metadata on update
 
       // Metadata will be loaded from backend when we update
       // For now, initialize with defaults - backend will merge on update
@@ -203,7 +206,7 @@ export function TenantEditPage() {
     );
   }
 
-  if (tenantQuery.isError || !tenantQuery.data?.tenant) {
+  if (tenantQuery.isError || !tenantQuery.data) {
     return (
       <div style={{ padding: "var(--space-6)", maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ textAlign: "center", padding: "var(--space-16)" }}>
