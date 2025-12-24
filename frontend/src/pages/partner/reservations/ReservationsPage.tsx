@@ -30,7 +30,6 @@ export function ReservationsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterFrom, setFilterFrom] = useState<string>("");
   const [filterTo, setFilterTo] = useState<string>("");
-  const [filterOrigin, setFilterOrigin] = useState<string>("widget");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -79,14 +78,9 @@ export function ReservationsPage() {
 
   const allReservations = reservationsQuery.data ?? [];
   
-  // Filter reservations by search term and origin
+  // Filter reservations by search term
   const filteredReservations = useMemo(() => {
     let filtered = allReservations;
-    
-    // Filter by origin
-    if (filterOrigin) {
-      filtered = filtered.filter((reservation) => reservation.origin === filterOrigin);
-    }
     
     // Filter by search term
     if (searchTerm.trim()) {
@@ -107,7 +101,7 @@ export function ReservationsPage() {
     }
     
     return filtered;
-  }, [allReservations, searchTerm, filterOrigin]);
+  }, [allReservations, searchTerm]);
 
   // Paginate filtered data
   const paginatedReservations = useMemo(() => {
@@ -223,15 +217,26 @@ export function ReservationsPage() {
 
       <ModernCard variant="glass" padding="lg">
         <div style={{ marginBottom: 'var(--space-6)' }}>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
+          <h2 style={{ 
+            fontSize: 'var(--text-xl)', 
+            fontWeight: 'var(--font-bold)', 
+            color: 'var(--text-primary)', 
+            margin: '0 0 var(--space-2) 0',
+            lineHeight: '1.4'
+          }}>
             {t("reservations.listTitle")}
           </h2>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+          <p style={{ 
+            fontSize: 'var(--text-sm)', 
+            color: 'var(--text-tertiary)', 
+            margin: 0,
+            lineHeight: '1.5'
+          }}>
             {t("reservations.listSubtitle")}
           </p>
         </div>
 
-        <div style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-5)' }}>
           <ModernInput
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
@@ -241,54 +246,59 @@ export function ReservationsPage() {
           />
         </div>
 
-        <div style={{ marginBottom: 'var(--space-4)', display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "flex-end" }}>
-          <ModernSelect
-            value={filterStatus}
-            onChange={(event) => setFilterStatus(event.target.value)}
-            options={[
-              { value: "", label: t("reservations.filter.all") },
-              { value: "reserved", label: t("reservations.filter.reserved") },
-              { value: "confirmed", label: "Onaylandı" },
-              { value: "active", label: t("reservations.filter.active") },
-              { value: "completed", label: t("reservations.filter.completed") },
-              { value: "cancelled", label: t("reservations.filter.cancelled") },
-              { value: "no_show", label: t("reservations.filter.noShow") },
-            ]}
-            size="sm"
-          />
-          <ModernSelect
-            value={filterOrigin}
-            onChange={(event) => setFilterOrigin(event.target.value)}
-            options={[
-              { value: "widget", label: "Widget" },
-              { value: "panel", label: "Panel" },
-              { value: "api", label: "API" },
-            ]}
-            size="sm"
-          />
-          <DateField
-            value={filterFrom}
-            onChange={(value) => setFilterFrom(value || "")}
-            placeholder="Başlangıç"
-            size="sm"
-          />
-          <DateField
-            value={filterTo}
-            onChange={(value) => setFilterTo(value || "")}
-            placeholder="Bitiş"
-            size="sm"
-          />
-          <div style={{ marginLeft: 'auto' }}>
-            <ModernButton
-              variant="outline"
+        <div style={{ 
+          marginBottom: 'var(--space-6)', 
+          display: "flex", 
+          gap: "var(--space-3)", 
+          flexWrap: "wrap", 
+          alignItems: "flex-end",
+          justifyContent: "space-between"
+        }}>
+          <div style={{ 
+            display: "flex", 
+            gap: "var(--space-3)", 
+            flexWrap: "wrap", 
+            alignItems: "flex-end",
+            flex: "1 1 auto",
+            minWidth: 0
+          }}>
+            <ModernSelect
+              value={filterStatus}
+              onChange={(event) => setFilterStatus(event.target.value)}
+              options={[
+                { value: "", label: t("reservations.filter.all") },
+                { value: "reserved", label: t("reservations.filter.reserved") },
+                { value: "confirmed", label: "Onaylandı" },
+                { value: "active", label: t("reservations.filter.active") },
+                { value: "completed", label: t("reservations.filter.completed") },
+                { value: "cancelled", label: t("reservations.filter.cancelled") },
+                { value: "no_show", label: t("reservations.filter.noShow") },
+              ]}
               size="sm"
-              onClick={exportToCsv}
-              disabled={filteredReservations.length === 0}
-              leftIcon={<Download className="h-4 w-4" />}
-            >
-              CSV İndir
-            </ModernButton>
+            />
+            <DateField
+              value={filterFrom}
+              onChange={(value) => setFilterFrom(value || "")}
+              placeholder="Başlangıç"
+              size="sm"
+            />
+            <DateField
+              value={filterTo}
+              onChange={(value) => setFilterTo(value || "")}
+              placeholder="Bitiş"
+              size="sm"
+            />
           </div>
+          <ModernButton
+            variant="outline"
+            size="sm"
+            onClick={exportToCsv}
+            disabled={filteredReservations.length === 0}
+            leftIcon={<Download className="h-4 w-4" />}
+            style={{ flexShrink: 0 }}
+          >
+            CSV İndir
+          </ModernButton>
         </div>
 
         {reservationsQuery.isLoading ? (
