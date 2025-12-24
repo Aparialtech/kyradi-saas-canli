@@ -160,6 +160,16 @@
   border-radius: var(--radius-full);
 }
 
+/* Hide scrollbar when sidebar is collapsed */
+.navCollapsed {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.navCollapsed::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 .navItem {
   position: relative;
   display: flex;

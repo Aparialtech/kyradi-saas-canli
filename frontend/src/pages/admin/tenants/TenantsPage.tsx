@@ -1429,196 +1429,282 @@ function TenantQuotaModal({ tenantId, onClose, notify }: TenantQuotaModalProps) 
           </button>
         </div>
       ) : (
-        <form className="form-grid" onSubmit={handleMetadataUpdate} style={{ marginTop: 'var(--space-4)' }}>
-          <div className="form-grid__field--full" style={{ marginBottom: 'var(--space-4)' }}>
-            <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
-              Kota Ayarları
-            </h4>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-              Tenant'ın oluşturabileceği maksimum kaynak sayılarını belirleyin
-            </p>
-          </div>
-          
-          <label className="form-field">
-            <span className="form-field__label">Maks. Lokasyon Sayısı</span>
-            <input
-              type="number"
-              min={0}
-              value={quotaLocationCount}
-              onChange={(e) => setQuotaLocationCount(e.target.value)}
-              placeholder="Sınırsız için boş bırakın"
-            />
-            <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
-              Tenant'ın oluşturabileceği maksimum lokasyon sayısı
-            </small>
-          </label>
-          
-          <label className="form-field">
-            <span className="form-field__label">Maks. Depo Sayısı</span>
-            <input
-              type="number"
-              min={0}
-              value={quotaStorageCount}
-              onChange={(e) => setQuotaStorageCount(e.target.value)}
-              placeholder="Sınırsız için boş bırakın"
-            />
-            <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
-              Tenant'ın oluşturabileceği maksimum depo sayısı
-            </small>
-          </label>
-          
-          <label className="form-field">
-            <span className="form-field__label">Maks. Kullanıcı Sayısı</span>
-            <input
-              type="number"
-              min={0}
-              value={quotaUserCount}
-              onChange={(e) => setQuotaUserCount(e.target.value)}
-              placeholder="Sınırsız için boş bırakın"
-            />
-            <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
-              Tenant'ın oluşturabileceği maksimum aktif kullanıcı sayısı
-            </small>
-          </label>
-          
-          <label className="form-field">
-            <span className="form-field__label">Maks. Rezervasyon Sayısı</span>
-            <input
-              type="number"
-              min={0}
-              value={quotaReservationCount}
-              onChange={(e) => setQuotaReservationCount(e.target.value)}
-              placeholder="Sınırsız için boş bırakın"
-            />
-            <small style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
-              Tenant'ın oluşturabileceği maksimum toplam rezervasyon sayısı
-            </small>
-          </label>
-          
-          <div className="form-grid__field--full" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-            <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
-              Finans Ayarları
-            </h4>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-              Platform komisyon oranını ayarlayın
-            </p>
-          </div>
-          
-          <div className="form-grid__field--full">
-            <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
-              Komisyon Oranı (%)
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={0.1}
-                value={financialCommissionRate || metadataQuery.data?.financial.commission_rate || 5.0}
-                onChange={(e) => setFinancialCommissionRate(e.target.value)}
-                style={{ flex: 1, height: '8px', borderRadius: 'var(--radius-lg)', background: 'var(--bg-tertiary)', outline: 'none' }}
-              />
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={0.1}
-                value={financialCommissionRate}
-                onChange={(e) => setFinancialCommissionRate(e.target.value)}
-                placeholder="5.0"
-                style={{ width: '120px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)' }}
-              />
-              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>%</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+          <form onSubmit={handleMetadataUpdate} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            {/* Kota Ayarları Section */}
+            <ModernCard variant="glass" padding="lg">
+              <div style={{ marginBottom: 'var(--space-6)' }}>
+                <h4 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
+                  Kota Ayarları
+                </h4>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                  Tenant'ın oluşturabileceği maksimum kaynak sayılarını belirleyin
+                </p>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--space-4)' }}>
+                <ModernInput
+                  type="number"
+                  min={0}
+                  label="Maks. Lokasyon Sayısı"
+                  value={quotaLocationCount}
+                  onChange={(e) => setQuotaLocationCount(e.target.value)}
+                  placeholder="Sınırsız için boş bırakın"
+                  helperText="Tenant'ın oluşturabileceği maksimum lokasyon sayısı"
+                  fullWidth
+                />
+                
+                <ModernInput
+                  type="number"
+                  min={0}
+                  label="Maks. Depo Sayısı"
+                  value={quotaStorageCount}
+                  onChange={(e) => setQuotaStorageCount(e.target.value)}
+                  placeholder="Sınırsız için boş bırakın"
+                  helperText="Tenant'ın oluşturabileceği maksimum depo sayısı"
+                  fullWidth
+                />
+                
+                <ModernInput
+                  type="number"
+                  min={0}
+                  label="Maks. Kullanıcı Sayısı"
+                  value={quotaUserCount}
+                  onChange={(e) => setQuotaUserCount(e.target.value)}
+                  placeholder="Sınırsız için boş bırakın"
+                  helperText="Tenant'ın oluşturabileceği maksimum aktif kullanıcı sayısı"
+                  fullWidth
+                />
+                
+                <ModernInput
+                  type="number"
+                  min={0}
+                  label="Maks. Rezervasyon Sayısı"
+                  value={quotaReservationCount}
+                  onChange={(e) => setQuotaReservationCount(e.target.value)}
+                  placeholder="Sınırsız için boş bırakın"
+                  helperText="Tenant'ın oluşturabileceği maksimum toplam rezervasyon sayısı"
+                  fullWidth
+                />
+              </div>
+            </ModernCard>
+            
+            {/* Finans Ayarları Section */}
+            <ModernCard variant="glass" padding="lg">
+              <div style={{ marginBottom: 'var(--space-6)' }}>
+                <h4 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
+                  Finans Ayarları
+                </h4>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                  Platform komisyon oranını ayarlayın
+                </p>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: 'var(--space-3)', fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
+                  Komisyon Oranı (%)
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-2)' }}>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={financialCommissionRate || metadataQuery.data?.financial.commission_rate || 5.0}
+                    onChange={(e) => setFinancialCommissionRate(e.target.value)}
+                    style={{ 
+                      flex: 1, 
+                      height: '8px', 
+                      borderRadius: 'var(--radius-lg)', 
+                      background: 'var(--bg-tertiary)', 
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: '140px' }}>
+                    <div style={{ width: '120px' }}>
+                      <ModernInput
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        value={financialCommissionRate}
+                        onChange={(e) => setFinancialCommissionRate(e.target.value)}
+                        placeholder="5.0"
+                        inputSize="sm"
+                      />
+                    </div>
+                    <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', fontWeight: 600 }}>%</span>
+                  </div>
+                </div>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', margin: 0 }}>
+                  Kyradi platform komisyon oranı (0-100%). Raporlar ve hakedişler bu orana göre hesaplanır.
+                </p>
+              </div>
+            </ModernCard>
+            
+            {/* Özellik Bayrakları Section */}
+            <ModernCard variant="glass" padding="lg">
+              <div style={{ marginBottom: 'var(--space-6)' }}>
+                <h4 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0', color: 'var(--text-primary)' }}>
+                  Özellik Bayrakları
+                </h4>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                  Tenant için kullanılabilir özellikleri etkinleştirin veya devre dışı bırakın
+                </p>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  gap: 'var(--space-4)', 
+                  cursor: 'pointer', 
+                  padding: 'var(--space-4)', 
+                  borderRadius: 'var(--radius-xl)', 
+                  border: '1px solid var(--border-primary)', 
+                  background: 'var(--bg-secondary)',
+                  transition: 'all var(--transition-base)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary-400)';
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-primary)';
+                  e.currentTarget.style.background = 'var(--bg-secondary)';
+                }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={featureAiEnabled}
+                    onChange={(e) => setFeatureAiEnabled(e.target.checked)}
+                    style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      cursor: 'pointer', 
+                      flexShrink: 0,
+                      marginTop: '2px'
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>
+                      AI Asistanı
+                    </div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                      KYRADI AI Asistanı özelliğini etkinleştir/devre dışı bırak
+                    </div>
+                  </div>
+                </label>
+                
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  gap: 'var(--space-4)', 
+                  cursor: 'pointer', 
+                  padding: 'var(--space-4)', 
+                  borderRadius: 'var(--radius-xl)', 
+                  border: '1px solid var(--border-primary)', 
+                  background: 'var(--bg-secondary)',
+                  transition: 'all var(--transition-base)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary-400)';
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-primary)';
+                  e.currentTarget.style.background = 'var(--bg-secondary)';
+                }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={featureAdvancedReportsEnabled}
+                    onChange={(e) => setFeatureAdvancedReportsEnabled(e.target.checked)}
+                    style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      cursor: 'pointer', 
+                      flexShrink: 0,
+                      marginTop: '2px'
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>
+                      Gelişmiş Raporlar
+                    </div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                      Gelişmiş analiz ve raporlama özelliklerini etkinleştir/devre dışı bırak
+                    </div>
+                  </div>
+                </label>
+                
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  gap: 'var(--space-4)', 
+                  cursor: 'pointer', 
+                  padding: 'var(--space-4)', 
+                  borderRadius: 'var(--radius-xl)', 
+                  border: '1px solid var(--border-primary)', 
+                  background: 'var(--bg-secondary)',
+                  transition: 'all var(--transition-base)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary-400)';
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-primary)';
+                  e.currentTarget.style.background = 'var(--bg-secondary)';
+                }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={featurePaymentGatewayEnabled}
+                    onChange={(e) => setFeaturePaymentGatewayEnabled(e.target.checked)}
+                    style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      cursor: 'pointer', 
+                      flexShrink: 0,
+                      marginTop: '2px'
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>
+                      Ödeme Gateway
+                    </div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                      Online ödeme gateway entegrasyonunu etkinleştir/devre dışı bırak
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </ModernCard>
+            
+            {/* Form Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', paddingTop: 'var(--space-2)' }}>
+              <ModernButton
+                type="button"
+                variant="ghost"
+                onClick={onClose}
+                disabled={updateMetadataMutation.isPending}
+              >
+                İptal
+              </ModernButton>
+              <ModernButton
+                type="submit"
+                variant="primary"
+                disabled={updateMetadataMutation.isPending}
+                isLoading={updateMetadataMutation.isPending}
+                loadingText="Güncelleniyor..."
+              >
+                Kaydet
+              </ModernButton>
             </div>
-            <small style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', display: 'block', marginTop: 'var(--space-1)' }}>
-              Kyradi platform komisyon oranı (0-100%). Raporlar ve hakedişler bu orana göre hesaplanır.
-            </small>
-          </div>
-          
-          <div className="form-grid__field--full" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-            <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0' }}>
-              Özellik Bayrakları
-            </h4>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-              Tenant için kullanılabilir özellikleri etkinleştirin veya devre dışı bırakın
-            </p>
-          </div>
-          
-          <div className="form-grid__field--full">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
-              <input
-                type="checkbox"
-                checked={featureAiEnabled}
-                onChange={(e) => setFeatureAiEnabled(e.target.checked)}
-                style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
-                  AI Asistanı
-                </div>
-                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                  KYRADI AI Asistanı özelliğini etkinleştir/devre dışı bırak
-                </div>
-              </div>
-            </label>
-          </div>
-          
-          <div className="form-grid__field--full">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
-              <input
-                type="checkbox"
-                checked={featureAdvancedReportsEnabled}
-                onChange={(e) => setFeatureAdvancedReportsEnabled(e.target.checked)}
-                style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
-                  Gelişmiş Raporlar
-                </div>
-                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                  Gelişmiş analiz ve raporlama özelliklerini etkinleştir/devre dışı bırak
-                </div>
-              </div>
-            </label>
-          </div>
-          
-          <div className="form-grid__field--full">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
-              <input
-                type="checkbox"
-                checked={featurePaymentGatewayEnabled}
-                onChange={(e) => setFeaturePaymentGatewayEnabled(e.target.checked)}
-                style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)' }}>
-                  Ödeme Gateway
-                </div>
-                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                  Online ödeme gateway entegrasyonunu etkinleştir/devre dışı bırak
-                </div>
-              </div>
-            </label>
-          </div>
-          
-          <div className="form-actions form-grid__field--full" style={{ marginTop: 'var(--space-4)' }}>
-            <button
-              type="button"
-              className="btn btn--ghost-dark"
-              onClick={onClose}
-              disabled={updateMetadataMutation.isPending}
-            >
-              İptal
-            </button>
-            <button
-              type="submit"
-              className="btn btn--primary"
-              disabled={updateMetadataMutation.isPending}
-            >
-              {updateMetadataMutation.isPending ? "Güncelleniyor..." : "Kaydet"}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       )}
     </Modal>
   );
