@@ -455,18 +455,7 @@ export function TenantsPage() {
                     <ModernButton
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        setEditingTenant(tenant);
-                        reset({
-                          slug: tenant.slug,
-                          name: tenant.name,
-                          plan: tenant.plan,
-                          is_active: tenant.is_active,
-                          brand_color: tenant.brand_color ?? "",
-                          logo_url: tenant.logo_url ?? "",
-                        });
-                        setShowForm(true);
-                      }}
+                      onClick={() => navigate(`/admin/tenants/${tenant.id}/edit`)}
                       leftIcon={<Edit className="h-4 w-4" />}
                     >
                       Düzenle

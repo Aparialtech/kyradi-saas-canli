@@ -302,7 +302,26 @@ async def update_tenant(
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    update_data = payload.model_dump(exclude_unset=True)
+    
+    # Handle metadata separately (deep merge with existing metadata)
+    metadata_to_update = update_data.pop("metadata", None)
+    if metadata_to_update is not None:
+        existing_metadata = dict(tenant.metadata_ or {})
+        # Deep merge metadata dictionaries
+        if isinstance(metadata_to_update, dict):
+            for key, value in metadata_to_update.items():
+                if value is not None:
+                    if key in existing_metadata and isinstance(existing_metadata[key], dict) and isinstance(value, dict):
+                        # Deep merge nested dicts (e.g., contact, location)
+                        existing_metadata[key] = {**existing_metadata[key], **value}
+                    else:
+                        # Replace or add the value
+                        existing_metadata[key] = value
+        tenant.metadata_ = existing_metadata if existing_metadata else None
+    
+    # Update other fields
+    for field, value in update_data.items():
         setattr(tenant, field, value)
 
     await record_audit(

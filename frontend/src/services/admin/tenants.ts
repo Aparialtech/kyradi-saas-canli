@@ -44,6 +44,23 @@ export interface TenantUpdatePayload {
   is_active?: boolean;
   brand_color?: string;
   logo_url?: string;
+  legal_name?: string;
+  metadata?: {
+    contact?: {
+      email?: string;
+      phone?: string;
+      website?: string;
+    };
+    location?: {
+      address?: string;
+      city?: string;
+      district?: string;
+      latitude?: number;
+      longitude?: number;
+    };
+    working_hours?: Record<string, { open: string; close: string; closed: boolean }>;
+    tax_number?: string;
+  };
 }
 
 export interface TenantPlanLimits {

@@ -27,6 +27,7 @@ class TenantUpdate(BaseModel):
     brand_color: Optional[str] = Field(default=None, max_length=16)
     logo_url: Optional[str] = Field(default=None, max_length=512)
     legal_name: Optional[str] = Field(default=None, max_length=255)
+    metadata: Optional[dict] = Field(default=None, description="Tenant metadata (contact, location, working_hours, tax_number)")
 
 
 class TenantRead(IdentifiedModel):
