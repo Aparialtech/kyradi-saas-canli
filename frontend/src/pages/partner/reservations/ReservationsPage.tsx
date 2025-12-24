@@ -423,6 +423,7 @@ export function ReservationsPage() {
                       variant="primary"
                       title="Teslim Edildi / Tamamla"
                       disabled={row.status === 'completed' || row.status === 'cancelled'}
+                      leftIcon={<CheckCircle2 className="h-4 w-4" />}
                       onClick={async () => {
                         const confirmed = await confirm({
                           title: 'Teslim Onayı',
@@ -436,13 +437,13 @@ export function ReservationsPage() {
                         }
                       }}
                     >
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span style={{ marginLeft: 'var(--space-2)' }}>Onay</span>
+                      Onay
                     </ModernButton>
                     <ModernButton
                       variant="danger"
                       title="Rezervasyonu İptal Et"
                       disabled={row.status === 'completed' || row.status === 'cancelled'}
+                      leftIcon={<XOctagon className="h-4 w-4" />}
                       onClick={async () => {
                         const confirmed = await confirm({
                           title: 'Rezervasyon İptali',
@@ -456,8 +457,7 @@ export function ReservationsPage() {
                         }
                       }}
                     >
-                      <XOctagon className="h-4 w-4" />
-                      <span style={{ marginLeft: 'var(--space-2)' }}>İptal</span>
+                      İptal
                     </ModernButton>
                   </div>
                 ),
