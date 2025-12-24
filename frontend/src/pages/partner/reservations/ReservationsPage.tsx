@@ -388,7 +388,19 @@ export function ReservationsPage() {
               {
                 key: 'status',
                 label: t("reservations.table.status"),
-                render: (value) => <StatusBadge status={value} />,
+                render: (value) => {
+                  const statusKey = `reservations.status.${value}`;
+                  let translatedLabel = value;
+                  try {
+                    const translated = t(statusKey as any);
+                    if (translated && translated !== statusKey) {
+                      translatedLabel = translated;
+                    }
+                  } catch {
+                    // Fallback to raw value if translation fails
+                  }
+                  return <StatusBadge status={value} label={translatedLabel} />;
+                },
                 align: 'center',
               },
               {
@@ -425,6 +437,7 @@ export function ReservationsPage() {
                       }}
                     >
                       <CheckCircle2 className="h-4 w-4" />
+                      <span style={{ marginLeft: 'var(--space-2)' }}>Onay</span>
                     </ModernButton>
                     <ModernButton
                       variant="danger"
@@ -444,6 +457,7 @@ export function ReservationsPage() {
                       }}
                     >
                       <XOctagon className="h-4 w-4" />
+                      <span style={{ marginLeft: 'var(--space-2)' }}>İptal</span>
                     </ModernButton>
                   </div>
                 ),
