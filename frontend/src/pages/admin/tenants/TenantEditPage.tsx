@@ -57,7 +57,6 @@ export function TenantEditPage() {
   // Basic info
   const [name, setName] = useState("");
   const [plan, setPlan] = useState("standard");
-  const [isActive, setIsActive] = useState(true);
   const [brandColor, setBrandColor] = useState("#00a389");
   const [logoUrl, setLogoUrl] = useState("");
 
@@ -99,7 +98,6 @@ export function TenantEditPage() {
       const tenant = tenantQuery.data;
       setName(tenant.name || "");
       setPlan(tenant.plan || "standard");
-      setIsActive(tenant.is_active ?? true);
       setBrandColor(tenant.brand_color || "#00a389");
       setLogoUrl(tenant.logo_url || "");
       setLegalName(tenant.legal_name || "");
@@ -138,7 +136,6 @@ export function TenantEditPage() {
     const payload: TenantUpdatePayload = {
       name: name.trim(),
       plan,
-      is_active: isActive,
       brand_color: brandColor || undefined,
       logo_url: logoUrl || undefined,
       legal_name: legalName || undefined,
