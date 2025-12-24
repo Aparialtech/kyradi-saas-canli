@@ -615,11 +615,6 @@ export function KyradiChat({
             className={`kyradi-chat__message kyradi-chat__message--${message.role}${message.isError ? " kyradi-chat__message--error" : ""}`}
           >
             <div className="kyradi-chat__bubble">{message.text}</div>
-            {message.requestId && message.role === "assistant" && !message.isError ? (
-              <span className="kyradi-chat__meta">
-                {copy.requestLabel} #{message.requestId.slice(0, 8)}
-              </span>
-            ) : null}
             {message.sources && message.sources.length > 0 ? (
               <details className="kyradi-chat__sources">
                 <summary>
