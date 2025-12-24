@@ -92,7 +92,9 @@ export const ModernSidebar: React.FC<ModernSidebarProps> = ({
         </div>
 
         {/* Navigation */}
-        <nav className={styles.nav}>
+        <nav className={clsx(styles.nav, {
+          [styles.navCollapsed]: !isOpen,
+        })}>
           {items.map((item) => (
             <NavLink
               key={item.to}
