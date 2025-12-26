@@ -565,23 +565,6 @@ export function DemoFlowPage() {
                 }
               }
             `}</style>
-            {!lastReservationId && (
-              <div
-                style={{
-                  marginTop: "1rem",
-                  padding: "1rem",
-                  background: "#e0f2fe",
-                  borderRadius: "8px",
-                  fontSize: "0.9rem",
-                  color: "#0c4a6e",
-                }}
-              >
-                <p style={{ margin: 0, fontWeight: 500 }}>
-                  <strong>ℹ️ {t("demo.flow.widgetHint")}</strong>
-                </p>
-                <p style={{ margin: "0.5rem 0 0" }}>{t("demo.flow.widgetHintDesc")}</p>
-              </div>
-            )}
           </div>
         )}
         {lastReservationId && (
