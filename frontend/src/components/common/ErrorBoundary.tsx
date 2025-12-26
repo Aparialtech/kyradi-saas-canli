@@ -1,10 +1,12 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { AlertTriangle } from "../../lib/lucide";
+import { errorLogger, ErrorSeverity } from "../../lib/errorLogger";
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  componentName?: string;
 }
 
 interface State {
@@ -23,7 +25,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("ErrorBoundary caught error:", error, errorInfo);
+    // Log error with full context
+    errorLogger.critical(error, {
+      component: this.props.componentName || "ErrorBoundary",
+      action: "componentDidCatch",
+      componentStack: errorInfo.componentStack,
+      errorBoundary: true,
+    });
   }
 
   render() {

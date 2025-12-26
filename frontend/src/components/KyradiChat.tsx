@@ -15,6 +15,7 @@ import type { FormEvent, KeyboardEvent } from "react";
 
 import { useKyradiAI } from "../lib/kyradi-ai";
 import type { KyradiAISource } from "../lib/kyradi-ai";
+import { errorLogger } from "../lib/errorLogger";
 
 type ChatTheme = "light" | "dark";
 
@@ -471,10 +472,12 @@ export function KyradiChat({
         requestId: response.requestId,
       });
     } catch (chatError) {
-      // Only log in development mode
-      if (process.env.NODE_ENV === "development") {
-        console.error("KyradiChat ask failed", chatError);
-      }
+      // Log error with context
+      errorLogger.error(chatError, {
+        component: "KyradiChat",
+        action: "ask",
+        input: value.substring(0, 100), // Log first 100 chars of input
+      });
       
       // Handle typed errors from backend
       let errorMessage = "Bir hata oluştu";

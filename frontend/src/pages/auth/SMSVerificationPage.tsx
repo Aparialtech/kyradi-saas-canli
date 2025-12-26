@@ -6,6 +6,7 @@ import axios from "axios";
 import { authService } from "../../services/auth";
 import { tokenStorage } from "../../lib/tokenStorage";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
+import { errorLogger } from "../../lib/errorLogger";
 
 export function SMSVerificationPage() {
   const location = useLocation();
@@ -118,7 +119,10 @@ export function SMSVerificationPage() {
       setError(""); // Clear any previous errors
       alert("✅ Doğrulama kodu yeniden gönderildi!");
     } catch (err) {
-      console.error(err);
+      errorLogger.error(err, {
+        component: "SMSVerificationPage",
+        action: "handleResend",
+      });
       if (axios.isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: unknown })?.detail;
         let message = "Kod yeniden gönderilemedi.";

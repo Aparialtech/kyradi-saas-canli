@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 import { authService } from "../../services/auth";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
+import { errorLogger } from "../../lib/errorLogger";
 import { Lock, Database, Shield, CheckCircle, ArrowLeft, Eye, EyeOff } from "../../lib/lucide";
 import styles from "./ResetPasswordPage.module.css";
 
@@ -83,7 +84,10 @@ export function ResetPasswordPage() {
         navigate("/login", { replace: true });
       }, 3000);
     } catch (err) {
-      console.error(err);
+      errorLogger.error(err, {
+        component: "ResetPasswordPage",
+        action: "handleSubmit",
+      });
       if (axios.isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: unknown })?.detail;
         let message = "Şifre sıfırlama başarısız.";

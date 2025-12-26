@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { authService } from "../services/auth";
 import { tokenStorage } from "../lib/tokenStorage";
 import { setOnUnauthorized } from "../lib/http";
+import { errorLogger } from "../lib/errorLogger";
 import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
 
 interface AuthContextValue {
@@ -44,7 +45,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
       } catch (error) {
-        console.error("Unable to fetch current user", error);
+        errorLogger.error(error, {
+          component: "AuthContext",
+          action: "getCurrentUser",
+        });
         tokenStorage.clear();
         setToken(null);
       } finally {

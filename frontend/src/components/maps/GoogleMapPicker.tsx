@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from '@react-google-maps/api';
 import { Loader2, MapPin, Search, AlertTriangle, Edit } from '../../lib/lucide';
+import { errorLogger } from '../../lib/errorLogger';
 
 const libraries: ("places")[] = ['places'];
 
@@ -323,7 +324,12 @@ export function GoogleMapPicker({
           onLocationSelect({ lat, lng });
         }
       } catch (error) {
-        console.error('Geocoding error:', error);
+        errorLogger.warn(error, {
+          component: "GoogleMapPicker",
+          action: "geocoding",
+          lat,
+          lng,
+        });
         onLocationSelect({ lat, lng });
       }
     }

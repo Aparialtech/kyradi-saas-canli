@@ -1,8 +1,12 @@
 """Public (unauthenticated) endpoints for self-service flows."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from ...db.session import get_session
 from ...models import Location, Reservation, Storage, Tenant
@@ -152,6 +156,7 @@ async def create_self_service_reservation(
         )
     except ValueError as exc:
         message = str(exc)
+        logger.warning(f"ValueError in self-service reservation creation: {message} (tenant={tenant.slug})")
         if "Plan limit" in message:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=message) from exc
         if "Storage already reserved" in message or "Locker already reserved" in message:
@@ -238,6 +243,7 @@ async def self_return_reservation(
             source="self_service",
         )
     except ValueError as exc:
+        logger.warning(f"ValueError in self-service return: {str(exc)} (code={code})")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     return SelfServiceReservationResponse(

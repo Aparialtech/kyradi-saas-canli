@@ -6,6 +6,7 @@ import { Download, Filter, BarChart3, LineChart as LineChartIcon, PieChartIcon, 
 import { partnerReportService, type PartnerOverviewResponse } from "../../../services/partner/reports";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
+import { errorLogger } from "../../../lib/errorLogger";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { StatCard } from "../../../components/ui/ModernCard";
 import { ReservationTrendChart } from "../../../components/charts/ReservationTrendChart";
@@ -299,7 +300,11 @@ export function ReportsAnalyticsPage() {
                 a.click();
                 window.URL.revokeObjectURL(url);
               } catch (error) {
-                console.error("Export failed:", error);
+                errorLogger.error(error, {
+                  component: "ReportsAnalyticsPage",
+                  action: "exportReport",
+                  format: "csv",
+                });
               }
             }}
             leftIcon={<Download className="h-4 w-4" />}
@@ -325,7 +330,11 @@ export function ReportsAnalyticsPage() {
                 a.click();
                 window.URL.revokeObjectURL(url);
               } catch (error) {
-                console.error("Export failed:", error);
+                errorLogger.error(error, {
+                  component: "ReportsAnalyticsPage",
+                  action: "exportReport",
+                  format: "csv",
+                });
               }
             }}
             leftIcon={<Download className="h-4 w-4" />}
@@ -351,7 +360,11 @@ export function ReportsAnalyticsPage() {
                 a.click();
                 window.URL.revokeObjectURL(url);
               } catch (error) {
-                console.error("Export failed:", error);
+                errorLogger.error(error, {
+                  component: "ReportsAnalyticsPage",
+                  action: "exportReport",
+                  format: "csv",
+                });
               }
             }}
             leftIcon={<Download className="h-4 w-4" />}

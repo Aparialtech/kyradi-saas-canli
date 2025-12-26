@@ -14,6 +14,7 @@ import { DateField } from "../../../components/ui/DateField";
 import { ReservationTrendChart } from "../../../components/charts/ReservationTrendChart";
 import { OccupancyBarChart } from "../../../components/charts/OccupancyBarChart";
 import { http } from "../../../lib/http";
+import { errorLogger } from "../../../lib/errorLogger";
 import { Modal } from "../../../components/common/Modal";
 
 export function AdminReportsAnalyticsPage() {
@@ -135,6 +136,11 @@ export function AdminReportsAnalyticsPage() {
 
       push({ title: "Rapor indirildi", type: "success" });
     } catch (error) {
+      errorLogger.error(error, {
+        component: "AdminReportsAnalyticsPage",
+        action: "exportReport",
+        format: reportFormat,
+      });
       push({ title: "Rapor indirilemedi", description: String(error), type: "error" });
     }
   };
@@ -175,6 +181,11 @@ export function AdminReportsAnalyticsPage() {
           responseType: "blob",
         });
       } catch (error: any) {
+        errorLogger.error(error, {
+          component: "AdminReportsAnalyticsPage",
+          action: "generateCommissionInvoice",
+          step: "httpRequest",
+        });
         // If axios throws an error, check if it's a blob response with error
         if (error?.response?.data instanceof Blob) {
           try {
@@ -187,6 +198,11 @@ export function AdminReportsAnalyticsPage() {
             const errorData = JSON.parse(text);
             throw new Error(errorData.detail || `HTTP ${error.response.status}: Fatura oluşturulamadı`);
           } catch (parseError) {
+            errorLogger.error(parseError, {
+              component: "AdminReportsAnalyticsPage",
+              action: "generateCommissionInvoice",
+              step: "parseError",
+            });
             throw new Error(`HTTP ${error.response?.status || 500}: Fatura oluşturulamadı`);
           }
         }
@@ -261,12 +277,17 @@ export function AdminReportsAnalyticsPage() {
         errorMessage = error.message;
       }
       
+      errorLogger.error(error, {
+        component: "AdminReportsAnalyticsPage",
+        action: "generateCommissionInvoice",
+        errorMessage,
+      });
+      
       push({ 
         title: "Fatura oluşturulamadı", 
         description: errorMessage,
         type: "error" 
       });
-      console.error("Invoice generation error:", error);
     }
   };
 
@@ -318,6 +339,10 @@ export function AdminReportsAnalyticsPage() {
             const errorData = JSON.parse(text);
             throw new Error(errorData.detail || `HTTP ${error.response.status}: Fatura oluşturulamadı`);
           } catch (parseError) {
+            errorLogger.error(parseError, {
+              component: "AdminReportsAnalyticsPage",
+              action: "parseInvoiceError",
+            });
             throw new Error(`HTTP ${error.response?.status || 500}: Fatura oluşturulamadı`);
           }
         }
@@ -392,12 +417,17 @@ export function AdminReportsAnalyticsPage() {
         errorMessage = error.message;
       }
       
+      errorLogger.error(error, {
+        component: "AdminReportsAnalyticsPage",
+        action: "generateRevenueInvoice",
+        errorMessage,
+      });
+      
       push({ 
         title: "Fatura oluşturulamadı", 
         description: errorMessage,
         type: "error" 
       });
-      console.error("Invoice generation error:", error);
     }
   };
 

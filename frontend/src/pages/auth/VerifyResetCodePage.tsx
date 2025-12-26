@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 import { authService } from "../../services/auth";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
+import { errorLogger } from "../../lib/errorLogger";
 import { Mail, Database, Shield, ArrowLeft, CheckCircle, Loader2, RefreshCw } from "../../lib/lucide";
 import styles from "./VerifyResetCodePage.module.css";
 
@@ -102,7 +103,10 @@ export function VerifyResetCodePage() {
         replace: true 
       });
     } catch (err) {
-      console.error(err);
+      errorLogger.error(err, {
+        component: "VerifyResetCodePage",
+        action: "handleSubmit",
+      });
       if (axios.isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: unknown })?.detail;
         let errorMessage = "Kod doğrulama başarısız.";

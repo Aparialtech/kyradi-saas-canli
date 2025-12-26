@@ -10,6 +10,7 @@ import type { AuthUser } from "../../types/auth";
 import { authService } from "../../services/auth";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tokenStorage } from "../../lib/tokenStorage";
+import { errorLogger } from "../../lib/errorLogger";
 import { Lock, Mail, BarChart3, CreditCard, Eye, EyeOff, Database, Building2, Shield, Hotel } from "../../lib/lucide";
 import styles from "./LoginPage.module.css";
 
@@ -73,7 +74,11 @@ export function LoginPage() {
         setError(t("login.error.generic"));
       }
     } catch (err) {
-      console.error(err);
+      errorLogger.error(err, {
+        component: "LoginPage",
+        action: "handleSubmit",
+        loginMode,
+      });
       if (axios.isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: unknown })?.detail;
         let message = t("login.error.invalidCredentials");

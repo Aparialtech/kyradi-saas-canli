@@ -6,9 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App.tsx";
 import { AuthProvider } from "./context/AuthContext.tsx";
 import { LocaleProvider } from "./context/LocaleContext.tsx";
+import { setupGlobalErrorHandlers } from "./lib/errorLogger";
 import "./index.css";
 import "./styles/ui.css";
 import "react-day-picker/src/style.css";
+
+// Setup global error handlers
+setupGlobalErrorHandlers();
 
 const queryClient = new QueryClient({
   defaultOptions: {

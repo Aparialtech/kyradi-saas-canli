@@ -11,6 +11,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
 import { useConfirm } from "../../../components/common/ConfirmDialog";
 import { getErrorMessage } from "../../../lib/httpError";
+import { errorLogger } from "../../../lib/errorLogger";
 import type { UserRole } from "../../../types/auth";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernInput } from "../../../components/ui/ModernInput";
@@ -213,7 +214,10 @@ export function AdminUsersPage() {
     
     createUserMutation.mutate(payload, {
       onError: (error: unknown) => {
-        console.error("Create user error:", error);
+        errorLogger.error(error, {
+          component: "AdminUsersPage",
+          action: "createUser",
+        });
         // Error handling is already in mutation definition, but ensure modal stays open on error
       },
     });
@@ -276,7 +280,11 @@ export function AdminUsersPage() {
     } catch (error) {
       // If error, just show error message - DO NOT reset
       const errorMessage = getErrorMessage(error);
-      console.error("Password fetch error:", error); // Debug log
+      errorLogger.error(error, {
+        component: "AdminUsersPage",
+        action: "fetchPassword",
+        userId: user.id,
+      });
       setResetPasswordResult({ 
         current_password: undefined,
         message: errorMessage || "Şifre alınamadı"

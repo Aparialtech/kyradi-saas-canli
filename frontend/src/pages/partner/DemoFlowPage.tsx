@@ -12,6 +12,7 @@ import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
 import { useTranslation } from "../../hooks/useTranslation";
+import { errorLogger } from "../../lib/errorLogger";
 import styles from "./DemoFlowPage.module.css";
 
 declare global {
@@ -215,7 +216,10 @@ export function DemoFlowPage() {
         console.log("[DemoFlow] KyradiReserve found, mounting...");
         window.KyradiReserve.mount();
       } else {
-        console.warn("[DemoFlow] KyradiReserve not found on window object");
+        errorLogger.warn(new Error("KyradiReserve not found on window object"), {
+          component: "DemoFlowPage",
+          action: "widgetInitialization",
+        });
       }
 
       // Wait for custom element to be defined, then create widget element
@@ -255,7 +259,12 @@ export function DemoFlowPage() {
         } else if (attempts < maxAttempts) {
           setTimeout(checkAndCreate, 50);
         } else {
-          console.error("[DemoFlow] Custom element 'kyradi-reserve' not defined after", maxAttempts, "attempts");
+          const error = new Error(`Custom element 'kyradi-reserve' not defined after ${maxAttempts} attempts`);
+          errorLogger.error(error, {
+            component: "DemoFlowPage",
+            action: "widgetInitialization",
+            attempts: maxAttempts,
+          });
           push({
             title: t("demo.flow.widgetError"),
             description: "Widget yüklenemedi. Lütfen sayfayı yenileyin.",
@@ -279,7 +288,12 @@ export function DemoFlowPage() {
         initializeWidget();
       };
       scriptEl.onerror = () => {
-        console.error("[DemoFlow] Failed to load widget script:", scriptEl.src);
+        const error = new Error(`Failed to load widget script: ${scriptEl.src}`);
+        errorLogger.error(error, {
+          component: "DemoFlowPage",
+          action: "scriptLoad",
+          scriptUrl: scriptEl.src,
+        });
         push({
           title: t("demo.flow.widgetError"),
           description: `Script yüklenemedi: ${scriptEl.src}. Lütfen widget dosyasının public/widgets/ klasöründe olduğundan emin olun.`,

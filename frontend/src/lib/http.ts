@@ -3,6 +3,7 @@ import type { InternalAxiosRequestConfig } from "axios";
 
 import { env } from "../config/env";
 import { tokenStorage } from "./tokenStorage";
+import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const baseURL = env.API_URL.replace(/\/+$/, "");
 // Startup log for debugging deployed envs
@@ -58,7 +59,12 @@ http.interceptors.response.use(
                                   message.includes("Failed to fetch");
         
         if (isNetworkChanged) {
-          console.warn("[HTTP] Network changed, request aborted:", axiosError.config?.url);
+          errorLogger.warn(axiosError, {
+            component: "HTTP",
+            action: "networkChanged",
+            url: axiosError.config?.url,
+            method: axiosError.config?.method,
+          });
           // Return a structured error that React Query can handle
           return Promise.reject({
             ...axiosError,
@@ -74,7 +80,12 @@ http.interceptors.response.use(
       
       // 401 Unauthorized - clear token and trigger logout
       if (axiosError.response?.status === 401) {
-        console.warn("[HTTP] 401 Unauthorized - token expired or invalid");
+        errorLogger.warn(axiosError, {
+          component: "HTTP",
+          action: "unauthorized",
+          url: axiosError.config?.url,
+          method: axiosError.config?.method,
+        });
         tokenStorage.clear();
         // Trigger the logout callback if set
         if (onUnauthorized) {
@@ -82,14 +93,41 @@ http.interceptors.response.use(
         }
       }
       
-      // 404 Not Found - don't log as error for optional endpoints
+      // 404 Not Found - log as low severity for optional endpoints
       if (axiosError.response?.status === 404) {
-        console.debug("[HTTP] 404 Not Found:", axiosError.config?.url);
+        errorLogger.warn(axiosError, {
+          component: "HTTP",
+          action: "notFound",
+          url: axiosError.config?.url,
+          method: axiosError.config?.method,
+        });
+      } else if (axiosError.response?.status) {
+        // Log other HTTP errors with appropriate severity
+        const status = axiosError.response.status;
+        const severity = status >= 500 ? ErrorSeverity.HIGH : ErrorSeverity.MEDIUM;
+        
+        errorLogger.log(axiosError, severity, {
+          component: "HTTP",
+          action: "httpError",
+          url: axiosError.config?.url,
+          method: axiosError.config?.method,
+          statusCode: status,
+          responseData: axiosError.response?.data,
+        });
       } else {
-        console.error("[HTTP] Error:", axiosError.response?.status, axiosError.config?.url, axiosError.response?.data || axiosError.message);
+        // No response - network or timeout error
+        errorLogger.error(axiosError, {
+          component: "HTTP",
+          action: "noResponse",
+          url: axiosError.config?.url,
+          method: axiosError.config?.method,
+        });
       }
     } else {
-      console.error("[HTTP] Non-Axios error:", error);
+      errorLogger.error(error, {
+        component: "HTTP",
+        action: "nonAxiosError",
+      });
     }
     
     return Promise.reject(error);

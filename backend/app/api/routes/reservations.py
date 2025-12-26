@@ -14,6 +14,8 @@ from ...db.session import get_session
 from ...dependencies import require_tenant_operator, require_tenant_staff
 from ...models import Reservation, ReservationStatus, Storage, StorageStatus, User, Payment, PaymentStatus
 
+logger = logging.getLogger(__name__)
+
 # Backward compatibility
 Locker = Storage
 from ...schemas import (
@@ -257,6 +259,7 @@ async def create_reservation(
         )
     except ValueError as exc:
         message = str(exc)
+        logger.warning(f"ValueError in reservation creation: {message} (tenant={current_user.tenant_id}, user={current_user.id})")
         if "Plan limit" in message:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=message) from exc
         if "Storage already reserved" in message or "Locker already reserved" in message:

@@ -11,6 +11,7 @@ import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
 import { DateField } from "../../../components/ui/DateField";
 import { http } from "../../../lib/http";
+import { errorLogger } from "../../../lib/errorLogger";
 
 interface InvoiceItem {
   description: string;
@@ -131,6 +132,11 @@ export function AdminInvoicePage() {
             const errorData = JSON.parse(text);
             throw new Error(errorData.detail || `HTTP ${error.response.status}: Fatura oluşturulamadı`);
           } catch (parseError) {
+            errorLogger.error(parseError, {
+              component: "AdminInvoicePage",
+              action: "generateInvoice",
+              step: "parseError",
+            });
             throw new Error(`HTTP ${error.response?.status || 500}: Fatura oluşturulamadı`);
           }
         }
@@ -197,8 +203,13 @@ export function AdminInvoicePage() {
           errorMessage = error.response.data.detail || errorMessage;
         }
       }
+      errorLogger.error(error, {
+        component: "AdminInvoicePage",
+        action: "generateInvoice",
+        errorMessage,
+      });
+      
       push({ title: "Fatura oluşturulamadı", description: errorMessage, type: "error" });
-      console.error("Invoice generation error:", error);
     }
   };
 

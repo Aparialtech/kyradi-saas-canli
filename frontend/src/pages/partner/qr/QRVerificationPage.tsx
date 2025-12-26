@@ -10,6 +10,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
 import { getErrorMessage } from "../../../lib/httpError";
+import { errorLogger } from "../../../lib/errorLogger";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
@@ -114,6 +115,11 @@ export function QRVerificationPage() {
         push({ title: "QR doğrulama başarısız", description: errorMessage, type: "error" });
       }
     } catch (error) {
+      errorLogger.error(error, {
+        component: "QRVerificationPage",
+        action: "verifyQR",
+        code: code?.substring(0, 10), // Log first 10 chars only
+      });
       push({ title: "Doğrulama başarısız", description: getErrorMessage(error), type: "error" });
       setResult(null);
     } finally {
@@ -189,6 +195,11 @@ export function QRVerificationPage() {
         }
         setActionModal(null);
       } catch (error) {
+        errorLogger.error(error, {
+          component: "QRVerificationPage",
+          action: actionModal.mode === "handover" ? "handover" : "return",
+          reservationId: actionModal.reservationId,
+        });
         push({ title: "İşlem tamamlanamadı", description: getErrorMessage(error), type: "error" });
       }
     },

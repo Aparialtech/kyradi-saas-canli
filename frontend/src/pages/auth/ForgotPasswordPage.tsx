@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 import { authService } from "../../services/auth";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
+import { errorLogger } from "../../lib/errorLogger";
 import { Mail, Database, Shield, ArrowLeft, Send, Loader2 } from "../../lib/lucide";
 import styles from "./ForgotPasswordPage.module.css";
 
@@ -39,7 +40,10 @@ export function ForgotPasswordPage() {
         replace: true 
       });
     } catch (err) {
-      console.error(err);
+      errorLogger.error(err, {
+        component: "ForgotPasswordPage",
+        action: "handleSubmit",
+      });
       if (axios.isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: unknown })?.detail;
         let message = "Kod gönderme işlemi başarısız.";
