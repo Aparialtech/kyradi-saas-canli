@@ -7,7 +7,6 @@ import {
   Users,
   MapPin,
   Calendar,
-  CreditCard,
   Settings,
   BarChart3,
   HelpCircle,
