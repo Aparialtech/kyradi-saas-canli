@@ -917,7 +917,7 @@ export function DemoFlowPage() {
           isLoading={convertReservationMutation.isPending}
         />
       )}
-    </section>
+    </div>
   );
 }
 
