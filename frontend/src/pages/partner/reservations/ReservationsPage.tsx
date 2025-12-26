@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Eye, CheckCircle2, XOctagon, Search, FileText, Download } from "../../../lib/lucide";
+import { Eye, CheckCircle2, XOctagon, Search, FileText, Download, Plus } from "../../../lib/lucide";
 
 import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../../services/partner/reservations";
 import { useToast } from "../../../hooks/useToast";
@@ -26,6 +27,7 @@ import { useConfirm } from "../../../components/common/ConfirmDialog";
 export function ReservationsPage() {
   const { messages, push } = useToast();
   const { t, locale } = useTranslation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const [filterStatus, setFilterStatus] = useState<string>("");
@@ -217,24 +219,39 @@ export function ReservationsPage() {
       )}
 
       <ModernCard variant="glass" padding="lg">
-        <div style={{ marginBottom: 'var(--space-6)' }}>
-          <h2 style={{ 
-            fontSize: 'var(--text-xl)', 
-            fontWeight: 'var(--font-bold)', 
-            color: 'var(--text-primary)', 
-            margin: '0 0 var(--space-2) 0',
-            lineHeight: '1.4'
-          }}>
-            {t("reservations.listTitle")}
-          </h2>
-          <p style={{ 
-            fontSize: 'var(--text-sm)', 
-            color: 'var(--text-tertiary)', 
-            margin: 0,
-            lineHeight: '1.5'
-          }}>
-            {t("reservations.listSubtitle")}
-          </p>
+        <div style={{ 
+          marginBottom: 'var(--space-6)', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start',
+          gap: 'var(--space-4)'
+        }}>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ 
+              fontSize: 'var(--text-xl)', 
+              fontWeight: 'var(--font-bold)', 
+              color: 'var(--text-primary)', 
+              margin: '0 0 var(--space-2) 0',
+              lineHeight: '1.4'
+            }}>
+              {t("reservations.listTitle")}
+            </h2>
+            <p style={{ 
+              fontSize: 'var(--text-sm)', 
+              color: 'var(--text-tertiary)', 
+              margin: 0,
+              lineHeight: '1.5'
+            }}>
+              {t("reservations.listSubtitle")}
+            </p>
+          </div>
+          <ModernButton
+            variant="primary"
+            onClick={() => navigate("/app/demo-flow")}
+          >
+            <Plus className="h-4 w-4" style={{ marginRight: "var(--space-2)", display: "inline-block" }} />
+            Yeni Rezervasyon
+          </ModernButton>
         </div>
 
         <div style={{ marginBottom: 'var(--space-5)' }}>

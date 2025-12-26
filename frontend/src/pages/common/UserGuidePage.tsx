@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,6 +16,8 @@ import {
   HardDrive,
   ScanLine,
   MessageSquare,
+  ChevronDown,
+  ChevronUp,
 } from "../../lib/lucide";
 import { ModernCard } from "../../components/ui/ModernCard";
 import { ModernButton } from "../../components/ui/ModernButton";
@@ -33,9 +36,22 @@ interface GuideSection {
 export function UserGuidePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   // Determine panel type from path
   const isAdmin = location.pathname.startsWith("/admin");
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
+      } else {
+        newSet.add(sectionId);
+      }
+      return newSet;
+    });
+  };
 
   const partnerSections: GuideSection[] = [
     {
@@ -439,9 +455,9 @@ export function UserGuidePage() {
         <ModernButton
           variant="ghost"
           onClick={() => navigate(isAdmin ? "/admin" : "/app")}
-          leftIcon={<ArrowLeft className="h-4 w-4" />}
           style={{ marginBottom: "var(--space-4)" }}
         >
+          <ArrowLeft className="h-4 w-4" style={{ marginRight: "var(--space-2)", display: "inline-block" }} />
           Geri Dön
         </ModernButton>
 
@@ -513,7 +529,16 @@ export function UserGuidePage() {
             transition={{ delay: 0.2 + sectionIndex * 0.1 }}
           >
             <ModernCard variant="glass" padding="lg">
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-6)" }}>
+              <div
+                onClick={() => toggleSection(section.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-3)",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
                 <div
                   style={{
                     width: "40px",
@@ -524,6 +549,7 @@ export function UserGuidePage() {
                     alignItems: "center",
                     justifyContent: "center",
                     color: "white",
+                    flexShrink: 0,
                   }}
                 >
                   {section.icon}
@@ -534,65 +560,83 @@ export function UserGuidePage() {
                     fontWeight: "var(--font-bold)",
                     color: "var(--text-primary)",
                     margin: 0,
+                    flex: 1,
                   }}
                 >
                   {section.title}
                 </h2>
+                {expandedSections.has(section.id) ? (
+                  <ChevronUp className="h-5 w-5" style={{ color: "var(--text-tertiary)", flexShrink: 0 }} />
+                ) : (
+                  <ChevronDown className="h-5 w-5" style={{ color: "var(--text-tertiary)", flexShrink: 0 }} />
+                )}
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
-                {section.steps.map((step, stepIndex) => (
-                  <div key={stepIndex} style={{ paddingLeft: "var(--space-4)", borderLeft: "2px solid var(--border-primary)" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-                      <CheckCircle2 className="h-5 w-5" style={{ color: "var(--primary)", flexShrink: 0, marginTop: "2px" }} />
-                      <div style={{ flex: 1 }}>
-                        <h3
-                          style={{
-                            fontSize: "var(--text-lg)",
-                            fontWeight: "var(--font-semibold)",
-                            color: "var(--text-primary)",
-                            margin: "0 0 var(--space-2) 0",
-                          }}
-                        >
-                          {step.title}
-                        </h3>
-                        <p style={{ color: "var(--text-secondary)", lineHeight: 1.6, margin: "0 0 var(--space-3) 0" }}>
-                          {step.description}
-                        </p>
-                        {step.details && step.details.length > 0 && (
-                          <ul
-                            style={{
-                              listStyle: "none",
-                              padding: 0,
-                              margin: 0,
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "var(--space-2)",
-                            }}
-                          >
-                            {step.details.map((detail, detailIndex) => (
-                              <li
-                                key={detailIndex}
+              <AnimatePresence>
+                {expandedSections.has(section.id) && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)", marginTop: "var(--space-6)" }}>
+                      {section.steps.map((step, stepIndex) => (
+                        <div key={stepIndex} style={{ paddingLeft: "var(--space-4)", borderLeft: "2px solid var(--border-primary)" }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+                            <CheckCircle2 className="h-5 w-5" style={{ color: "var(--primary)", flexShrink: 0, marginTop: "2px" }} />
+                            <div style={{ flex: 1 }}>
+                              <h3
                                 style={{
-                                  display: "flex",
-                                  alignItems: "flex-start",
-                                  gap: "var(--space-2)",
-                                  color: "var(--text-secondary)",
-                                  fontSize: "var(--text-sm)",
-                                  lineHeight: 1.6,
+                                  fontSize: "var(--text-lg)",
+                                  fontWeight: "var(--font-semibold)",
+                                  color: "var(--text-primary)",
+                                  margin: "0 0 var(--space-2) 0",
                                 }}
                               >
-                                <span style={{ color: "var(--primary)", marginRight: "var(--space-1)" }}>•</span>
-                                <span>{detail}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
+                                {step.title}
+                              </h3>
+                              <p style={{ color: "var(--text-secondary)", lineHeight: 1.6, margin: "0 0 var(--space-3) 0" }}>
+                                {step.description}
+                              </p>
+                              {step.details && step.details.length > 0 && (
+                                <ul
+                                  style={{
+                                    listStyle: "none",
+                                    padding: 0,
+                                    margin: 0,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "var(--space-2)",
+                                  }}
+                                >
+                                  {step.details.map((detail, detailIndex) => (
+                                    <li
+                                      key={detailIndex}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "flex-start",
+                                        gap: "var(--space-2)",
+                                        color: "var(--text-secondary)",
+                                        fontSize: "var(--text-sm)",
+                                        lineHeight: 1.6,
+                                      }}
+                                    >
+                                      <span style={{ color: "var(--primary)", marginRight: "var(--space-1)" }}>•</span>
+                                      <span>{detail}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </ModernCard>
           </motion.div>
         ))}
