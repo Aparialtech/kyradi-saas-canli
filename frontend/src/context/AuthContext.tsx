@@ -91,7 +91,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   // Register the 401 handler callback
   useEffect(() => {
     setOnUnauthorized(() => {
-      console.warn("[Auth] Session expired - redirecting to login");
+      errorLogger.warn(new Error("Session expired"), {
+        component: "AuthContext",
+        action: "sessionExpired",
+      });
       setToken(null);
       setUser(null);
       navigate("/login");

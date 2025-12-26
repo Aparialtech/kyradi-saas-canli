@@ -76,7 +76,10 @@ export function SMSVerificationPage() {
         window.location.href = "/app";
       }
     } catch (err) {
-      console.error(err);
+      errorLogger.error(err, {
+        component: "SMSVerificationPage",
+        action: "handleSubmit",
+      });
       if (axios.isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: unknown })?.detail;
         let message = "Doğrulama kodu geçersiz.";

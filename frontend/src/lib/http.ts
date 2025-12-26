@@ -138,6 +138,9 @@ export const testConnection = async () => {
   try {
     await http.get("/health");
   } catch (error) {
-    console.warn("API OFFLINE", error);
+    errorLogger.warn(error, {
+      component: "HTTP",
+      action: "testConnection",
+    });
   }
 };

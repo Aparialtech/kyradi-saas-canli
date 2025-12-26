@@ -269,7 +269,11 @@ export function GoogleMapPicker({
           event.message?.includes('BillingNotEnabled') ||
           event.message?.includes('ApiNotActivated') ||
           event.message?.includes('InvalidKeyMapError')) {
-        console.warn('Google Maps API error detected, switching to manual entry');
+        errorLogger.warn(new Error('Google Maps API error detected'), {
+          component: "GoogleMapPicker",
+          action: "apiError",
+          errorType: "BillingNotEnabledMapError",
+        });
         setRuntimeError(true);
       }
     };

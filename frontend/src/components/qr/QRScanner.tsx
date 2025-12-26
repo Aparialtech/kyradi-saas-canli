@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ScanLine, XCircle, RefreshCw, AlertTriangle } from "../../lib/lucide";
+import { errorLogger } from "../../lib/errorLogger";
 import { ModernButton } from "../ui/ModernButton";
 import { ModernCard } from "../ui/ModernCard";
 import { Badge } from "../ui/Badge";
@@ -51,7 +52,10 @@ export function QRScanner({ onScan, isProcessing = false, disabled = false }: QR
         setSelectedCamera(backCamera?.deviceId || videoDevices[0].deviceId);
       }
     } catch (err) {
-      console.error("Error getting cameras:", err);
+      errorLogger.error(err, {
+        component: "QRScanner",
+        action: "getAvailableCameras",
+      });
     }
   }, [selectedCamera]);
 
@@ -86,7 +90,11 @@ export function QRScanner({ onScan, isProcessing = false, disabled = false }: QR
       // Start scanning for QR codes
       startScanning();
     } catch (err: any) {
-      console.error("Camera error:", err);
+      errorLogger.error(err, {
+        component: "QRScanner",
+        action: "startCamera",
+        errorName: err.name,
+      });
       if (err.name === "NotAllowedError") {
         setPermission("denied");
         setError("Kamera izni reddedildi. Lütfen tarayıcı ayarlarından izin verin.");
