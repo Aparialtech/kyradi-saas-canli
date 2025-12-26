@@ -12,6 +12,7 @@ import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
 import { useTranslation } from "../../hooks/useTranslation";
+import styles from "./DemoFlowPage.module.css";
 
 declare global {
   interface Window {
@@ -330,17 +331,15 @@ export function DemoFlowPage() {
   };
 
   return (
-    <section className="page" style={{ paddingBottom: "2rem" }}>
+    <div className={styles.pageWrapper}>
       <ToastContainer messages={messages} />
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{t("onlineReservationForm.title")}</h1>
-          <p className="page-subtitle">{t("onlineReservationForm.subtitle")}</p>
-        </div>
+      <header className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>{t("onlineReservationForm.title")}</h1>
+        <p className={styles.pageSubtitle}>{t("onlineReservationForm.subtitle")}</p>
       </header>
 
       {/* Progress Steps */}
-      <div className="panel" style={{ marginBottom: "2rem", padding: "1.5rem" }}>
+      <div className={`panel ${styles.stepperPanel}`} style={{ padding: "1.5rem" }}>
         <div
           style={{
             display: "flex",
