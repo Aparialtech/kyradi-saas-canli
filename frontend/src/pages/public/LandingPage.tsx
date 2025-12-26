@@ -1,4 +1,5 @@
-import { useState, FormEvent } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -22,8 +23,6 @@ import {
   Shield,
   Clock,
   Users,
-  Star,
-  Award,
   Globe,
   Lock,
   Eye,
@@ -182,7 +181,7 @@ export function LandingPage() {
             className={styles.heroContent}
           >
             <div className={styles.heroBadge}>
-              <Star className="h-4 w-4" />
+              <CheckCircle2 className="h-4 w-4" />
               <span>#1 Otel Bagaj Yönetim Platformu</span>
             </div>
             <h1 className={styles.heroTitle}>
@@ -268,7 +267,7 @@ export function LandingPage() {
               { icon: <Users className="h-6 w-6" />, value: "500+", label: "Aktif Otel", color: "#6366f1" },
               { icon: <Package className="h-6 w-6" />, value: "50K+", label: "Aylık Rezervasyon", color: "#10b981" },
               { icon: <TrendingUp className="h-6 w-6" />, value: "%99.9", label: "Sistem Uptime", color: "#f59e0b" },
-              { icon: <Award className="h-6 w-6" />, value: "4.9/5", label: "Müşteri Memnuniyeti", color: "#ef4444" },
+              { icon: <CheckCircle2 className="h-6 w-6" />, value: "4.9/5", label: "Müşteri Memnuniyeti", color: "#ef4444" },
             ].map((stat, index) => (
               <motion.div
                 key={index}
