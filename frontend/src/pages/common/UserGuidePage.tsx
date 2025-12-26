@@ -17,6 +17,13 @@ import {
   ScanLine,
   MessageSquare,
   ChevronDown,
+  UserCog,
+  BadgePercent,
+  Wallet,
+  PiggyBank,
+  Send,
+  Receipt,
+  TrendingUp,
 } from "../../lib/lucide";
 import { ModernCard } from "../../components/ui/ModernCard";
 import { ModernButton } from "../../components/ui/ModernButton";
@@ -284,6 +291,209 @@ export function UserGuidePage() {
       ],
     },
     {
+      id: "staff",
+      title: "Çalışan Yönetimi",
+      icon: <UserCog className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Yeni Çalışan Ekleme",
+          description: "Sisteminize yeni bir çalışan nasıl eklenir?",
+          details: [
+            "Çalışanlar sayfasına gidin",
+            "'Yeni Çalışan' butonuna tıklayın",
+            "Çalışan bilgilerini girin (ad, soyad, e-posta, telefon)",
+            "Çalışan rolünü seçin",
+            "Çalışanı bir depoya atayın (opsiyonel)",
+            "Çalışanı kaydedin",
+          ],
+        },
+        {
+          title: "Çalışan Atama",
+          description: "Çalışanları depolara nasıl atarsınız?",
+          details: [
+            "Çalışanlar sayfasında 'Atama' butonuna tıklayın",
+            "Çalışanı seçin",
+            "Atanacak depoyu seçin",
+            "Atamayı kaydedin",
+          ],
+        },
+        {
+          title: "Çalışan Düzenleme",
+          description: "Mevcut çalışan bilgilerini güncelleme.",
+          details: [
+            "Çalışanlar listesinde düzenlemek istediğiniz çalışana tıklayın",
+            "Çalışan bilgilerini güncelleyin",
+            "Değişiklikleri kaydedin",
+          ],
+        },
+      ],
+    },
+    {
+      id: "pricing",
+      title: "Ücretlendirme Yönetimi",
+      icon: <BadgePercent className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Yeni Fiyat Planı Oluşturma",
+          description: "Sisteminize yeni bir fiyat planı nasıl eklenir?",
+          details: [
+            "Ücretlendirme sayfasına gidin",
+            "'Yeni Fiyat Planı' butonuna tıklayın",
+            "Plan adını girin",
+            "Başlangıç ve bitiş tarihlerini belirleyin",
+            "Bavul sayısına göre fiyatları girin",
+            "Fiyat planını kaydedin",
+          ],
+        },
+        {
+          title: "Fiyat Planı Düzenleme",
+          description: "Mevcut fiyat planlarını güncelleme.",
+          details: [
+            "Ücretlendirme sayfasında düzenlemek istediğiniz plana tıklayın",
+            "Fiyat bilgilerini güncelleyin",
+            "Tarih aralığını değiştirin",
+            "Değişiklikleri kaydedin",
+          ],
+        },
+      ],
+    },
+    {
+      id: "revenue",
+      title: "Gelir Yönetimi",
+      icon: <Wallet className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Gelir Görüntüleme",
+          description: "Sisteminizdeki gelir bilgilerini nasıl görüntüleyebilirsiniz?",
+          details: [
+            "Gelir sayfasına gidin",
+            "Tarih aralığı seçin",
+            "Toplam gelir bilgilerini görüntüleyin",
+            "Günlük, haftalık ve aylık gelir grafiklerini inceleyin",
+            "Ödeme yöntemlerine göre gelir dağılımını görün",
+          ],
+        },
+        {
+          title: "Gelir Raporları",
+          description: "Detaylı gelir raporlarını görüntüleme.",
+          details: [
+            "Gelir sayfasında rapor bölümüne gidin",
+            "Filtreleme seçeneklerini kullanın",
+            "Raporu CSV veya Excel formatında dışa aktarın",
+          ],
+        },
+      ],
+    },
+    {
+      id: "settlements",
+      title: "Hakediş Yönetimi",
+      icon: <PiggyBank className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Hakediş Görüntüleme",
+          description: "Hakediş bilgilerini nasıl görüntüleyebilirsiniz?",
+          details: [
+            "Hakedişler sayfasına gidin",
+            "Tarih aralığı seçin",
+            "Hakediş listesini görüntüleyin",
+            "Hakediş detaylarını inceleyin",
+          ],
+        },
+        {
+          title: "Hakediş Durumları",
+          description: "Hakediş durumlarını anlama.",
+          details: [
+            "Beklemede: Henüz ödenmemiş hakedişler",
+            "Tamamlandı: Ödenmiş hakedişler",
+            "İptal: İptal edilmiş hakedişler",
+          ],
+        },
+      ],
+    },
+    {
+      id: "transfers",
+      title: "Komisyon Ödemeleri",
+      icon: <Send className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Komisyon Ödemelerini Görüntüleme",
+          description: "Komisyon ödeme bilgilerini nasıl görüntüleyebilirsiniz?",
+          details: [
+            "Komisyon Ödemeleri sayfasına gidin",
+            "Bekleyen ve tamamlanan ödemeleri görüntüleyin",
+            "Ödeme detaylarını inceleyin",
+            "Ödeme geçmişini kontrol edin",
+          ],
+        },
+        {
+          title: "Komisyon Hesaplama",
+          description: "Komisyonların nasıl hesaplandığını anlama.",
+          details: [
+            "Komisyon oranı planınıza göre belirlenir",
+            "Her rezervasyon için komisyon otomatik hesaplanır",
+            "Komisyonlar belirli dönemlerde ödenir",
+            "Ödeme durumunu takip edebilirsiniz",
+          ],
+        },
+      ],
+    },
+    {
+      id: "tickets",
+      title: "İletişim / Ticket Sistemi",
+      icon: <MessageSquare className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Yeni Ticket Oluşturma",
+          description: "Destek talebi nasıl oluşturulur?",
+          details: [
+            "İletişim sayfasına gidin",
+            "'Yeni Ticket' butonuna tıklayın",
+            "Konu başlığını girin",
+            "Mesajınızı yazın",
+            "Ticket'ı gönderin",
+          ],
+        },
+        {
+          title: "Ticket Yönetimi",
+          description: "Ticket'ları nasıl yönetebilirsiniz?",
+          details: [
+            "Gelen ve giden ticket'ları görüntüleyin",
+            "Ticket detaylarını inceleyin",
+            "Yanıt gönderin",
+            "Ticket durumunu takip edin",
+          ],
+        },
+      ],
+    },
+    {
+      id: "demo-flow",
+      title: "Online Rezervasyon (Demo Flow)",
+      icon: <Calendar className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Online Rezervasyon Oluşturma",
+          description: "Müşterilerin kendi rezervasyonlarını nasıl oluşturabileceğini anlama.",
+          details: [
+            "Online Rezervasyon sayfasına gidin",
+            "Misafir bilgilerini girin",
+            "Tarih aralığını seçin",
+            "Bavul sayısını belirleyin",
+            "KVKK ve kullanım şartlarını onaylayın",
+            "Rezervasyonu gönderin",
+          ],
+        },
+        {
+          title: "Widget Entegrasyonu",
+          description: "Rezervasyon widget'ını web sitenize nasıl entegre edersiniz?",
+          details: [
+            "Widget kodunu alın",
+            "Web sitenize widget kodunu ekleyin",
+            "Müşterileriniz artık doğrudan web sitenizden rezervasyon yapabilir",
+          ],
+        },
+      ],
+    },
+    {
       id: "settings",
       title: "Sistem Ayarları",
       icon: <Settings className="h-5 w-5" />,
@@ -424,8 +634,35 @@ export function UserGuidePage() {
     },
     {
       id: "settlements",
-      title: "Hakediş ve Transferler",
-      icon: <CreditCard className="h-5 w-5" />,
+      title: "Hakediş Yönetimi",
+      icon: <PiggyBank className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Hakediş Görüntüleme",
+          description: "Sistem geneli hakediş bilgilerini görüntüleme.",
+          details: [
+            "Hakedişler sayfasına gidin",
+            "Otel bazlı filtreleme yapın",
+            "Tarih aralığı seçin",
+            "Hakediş listesini görüntüleyin",
+            "Hakediş detaylarını inceleyin",
+          ],
+        },
+        {
+          title: "Hakediş Durumları",
+          description: "Hakediş durumlarını anlama.",
+          details: [
+            "Beklemede: Henüz ödenmemiş hakedişler",
+            "Tamamlandı: Ödenmiş hakedişler",
+            "İptal: İptal edilmiş hakedişler",
+          ],
+        },
+      ],
+    },
+    {
+      id: "transfers",
+      title: "Transferler (MagicPay)",
+      icon: <Send className="h-5 w-5" />,
       steps: [
         {
           title: "Transfer İşlemleri",
@@ -435,6 +672,103 @@ export function UserGuidePage() {
             "Bekleyen transferleri görüntüleyin",
             "Transfer işlemini onaylayın",
             "Transfer geçmişini inceleyin",
+          ],
+        },
+        {
+          title: "MagicPay Entegrasyonu",
+          description: "MagicPay ile ödeme işlemleri.",
+          details: [
+            "Transfer işlemleri MagicPay üzerinden yapılır",
+            "Transfer durumunu takip edebilirsiniz",
+            "Ödeme geçmişini görüntüleyebilirsiniz",
+          ],
+        },
+      ],
+    },
+    {
+      id: "invoice",
+      title: "Fatura Oluşturma",
+      icon: <Receipt className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Fatura Oluşturma",
+          description: "Sistem geneli fatura nasıl oluşturulur?",
+          details: [
+            "Fatura Oluştur sayfasına gidin",
+            "Fatura türünü seçin (Komisyon, Gelir, vb.)",
+            "Otel ve tarih aralığını belirleyin",
+            "Fatura detaylarını kontrol edin",
+            "Faturayı oluşturun ve indirin",
+          ],
+        },
+      ],
+    },
+    {
+      id: "revenue",
+      title: "Sistem Geneli Gelir",
+      icon: <TrendingUp className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Gelir Görüntüleme",
+          description: "Tüm otellerin gelir bilgilerini görüntüleme.",
+          details: [
+            "Gelir sayfasına gidin",
+            "Otel bazlı filtreleme yapın",
+            "Tarih aralığı seçin",
+            "Toplam gelir bilgilerini görüntüleyin",
+            "Gelir raporlarını dışa aktarın",
+          ],
+        },
+      ],
+    },
+    {
+      id: "tickets",
+      title: "İletişim / Ticket Yönetimi",
+      icon: <MessageSquare className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Ticket Görüntüleme",
+          description: "Sistem geneli ticket'ları görüntüleme.",
+          details: [
+            "İletişim / Ticket sayfasına gidin",
+            "Gelen ve giden ticket'ları görüntüleyin",
+            "Ticket detaylarını inceleyin",
+            "Yanıt gönderin",
+          ],
+        },
+      ],
+    },
+    {
+      id: "settings",
+      title: "Sistem Ayarları",
+      icon: <Settings className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Genel Sistem Ayarları",
+          description: "Sistem genel ayarlarını yönetme.",
+          details: [
+            "Sistem Ayarları sayfasına gidin",
+            "Sistem genel bilgilerini güncelleyin",
+            "Email ve SMS ayarlarını yapılandırın",
+            "Değişiklikleri kaydedin",
+          ],
+        },
+      ],
+    },
+    {
+      id: "audit",
+      title: "Audit Log (Denetim Kayıtları)",
+      icon: <FileText className="h-5 w-5" />,
+      steps: [
+        {
+          title: "Audit Log Görüntüleme",
+          description: "Sistem aktivitelerini nasıl görüntüleyebilirsiniz?",
+          details: [
+            "Audit Log sayfasına gidin",
+            "Tarih aralığı seçin",
+            "Kullanıcı veya işlem tipine göre filtreleyin",
+            "Sistem aktivitelerini inceleyin",
+            "Log detaylarını görüntüleyin",
           ],
         },
       ],
