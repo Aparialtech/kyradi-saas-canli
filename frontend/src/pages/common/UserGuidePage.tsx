@@ -17,7 +17,6 @@ import {
   ScanLine,
   MessageSquare,
   ChevronDown,
-  ChevronUp,
 } from "../../lib/lucide";
 import { ModernCard } from "../../components/ui/ModernCard";
 import { ModernButton } from "../../components/ui/ModernButton";
@@ -565,11 +564,15 @@ export function UserGuidePage() {
                 >
                   {section.title}
                 </h2>
-                {expandedSections.has(section.id) ? (
-                  <ChevronUp className="h-5 w-5" style={{ color: "var(--text-tertiary)", flexShrink: 0 }} />
-                ) : (
-                  <ChevronDown className="h-5 w-5" style={{ color: "var(--text-tertiary)", flexShrink: 0 }} />
-                )}
+                <ChevronDown 
+                  className="h-5 w-5" 
+                  style={{ 
+                    color: "var(--text-tertiary)", 
+                    flexShrink: 0,
+                    transform: expandedSections.has(section.id) ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 0.3s ease"
+                  }} 
+                />
               </div>
 
               <AnimatePresence>
