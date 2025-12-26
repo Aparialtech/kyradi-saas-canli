@@ -53,6 +53,7 @@ import { WidgetPreviewPage } from "../pages/partner/WidgetPreviewPage";
 import { MagicPayDemoPage } from "../pages/partner/magicpay/MagicPayDemoPage";
 import { SelfServiceReservationPage } from "../pages/public/SelfServiceReservationPage";
 import { WidgetDemoPage } from "../pages/public/WidgetDemoPage";
+import { LandingPage } from "../pages/public/LandingPage";
 import { UserGuidePage } from "../pages/common/UserGuidePage";
 
 export function AppRouter() {
@@ -137,8 +138,7 @@ export function AppRouter() {
         </Route>
       </Route>
 
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
