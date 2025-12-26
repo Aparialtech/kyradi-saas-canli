@@ -2,11 +2,9 @@ import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
-  BookOpen,
   FileText,
   Users,
   MapPin,
-  Package,
   Calendar,
   CreditCard,
   Settings,
@@ -16,12 +14,10 @@ import {
   Building2,
   HardDrive,
   ScanLine,
-  DollarSign,
   MessageSquare,
 } from "../../lib/lucide";
 import { ModernCard } from "../../components/ui/ModernCard";
 import { ModernButton } from "../../components/ui/ModernButton";
-import { useTranslation } from "../../hooks/useTranslation";
 
 interface GuideSection {
   id: string;
@@ -37,11 +33,9 @@ interface GuideSection {
 export function UserGuidePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
 
   // Determine panel type from path
   const isAdmin = location.pathname.startsWith("/admin");
-  const panelType = isAdmin ? "admin" : "partner";
 
   const partnerSections: GuideSection[] = [
     {
@@ -463,7 +457,7 @@ export function UserGuidePage() {
               justifyContent: "center",
             }}
           >
-            <BookOpen className="h-6 w-6" style={{ color: "white" }} />
+            <FileText className="h-6 w-6" style={{ color: "white" }} />
           </div>
           <div>
             <h1

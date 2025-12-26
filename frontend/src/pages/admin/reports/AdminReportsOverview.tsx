@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Building2, Users, Package, DollarSign, HardDrive, Mail, MessageSquare, CreditCard, Loader2, AlertCircle, CheckCircle2, XCircle, Clock, Send, BookOpen } from "../../../lib/lucide";
+import { Building2, Users, Package, DollarSign, HardDrive, Mail, MessageSquare, CreditCard, Loader2, AlertCircle, CheckCircle2, XCircle, Clock, Send, FileText } from "../../../lib/lucide";
 import { ModernButton } from "../../../components/ui/ModernButton";
 
 import { adminReportService, type AdminSummaryResponse } from "../../../services/admin/reports";
@@ -97,8 +97,8 @@ export function AdminReportsOverview() {
         <ModernButton
           variant="primary"
           onClick={() => navigate("/admin/guide")}
-          leftIcon={<BookOpen className="h-4 w-4" />}
         >
+          <FileText className="h-4 w-4" style={{ marginRight: "var(--space-2)", display: "inline-block" }} />
           Nasıl Kullanılır?
         </ModernButton>
       </motion.div>
