@@ -10,6 +10,7 @@ import { usePagination, calculatePaginationMeta } from "../../../components/comm
 import { ReservationDetailModal } from "../../../components/reservations/ReservationDetailModal";
 import { PaymentActionModal } from "../../../components/reservations/PaymentActionModal";
 import { getErrorMessage } from "../../../lib/httpError";
+import { errorLogger } from "../../../lib/errorLogger";
 import { env } from "../../../config/env";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { StatusBadge } from "../../../components/common/StatusBadge";

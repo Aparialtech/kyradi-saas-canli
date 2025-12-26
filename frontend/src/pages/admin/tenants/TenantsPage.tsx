@@ -29,6 +29,7 @@ import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
 import { getErrorMessage } from "../../../lib/httpError";
+import { errorLogger } from "../../../lib/errorLogger";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { DataToolbar } from "../../../components/common/DataToolbar";
@@ -758,8 +759,13 @@ function TenantDetailCard({
         }
         await updateUserMutation.mutateAsync({ userId: userModal.user.id, payload });
       }
-    } catch {
+    } catch (error) {
       // Hata bildirimleri mutation onError içinde tetikleniyor.
+      errorLogger.error(error, {
+        component: "TenantsPage",
+        action: "handleUserModalSubmit",
+        userId: userModal.user.id,
+      });
     }
   });
 

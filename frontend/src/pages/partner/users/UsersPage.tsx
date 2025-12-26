@@ -19,6 +19,7 @@ import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
+import { errorLogger } from "../../../lib/errorLogger";
 import { useConfirm } from "../../../components/common/ConfirmDialog";
 import type { UserRole } from "../../../types/auth";
 import { useAuth } from "../../../context/AuthContext";

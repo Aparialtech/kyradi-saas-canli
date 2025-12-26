@@ -17,6 +17,7 @@ import { ToastContainer } from "../../components/common/ToastContainer";
 import { Modal } from "../../components/common/Modal";
 import { ContractViewerModal } from "../../components/common/ContractViewerModal";
 import { getErrorMessage } from "../../lib/httpError";
+import { errorLogger } from "../../lib/errorLogger";
 import { DateTimeField } from "../../components/ui/DateField";
 
 const statusLabels: Record<string, string> = {
@@ -102,7 +103,11 @@ export function SelfServiceReservationPage() {
         baggage_count: createForm.baggage_count || 1,
       });
       setPriceEstimate(estimate);
-    } catch {
+    } catch (error) {
+      errorLogger.warn(error, {
+        component: "SelfServiceReservationPage",
+        action: "calculatePrice",
+      });
       setPriceEstimate(null);
     }
   }, [createForm.start_at, createForm.end_at, createForm.tenant_slug, createForm.baggage_count]);
@@ -143,6 +148,10 @@ export function SelfServiceReservationPage() {
       setCreateResult(res);
       push({ title: "Rezervasyon Oluşturuldu", description: `Kod: ${res.confirmation_code}`, type: "success" });
     } catch (err) {
+      errorLogger.error(err, {
+        component: "SelfServiceReservationPage",
+        action: "handleCreateReservation",
+      });
       push({ title: "Hata", description: getErrorMessage(err), type: "error" });
     } finally {
       setCreateLoading(false);
@@ -159,6 +168,11 @@ export function SelfServiceReservationPage() {
       setHandoverModalOpen(false);
       push({ title: "Teslim Alındı", type: "success" });
     } catch (err) {
+      errorLogger.error(err, {
+        component: "SelfServiceReservationPage",
+        action: "handleHandover",
+        confirmationCode: result?.confirmation_code?.substring(0, 10),
+      });
       push({ title: "Hata", description: getErrorMessage(err), type: "error" });
     } finally {
       setHandoverLoading(false);
@@ -175,6 +189,11 @@ export function SelfServiceReservationPage() {
       setReturnModalOpen(false);
       push({ title: "Teslim Edildi", type: "success" });
     } catch (err) {
+      errorLogger.error(err, {
+        component: "SelfServiceReservationPage",
+        action: "handleReturn",
+        confirmationCode: result?.confirmation_code?.substring(0, 10),
+      });
       push({ title: "Hata", description: getErrorMessage(err), type: "error" });
     } finally {
       setReturnLoading(false);

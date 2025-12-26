@@ -11,6 +11,7 @@ import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import { useTranslation } from '../../hooks/useTranslation';
 import { getErrorMessage } from '../../lib/httpError';
+import { errorLogger } from '../../lib/errorLogger';
 import { Eye, CheckCircle2, XOctagon, Search } from '../../lib/lucide';
 import styles from './ModernReservationsPage.module.css';
 
