@@ -59,6 +59,8 @@ import { UserGuidePage } from "../pages/common/UserGuidePage";
 export function AppRouter() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/verify-reset-code" element={<VerifyResetCodePage />} />
