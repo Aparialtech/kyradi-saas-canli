@@ -1209,6 +1209,17 @@
   padding: 4rem 0 2rem;
   background: #0f172a;
   color: white;
+  position: relative;
+}
+
+.footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
 }
 
 .footerContent {
@@ -1346,6 +1357,17 @@
   .footerContent {
     grid-template-columns: 1fr;
     gap: 2rem;
+  }
+
+  .footerBrand {
+    align-items: center;
+    text-align: center;
+  }
+
+  .footerLogo {
+    height: 48px;
+    max-width: 160px;
+    margin: 0 auto;
   }
 
   .footerLinks {
