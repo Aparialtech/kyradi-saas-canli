@@ -38,8 +38,13 @@ export const ModernReservationsPage: React.FC = () => {
       void queryClient.invalidateQueries({ queryKey: ['widget-reservations'] });
       push({ title: 'Rezervasyon tamamlandı', type: 'success' });
     },
-    onError: (error: unknown) =>
-      push({ title: 'Hata', description: getErrorMessage(error), type: 'error' }),
+    onError: (error: unknown) => {
+      errorLogger.error(error, {
+        component: "ModernReservationsPage",
+        action: "completeReservation",
+      });
+      push({ title: 'Hata', description: getErrorMessage(error), type: 'error' });
+    },
   });
 
   // Cancel mutation
@@ -49,8 +54,13 @@ export const ModernReservationsPage: React.FC = () => {
       void queryClient.invalidateQueries({ queryKey: ['widget-reservations'] });
       push({ title: 'Rezervasyon iptal edildi', type: 'info' });
     },
-    onError: (error: unknown) =>
-      push({ title: 'Hata', description: getErrorMessage(error), type: 'error' }),
+    onError: (error: unknown) => {
+      errorLogger.error(error, {
+        component: "ModernReservationsPage",
+        action: "cancelReservation",
+      });
+      push({ title: 'Hata', description: getErrorMessage(error), type: 'error' });
+    },
   });
 
   // Filter reservations

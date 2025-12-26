@@ -211,8 +211,12 @@ export function UsersPage() {
           await navigator.clipboard.writeText(text);
           push({ title: "Panoya kopyalandı", type: "success" });
         }
-      } catch {
-        // ignore
+      } catch (error) {
+        errorLogger.warn(error, {
+          component: "UsersPage",
+          action: "copyToClipboard",
+        });
+        // ignore clipboard errors
       }
     },
     [push],

@@ -764,7 +764,7 @@ function TenantDetailCard({
       errorLogger.error(error, {
         component: "TenantsPage",
         action: "handleUserModalSubmit",
-        userId: userModal.user.id,
+        userId: userModal.user?.id,
       });
     }
   });

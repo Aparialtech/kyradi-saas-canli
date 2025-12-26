@@ -1,7 +1,7 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { AlertTriangle } from "../../lib/lucide";
-import { errorLogger, ErrorSeverity } from "../../lib/errorLogger";
+import { errorLogger } from "../../lib/errorLogger";
 
 interface Props {
   children: ReactNode;

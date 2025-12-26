@@ -397,8 +397,13 @@ export function ReservationsPage() {
                     if (translated && translated !== statusKey) {
                       translatedLabel = translated;
                     }
-                  } catch {
+                  } catch (err) {
                     // Fallback to raw value if translation fails
+                    errorLogger.warn(err, {
+                      component: "ReservationsPage",
+                      action: "translateStatus",
+                      statusKey,
+                    });
                   }
                   return <StatusBadge status={value} label={translatedLabel} />;
                 },

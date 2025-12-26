@@ -3,12 +3,19 @@
  * Provides structured error logging with context, severity levels, and optional remote reporting.
  */
 
-export enum ErrorSeverity {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
-}
+export type ErrorSeverity = "low" | "medium" | "high" | "critical";
+
+export const ErrorSeverity: {
+  LOW: ErrorSeverity;
+  MEDIUM: ErrorSeverity;
+  HIGH: ErrorSeverity;
+  CRITICAL: ErrorSeverity;
+} = {
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+  CRITICAL: "critical",
+};
 
 export interface ErrorContext {
   userId?: string;
@@ -76,7 +83,7 @@ class ErrorLogger {
     });
 
     // In production, could send to error tracking service (Sentry, LogRocket, etc.)
-    if (import.meta.env.PROD && severity >= ErrorSeverity.HIGH) {
+    if (import.meta.env.PROD && (severity === ErrorSeverity.HIGH || severity === ErrorSeverity.CRITICAL)) {
       this.reportToService(loggedError);
     }
   }
