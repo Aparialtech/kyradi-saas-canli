@@ -430,7 +430,8 @@ def _get_tenant_metadata_safe(tenant: Tenant | None) -> dict:
         import json
         try:
             return json.loads(tenant_metadata)
-        except Exception:
+        except Exception as exc:
+            logger.warning(f"Failed to get tenant metadata for commission calculation: {exc}")
             return {}
     
     if isinstance(tenant_metadata, dict):

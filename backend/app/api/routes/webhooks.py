@@ -1,10 +1,13 @@
 """External webhook endpoints."""
 
+import logging
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from ...db.session import get_session
 from ...models import Payment, PaymentStatus
