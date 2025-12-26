@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -16,6 +16,17 @@ import {
   TrendingUp,
   ChevronDown,
   ArrowRight,
+  Mail,
+  Phone,
+  Send,
+  Shield,
+  Clock,
+  Users,
+  Star,
+  Award,
+  Globe,
+  Lock,
+  Eye,
 } from "../../lib/lucide";
 import styles from "./LandingPage.module.css";
 
@@ -24,6 +35,15 @@ export function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [activeUseCase, setActiveUseCase] = useState<"hotels" | "depots" | "events">("hotels");
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    message: "",
+  });
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
 
   const toggleFaq = (id: string) => {
     setExpandedFaq(expandedFaq === id ? null : id);
@@ -38,8 +58,28 @@ export function LandingPage() {
   };
 
   const handleDemoRequest = () => {
-    // Navigate to contact or open demo request modal
-    window.location.href = "mailto:info@kyradi.com?subject=Demo Talep";
+    scrollToSection("contact");
+  };
+
+  const handleContactSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setContactSubmitting(true);
+    
+    // Simulate form submission (in production, this would call an API)
+    const subject = encodeURIComponent("Landing Page İletişim Formu");
+    const body = encodeURIComponent(
+      `İsim: ${contactForm.name}\nE-posta: ${contactForm.email}\nTelefon: ${contactForm.phone}\nŞirket: ${contactForm.company}\n\nMesaj:\n${contactForm.message}`
+    );
+    
+    // Open mailto link
+    window.location.href = `mailto:info@kyradi.com?subject=${subject}&body=${body}`;
+    
+    setTimeout(() => {
+      setContactSuccess(true);
+      setContactSubmitting(false);
+      setContactForm({ name: "", email: "", phone: "", company: "", message: "" });
+      setTimeout(() => setContactSuccess(false), 5000);
+    }, 500);
   };
 
   return (
@@ -57,6 +97,9 @@ export function LandingPage() {
             <button onClick={() => scrollToSection("features")} className={styles.navLink}>
               Özellikler
             </button>
+            <button onClick={() => scrollToSection("screenshots")} className={styles.navLink}>
+              Örnek Sayfalar
+            </button>
             <button onClick={() => scrollToSection("how-it-works")} className={styles.navLink}>
               Nasıl Çalışır
             </button>
@@ -65,6 +108,9 @@ export function LandingPage() {
             </button>
             <button onClick={() => scrollToSection("faq")} className={styles.navLink}>
               SSS
+            </button>
+            <button onClick={() => scrollToSection("contact")} className={styles.navLink}>
+              İletişim
             </button>
           </div>
 
@@ -106,8 +152,14 @@ export function LandingPage() {
               <button onClick={() => scrollToSection("pricing")} className={styles.mobileNavLink}>
                 Fiyatlandırma
               </button>
+              <button onClick={() => scrollToSection("screenshots")} className={styles.mobileNavLink}>
+                Örnek Sayfalar
+              </button>
               <button onClick={() => scrollToSection("faq")} className={styles.mobileNavLink}>
                 SSS
+              </button>
+              <button onClick={() => scrollToSection("contact")} className={styles.mobileNavLink}>
+                İletişim
               </button>
               <button onClick={handleDemoRequest} className={styles.mobileNavLink}>
                 Demo Talep Et
@@ -129,14 +181,33 @@ export function LandingPage() {
             transition={{ duration: 0.6 }}
             className={styles.heroContent}
           >
+            <div className={styles.heroBadge}>
+              <Star className="h-4 w-4" />
+              <span>#1 Otel Bagaj Yönetim Platformu</span>
+            </div>
             <h1 className={styles.heroTitle}>
               Otel Bagaj & Emanet Yönetimi
               <br />
               <span className={styles.heroTitleAccent}>Online, Güvenli, Hızlı</span>
             </h1>
             <p className={styles.heroSubtitle}>
-              Rezervasyon, QR doğrulama, ödeme ve raporlama tek platformda. Operasyonunuzu profesyonelleştirin.
+              Rezervasyon, QR doğrulama, ödeme ve raporlama tek platformda. Operasyonunuzu profesyonelleştirin ve
+              müşteri memnuniyetini artırın.
             </p>
+            <div className={styles.heroStats}>
+              <div className={styles.statItem}>
+                <div className={styles.statValue}>500+</div>
+                <div className={styles.statLabel}>Aktif Otel</div>
+              </div>
+              <div className={styles.statItem}>
+                <div className={styles.statValue}>50K+</div>
+                <div className={styles.statLabel}>Rezervasyon/Ay</div>
+              </div>
+              <div className={styles.statItem}>
+                <div className={styles.statValue}>%99.9</div>
+                <div className={styles.statLabel}>Uptime</div>
+              </div>
+            </div>
             <div className={styles.heroCTAs}>
               <button onClick={handleDemoRequest} className={styles.btnPrimaryLarge}>
                 Demo Talep Et
@@ -186,6 +257,35 @@ export function LandingPage() {
               </div>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className={styles.statsSection}>
+        <div className={styles.container}>
+          <div className={styles.statsGrid}>
+            {[
+              { icon: <Users className="h-6 w-6" />, value: "500+", label: "Aktif Otel", color: "#6366f1" },
+              { icon: <Package className="h-6 w-6" />, value: "50K+", label: "Aylık Rezervasyon", color: "#10b981" },
+              { icon: <TrendingUp className="h-6 w-6" />, value: "%99.9", label: "Sistem Uptime", color: "#f59e0b" },
+              { icon: <Award className="h-6 w-6" />, value: "4.9/5", label: "Müşteri Memnuniyeti", color: "#ef4444" },
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className={styles.statCard}
+              >
+                <div className={styles.statIcon} style={{ color: stat.color }}>
+                  {stat.icon}
+                </div>
+                <div className={styles.statValue}>{stat.value}</div>
+                <div className={styles.statLabel}>{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -500,6 +600,167 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Screenshots Section */}
+      <section id="screenshots" className={styles.screenshots}>
+        <div className={styles.container}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className={styles.sectionHeader}
+          >
+            <h2 className={styles.sectionTitle}>Platform Önizleme</h2>
+            <p className={styles.sectionSubtitle}>
+              Modern, kullanıcı dostu arayüz ile operasyonlarınızı kolayca yönetin
+            </p>
+          </motion.div>
+
+          <div className={styles.screenshotsGrid}>
+            {[
+              {
+                title: "Dashboard & Genel Bakış",
+                description: "Tüm önemli metriklerinizi tek ekranda görüntüleyin",
+                features: ["Gelir istatistikleri", "Rezervasyon özeti", "Depo doluluk oranı", "Komisyon takibi"],
+              },
+              {
+                title: "Rezervasyon Yönetimi",
+                description: "Rezervasyonları kolayca oluşturun, görüntüleyin ve yönetin",
+                features: ["Hızlı rezervasyon oluşturma", "Durum takibi", "Ödeme yönetimi", "Detaylı raporlar"],
+              },
+              {
+                title: "QR Kod Doğrulama",
+                description: "QR kod ile hızlı ve güvenli teslim alma/etme işlemleri",
+                features: ["Anlık QR tarama", "Manuel kod girişi", "Teslim işlemleri", "Geçmiş kayıtları"],
+              },
+              {
+                title: "Raporlar & Analiz",
+                description: "Detaylı raporlar ve analizlerle operasyonunuzu optimize edin",
+                features: ["Gelir raporları", "Rezervasyon analizi", "Depo kullanımı", "CSV/Excel export"],
+              },
+            ].map((screenshot, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className={styles.screenshotCard}
+              >
+                <div className={styles.screenshotMock}>
+                  <div className={styles.mockBrowser}>
+                    <div className={styles.mockBrowserHeader}>
+                      <div className={styles.mockBrowserDots}>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                    <div className={styles.mockBrowserContent}>
+                      <div className={styles.mockContentBar} style={{ width: "85%" }}></div>
+                      <div className={styles.mockContentBar} style={{ width: "70%" }}></div>
+                      <div className={styles.mockContentBar} style={{ width: "90%" }}></div>
+                      <div className={styles.mockContentGrid}>
+                        <div className={styles.mockGridItem}></div>
+                        <div className={styles.mockGridItem}></div>
+                        <div className={styles.mockGridItem}></div>
+                        <div className={styles.mockGridItem}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.screenshotInfo}>
+                  <h3 className={styles.screenshotTitle}>{screenshot.title}</h3>
+                  <p className={styles.screenshotDescription}>{screenshot.description}</p>
+                  <ul className={styles.screenshotFeatures}>
+                    {screenshot.features.map((feature, fIndex) => (
+                      <li key={fIndex}>
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className={styles.benefits}>
+        <div className={styles.container}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className={styles.sectionHeader}
+          >
+            <h2 className={styles.sectionTitle}>Neden Kyradi?</h2>
+            <p className={styles.sectionSubtitle}>
+              Operasyonunuzu dijitalleştirin, verimliliği artırın, müşteri memnuniyetini yükseltin
+            </p>
+          </motion.div>
+
+          <div className={styles.benefitsGrid}>
+            {[
+              {
+                icon: <Zap className="h-6 w-6" />,
+                title: "Hızlı Kurulum",
+                description: "5 dakikada kurulum, hemen kullanmaya başlayın. Teknik bilgi gerektirmez.",
+                color: "#f59e0b",
+              },
+              {
+                icon: <Shield className="h-6 w-6" />,
+                title: "Güvenli & KVKK Uyumlu",
+                description: "Tüm veriler şifrelenir, KVKK uyumlu saklanır. Güvenliğiniz önceliğimiz.",
+                color: "#10b981",
+              },
+              {
+                icon: <Clock className="h-6 w-6" />,
+                title: "7/24 Destek",
+                description: "Her zaman yanınızdayız. E-posta, telefon ve canlı destek ile hızlı çözüm.",
+                color: "#6366f1",
+              },
+              {
+                icon: <TrendingUp className="h-6 w-6" />,
+                title: "Sürekli Gelişim",
+                description: "Düzenli güncellemeler ve yeni özellikler. Platform sürekli gelişiyor.",
+                color: "#ef4444",
+              },
+              {
+                icon: <Globe className="h-6 w-6" />,
+                title: "Çoklu Dil Desteği",
+                description: "Türkçe ve İngilizce dil desteği. Müşterileriniz kendi dilinde rezervasyon yapabilir.",
+                color: "#8b5cf6",
+              },
+              {
+                icon: <BarChart3 className="h-6 w-6" />,
+                title: "Detaylı Analiz",
+                description: "Gelir, rezervasyon ve depo kullanım analizleri ile kararlarınızı veriye dayandırın.",
+                color: "#06b6d4",
+              },
+            ].map((benefit, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className={styles.benefitCard}
+              >
+                <div className={styles.benefitIcon} style={{ background: `${benefit.color}15`, color: benefit.color }}>
+                  {benefit.icon}
+                </div>
+                <h3 className={styles.benefitTitle}>{benefit.title}</h3>
+                <p className={styles.benefitDescription}>{benefit.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section id="faq" className={styles.faq}>
         <div className={styles.container}>
@@ -588,6 +849,176 @@ export function LandingPage() {
                 </AnimatePresence>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className={styles.contact}>
+        <div className={styles.container}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className={styles.sectionHeader}
+          >
+            <h2 className={styles.sectionTitle}>İletişime Geçin</h2>
+            <p className={styles.sectionSubtitle}>
+              Sorularınız mı var? Demo talep etmek mi istiyorsunuz? Bize ulaşın, size yardımcı olalım.
+            </p>
+          </motion.div>
+
+          <div className={styles.contactGrid}>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className={styles.contactInfo}
+            >
+              <h3 className={styles.contactInfoTitle}>Bize Ulaşın</h3>
+              <p className={styles.contactInfoDescription}>
+                Kyradi ekibi olarak size en iyi hizmeti sunmak için buradayız. Sorularınız, önerileriniz veya demo
+                talepleriniz için bizimle iletişime geçebilirsiniz.
+              </p>
+
+              <div className={styles.contactMethods}>
+                <a href="mailto:info@kyradi.com" className={styles.contactMethod}>
+                  <div className={styles.contactMethodIcon}>
+                    <Mail className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className={styles.contactMethodLabel}>E-posta</div>
+                    <div className={styles.contactMethodValue}>info@kyradi.com</div>
+                  </div>
+                </a>
+                <a href="tel:+905551234567" className={styles.contactMethod}>
+                  <div className={styles.contactMethodIcon}>
+                    <Phone className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className={styles.contactMethodLabel}>Telefon</div>
+                    <div className={styles.contactMethodValue}>+90 555 123 45 67</div>
+                  </div>
+                </a>
+                <div className={styles.contactMethod}>
+                  <div className={styles.contactMethodIcon}>
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className={styles.contactMethodLabel}>Çalışma Saatleri</div>
+                    <div className={styles.contactMethodValue}>Pazartesi - Cuma: 09:00 - 18:00</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.contactTrust}>
+                <div className={styles.trustItem}>
+                  <Shield className="h-5 w-5" />
+                  <span>KVKK Uyumlu</span>
+                </div>
+                <div className={styles.trustItem}>
+                  <Lock className="h-5 w-5" />
+                  <span>Güvenli Veri</span>
+                </div>
+                <div className={styles.trustItem}>
+                  <Eye className="h-5 w-5" />
+                  <span>Şeffaf Fiyatlandırma</span>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className={styles.contactFormWrapper}
+            >
+              <form onSubmit={handleContactSubmit} className={styles.contactForm}>
+                {contactSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={styles.contactSuccess}
+                  >
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span>Mesajınız gönderildi! En kısa sürede size dönüş yapacağız.</span>
+                  </motion.div>
+                )}
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="contact-name">Ad Soyad *</label>
+                    <input
+                      type="text"
+                      id="contact-name"
+                      required
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                      placeholder="Adınız ve soyadınız"
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="contact-email">E-posta *</label>
+                    <input
+                      type="email"
+                      id="contact-email"
+                      required
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                      placeholder="ornek@email.com"
+                    />
+                  </div>
+                </div>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="contact-phone">Telefon</label>
+                    <input
+                      type="tel"
+                      id="contact-phone"
+                      value={contactForm.phone}
+                      onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                      placeholder="+90 555 123 45 67"
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="contact-company">Şirket</label>
+                    <input
+                      type="text"
+                      id="contact-company"
+                      value={contactForm.company}
+                      onChange={(e) => setContactForm({ ...contactForm, company: e.target.value })}
+                      placeholder="Şirket adı"
+                    />
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="contact-message">Mesajınız *</label>
+                  <textarea
+                    id="contact-message"
+                    required
+                    rows={5}
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                    placeholder="Mesajınızı buraya yazın..."
+                  />
+                </div>
+                <button type="submit" className={styles.btnPrimary} disabled={contactSubmitting}>
+                  {contactSubmitting ? (
+                    <>
+                      <Clock className="h-5 w-5" />
+                      Gönderiliyor...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-5 w-5" />
+                      Mesaj Gönder
+                    </>
+                  )}
+                </button>
+              </form>
+            </motion.div>
           </div>
         </div>
       </section>
