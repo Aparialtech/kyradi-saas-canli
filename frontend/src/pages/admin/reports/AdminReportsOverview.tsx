@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Building2, Users, Package, DollarSign, HardDrive, Mail, MessageSquare, CreditCard, Loader2, AlertCircle, CheckCircle2, XCircle, Clock, Send } from "../../../lib/lucide";
+import { Building2, Users, Package, DollarSign, HardDrive, Mail, MessageSquare, CreditCard, Loader2, AlertCircle, CheckCircle2, XCircle, Clock, Send, BookOpen } from "../../../lib/lucide";
+import { ModernButton } from "../../../components/ui/ModernButton";
 
 import { adminReportService, type AdminSummaryResponse } from "../../../services/admin/reports";
 import { paymentScheduleService } from "../../../services/partner/paymentSchedules";
@@ -16,6 +18,7 @@ import { ModernTable, type ModernTableColumn } from "../../../components/ui/Mode
 export function AdminReportsOverview() {
   const { t } = useTranslation();
   const { messages } = useToast();
+  const navigate = useNavigate();
   const summaryQuery = useQuery<AdminSummaryResponse>({ 
     queryKey: ["admin", "summary"], 
     queryFn: () => adminReportService.summary(),
@@ -81,14 +84,23 @@ export function AdminReportsOverview() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{ marginBottom: 'var(--space-6)' }}
+        style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
       >
-        <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
-          {t("admin.dashboard.title")}
-        </h1>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
-          {t("admin.dashboard.subtitle")}
-        </p>
+        <div>
+          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-black)', color: 'var(--text-primary)', margin: '0 0 var(--space-2) 0' }}>
+            {t("admin.dashboard.title")}
+          </h1>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)', margin: 0 }}>
+            {t("admin.dashboard.subtitle")}
+          </p>
+        </div>
+        <ModernButton
+          variant="primary"
+          onClick={() => navigate("/admin/guide")}
+          leftIcon={<BookOpen className="h-4 w-4" />}
+        >
+          Nasıl Kullanılır?
+        </ModernButton>
       </motion.div>
 
       {/* Global KPI Cards */}

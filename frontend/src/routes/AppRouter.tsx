@@ -53,6 +53,7 @@ import { WidgetPreviewPage } from "../pages/partner/WidgetPreviewPage";
 import { MagicPayDemoPage } from "../pages/partner/magicpay/MagicPayDemoPage";
 import { SelfServiceReservationPage } from "../pages/public/SelfServiceReservationPage";
 import { WidgetDemoPage } from "../pages/public/WidgetDemoPage";
+import { UserGuidePage } from "../pages/common/UserGuidePage";
 
 export function AppRouter() {
   return (
@@ -83,6 +84,7 @@ export function AppRouter() {
           <Route path="tickets" element={<AdminTicketsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="guide" element={<UserGuidePage />} />
           <Route path="*" element={<Navigate to="/admin/overview" replace />} />
         </Route>
       </Route>
@@ -130,6 +132,7 @@ export function AppRouter() {
             <Route path="demo-payment-flow" element={<DemoPaymentFlowPage />} />
           </Route>
           <Route path="settings" element={<PartnerSettingsPage />} />
+          <Route path="guide" element={<UserGuidePage />} />
           <Route path="*" element={<Navigate to="/app" replace />} />
         </Route>
       </Route>

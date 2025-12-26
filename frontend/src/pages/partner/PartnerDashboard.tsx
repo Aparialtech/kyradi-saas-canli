@@ -54,6 +54,7 @@ import {
   MessageSquare,
   DollarSign,
   Send,
+  BookOpen,
 } from "../../lib/lucide";
 import { ticketService } from "../../services/partner/tickets";
 import { paymentScheduleService } from "../../services/partner/paymentSchedules";
@@ -323,6 +324,18 @@ export function PartnerOverview() {
           title={t("partner.overview.title")}
           subtitle={t("partner.overview.subtitle")}
           actions={[
+            {
+              key: "guide",
+              node: (
+                <Button
+                  variant="primary"
+                  onClick={() => navigate("/app/guide")}
+                  leftIcon={<BookOpen className="h-4 w-4" />}
+                >
+                  Nasıl Kullanılır?
+                </Button>
+              ),
+            },
             {
               key: "support",
               node: (
