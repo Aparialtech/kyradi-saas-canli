@@ -48,7 +48,7 @@ const statusConfig: Record<string, { label: string; color: "success" | "warning"
 };
 
 export function TransfersPage() {
-  const { t: _t } = useTranslation(); // Translation hook ready for i18n
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { page, pageSize, setPage, setPageSize } = usePagination(10);

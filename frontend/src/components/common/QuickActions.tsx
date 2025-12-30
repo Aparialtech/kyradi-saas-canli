@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "../../hooks/useTranslation";
+import { useTranslation, type TranslationKey } from "../../hooks/useTranslation";
 import {
   Search, Command, Home, MapPin, Package, Calendar,
   Users, DollarSign, Settings, BarChart3, FileText,
@@ -28,7 +28,7 @@ interface QuickActionsProps {
 }
 
 // Default actions for Partner Panel
-const getPartnerActions = (navigate: (path: string) => void, t: (key: string) => string): QuickAction[] => [
+const getPartnerActions = (navigate: (path: string) => void, t: (key: TranslationKey) => string): QuickAction[] => [
   // Navigasyon
   {
     id: 'dashboard',
@@ -168,7 +168,7 @@ const getPartnerActions = (navigate: (path: string) => void, t: (key: string) =>
 ];
 
 // Default actions for Admin Panel
-const getAdminActions = (navigate: (path: string) => void, t: (key: string) => string): QuickAction[] => [
+const getAdminActions = (navigate: (path: string) => void, t: (key: TranslationKey) => string): QuickAction[] => [
   // Navigasyon
   {
     id: 'admin-dashboard',
