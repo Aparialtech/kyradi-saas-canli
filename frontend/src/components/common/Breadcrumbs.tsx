@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronRight, Home } from "../../lib/lucide";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface BreadcrumbItem {
   label: string;
@@ -17,37 +18,37 @@ interface BreadcrumbsProps {
   showHome?: boolean;
 }
 
-// Route to label mapping for auto-generation
-const ROUTE_LABELS: Record<string, string> = {
+// Route to translation key mapping for auto-generation
+const getRouteLabels = (t: (key: string) => string): Record<string, string> => ({
   // Partner routes
   'app': 'Partner Panel',
-  'dashboard': 'Genel Bakış',
-  'overview': 'Genel Bakış',
-  'locations': 'Lokasyonlar',
-  'lockers': 'Depolar',
-  'reservations': 'Rezervasyonlar',
-  'users': 'Kullanıcılar',
-  'staff': 'Çalışanlar',
-  'pricing': 'Ücretlendirme',
-  'revenue': 'Gelir',
-  'reports': 'Raporlar',
-  'settlements': 'Hakedişler',
-  'settings': 'Ayarlar',
-  'widget-preview': 'Widget Önizleme',
-  'demo-flow': 'Online Rezervasyon',
-  'qr': 'QR Doğrulama',
+  'dashboard': t('nav.overview'),
+  'overview': t('nav.overview'),
+  'locations': t('nav.locations'),
+  'lockers': t('nav.storages'),
+  'reservations': t('nav.reservations'),
+  'users': t('nav.users'),
+  'staff': t('nav.staff'),
+  'pricing': t('nav.pricing'),
+  'revenue': t('nav.revenue'),
+  'reports': t('nav.reports'),
+  'settlements': t('nav.settlements'),
+  'settings': t('nav.settings'),
+  'widget-preview': t('nav.widgetPreview'),
+  'demo-flow': t('nav.demoFlow'),
+  'qr': t('nav.qr'),
   
   // Admin routes
   'admin': 'Admin Panel',
-  'tenants': 'Oteller',
-  'audit': 'Audit Log',
-  'system': 'Sistem',
+  'tenants': t('nav.tenants'),
+  'audit': t('nav.audit'),
+  'system': t('nav.systemSettings'),
   
   // Common
-  'new': 'Yeni',
-  'edit': 'Düzenle',
-  'details': 'Detaylar',
-};
+  'new': t('common.new'),
+  'edit': t('common.edit'),
+  'details': t('common.details'),
+});
 
 /**
  * Breadcrumbs navigation component
@@ -55,13 +56,15 @@ const ROUTE_LABELS: Record<string, string> = {
  */
 export function Breadcrumbs({
   items,
-  homeLabel = "Ana Sayfa",
+  homeLabel,
   homePath = "/app",
   className = "",
   separator,
   showHome = true,
 }: BreadcrumbsProps) {
   const location = useLocation();
+  const { t } = useTranslation();
+  const defaultHomeLabel = homeLabel ?? t("common.home");
 
   // Auto-generate breadcrumbs from current path
   const autoItems = useMemo(() => {
@@ -78,13 +81,14 @@ export function Breadcrumbs({
       // Skip if it's a UUID or ID
       if (segment.match(/^[0-9a-f-]{36}$/i) || segment.match(/^\d+$/)) {
         breadcrumbs.push({
-          label: 'Detay',
+          label: t('common.details'),
           path: isLast ? undefined : currentPath,
         });
         return;
       }
 
-      const label = ROUTE_LABELS[segment] || segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
+      const routeLabels = getRouteLabels(t);
+      const label = routeLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
       
       breadcrumbs.push({
         label,
@@ -140,7 +144,7 @@ export function Breadcrumbs({
               onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
             >
               <Home className="h-4 w-4" />
-              <span>{homeLabel}</span>
+              <span>{defaultHomeLabel}</span>
             </Link>
           </motion.div>
           {displayItems.length > 0 && (separator || defaultSeparator)}

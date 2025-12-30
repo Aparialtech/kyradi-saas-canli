@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Download, Users, Building2, DollarSign, Package, Receipt } from "../../../lib/lucide";
+import { useTranslation } from "../../../hooks/useTranslation";
 
 import { adminReportService } from "../../../services/admin/reports";
 import type { AdminStorageUsage } from "../../../services/admin/reports";
@@ -18,6 +19,7 @@ import { errorLogger } from "../../../lib/errorLogger";
 import { Modal } from "../../../components/common/Modal";
 
 export function AdminReportsAnalyticsPage() {
+  const { t } = useTranslation();
   const { messages, push } = useToast();
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<string>("");
@@ -571,7 +573,7 @@ export function AdminReportsAnalyticsPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', fontWeight: 600, margin: '0 0 var(--space-1) 0' }}>
-                Toplam Gelir
+                {t("revenue.totalRevenue")}
               </p>
               <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: 0 }}>
                 {summaryQuery.isLoading ? "..." : formatCurrency(summaryQuery.data?.total_revenue_minor ?? 0)}
@@ -669,7 +671,7 @@ export function AdminReportsAnalyticsPage() {
                 <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, margin: 0 }}>{selectedStorage.reservations}</p>
               </div>
               <div>
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0' }}>Toplam Gelir</p>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0' }}>{t("revenue.totalRevenue")}</p>
                 <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, margin: 0 }}>{formatCurrency(selectedStorage.total_revenue_minor)}</p>
               </div>
             </div>

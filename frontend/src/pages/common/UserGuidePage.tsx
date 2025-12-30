@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "../../hooks/useTranslation";
 import {
   ArrowLeft,
   FileText,
@@ -41,6 +42,7 @@ interface GuideSection {
 export function UserGuidePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   // Determine panel type from path
@@ -816,7 +818,7 @@ export function UserGuidePage() {
                 margin: 0,
               }}
             >
-              Nasıl Kullanılır?
+              {t("common.howToUse")}
             </h1>
             <p style={{ fontSize: "var(--text-base)", color: "var(--text-tertiary)", margin: "var(--space-1) 0 0" }}>
               {isAdmin

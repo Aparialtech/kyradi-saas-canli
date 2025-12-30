@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "../../hooks/useTranslation";
 import {
   Search, Command, Home, MapPin, Package, Calendar,
   Users, DollarSign, Settings, BarChart3, FileText,
@@ -27,11 +28,11 @@ interface QuickActionsProps {
 }
 
 // Default actions for Partner Panel
-const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
+const getPartnerActions = (navigate: (path: string) => void, t: (key: string) => string): QuickAction[] => [
   // Navigasyon
   {
     id: 'dashboard',
-    title: 'Genel Bakış',
+    title: t('nav.overview'),
     description: 'Partner dashboard ana sayfa',
     icon: <Home className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -41,7 +42,7 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'locations',
-    title: 'Lokasyonlar',
+    title: t('nav.locations'),
     description: 'Lokasyon yönetimi',
     icon: <MapPin className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -51,7 +52,7 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'lockers',
-    title: 'Depolar',
+    title: t('nav.storages'),
     description: 'Depo/dolap yönetimi',
     icon: <Package className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -61,7 +62,7 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'reservations',
-    title: 'Rezervasyonlar',
+    title: t('nav.reservations'),
     description: 'Rezervasyon listesi ve yönetimi',
     icon: <Calendar className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -71,7 +72,7 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'staff',
-    title: 'Çalışanlar',
+    title: t('nav.staff'),
     description: 'Personel yönetimi',
     icon: <Users className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -81,7 +82,7 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'pricing',
-    title: 'Ücretlendirme',
+    title: t('nav.pricing'),
     description: 'Fiyatlandırma kuralları',
     icon: <DollarSign className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -91,7 +92,7 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'revenue',
-    title: 'Gelir',
+    title: t('nav.revenue'),
     description: 'Gelir raporları ve ödemeler',
     icon: <CreditCard className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -101,7 +102,7 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'reports',
-    title: 'Raporlar & Analiz',
+    title: t('nav.reports'),
     description: 'İstatistikler ve raporlar',
     icon: <BarChart3 className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -110,7 +111,7 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'tickets',
-    title: 'İletişim / Ticket',
+    title: t('nav.communication'),
     description: 'Destek talepleri',
     icon: <MessageSquare className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -119,7 +120,7 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'settings',
-    title: 'Ayarlar',
+    title: t('nav.settings'),
     description: 'Hesap ve sistem ayarları',
     icon: <Settings className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -167,11 +168,11 @@ const getPartnerActions = (navigate: (path: string) => void): QuickAction[] => [
 ];
 
 // Default actions for Admin Panel
-const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
+const getAdminActions = (navigate: (path: string) => void, t: (key: string) => string): QuickAction[] => [
   // Navigasyon
   {
     id: 'admin-dashboard',
-    title: 'Genel Bakış',
+    title: t('nav.overview'),
     description: 'Admin ana sayfası',
     icon: <Home className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -181,7 +182,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-reports',
-    title: 'Raporlar ve Analiz',
+    title: t('nav.reports'),
     description: 'Sistem raporları ve analizler',
     icon: <BarChart3 className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -191,7 +192,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-invoice',
-    title: 'Fatura Oluştur',
+    title: t('nav.invoice'),
     description: 'Fatura oluşturma',
     icon: <Receipt className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -200,7 +201,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-tenants',
-    title: 'Oteller',
+    title: t('nav.tenants'),
     description: 'Otel/tenant yönetimi',
     icon: <Building2 className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -210,7 +211,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-revenue',
-    title: 'Global Gelir',
+    title: t('nav.globalRevenue'),
     description: 'Tüm sistem gelir raporları',
     icon: <Globe className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -219,7 +220,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-settlements',
-    title: 'Hakedişler',
+    title: t('nav.globalSettlements'),
     description: 'Partner hakedişleri',
     icon: <ClipboardList className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -228,7 +229,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-transfers',
-    title: 'Transferler (MagicPay)',
+    title: t('nav.transfers'),
     description: 'Ödeme transferleri',
     icon: <RefreshCw className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -237,7 +238,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-users',
-    title: 'Kullanıcılar',
+    title: t('nav.globalUsers'),
     description: 'Sistem kullanıcı yönetimi',
     icon: <Users className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -247,7 +248,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-tickets',
-    title: 'İletişim / Ticket',
+    title: t('nav.tickets'),
     description: 'Destek talepleri',
     icon: <MessageSquare className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -256,7 +257,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-settings',
-    title: 'Sistem Ayarları',
+    title: t('nav.systemSettings'),
     description: 'Genel sistem ayarları',
     icon: <Settings className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -266,7 +267,7 @@ const getAdminActions = (navigate: (path: string) => void): QuickAction[] => [
   },
   {
     id: 'admin-audit',
-    title: 'Audit Log',
+    title: t('nav.audit'),
     description: 'Sistem logları ve işlem geçmişi',
     icon: <FileText className="h-4 w-4" />,
     category: 'Navigasyon',
@@ -301,6 +302,7 @@ export function QuickActions({
   panelType = 'partner',
 }: QuickActionsProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -309,9 +311,9 @@ export function QuickActions({
   // Get default actions based on panel type
   const defaultActions = useMemo(() => {
     return panelType === 'admin' 
-      ? getAdminActions(navigate) 
-      : getPartnerActions(navigate);
-  }, [panelType, navigate]);
+      ? getAdminActions(navigate, t) 
+      : getPartnerActions(navigate, t);
+  }, [panelType, navigate, t]);
 
   const allActions = useMemo(() => [...defaultActions, ...customActions], [defaultActions, customActions]);
 

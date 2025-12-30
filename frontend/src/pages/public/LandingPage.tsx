@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "../../hooks/useTranslation";
 import {
   Menu,
   X,
@@ -31,6 +32,7 @@ import styles from "./LandingPage.module.css";
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [activeUseCase, setActiveUseCase] = useState<"hotels" | "depots" | "events">("hotels");
@@ -328,8 +330,8 @@ export function LandingPage() {
               },
               {
                 icon: <BarChart3 className="h-6 w-6" />,
-                title: "Raporlar & Analiz",
-                description: "Detaylı gelir raporları, rezervasyon istatistikleri ve depo kullanım analizleri.",
+                title: t("nav.reports"),
+                description: t("landing.features.reportsDesc"),
               },
               {
                 icon: <MessageSquare className="h-6 w-6" />,
@@ -633,9 +635,14 @@ export function LandingPage() {
                 features: ["Anlık QR tarama", "Manuel kod girişi", "Teslim işlemleri", "Geçmiş kayıtları"],
               },
               {
-                title: "Raporlar & Analiz",
-                description: "Detaylı raporlar ve analizlerle operasyonunuzu optimize edin",
-                features: ["Gelir raporları", "Rezervasyon analizi", "Depo kullanımı", "CSV/Excel export"],
+                title: t("nav.reports"),
+                description: t("landing.screenshots.reportsDesc"),
+                features: [
+                  t("landing.screenshots.reportsFeature1"),
+                  t("landing.screenshots.reportsFeature2"),
+                  t("landing.screenshots.reportsFeature3"),
+                  t("landing.screenshots.reportsFeature4"),
+                ],
               },
             ].map((screenshot, index) => (
               <motion.div

@@ -53,14 +53,14 @@ export function AdminDashboard() {
   const modernNavigation = useMemo((): ModernSidebarNavItem[] => {
     const items: ModernSidebarNavItem[] = [
       { to: ".", label: t("nav.overview"), end: true, icon: <BarChart3 className="h-5 w-5" /> },
-      { to: "reports", label: "Raporlar ve Analiz", icon: <TrendingUp className="h-5 w-5" /> },
-      { to: "invoice", label: "Fatura Oluştur", icon: <Receipt className="h-5 w-5" /> },
+      { to: "reports", label: t("nav.reports"), icon: <TrendingUp className="h-5 w-5" /> },
+      { to: "invoice", label: t("nav.invoice"), icon: <Receipt className="h-5 w-5" /> },
       { to: "tenants", label: t("nav.tenants"), icon: <Building2 className="h-5 w-5" /> },
       { to: "revenue", label: t("nav.globalRevenue"), icon: <Receipt className="h-5 w-5" /> },
       { to: "settlements", label: t("nav.globalSettlements"), icon: <CreditCard className="h-5 w-5" /> },
-      { to: "transfers", label: "Transferler (MagicPay)", icon: <Send className="h-5 w-5" /> },
+      { to: "transfers", label: t("nav.transfers"), icon: <Send className="h-5 w-5" /> },
       { to: "users", label: t("nav.globalUsers"), icon: <Users className="h-5 w-5" /> },
-      { to: "tickets", label: "İletişim / Ticket", icon: <MessageSquare className="h-5 w-5" /> },
+      { to: "tickets", label: t("nav.tickets"), icon: <MessageSquare className="h-5 w-5" /> },
       { to: "settings", label: t("nav.systemSettings"), icon: <Settings className="h-5 w-5" /> },
       { to: "audit", label: t("nav.audit"), icon: <FileText className="h-5 w-5" /> },
     ];

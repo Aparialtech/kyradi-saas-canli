@@ -294,8 +294,8 @@ export function TransfersPage() {
       >
         <div className={styles.headerContent}>
           <div>
-            <h1 className={styles.title}>Komisyon Ödemeleri</h1>
-            <p className={styles.subtitle}>Kyradi'ye borçlu olduğunuz komisyonları ödeyin ve takip edin</p>
+            <h1 className={styles.title}>{t("transfers.commissionPaymentsTitle")}</h1>
+            <p className={styles.subtitle}>{t("transfers.commissionPaymentsSubtitle")}</p>
           </div>
           <div className={styles.headerActions}>
             <Badge variant="info">

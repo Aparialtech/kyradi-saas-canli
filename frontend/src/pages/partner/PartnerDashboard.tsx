@@ -257,9 +257,9 @@ export function PartnerOverview() {
         icon: <MapPin className="h-[22px] w-[22px]" />,
       },
       {
-        label: "Toplam Gelir",
+        label: t("partner.stats.totalRevenueLabel"),
         value: summaryQuery.isPending ? "..." : currencyFormatter.format(totalRevenueMinor / 100),
-        hint: "Tüm zamanların toplam geliri",
+        hint: t("partner.stats.totalRevenueHint"),
         icon: <Wallet className="h-[22px] w-[22px]" />,
       },
       {
@@ -285,19 +285,19 @@ export function PartnerOverview() {
         icon: <HardDrive className="h-[22px] w-[22px]" />,
       },
       {
-        label: "Kalan Komisyon Borcu",
+        label: t("partner.stats.availableCommissionLabel"),
         value: commissionQuery.isPending
           ? "..."
           : currencyFormatter.format(commissionQuery.data?.available_commission ?? 0),
-        hint: "Kyradi'ye ödenmesi gereken komisyon",
+        hint: t("partner.stats.availableCommissionHint"),
         icon: <DollarSign className="h-[22px] w-[22px]" />,
       },
       {
-        label: "Gönderilen Komisyon",
+        label: t("partner.stats.transferredCommissionLabel"),
         value: commissionQuery.isPending
           ? "..."
           : currencyFormatter.format(commissionQuery.data?.transferred_commission ?? 0),
-        hint: "Toplam ödenen komisyon tutarı",
+        hint: t("partner.stats.transferredCommissionHint"),
         icon: <Send className="h-[22px] w-[22px]" />,
       },
     ];
@@ -331,7 +331,7 @@ export function PartnerOverview() {
                   onClick={() => navigate("/app/guide")}
                 >
                   <FileText className="h-4 w-4" style={{ marginRight: "var(--space-2)" }} />
-                  Nasıl Kullanılır?
+                  {t("common.howToUse")}
                 </Button>
               ),
             },
@@ -788,7 +788,7 @@ export function PartnerDashboard() {
       items.push({ to: "reports", label: t("nav.reports"), icon: <LineChart className="h-5 w-5" /> });
       items.push({ to: "revenue", label: t("nav.revenue"), icon: <Wallet className="h-5 w-5" /> });
       items.push({ to: "settlements", label: t("nav.settlements"), icon: <PiggyBank className="h-5 w-5" /> });
-      items.push({ to: "transfers", label: "Komisyon Ödemeleri", icon: <PiggyBank className="h-5 w-5" /> });
+      items.push({ to: "transfers", label: t("nav.commissionPayments"), icon: <PiggyBank className="h-5 w-5" /> });
     }
     
     // Hotel manager and tenant admin can manage users and staff
@@ -803,7 +803,7 @@ export function PartnerDashboard() {
     const unreadCount = unreadTicketsQuery.data ?? 0;
     items.push({ 
       to: "tickets", 
-      label: "İletişim", 
+      label: t("nav.communication"), 
       icon: <MessageSquare className="h-5 w-5" />,
       badge: unreadCount > 0 ? unreadCount : undefined,
     });

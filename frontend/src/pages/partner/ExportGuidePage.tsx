@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Download, FileText, Calendar, Filter, CheckCircle2 } from "../../lib/lucide";
 import { ModernCard } from "../../components/ui/ModernCard";
 import { ModernButton } from "../../components/ui/ModernButton";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export function ExportGuidePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div style={{ padding: "var(--space-6)", maxWidth: "1000px", margin: "0 auto" }}>
@@ -21,7 +23,7 @@ export function ExportGuidePage() {
           leftIcon={<ArrowLeft className="h-4 w-4" />}
           style={{ marginBottom: "var(--space-4)" }}
         >
-          Geri Dön
+          {t("common.back")}
         </ModernButton>
 
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
@@ -179,10 +181,10 @@ export function ExportGuidePage() {
               </div>
               <div>
                 <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", marginTop: 0, marginBottom: "var(--space-2)" }}>
-                  Raporlar & Analiz Sayfasına Gidin
+                  {t("exportGuide.goToReports")}
                 </h3>
                 <p style={{ color: "var(--text-secondary)", margin: 0 }}>
-                  Sol menüden <strong>"Raporlar & Analiz"</strong> sekmesine tıklayın veya doğrudan <code style={{ background: "var(--bg-tertiary)", padding: "2px 6px", borderRadius: "4px" }}>/app/reports</code> adresine gidin.
+                  {t("exportGuide.goToReportsDesc")}
                 </p>
               </div>
             </div>
@@ -374,14 +376,14 @@ export function ExportGuidePage() {
               Hemen Export Yapmaya Başlayın
             </h2>
             <p style={{ marginBottom: "var(--space-4)", opacity: 0.9 }}>
-              Raporlar & Analiz sayfasına giderek verilerinizi export edebilirsiniz.
+              {t("exportGuide.exportDescription")}
             </p>
             <ModernButton
               variant="secondary"
               onClick={() => navigate("/app/reports")}
               style={{ background: "white", color: "var(--primary)" }}
             >
-              Raporlar & Analiz Sayfasına Git
+              {t("exportGuide.goToReportsButton")}
             </ModernButton>
           </div>
         </ModernCard>

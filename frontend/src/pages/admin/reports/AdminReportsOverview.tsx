@@ -99,7 +99,7 @@ export function AdminReportsOverview() {
           onClick={() => navigate("/admin/guide")}
         >
           <FileText className="h-4 w-4" style={{ marginRight: "var(--space-2)", display: "inline-block" }} />
-          Nasıl Kullanılır?
+          {t("common.howToUse")}
         </ModernButton>
       </motion.div>
 

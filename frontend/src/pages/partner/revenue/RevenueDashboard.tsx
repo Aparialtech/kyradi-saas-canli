@@ -119,7 +119,13 @@ export function RevenueDashboard() {
   const handleExportPaymentModeCSV = () => {
     if (!paymentModeQuery.data || paymentModeQuery.data.length === 0) return;
 
-    const headers = ["Ödeme Yöntemi", "Toplam Gelir (TRY)", "Otel Hakedişi (TRY)", "Komisyon (TRY)", "İşlem Sayısı"];
+    const headers = [
+      t("revenue.paymentMethod"),
+      `${t("revenue.totalRevenue")} (TRY)`,
+      `${t("revenue.hotelSettlement")} (TRY)`,
+      `${t("revenue.kyradiCommission")} (TRY)`,
+      t("revenue.transactionCount")
+    ];
     
     const rows = paymentModeQuery.data.map((item) => [
       item.label,
@@ -435,7 +441,7 @@ export function RevenueDashboard() {
             >
               <div style={{ padding: 'var(--space-4)', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', margin: 0 }}>Toplam Gelir</p>
+                  <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', margin: 0 }}>{t("revenue.totalRevenue")}</p>
                   <DollarSign className="h-5 w-5" style={{ color: '#16a34a' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#16a34a', margin: 0 }}>
@@ -829,7 +835,7 @@ export function RevenueDashboard() {
               border: '1px solid var(--primary-200)'
             }}>
               <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Toplam Gelir</p>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t("revenue.totalRevenue")}</p>
                 <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: '#16a34a', margin: 0 }}>{formatCurrency(historyQuery.data?.total_revenue_minor ?? 0)}</p>
               </div>
               <div style={{ textAlign: 'center' }}>
@@ -854,7 +860,7 @@ export function RevenueDashboard() {
                     <th style={{ padding: 'var(--space-3)', textAlign: 'left', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>
                       {granularity === 'daily' ? 'Tarih' : granularity === 'weekly' ? 'Hafta' : 'Ay'}
                     </th>
-                    <th style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Toplam Gelir</th>
+                    <th style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>{t("revenue.totalRevenue")}</th>
                     <th style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Otel Hakedişi</th>
                     <th style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Komisyon</th>
                     <th style={{ padding: 'var(--space-3)', textAlign: 'center', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>İşlem</th>
@@ -1020,7 +1026,7 @@ export function RevenueDashboard() {
             >
               <div style={{ padding: 'var(--space-4)', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', margin: 0 }}>Toplam Gelir</p>
+                  <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', margin: 0 }}>{t("revenue.totalRevenue")}</p>
                   <DollarSign className="h-5 w-5" style={{ color: '#16a34a' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: '#16a34a', margin: 0 }}>

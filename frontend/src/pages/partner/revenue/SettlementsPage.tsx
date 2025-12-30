@@ -168,7 +168,7 @@ export function SettlementsPage() {
               <div style={{ padding: 'var(--space-4)', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
                   <p style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", fontWeight: 'var(--font-medium)', margin: 0 }}>
-                    Toplam Gelir
+                    {t("revenue.totalRevenue")}
                   </p>
                   <DollarSign className="h-5 w-5" style={{ color: '#16a34a' }} />
                 </div>

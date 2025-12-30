@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "../../hooks/useTranslation";
 import { 
   Search, Command, MapPin, Package, Calendar, Users, 
   DollarSign, Settings, BarChart3, FileText, LogOut,
@@ -37,6 +38,7 @@ export function CommandPalette({
   userRole = 'partner',
 }: CommandPaletteProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +53,7 @@ export function CommandPalette({
         // Navigasyon
         {
           id: 'nav-overview',
-          label: 'Genel Bakış',
+          label: t('nav.overview'),
           description: 'Partner dashboard ana sayfa',
           icon: <Home className="h-4 w-4" />,
           action: () => navigate('/app'),
@@ -61,7 +63,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-locations',
-          label: 'Lokasyonlar',
+          label: t('nav.locations'),
           description: 'Lokasyon yönetimi',
           icon: <MapPin className="h-4 w-4" />,
           action: () => navigate('/app/locations'),
@@ -71,7 +73,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-lockers',
-          label: 'Depolar',
+          label: t('nav.storages'),
           description: 'Depo/dolap yönetimi',
           icon: <Package className="h-4 w-4" />,
           action: () => navigate('/app/lockers'),
@@ -81,7 +83,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-reservations',
-          label: 'Rezervasyonlar',
+          label: t('nav.reservations'),
           description: 'Rezervasyon listesi ve yönetimi',
           icon: <Calendar className="h-4 w-4" />,
           action: () => navigate('/app/reservations'),
@@ -91,7 +93,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-staff',
-          label: 'Çalışanlar',
+          label: t('nav.staff'),
           description: 'Personel yönetimi',
           icon: <Users className="h-4 w-4" />,
           action: () => navigate('/app/staff'),
@@ -101,7 +103,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-pricing',
-          label: 'Ücretlendirme',
+          label: t('nav.pricing'),
           description: 'Fiyatlandırma kuralları',
           icon: <DollarSign className="h-4 w-4" />,
           action: () => navigate('/app/pricing'),
@@ -111,7 +113,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-revenue',
-          label: 'Gelir',
+          label: t('nav.revenue'),
           description: 'Gelir raporları ve ödemeler',
           icon: <CreditCard className="h-4 w-4" />,
           action: () => navigate('/app/revenue'),
@@ -121,7 +123,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-reports',
-          label: 'Raporlar & Analiz',
+          label: t('nav.reports'),
           description: 'İstatistikler ve raporlar',
           icon: <BarChart3 className="h-4 w-4" />,
           action: () => navigate('/app/reports'),
@@ -130,7 +132,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-tickets',
-          label: 'İletişim / Ticket',
+          label: t('nav.communication'),
           description: 'Destek talepleri',
           icon: <MessageSquare className="h-4 w-4" />,
           action: () => navigate('/app/tickets'),
@@ -139,7 +141,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-settings',
-          label: 'Ayarlar',
+          label: t('nav.settings'),
           description: 'Hesap ve sistem ayarları',
           icon: <Settings className="h-4 w-4" />,
           action: () => navigate('/app/settings'),
@@ -192,7 +194,7 @@ export function CommandPalette({
         // Navigasyon
         {
           id: 'nav-admin',
-          label: 'Genel Bakış',
+          label: t('nav.overview'),
           description: 'Admin ana sayfası',
           icon: <Home className="h-4 w-4" />,
           action: () => navigate('/admin'),
@@ -202,7 +204,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-admin-reports',
-          label: 'Raporlar ve Analiz',
+          label: t('nav.reports'),
           description: 'Sistem raporları ve analizler',
           icon: <BarChart3 className="h-4 w-4" />,
           action: () => navigate('/admin/reports'),
@@ -212,7 +214,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-admin-invoice',
-          label: 'Fatura Oluştur',
+          label: t('nav.invoice'),
           description: 'Fatura oluşturma',
           icon: <Receipt className="h-4 w-4" />,
           action: () => navigate('/admin/invoice'),
@@ -221,7 +223,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-tenants',
-          label: 'Oteller',
+          label: t('nav.tenants'),
           description: 'Otel/tenant yönetimi',
           icon: <Building2 className="h-4 w-4" />,
           action: () => navigate('/admin/tenants'),
@@ -231,7 +233,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-admin-revenue',
-          label: 'Global Gelir',
+          label: t('nav.globalRevenue'),
           description: 'Tüm sistem gelir raporları',
           icon: <Globe className="h-4 w-4" />,
           action: () => navigate('/admin/revenue'),
@@ -240,7 +242,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-admin-settlements',
-          label: 'Hakedişler',
+          label: t('nav.globalSettlements'),
           description: 'Partner hakedişleri',
           icon: <ClipboardList className="h-4 w-4" />,
           action: () => navigate('/admin/settlements'),
@@ -249,7 +251,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-admin-transfers',
-          label: 'Transferler (MagicPay)',
+          label: t('nav.transfers'),
           description: 'Ödeme transferleri',
           icon: <RefreshCw className="h-4 w-4" />,
           action: () => navigate('/admin/transfers'),
@@ -258,7 +260,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-admin-users',
-          label: 'Kullanıcılar',
+          label: t('nav.globalUsers'),
           description: 'Sistem kullanıcı yönetimi',
           icon: <Users className="h-4 w-4" />,
           action: () => navigate('/admin/users'),
@@ -268,7 +270,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-admin-tickets',
-          label: 'İletişim / Ticket',
+          label: t('nav.tickets'),
           description: 'Destek talepleri',
           icon: <MessageSquare className="h-4 w-4" />,
           action: () => navigate('/admin/tickets'),
@@ -277,7 +279,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-admin-settings',
-          label: 'Sistem Ayarları',
+          label: t('nav.systemSettings'),
           description: 'Genel sistem ayarları',
           icon: <Settings className="h-4 w-4" />,
           action: () => navigate('/admin/settings'),
@@ -287,7 +289,7 @@ export function CommandPalette({
         },
         {
           id: 'nav-audit',
-          label: 'Audit Log',
+          label: t('nav.audit'),
           description: 'Sistem logları ve işlem geçmişi',
           icon: <FileText className="h-4 w-4" />,
           action: () => navigate('/admin/audit'),
