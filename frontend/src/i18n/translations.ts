@@ -713,6 +713,7 @@ export const translations = {
     "revenue.subtitle": "Tamamlanan işlemlerden elde edilen gelirleri görüntüleyin.",
     "revenue.totalRevenue": "Toplam Gelir",
     "revenue.totalRevenueHint": "Tamamlanan işlemlerden brüt gelir",
+    "revenue.paymentMethod": "Ödeme Yöntemi",
     "revenue.hotelSettlement": "Otel Hakedişi",
     "revenue.hotelSettlementHint": "Komisyon sonrası net tutar",
     "revenue.kyradiCommission": "Kyradi Komisyon",

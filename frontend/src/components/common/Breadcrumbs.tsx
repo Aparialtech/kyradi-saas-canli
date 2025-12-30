@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronRight, Home } from "../../lib/lucide";
-import { useTranslation } from "../../hooks/useTranslation";
+import { useTranslation, type TranslationKey } from "../../hooks/useTranslation";
 
 interface BreadcrumbItem {
   label: string;
@@ -19,7 +19,7 @@ interface BreadcrumbsProps {
 }
 
 // Route to translation key mapping for auto-generation
-const getRouteLabels = (t: (key: string) => string): Record<string, string> => ({
+const getRouteLabels = (t: (key: TranslationKey) => string): Record<string, string> => ({
   // Partner routes
   'app': 'Partner Panel',
   'dashboard': t('nav.overview'),

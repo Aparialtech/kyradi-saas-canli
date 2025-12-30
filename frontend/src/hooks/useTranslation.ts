@@ -2,6 +2,8 @@ import { useCallback, useMemo } from "react";
 import { useLocale } from "../context/LocaleContext";
 import { translations, type TranslationKey } from "../i18n/translations";
 
+export type { TranslationKey };
+
 type TemplateVars = Record<string, string | number | undefined>;
 
 export function useTranslation() {
