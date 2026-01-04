@@ -476,23 +476,24 @@ export function LocationEditPage() {
         </motion.div>
 
         {/* Form Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+        <div
           style={{ 
             marginTop: 'var(--space-6)',
             display: 'flex',
             justifyContent: 'flex-end',
             gap: 'var(--space-3)',
             position: 'relative',
-            zIndex: 100
+            zIndex: 1000,
+            pointerEvents: 'auto'
           }}
         >
           <Button
             type="button"
             variant="ghost"
-            onClick={() => navigate("/app/locations")}
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/app/locations");
+            }}
             disabled={createMutation.isPending || updateMutation.isPending}
           >
             <X className="h-4 w-4" style={{ marginRight: 'var(--space-1)' }} />
@@ -512,7 +513,7 @@ export function LocationEditPage() {
               </>
             )}
           </Button>
-        </motion.div>
+        </div>
       </form>
     </div>
   );
