@@ -5,13 +5,13 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from ...db.session import get_session
 from ...dependencies import require_storage_operator, require_tenant_admin, require_tenant_operator
-from ...models import Location, Reservation, ReservationStatus, Storage, StorageStatus, User
+from ...models import Location, Payment, PricingRule, Reservation, ReservationStatus, Storage, StorageStatus, User
 from ...services.limits import get_plan_limits_for_tenant
 from ...services.quota_checks import check_storage_quota
 from ...schemas import StorageCreate, StorageRead, StorageUpdate
@@ -297,6 +297,7 @@ async def delete_storage(
     if storage is None or storage.tenant_id != current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Storage not found")
 
+    # Check for active reservations
     active_reservation = await session.execute(
         select(Reservation.id).where(
             Reservation.storage_id == storage_id,
@@ -306,6 +307,10 @@ async def delete_storage(
     if active_reservation.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Storage has active reservations")
 
+    # Delete pricing rules associated with this storage (if any)
+    # This needs to be done manually since database-level CASCADE might not be set
+    await session.execute(delete(PricingRule).where(PricingRule.storage_id == storage_id))
+
     try:
         await session.delete(storage)
         await session.commit()
@@ -314,9 +319,32 @@ async def delete_storage(
         error_msg = str(e.orig) if hasattr(e, "orig") else str(e)
         # Check if it's a foreign key constraint error
         if "foreign key" in error_msg.lower() or "constraint" in error_msg.lower():
+            # Check what's preventing deletion
+            has_reservations = await session.execute(
+                select(Reservation.id).where(Reservation.storage_id == storage_id).limit(1)
+            )
+            has_payments = await session.execute(
+                select(Payment.id).where(Payment.storage_id == storage_id).limit(1)
+            )
+            has_pricing_rules = await session.execute(
+                select(PricingRule.id).where(PricingRule.storage_id == storage_id).limit(1)
+            )
+            
+            reasons = []
+            if has_reservations.scalar_one_or_none():
+                reasons.append("rezervasyonlar")
+            if has_payments.scalar_one_or_none():
+                reasons.append("ödeme kayıtları")
+            if has_pricing_rules.scalar_one_or_none():
+                reasons.append("fiyat kuralları")
+            
+            detail_msg = "Bu depo başka kayıtlarda kullanıldığı için silinemiyor."
+            if reasons:
+                detail_msg += f" İlişkili kayıtlar: {', '.join(reasons)}."
+            
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bu depo başka kayıtlarda kullanıldığı için silinemiyor. Önce bu depoya ait tüm rezervasyonları, ödemeleri ve fiyat kurallarını kontrol edin."
+                detail=detail_msg
             )
         # Re-raise if it's a different integrity error
         raise
