@@ -262,7 +262,7 @@ export function LocationEditPage() {
         </div>
       </motion.div>
 
-      <form onSubmit={onSubmit}>
+      <form onSubmit={onSubmit} id="location-form">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
           {/* Left Column - Basic Info */}
           <motion.div
@@ -500,9 +500,14 @@ export function LocationEditPage() {
             İptal
           </Button>
           <Button
-            type="submit"
+            type="button"
             variant="primary"
             disabled={createMutation.isPending || updateMutation.isPending}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSubmit(e as any);
+            }}
           >
             {(createMutation.isPending || updateMutation.isPending) ? (
               <>Kaydediliyor...</>

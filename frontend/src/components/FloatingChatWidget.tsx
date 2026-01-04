@@ -50,7 +50,7 @@ const floatingStyles = `
   display: flex !important;
   flex-direction: column-reverse !important;
   align-items: flex-end !important;
-  pointer-events: auto !important;
+  pointer-events: none !important;
   visibility: visible !important;
   opacity: 1 !important;
 }
@@ -69,6 +69,7 @@ const floatingStyles = `
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   z-index: 3 !important;
+  pointer-events: auto !important;
   flex-shrink: 0;
   order: 1;
 }
@@ -101,6 +102,7 @@ const floatingStyles = `
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
   position: relative;
   z-index: 1;
+  pointer-events: auto;
   order: 2;
 }
 .kyradi-chat-widget__panel--hidden {
