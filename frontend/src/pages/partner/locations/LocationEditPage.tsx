@@ -484,7 +484,9 @@ export function LocationEditPage() {
             marginTop: 'var(--space-6)',
             display: 'flex',
             justifyContent: 'flex-end',
-            gap: 'var(--space-3)'
+            gap: 'var(--space-3)',
+            position: 'relative',
+            zIndex: 100
           }}
         >
           <Button
