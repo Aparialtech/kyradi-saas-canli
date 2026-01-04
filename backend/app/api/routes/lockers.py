@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from ...db.session import get_session
 from ...dependencies import require_storage_operator, require_tenant_admin, require_tenant_operator
@@ -305,8 +306,20 @@ async def delete_storage(
     if active_reservation.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Storage has active reservations")
 
-    await session.delete(storage)
-    await session.commit()
+    try:
+        await session.delete(storage)
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        error_msg = str(e.orig) if hasattr(e, "orig") else str(e)
+        # Check if it's a foreign key constraint error
+        if "foreign key" in error_msg.lower() or "constraint" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bu depo başka kayıtlarda kullanıldığı için silinemiyor. Önce bu depoya ait tüm rezervasyonları, ödemeleri ve fiyat kurallarını kontrol edin."
+            )
+        # Re-raise if it's a different integrity error
+        raise
 
 
 @legacy_router.delete("/{locker_id}", status_code=status.HTTP_204_NO_CONTENT)
