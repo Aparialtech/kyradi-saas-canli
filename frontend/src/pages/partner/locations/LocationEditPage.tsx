@@ -170,31 +170,44 @@ export function LocationEditPage() {
     },
   });
 
-  const onSubmit = handleSubmit((values) => {
-    // Convert schedule to working_hours format
-    const working_hours: Record<string, { open: string; close: string }> = {};
-    DAYS.forEach((day) => {
-      if (values.schedule[day].enabled && values.schedule[day].slots.length > 0) {
-        const slot = values.schedule[day].slots[0];
-        working_hours[day] = { open: slot.start, close: slot.end };
+  const onSubmit = handleSubmit(
+    (values) => {
+      // Convert schedule to working_hours format
+      const working_hours: Record<string, { open: string; close: string }> = {};
+      DAYS.forEach((day) => {
+        if (values.schedule[day].enabled && values.schedule[day].slots.length > 0) {
+          const slot = values.schedule[day].slots[0];
+          working_hours[day] = { open: slot.start, close: slot.end };
+        }
+      });
+
+      const payload: LocationPayload = {
+        name: values.name,
+        address: [values.address, values.address_details].filter(Boolean).join(" - "),
+        phone_number: values.phone_number?.trim() || undefined,
+        working_hours: Object.keys(working_hours).length > 0 ? working_hours : undefined,
+        lat: mapCoords?.lat,
+        lon: mapCoords?.lng,
+      };
+
+      if (isNew) {
+        createMutation.mutate(payload);
+      } else {
+        updateMutation.mutate({ id: id!, payload });
       }
-    });
-
-    const payload: LocationPayload = {
-      name: values.name,
-      address: [values.address, values.address_details].filter(Boolean).join(" - "),
-      phone_number: values.phone_number?.trim() || undefined,
-      working_hours: Object.keys(working_hours).length > 0 ? working_hours : undefined,
-      lat: mapCoords?.lat,
-      lon: mapCoords?.lng,
-    };
-
-    if (isNew) {
-      createMutation.mutate(payload);
-    } else {
-      updateMutation.mutate({ id: id!, payload });
+    },
+    (errors) => {
+      // Show validation errors
+      const errorMessages = Object.values(errors).map(err => err?.message).filter(Boolean);
+      if (errorMessages.length > 0) {
+        push({ 
+          title: "Form hatası", 
+          description: errorMessages[0] || "Lütfen form alanlarını kontrol edin", 
+          type: "error" 
+        });
+      }
     }
-  });
+  );
 
   const addTimeSlot = useCallback((day: typeof DAYS[number]) => {
     const currentSlots = watch(`schedule.${day}.slots`);
