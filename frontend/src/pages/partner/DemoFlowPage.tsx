@@ -210,10 +210,8 @@ export function DemoFlowPage() {
     }
 
     const initializeWidget = () => {
-      console.log("[DemoFlow] Initializing widget...");
       // Mount custom element definition
       if (window.KyradiReserve) {
-        console.log("[DemoFlow] KyradiReserve found, mounting...");
         window.KyradiReserve.mount();
       } else {
         errorLogger.warn(new Error("KyradiReserve not found on window object"), {
@@ -228,7 +226,6 @@ export function DemoFlowPage() {
       const checkAndCreate = () => {
         attempts++;
         if (customElements.get("kyradi-reserve")) {
-          console.log("[DemoFlow] Custom element 'kyradi-reserve' is defined");
           // Remove any existing widget elements to prevent duplicates
           const existingWidgets = container.querySelectorAll("kyradi-reserve");
           existingWidgets.forEach((el) => el.remove());
@@ -243,7 +240,6 @@ export function DemoFlowPage() {
           
           // Now create and append widget element (connectedCallback will be called)
           const widgetEl = document.createElement("kyradi-reserve");
-          console.log("[DemoFlow] Created widget element:", widgetEl);
           // Set data attributes for widget initialization
           widgetEl.setAttribute("data-api-base", env.API_URL);
           widgetEl.setAttribute("data-tenant-id", tenant_id);
@@ -252,7 +248,6 @@ export function DemoFlowPage() {
           widgetEl.setAttribute("data-theme", "light");
           widgetEl.setAttribute("data-payment-provider", "fake");
           container.appendChild(widgetEl);
-          console.log("[DemoFlow] Widget element appended to container");
           
           // Attach event listener
           widgetEl.addEventListener("kyradi-reservation-success", handleWidgetSuccess as EventListener);
@@ -278,13 +273,10 @@ export function DemoFlowPage() {
 
     if (existingScript && window.KyradiReserve) {
       // Script already loaded, initialize immediately
-      console.log("[DemoFlow] Script already loaded, initializing immediately");
       initializeWidget();
     } else {
       // Wait for script to load
-      console.log("[DemoFlow] Waiting for script to load:", scriptEl.src);
       scriptEl.onload = () => {
-        console.log("[DemoFlow] Script loaded successfully");
         initializeWidget();
       };
       scriptEl.onerror = () => {

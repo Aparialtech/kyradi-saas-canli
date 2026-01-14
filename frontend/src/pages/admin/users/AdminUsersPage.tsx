@@ -266,7 +266,6 @@ export function AdminUsersPage() {
     // Try to get current password - DO NOT reset automatically
     try {
       const response = await http.get<{ password: string | null; has_password: boolean; message?: string }>(`/admin/users/${user.id}/password`);
-      console.log("Password response:", response.data); // Debug log
       if (response.data.password) {
         // Password exists, show it
         setResetPasswordResult({ current_password: response.data.password });
