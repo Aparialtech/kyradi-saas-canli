@@ -64,12 +64,18 @@ async def verify_qr_code(
 ) -> QRVerifyResponse:
     """Validate reservation QR codes.
     
-    Returns detailed error information for better UX:
-    - valid=False, status="not_found" - QR code not found
-    - valid=False, status="cancelled" - Reservation cancelled
-    - valid=False, status="completed" - Reservation completed
-    - valid=False, status="expired" - Reservation expired
-    - valid=True - Active reservation
+    Returns reservation details for any status - allows viewing info regardless of validity.
+    The 'valid' field indicates if the reservation is currently actionable (active & not expired).
+    
+    Possible responses:
+    - valid=False, status="not_found" - QR code not found in this tenant
+    - valid=False, status="cancelled" - Reservation was cancelled
+    - valid=False, status="completed" - Reservation is completed
+    - valid=False, status="expired" - Reservation time has passed
+    - valid=False, status="reserved" - Reservation not yet checked in
+    - valid=False, status="no_show" - Customer did not show up
+    - valid=False, status="lost" - Item marked as lost
+    - valid=True, status="active" - Active and actionable reservation
     """
     stmt = (
         select(Reservation)
@@ -82,24 +88,40 @@ async def verify_qr_code(
         )
     )
     reservation = (await session.execute(stmt)).scalar_one_or_none()
+    
+    # QR code not found - return minimal info
     if reservation is None:
         return QRVerifyResponse(
             valid=False,
             status="not_found",
+            status_override="not_found",
             reservation_id=None,
             locker_id=None,
         )
 
-    if reservation.status == ReservationStatus.CANCELLED.value:
+    # Always return full reservation details, but mark validity based on status
+    status = reservation.status
+    
+    # Check if reservation is cancelled
+    if status == ReservationStatus.CANCELLED.value:
         return _serialize_reservation(reservation, valid=False, status_override="cancelled")
     
-    if reservation.status == ReservationStatus.COMPLETED.value:
+    # Check if reservation is completed
+    if status == ReservationStatus.COMPLETED.value:
         return _serialize_reservation(reservation, valid=False, status_override="completed")
+    
+    # Check if reservation is reserved (not yet active/checked in)
+    if status == ReservationStatus.RESERVED.value:
+        return _serialize_reservation(reservation, valid=False, status_override="reserved")
+    
+    # Check for other non-active statuses (no_show, lost, etc.)
+    if status != ReservationStatus.ACTIVE.value:
+        # Return with the actual status as override for proper error messaging
+        return _serialize_reservation(reservation, valid=False, status_override=status)
 
-    if reservation.status != ReservationStatus.ACTIVE.value:
-        return _serialize_reservation(reservation, valid=False)
-
-    if reservation.end_at < datetime.now(timezone.utc):
+    # Check if reservation has expired (end_at in the past)
+    if reservation.end_at and reservation.end_at < datetime.now(timezone.utc):
         return _serialize_reservation(reservation, valid=False, status_override="expired")
 
+    # Reservation is active and valid
     return _serialize_reservation(reservation, valid=True)

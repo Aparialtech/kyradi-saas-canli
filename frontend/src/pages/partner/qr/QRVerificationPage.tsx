@@ -72,28 +72,66 @@ export function QRVerificationPage() {
     }) => reservationService.markReturned(id, payload),
   });
 
-  const getVerificationErrorMessage = useCallback((verification: QRVerifyResult): string => {
+  const getVerificationMessage = useCallback((verification: QRVerifyResult): { title: string; description: string; type: "success" | "info" | "warning" | "error" } => {
     const statusKey = (verification.status_override || verification.status || "").toLowerCase();
 
+    // QR code not found at all
     if (!verification.reservation_id) {
-      return "Bu QR kodu bu otele ait aktif bir rezervasyonla eşleşmiyor.";
+      return {
+        title: "QR Kodu Bulunamadı",
+        description: "Bu QR kodu bu otele ait herhangi bir rezervasyonla eşleşmiyor.",
+        type: "error"
+      };
     }
 
-    const friendlyMessages: Record<string, string> = {
-      not_found: "Bu QR kodu ile eşleşen aktif rezervasyon bulunamadı.",
-      cancelled: "Rezervasyon iptal edildiği için QR kodu geçersiz.",
-      completed: "Rezervasyon tamamlandığı için QR kodu kullanılamıyor.",
-      expired: "Rezervasyon süresi dolduğu için QR kodu pasif.",
-      reserved: "Rezervasyon henüz depoya teslim alınmadı; teslim alındığında QR kodu aktif olacak.",
-      no_show: "Misafir randevusuna gelmediği için QR kodu kullanılamıyor.",
-      lost: "Rezervasyon kayıp olarak işaretlenmiş, QR kodu devre dışı.",
+    // Reservation found but not actionable - show info messages
+    const statusMessages: Record<string, { title: string; description: string; type: "success" | "info" | "warning" | "error" }> = {
+      not_found: {
+        title: "QR Kodu Bulunamadı",
+        description: "Bu QR kodu ile eşleşen rezervasyon bulunamadı.",
+        type: "error"
+      },
+      cancelled: {
+        title: "İptal Edilmiş Rezervasyon",
+        description: "Bu rezervasyon iptal edilmiş. Detaylar aşağıda görüntüleniyor.",
+        type: "warning"
+      },
+      completed: {
+        title: "Tamamlanmış Rezervasyon",
+        description: "Bu rezervasyon başarıyla tamamlanmış. Detaylar aşağıda görüntüleniyor.",
+        type: "info"
+      },
+      expired: {
+        title: "Süresi Dolmuş Rezervasyon",
+        description: "Rezervasyon süresi dolmuş. Detaylar aşağıda görüntüleniyor.",
+        type: "warning"
+      },
+      reserved: {
+        title: "Bekleyen Rezervasyon",
+        description: "Rezervasyon henüz aktif değil (depoya teslim bekleniyor). Detaylar aşağıda görüntüleniyor.",
+        type: "info"
+      },
+      no_show: {
+        title: "Gelmedi (No-Show)",
+        description: "Misafir randevusuna gelmedi. Detaylar aşağıda görüntüleniyor.",
+        type: "warning"
+      },
+      lost: {
+        title: "Kayıp Rezervasyon",
+        description: "Bu rezervasyon kayıp olarak işaretlenmiş. Detaylar aşağıda görüntüleniyor.",
+        type: "error"
+      },
     };
 
-    if (statusKey && friendlyMessages[statusKey]) {
-      return friendlyMessages[statusKey];
+    if (statusKey && statusMessages[statusKey]) {
+      return statusMessages[statusKey];
     }
 
-    return "Rezervasyon bulundu ancak QR kodu şu anda kullanılamıyor.";
+    return {
+      title: "Rezervasyon Bulundu",
+      description: "Rezervasyon detayları aşağıda görüntüleniyor.",
+      type: "info"
+    };
   }, []);
 
   const handleVerify = useCallback(async (qrCode?: string) => {
@@ -109,10 +147,11 @@ export function QRVerificationPage() {
       const response = await qrService.verify(codeToVerify);
       setResult(response);
       if (response.valid) {
-        push({ title: "QR doğrulandı", description: "Rezervasyon aktif ve geçerli", type: "success" });
+        push({ title: "QR Doğrulandı ✓", description: "Rezervasyon aktif ve işlem yapılabilir", type: "success" });
       } else {
-        const errorMessage = getVerificationErrorMessage(response);
-        push({ title: "QR doğrulama başarısız", description: errorMessage, type: "error" });
+        // Show appropriate message based on status - not always an error
+        const message = getVerificationMessage(response);
+        push({ title: message.title, description: message.description, type: message.type });
       }
     } catch (error) {
       errorLogger.error(error, {
@@ -125,7 +164,7 @@ export function QRVerificationPage() {
     } finally {
       setLoading(false);
     }
-  }, [code, getVerificationErrorMessage, push]);
+  }, [code, getVerificationMessage, push]);
 
   // Handle QR scan from camera
   const handleQRScan = useCallback((scannedCode: string) => {
@@ -221,10 +260,11 @@ export function QRVerificationPage() {
     return returnMutation.isPending;
   }, [result, returnMutation.isPending]);
 
-  const invalidMessage = useMemo(() => {
-    if (!result || result.valid) return null;
-    return getVerificationErrorMessage(result);
-  }, [getVerificationErrorMessage, result]);
+  const statusInfo = useMemo(() => {
+    if (!result) return null;
+    if (result.valid) return { title: "Aktif Rezervasyon", description: "Bu rezervasyon aktif ve işlem yapılabilir durumda.", type: "success" as const };
+    return getVerificationMessage(result);
+  }, [getVerificationMessage, result]);
 
   const getStatusBadgeVariant = (status?: string) => {
     if (status === "active") return "success";
@@ -476,18 +516,39 @@ export function QRVerificationPage() {
                 </p>
               </div>
             )}
-            {invalidMessage && (
+            {statusInfo && !result?.valid && (
               <div style={{ 
                 marginTop: 'var(--space-4)', 
                 padding: 'var(--space-3)', 
-                background: 'rgba(220, 38, 38, 0.1)', 
-                border: '1px solid rgba(220, 38, 38, 0.2)',
+                background: statusInfo.type === 'error' 
+                  ? 'rgba(220, 38, 38, 0.1)' 
+                  : statusInfo.type === 'warning' 
+                    ? 'rgba(234, 179, 8, 0.1)' 
+                    : 'rgba(59, 130, 246, 0.1)', 
+                border: `1px solid ${statusInfo.type === 'error' 
+                  ? 'rgba(220, 38, 38, 0.2)' 
+                  : statusInfo.type === 'warning' 
+                    ? 'rgba(234, 179, 8, 0.2)' 
+                    : 'rgba(59, 130, 246, 0.2)'}`,
                 borderRadius: 'var(--radius-lg)',
-                color: '#dc2626'
+                color: statusInfo.type === 'error' 
+                  ? '#dc2626' 
+                  : statusInfo.type === 'warning' 
+                    ? '#ca8a04' 
+                    : '#2563eb'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <XCircle className="h-4 w-4" />
-                  <span style={{ fontSize: 'var(--text-sm)' }}>{invalidMessage}</span>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
+                  {statusInfo.type === 'error' ? (
+                    <XCircle className="h-4 w-4" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  ) : statusInfo.type === 'success' ? (
+                    <CheckCircle2 className="h-4 w-4" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  ) : (
+                    <QrCode className="h-4 w-4" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  )}
+                  <div>
+                    <strong style={{ fontSize: 'var(--text-sm)', display: 'block' }}>{statusInfo.title}</strong>
+                    <span style={{ fontSize: 'var(--text-xs)', opacity: 0.9 }}>{statusInfo.description}</span>
+                  </div>
                 </div>
               </div>
             )}
