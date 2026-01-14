@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "../../../lib/lucide";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Download, Filter, BarChart3, LineChart as LineChartIcon, PieChartIcon, TrendingUp, Search, X, MapPin, Package } from "../../../lib/lucide";
@@ -87,6 +88,12 @@ export function ReportsAnalyticsPage() {
   const [storageSortBy, setStorageSortBy] = useState<"code" | "location" | "reservations">("reservations");
   const [storageSortDir, setStorageSortDir] = useState<"asc" | "desc">("desc");
   
+  // Pagination State
+  const [locationPage, setLocationPage] = useState(1);
+  const [locationPageSize, setLocationPageSize] = useState(10);
+  const [storagePage, setStoragePage] = useState(1);
+  const [storagePageSize, setStoragePageSize] = useState(10);
+  
   const storageUsageQuery = useQuery({
     queryKey: ["partner", "storage-usage", dateFrom, dateTo],
     queryFn: () =>
@@ -157,8 +164,8 @@ export function ReportsAnalyticsPage() {
     }));
   }, [storageUsageQuery.data, occupancyLocationFilter]);
 
-  // Filtered & Sorted Location Data
-  const filteredLocationData = useMemo(() => {
+  // Filtered & Sorted Location Data (all items for counting)
+  const allFilteredLocationData = useMemo(() => {
     if (!overviewQuery.data?.by_location) return [];
     
     let data = [...overviewQuery.data.by_location];
@@ -187,6 +194,17 @@ export function ReportsAnalyticsPage() {
     return data;
   }, [overviewQuery.data?.by_location, debouncedLocationSearch, locationSortBy, locationSortDir]);
 
+  // Paginated Location Data
+  const filteredLocationData = useMemo(() => {
+    const startIndex = (locationPage - 1) * locationPageSize;
+    return allFilteredLocationData.slice(startIndex, startIndex + locationPageSize);
+  }, [allFilteredLocationData, locationPage, locationPageSize]);
+
+  const locationTotalPages = useMemo(() => 
+    Math.ceil(allFilteredLocationData.length / locationPageSize), 
+    [allFilteredLocationData.length, locationPageSize]
+  );
+
   // Get unique locations for storage filter
   const storageUniqueLocations = useMemo(() => {
     if (!overviewQuery.data?.by_storage) return [];
@@ -194,8 +212,8 @@ export function ReportsAnalyticsPage() {
     return Array.from(locations).sort();
   }, [overviewQuery.data?.by_storage]);
 
-  // Filtered & Sorted Storage Data
-  const filteredStorageData = useMemo(() => {
+  // Filtered & Sorted Storage Data (all items for counting)
+  const allFilteredStorageData = useMemo(() => {
     if (!overviewQuery.data?.by_storage) return [];
     
     let data = [...overviewQuery.data.by_storage];
@@ -230,11 +248,23 @@ export function ReportsAnalyticsPage() {
     return data;
   }, [overviewQuery.data?.by_storage, debouncedStorageSearch, storageLocationFilter, storageSortBy, storageSortDir]);
 
+  // Paginated Storage Data
+  const filteredStorageData = useMemo(() => {
+    const startIndex = (storagePage - 1) * storagePageSize;
+    return allFilteredStorageData.slice(startIndex, startIndex + storagePageSize);
+  }, [allFilteredStorageData, storagePage, storagePageSize]);
+
+  const storageTotalPages = useMemo(() => 
+    Math.ceil(allFilteredStorageData.length / storagePageSize), 
+    [allFilteredStorageData.length, storagePageSize]
+  );
+
   // Clear filters helpers
   const clearLocationFilters = useCallback(() => {
     setLocationSearchTerm("");
     setLocationSortBy("revenue");
     setLocationSortDir("desc");
+    setLocationPage(1);
   }, []);
 
   const clearStorageFilters = useCallback(() => {
@@ -242,7 +272,17 @@ export function ReportsAnalyticsPage() {
     setStorageLocationFilter("");
     setStorageSortBy("reservations");
     setStorageSortDir("desc");
+    setStoragePage(1);
   }, []);
+  
+  // Reset page when search/filter changes
+  useEffect(() => {
+    setLocationPage(1);
+  }, [debouncedLocationSearch, locationSortBy, locationSortDir]);
+  
+  useEffect(() => {
+    setStoragePage(1);
+  }, [debouncedStorageSearch, storageLocationFilter, storageSortBy, storageSortDir]);
 
   // Toggle sort helper
   const toggleLocationSort = useCallback((column: "name" | "revenue" | "reservations") => {
@@ -916,7 +956,7 @@ export function ReportsAnalyticsPage() {
                       Lokasyon Bazlı Gelir
                     </h3>
                     <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                      {filteredLocationData.length} / {overviewQuery.data.by_location.length} lokasyon
+                      {allFilteredLocationData.length} / {overviewQuery.data.by_location.length} lokasyon
                     </p>
                   </div>
                 </div>
@@ -1118,6 +1158,88 @@ export function ReportsAnalyticsPage() {
                   </tbody>
                 </table>
               </div>
+              
+              {/* Pagination */}
+              {locationTotalPages > 1 && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  marginTop: 'var(--space-4)',
+                  padding: 'var(--space-3) var(--space-4)',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: 'var(--radius-lg)',
+                  flexWrap: 'wrap',
+                  gap: 'var(--space-3)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                      Sayfa başına:
+                    </span>
+                    <select
+                      value={locationPageSize}
+                      onChange={(e) => { setLocationPageSize(Number(e.target.value)); setLocationPage(1); }}
+                      style={{
+                        padding: 'var(--space-1) var(--space-2)',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'var(--bg-tertiary)',
+                        color: 'var(--text-primary)',
+                        fontSize: 'var(--text-sm)',
+                      }}
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                      {(locationPage - 1) * locationPageSize + 1} - {Math.min(locationPage * locationPageSize, allFilteredLocationData.length)} / {allFilteredLocationData.length}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <button
+                      onClick={() => setLocationPage(p => Math.max(1, p - 1))}
+                      disabled={locationPage === 1}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '36px',
+                        height: '36px',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: 'var(--radius-md)',
+                        background: locationPage === 1 ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                        color: locationPage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                        cursor: locationPage === 1 ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span style={{ padding: '0 var(--space-3)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
+                      {locationPage} / {locationTotalPages}
+                    </span>
+                    <button
+                      onClick={() => setLocationPage(p => Math.min(locationTotalPages, p + 1))}
+                      disabled={locationPage === locationTotalPages}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '36px',
+                        height: '36px',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: 'var(--radius-md)',
+                        background: locationPage === locationTotalPages ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                        color: locationPage === locationTotalPages ? 'var(--text-muted)' : 'var(--text-primary)',
+                        cursor: locationPage === locationTotalPages ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </ModernCard>
           )}
 
@@ -1150,7 +1272,7 @@ export function ReportsAnalyticsPage() {
                       Depo Kullanımı (En Çok Kullanılanlar)
                     </h3>
                     <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                      {filteredStorageData.length} / {overviewQuery.data.by_storage.length} depo
+                      {allFilteredStorageData.length} / {overviewQuery.data.by_storage.length} depo
                     </p>
                   </div>
                 </div>
@@ -1379,6 +1501,88 @@ export function ReportsAnalyticsPage() {
                   </tbody>
                 </table>
               </div>
+              
+              {/* Pagination */}
+              {storageTotalPages > 1 && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  marginTop: 'var(--space-4)',
+                  padding: 'var(--space-3) var(--space-4)',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: 'var(--radius-lg)',
+                  flexWrap: 'wrap',
+                  gap: 'var(--space-3)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                      Sayfa başına:
+                    </span>
+                    <select
+                      value={storagePageSize}
+                      onChange={(e) => { setStoragePageSize(Number(e.target.value)); setStoragePage(1); }}
+                      style={{
+                        padding: 'var(--space-1) var(--space-2)',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'var(--bg-tertiary)',
+                        color: 'var(--text-primary)',
+                        fontSize: 'var(--text-sm)',
+                      }}
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                      {(storagePage - 1) * storagePageSize + 1} - {Math.min(storagePage * storagePageSize, allFilteredStorageData.length)} / {allFilteredStorageData.length}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <button
+                      onClick={() => setStoragePage(p => Math.max(1, p - 1))}
+                      disabled={storagePage === 1}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '36px',
+                        height: '36px',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: 'var(--radius-md)',
+                        background: storagePage === 1 ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                        color: storagePage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                        cursor: storagePage === 1 ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span style={{ padding: '0 var(--space-3)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
+                      {storagePage} / {storageTotalPages}
+                    </span>
+                    <button
+                      onClick={() => setStoragePage(p => Math.min(storageTotalPages, p + 1))}
+                      disabled={storagePage === storageTotalPages}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '36px',
+                        height: '36px',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: 'var(--radius-md)',
+                        background: storagePage === storageTotalPages ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                        color: storagePage === storageTotalPages ? 'var(--text-muted)' : 'var(--text-primary)',
+                        cursor: storagePage === storageTotalPages ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </ModernCard>
           )}
 
