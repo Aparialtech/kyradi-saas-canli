@@ -226,7 +226,7 @@ export function RevenueDashboard() {
         const batch = reservationIds.slice(i, i + batchSize);
         const promises = batch.map(async (resId) => {
           try {
-            const res = await reservationService.get(resId);
+            const res = await reservationService.getById(resId);
             details[resId] = {
               customer_name: res.customer_name || res.full_name || "—",
               location_name: res.location_name || "—",

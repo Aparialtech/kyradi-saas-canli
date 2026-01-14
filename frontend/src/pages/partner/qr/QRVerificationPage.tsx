@@ -72,7 +72,7 @@ export function QRVerificationPage() {
     }) => reservationService.markReturned(id, payload),
   });
 
-  const getVerificationMessage = useCallback((verification: QRVerifyResult): { title: string; description: string; type: "success" | "info" | "warning" | "error" } => {
+  const getVerificationMessage = useCallback((verification: QRVerifyResult): { title: string; description: string; type: "success" | "info" | "error" } => {
     const statusKey = (verification.status_override || verification.status || "").toLowerCase();
 
     // QR code not found at all
@@ -85,7 +85,7 @@ export function QRVerificationPage() {
     }
 
     // Reservation found but not actionable - show info messages
-    const statusMessages: Record<string, { title: string; description: string; type: "success" | "info" | "warning" | "error" }> = {
+    const statusMessages: Record<string, { title: string; description: string; type: "success" | "info" | "error" }> = {
       not_found: {
         title: "QR Kodu Bulunamadı",
         description: "Bu QR kodu ile eşleşen rezervasyon bulunamadı.",
@@ -94,7 +94,7 @@ export function QRVerificationPage() {
       cancelled: {
         title: "İptal Edilmiş Rezervasyon",
         description: "Bu rezervasyon iptal edilmiş. Detaylar aşağıda görüntüleniyor.",
-        type: "warning"
+        type: "error"
       },
       completed: {
         title: "Tamamlanmış Rezervasyon",
@@ -104,7 +104,7 @@ export function QRVerificationPage() {
       expired: {
         title: "Süresi Dolmuş Rezervasyon",
         description: "Rezervasyon süresi dolmuş. Detaylar aşağıda görüntüleniyor.",
-        type: "warning"
+        type: "info"
       },
       reserved: {
         title: "Bekleyen Rezervasyon",
@@ -114,7 +114,7 @@ export function QRVerificationPage() {
       no_show: {
         title: "Gelmedi (No-Show)",
         description: "Misafir randevusuna gelmedi. Detaylar aşağıda görüntüleniyor.",
-        type: "warning"
+        type: "info"
       },
       lost: {
         title: "Kayıp Rezervasyon",
@@ -260,9 +260,9 @@ export function QRVerificationPage() {
     return returnMutation.isPending;
   }, [result, returnMutation.isPending]);
 
-  const statusInfo = useMemo(() => {
+  const statusInfo = useMemo((): { title: string; description: string; type: "success" | "info" | "error" } | null => {
     if (!result) return null;
-    if (result.valid) return { title: "Aktif Rezervasyon", description: "Bu rezervasyon aktif ve işlem yapılabilir durumda.", type: "success" as const };
+    if (result.valid) return { title: "Aktif Rezervasyon", description: "Bu rezervasyon aktif ve işlem yapılabilir durumda.", type: "success" };
     return getVerificationMessage(result);
   }, [getVerificationMessage, result]);
 
@@ -522,20 +522,14 @@ export function QRVerificationPage() {
                 padding: 'var(--space-3)', 
                 background: statusInfo.type === 'error' 
                   ? 'rgba(220, 38, 38, 0.1)' 
-                  : statusInfo.type === 'warning' 
-                    ? 'rgba(234, 179, 8, 0.1)' 
-                    : 'rgba(59, 130, 246, 0.1)', 
+                  : 'rgba(59, 130, 246, 0.1)', 
                 border: `1px solid ${statusInfo.type === 'error' 
                   ? 'rgba(220, 38, 38, 0.2)' 
-                  : statusInfo.type === 'warning' 
-                    ? 'rgba(234, 179, 8, 0.2)' 
-                    : 'rgba(59, 130, 246, 0.2)'}`,
+                  : 'rgba(59, 130, 246, 0.2)'}`,
                 borderRadius: 'var(--radius-lg)',
                 color: statusInfo.type === 'error' 
                   ? '#dc2626' 
-                  : statusInfo.type === 'warning' 
-                    ? '#ca8a04' 
-                    : '#2563eb'
+                  : '#2563eb'
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
                   {statusInfo.type === 'error' ? (
