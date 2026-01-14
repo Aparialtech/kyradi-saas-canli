@@ -18,8 +18,10 @@ import {
   YAxis,
   CartesianGrid
 } from "recharts";
-import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon, Calendar, Clock, ChevronLeft, ChevronRight, Search, X } from "../../../lib/lucide";
-import { revenueService, type PaymentModeRevenue, type RevenueHistoryResponse } from "../../../services/partner/revenue";
+import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon, Calendar, Clock, ChevronLeft, ChevronRight, Search, X, Eye, MapPin, Package, User, Receipt } from "../../../lib/lucide";
+import { revenueService, type PaymentModeRevenue, type RevenueHistoryResponse, type Settlement, type DailyRevenueItem } from "../../../services/partner/revenue";
+import { reservationService } from "../../../services/partner/reservations";
+import { ModernModal } from "../../../components/ui/ModernModal";
 import { locationService } from "../../../services/partner/locations";
 import { storageService } from "../../../services/partner/storages";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -52,6 +54,13 @@ export function RevenueDashboard() {
   const [historySearch, setHistorySearch] = useState("");
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
+  
+  // Detail modal state
+  const [selectedPeriod, setSelectedPeriod] = useState<DailyRevenueItem | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [periodSettlements, setPeriodSettlements] = useState<Settlement[]>([]);
+  const [reservationDetails, setReservationDetails] = useState<Record<string, { customer_name?: string; location_name?: string; storage_code?: string }>>({});
 
   // Fetch locations for filter
   const locationsQuery = useQuery({
@@ -166,6 +175,84 @@ export function RevenueDashboard() {
   };
   
   const hasActiveHistoryFilters = historySearch || minAmount || maxAmount;
+  
+  // Open detail modal and fetch settlements for the selected period
+  const handleRowClick = async (item: DailyRevenueItem) => {
+    setSelectedPeriod(item);
+    setIsDetailModalOpen(true);
+    setDetailLoading(true);
+    setPeriodSettlements([]);
+    setReservationDetails({});
+    
+    try {
+      // Calculate date range based on granularity
+      let dateFromStr = item.date;
+      let dateToStr = item.date;
+      
+      if (granularity === "daily") {
+        dateToStr = item.date + "T23:59:59";
+        dateFromStr = item.date + "T00:00:00";
+      } else if (granularity === "weekly") {
+        // Item date format: "2024-W01"
+        // We'll just use the date as-is for now
+        dateFromStr = item.date;
+        dateToStr = item.date;
+      } else if (granularity === "monthly") {
+        // Item date format: "2024-01"
+        dateFromStr = item.date + "-01";
+        const [year, month] = item.date.split("-");
+        const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+        dateToStr = `${item.date}-${lastDay}`;
+      }
+      
+      // Fetch settlements for this period
+      const response = await revenueService.listSettlements(
+        undefined, // status
+        dateFromStr,
+        dateToStr,
+        locationFilter || undefined,
+        storageFilter || undefined
+      );
+      
+      setPeriodSettlements(response.items);
+      
+      // Fetch reservation details for each settlement (limit to avoid too many requests)
+      const reservationIds = [...new Set(response.items.map(s => s.reservation_id).filter(Boolean))].slice(0, 20);
+      const details: Record<string, { customer_name?: string; location_name?: string; storage_code?: string }> = {};
+      
+      // Fetch reservations in parallel (up to 5 at a time)
+      const batchSize = 5;
+      for (let i = 0; i < reservationIds.length; i += batchSize) {
+        const batch = reservationIds.slice(i, i + batchSize);
+        const promises = batch.map(async (resId) => {
+          try {
+            const res = await reservationService.get(resId);
+            details[resId] = {
+              customer_name: res.customer_name || res.full_name || "—",
+              location_name: res.location_name || "—",
+              storage_code: res.storage_code || "—",
+            };
+          } catch {
+            details[resId] = { customer_name: "—", location_name: "—", storage_code: "—" };
+          }
+        });
+        await Promise.all(promises);
+      }
+      
+      setReservationDetails(details);
+    } catch (error) {
+      console.error("Failed to fetch period details:", error);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+  
+  const closeDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedPeriod(null);
+    setPeriodSettlements([]);
+    setReservationDetails({});
+  };
 
   // Export payment mode data to CSV
   const handleExportPaymentModeCSV = () => {
@@ -1071,6 +1158,7 @@ export function RevenueDashboard() {
                     <th style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Otel Hakedişi</th>
                     <th style={{ padding: 'var(--space-3)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Komisyon</th>
                     <th style={{ padding: 'var(--space-3)', textAlign: 'center', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>İşlem</th>
+                    <th style={{ padding: 'var(--space-3)', textAlign: 'center', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Detay</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1080,10 +1168,15 @@ export function RevenueDashboard() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
+                      onClick={() => handleRowClick(item)}
                       style={{ 
                         borderBottom: '1px solid var(--border-secondary)',
                         background: index % 2 === 0 ? 'transparent' : 'var(--bg-secondary)',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease',
                       }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-50)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? 'transparent' : 'var(--bg-secondary)'}
                     >
                       <td style={{ padding: 'var(--space-3)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -1111,6 +1204,27 @@ export function RevenueDashboard() {
                         }}>
                           {item.transaction_count}
                         </span>
+                      </td>
+                      <td style={{ padding: 'var(--space-3)', textAlign: 'center' }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRowClick(item); }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 'var(--space-1)',
+                            padding: 'var(--space-1) var(--space-2)',
+                            border: '1px solid var(--border-primary)',
+                            borderRadius: 'var(--radius-md)',
+                            background: 'var(--bg-tertiary)',
+                            color: 'var(--text-secondary)',
+                            fontSize: 'var(--text-xs)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <Eye className="h-3 w-3" />
+                          Detay
+                        </button>
                       </td>
                     </motion.tr>
                   ))}
@@ -1317,6 +1431,171 @@ export function RevenueDashboard() {
           </div>
         </ModernCard>
       )}
+
+      {/* Period Detail Modal */}
+      <ModernModal
+        isOpen={isDetailModalOpen}
+        onClose={closeDetailModal}
+        title={`${selectedPeriod?.date || ''} Dönem Detayı`}
+        size="xl"
+      >
+        <div style={{ padding: 'var(--space-4)' }}>
+          {/* Period Summary */}
+          {selectedPeriod && (
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(4, 1fr)', 
+              gap: 'var(--space-3)', 
+              marginBottom: 'var(--space-5)',
+              padding: 'var(--space-4)',
+              background: 'linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--primary-200)'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase' }}>Toplam Gelir</p>
+                <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: '#16a34a', margin: 0 }}>{formatCurrency(selectedPeriod.total_revenue_minor)}</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase' }}>Otel Hakedişi</p>
+                <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: '#1d4ed8', margin: 0 }}>{formatCurrency(selectedPeriod.tenant_settlement_minor)}</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase' }}>Komisyon</p>
+                <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: '#dc2626', margin: 0 }}>{formatCurrency(selectedPeriod.kyradi_commission_minor)}</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '0 0 var(--space-1) 0', textTransform: 'uppercase' }}>İşlem Sayısı</p>
+                <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: '#6366f1', margin: 0 }}>{selectedPeriod.transaction_count}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Settlements List */}
+          <h4 style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', margin: '0 0 var(--space-3) 0', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <Receipt className="h-4 w-4" style={{ color: 'var(--primary-500)' }} />
+            İşlem Detayları ({periodSettlements.length} kayıt)
+          </h4>
+
+          {detailLoading ? (
+            <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+              <Loader2 className="h-8 w-8" style={{ margin: '0 auto var(--space-3) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+              <p style={{ margin: 0 }}>Detaylar yükleniyor...</p>
+            </div>
+          ) : periodSettlements.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+              <AlertCircle className="h-8 w-8" style={{ margin: '0 auto var(--space-3) auto', opacity: 0.5 }} />
+              <p style={{ margin: 0 }}>Bu dönemde işlem bulunamadı.</p>
+            </div>
+          ) : (
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-primary)', zIndex: 10 }}>
+                  <tr style={{ borderBottom: '2px solid var(--border-primary)' }}>
+                    <th style={{ padding: 'var(--space-2)', textAlign: 'left', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                        <User className="h-3 w-3" />
+                        Müşteri
+                      </div>
+                    </th>
+                    <th style={{ padding: 'var(--space-2)', textAlign: 'left', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                        <MapPin className="h-3 w-3" />
+                        Lokasyon
+                      </div>
+                    </th>
+                    <th style={{ padding: 'var(--space-2)', textAlign: 'left', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                        <Package className="h-3 w-3" />
+                        Depo
+                      </div>
+                    </th>
+                    <th style={{ padding: 'var(--space-2)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Gelir</th>
+                    <th style={{ padding: 'var(--space-2)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Hakediş</th>
+                    <th style={{ padding: 'var(--space-2)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Komisyon</th>
+                    <th style={{ padding: 'var(--space-2)', textAlign: 'center', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)' }}>Durum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {periodSettlements.map((settlement, idx) => {
+                    const details = reservationDetails[settlement.reservation_id] || {};
+                    return (
+                      <tr 
+                        key={settlement.id}
+                        style={{ 
+                          borderBottom: '1px solid var(--border-secondary)',
+                          background: idx % 2 === 0 ? 'transparent' : 'var(--bg-secondary)',
+                        }}
+                      >
+                        <td style={{ padding: 'var(--space-2)', color: 'var(--text-primary)', fontWeight: 'var(--font-medium)' }}>
+                          {details.customer_name || '—'}
+                        </td>
+                        <td style={{ padding: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                          {details.location_name || '—'}
+                        </td>
+                        <td style={{ padding: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                          <span style={{ 
+                            background: 'var(--bg-tertiary)', 
+                            padding: 'var(--space-1) var(--space-2)', 
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--text-xs)',
+                            fontFamily: 'monospace'
+                          }}>
+                            {details.storage_code || '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: 'var(--space-2)', textAlign: 'right', fontWeight: 'var(--font-semibold)', color: '#16a34a' }}>
+                          {formatCurrency(settlement.total_amount_minor)}
+                        </td>
+                        <td style={{ padding: 'var(--space-2)', textAlign: 'right', color: '#1d4ed8' }}>
+                          {formatCurrency(settlement.tenant_settlement_minor)}
+                        </td>
+                        <td style={{ padding: 'var(--space-2)', textAlign: 'right', color: '#dc2626' }}>
+                          {formatCurrency(settlement.kyradi_commission_minor)}
+                        </td>
+                        <td style={{ padding: 'var(--space-2)', textAlign: 'center' }}>
+                          <span style={{ 
+                            background: settlement.status === 'settled' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                            color: settlement.status === 'settled' ? '#16a34a' : '#ca8a04',
+                            padding: 'var(--space-1) var(--space-2)', 
+                            borderRadius: 'var(--radius-full)',
+                            fontSize: 'var(--text-xs)',
+                            fontWeight: 'var(--font-medium)'
+                          }}>
+                            {settlement.status === 'settled' ? 'Tamamlandı' : settlement.status === 'pending' ? 'Bekliyor' : settlement.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Commission Rate Info */}
+          {periodSettlements.length > 0 && (
+            <div style={{ 
+              marginTop: 'var(--space-4)', 
+              padding: 'var(--space-3)', 
+              background: 'var(--bg-secondary)', 
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-xs)',
+              color: 'var(--text-tertiary)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>
+                Komisyon Oranı: %{((periodSettlements[0]?.commission_rate || 0) * 100).toFixed(1)}
+              </span>
+              <span>
+                Toplam {periodSettlements.length} işlem
+              </span>
+            </div>
+          )}
+        </div>
+      </ModernModal>
     </div>
   );
 }
