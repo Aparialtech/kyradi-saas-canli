@@ -18,7 +18,7 @@ import {
   YAxis,
   CartesianGrid
 } from "recharts";
-import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon, Calendar, Clock, ChevronLeft, ChevronRight } from "../../../lib/lucide";
+import { TrendingUp, DollarSign, CreditCard, Loader2, AlertCircle, BarChart3, Download, LineChart as LineChartIcon, Calendar, Clock, ChevronLeft, ChevronRight, Search, X } from "../../../lib/lucide";
 import { revenueService, type PaymentModeRevenue, type RevenueHistoryResponse } from "../../../services/partner/revenue";
 import { locationService } from "../../../services/partner/locations";
 import { storageService } from "../../../services/partner/storages";
@@ -47,6 +47,11 @@ export function RevenueDashboard() {
   // Pagination state for history table
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState(10);
+  
+  // Search state for history table
+  const [historySearch, setHistorySearch] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
 
   // Fetch locations for filter
   const locationsQuery = useQuery({
@@ -102,18 +107,65 @@ export function RevenueDashboard() {
   const chartData = prepareChartData(paymentModeQuery.data);
   const totalTransactions = paymentModeQuery.data?.reduce((sum, item) => sum + item.transaction_count, 0) || 0;
 
-  // Paginate history data
+  // Filter and paginate history data
+  const filteredHistoryItems = useMemo(() => {
+    let items = historyQuery.data?.items ?? [];
+    
+    // Apply search filter (date)
+    if (historySearch.trim()) {
+      const searchLower = historySearch.toLowerCase().trim();
+      items = items.filter(item => 
+        item.date.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply amount filters
+    if (minAmount) {
+      const min = parseFloat(minAmount) * 100; // Convert to minor
+      items = items.filter(item => item.total_revenue_minor >= min);
+    }
+    if (maxAmount) {
+      const max = parseFloat(maxAmount) * 100; // Convert to minor
+      items = items.filter(item => item.total_revenue_minor <= max);
+    }
+    
+    return items;
+  }, [historyQuery.data?.items, historySearch, minAmount, maxAmount]);
+  
   const paginatedHistoryItems = useMemo(() => {
-    const items = historyQuery.data?.items ?? [];
     const start = (historyPage - 1) * historyPageSize;
     const end = start + historyPageSize;
-    return items.slice(start, end);
-  }, [historyQuery.data?.items, historyPage, historyPageSize]);
+    return filteredHistoryItems.slice(start, end);
+  }, [filteredHistoryItems, historyPage, historyPageSize]);
 
   const historyTotalPages = useMemo(() => {
-    const total = historyQuery.data?.items?.length ?? 0;
-    return Math.ceil(total / historyPageSize);
-  }, [historyQuery.data?.items?.length, historyPageSize]);
+    return Math.ceil(filteredHistoryItems.length / historyPageSize);
+  }, [filteredHistoryItems.length, historyPageSize]);
+  
+  // Reset page when filters change
+  const handleHistorySearchChange = (value: string) => {
+    setHistorySearch(value);
+    setHistoryPage(1);
+  };
+  
+  const handleMinAmountChange = (value: string) => {
+    setMinAmount(value);
+    setHistoryPage(1);
+  };
+  
+  const handleMaxAmountChange = (value: string) => {
+    setMaxAmount(value);
+    setHistoryPage(1);
+  };
+  
+  const clearHistoryFilters = () => {
+    setHistorySearch("");
+    setMinAmount("");
+    setMaxAmount("");
+    setHistoryPage(1);
+  };
+  
+  const hasActiveHistoryFilters = historySearch || minAmount || maxAmount;
 
   // Export payment mode data to CSV
   const handleExportPaymentModeCSV = () => {
@@ -804,6 +856,161 @@ export function RevenueDashboard() {
             </button>
           </div>
         </div>
+        
+        {/* Search and Filter Bar */}
+        <div style={{ 
+          display: 'flex', 
+          gap: 'var(--space-3)', 
+          marginBottom: 'var(--space-4)',
+          flexWrap: 'wrap',
+          alignItems: 'flex-end'
+        }}>
+          {/* Search by date */}
+          <div style={{ flex: '1', minWidth: '200px' }}>
+            <label style={{ 
+              fontSize: 'var(--text-xs)', 
+              fontWeight: 'var(--font-medium)', 
+              color: 'var(--text-tertiary)', 
+              marginBottom: 'var(--space-1)', 
+              display: 'block' 
+            }}>
+              Tarih Ara
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Search className="h-4 w-4" style={{ 
+                position: 'absolute', 
+                left: '12px', 
+                top: '50%', 
+                transform: 'translateY(-50%)', 
+                color: 'var(--text-tertiary)' 
+              }} />
+              <input
+                type="text"
+                value={historySearch}
+                onChange={(e) => handleHistorySearchChange(e.target.value)}
+                placeholder="Tarih ara (örn: 2024-01)"
+                style={{
+                  width: '100%',
+                  height: '40px',
+                  padding: '0 var(--space-3) 0 36px',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  fontSize: 'var(--text-sm)',
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Min Amount */}
+          <div style={{ width: '140px' }}>
+            <label style={{ 
+              fontSize: 'var(--text-xs)', 
+              fontWeight: 'var(--font-medium)', 
+              color: 'var(--text-tertiary)', 
+              marginBottom: 'var(--space-1)', 
+              display: 'block' 
+            }}>
+              Min Tutar (₺)
+            </label>
+            <input
+              type="number"
+              value={minAmount}
+              onChange={(e) => handleMinAmountChange(e.target.value)}
+              placeholder="0"
+              min="0"
+              step="100"
+              style={{
+                width: '100%',
+                height: '40px',
+                padding: '0 var(--space-3)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+              }}
+            />
+          </div>
+          
+          {/* Max Amount */}
+          <div style={{ width: '140px' }}>
+            <label style={{ 
+              fontSize: 'var(--text-xs)', 
+              fontWeight: 'var(--font-medium)', 
+              color: 'var(--text-tertiary)', 
+              marginBottom: 'var(--space-1)', 
+              display: 'block' 
+            }}>
+              Max Tutar (₺)
+            </label>
+            <input
+              type="number"
+              value={maxAmount}
+              onChange={(e) => handleMaxAmountChange(e.target.value)}
+              placeholder="∞"
+              min="0"
+              step="100"
+              style={{
+                width: '100%',
+                height: '40px',
+                padding: '0 var(--space-3)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--text-sm)',
+              }}
+            />
+          </div>
+          
+          {/* Clear Filters Button */}
+          {hasActiveHistoryFilters && (
+            <button
+              onClick={clearHistoryFilters}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-1)',
+                height: '40px',
+                padding: '0 var(--space-3)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-secondary)',
+                fontSize: 'var(--text-sm)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <X className="h-4 w-4" />
+              Temizle
+            </button>
+          )}
+        </div>
+        
+        {/* Active Filters Info */}
+        {hasActiveHistoryFilters && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+            marginBottom: 'var(--space-4)',
+            padding: 'var(--space-2) var(--space-3)',
+            background: 'var(--primary-50)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--primary-200)',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--primary-700)'
+          }}>
+            <Search className="h-4 w-4" />
+            <span>
+              <strong>{filteredHistoryItems.length}</strong> kayıt filtrelendi
+              {historyQuery.data?.items && ` (toplam ${historyQuery.data.items.length} kayıttan)`}
+            </span>
+          </div>
+        )}
 
         {historyQuery.isLoading ? (
           <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
@@ -947,7 +1154,10 @@ export function RevenueDashboard() {
                     <option value={50}>50</option>
                   </select>
                   <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                    Toplam {historyQuery.data?.items?.length ?? 0} kayıt
+                    {hasActiveHistoryFilters 
+                      ? `${filteredHistoryItems.length} / ${historyQuery.data?.items?.length ?? 0} kayıt`
+                      : `Toplam ${historyQuery.data?.items?.length ?? 0} kayıt`
+                    }
                   </span>
                 </div>
                 
