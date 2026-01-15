@@ -17,6 +17,7 @@ import {
   AdminSettingsPage,
   AdminTransfersPage,
 } from "../pages/admin/AdminDashboard";
+import { AdminUserPasswordResetPage } from "../pages/admin/users/AdminUserPasswordResetPage";
 import { AdminTicketsPage } from "../pages/admin/tickets/AdminTicketsPage";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
@@ -84,6 +85,7 @@ export function AppRouter() {
           <Route path="transfers" element={<AdminTransfersPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="users/new" element={<AdminUserCreatePage />} />
+          <Route path="users/:userId/reset-password" element={<AdminUserPasswordResetPage />} />
           <Route path="tickets" element={<AdminTicketsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />

@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key, Trash2, Copy, Eye } from "../../../lib/lucide";
+import { Users, Search, Shield, CheckCircle2, XCircle, Edit, Loader2, AlertCircle, UserPlus, Key, Trash2 } from "../../../lib/lucide";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { adminTenantService } from "../../../services/admin/tenants";
 import { http } from "../../../lib/http";
@@ -54,10 +54,6 @@ export function AdminUsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
-  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
-  const [resetPasswordResult, setResetPasswordResult] = useState<{ new_password?: string; current_password?: string; message?: string } | null>(null);
-  const [currentPasswordLoading, setCurrentPasswordLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
   
@@ -251,46 +247,8 @@ export function AdminUsersPage() {
     }
   };
 
-  const copyPassword = (password: string) => {
-    navigator.clipboard.writeText(password).then(() => {
-      push({ title: "Kopyalandı", description: "Parola panoya kopyalandı", type: "success" });
-    });
-  };
-
-  const handleShowPassword = async (user: User) => {
-    setResetPasswordUser(user);
-    setResetPasswordResult(null);
-    setCurrentPasswordLoading(user.id);
-    setShowResetPasswordModal(true);
-    
-    // Try to get current password - DO NOT reset automatically
-    try {
-      const response = await http.get<{ password: string | null; has_password: boolean; message?: string }>(`/admin/users/${user.id}/password`);
-      if (response.data.password) {
-        // Password exists, show it
-        setResetPasswordResult({ current_password: response.data.password });
-      } else {
-        // No password found, just show message - DO NOT reset
-        setResetPasswordResult({ 
-          current_password: undefined,
-          message: response.data.message || "Şifre bulunamadı"
-        });
-      }
-    } catch (error) {
-      // If error, just show error message - DO NOT reset
-      const errorMessage = getErrorMessage(error);
-      errorLogger.error(error, {
-        component: "AdminUsersPage",
-        action: "fetchPassword",
-        userId: user.id,
-      });
-      setResetPasswordResult({ 
-        current_password: undefined,
-        message: errorMessage || "Şifre alınamadı"
-      });
-    } finally {
-      setCurrentPasswordLoading(null);
-    }
+  const handleResetPassword = (user: User) => {
+    navigate(`/admin/users/${user.id}/reset-password`);
   };
 
   return (
@@ -515,45 +473,6 @@ export function AdminUsersPage() {
                 render: (value) => new Date(value).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }),
               },
               {
-                key: 'password',
-                label: 'Şifre',
-                align: 'center',
-                render: (_, row) => (
-                  <button
-                    onClick={() => handleShowPassword(row)}
-                    disabled={currentPasswordLoading === row.id}
-                    title="Şifreyi göster"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 'var(--space-2)',
-                      borderRadius: 'var(--radius-md)',
-                      border: 'none',
-                      background: 'rgba(99, 102, 241, 0.1)',
-                      color: '#6366f1',
-                      cursor: currentPasswordLoading === row.id ? 'wait' : 'pointer',
-                      transition: 'all 0.2s',
-                      opacity: currentPasswordLoading === row.id ? 0.6 : 1,
-                    }}
-                    onMouseOver={(e) => {
-                      if (currentPasswordLoading !== row.id) {
-                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
-                    }}
-                  >
-                    {currentPasswordLoading === row.id ? (
-                      <Loader2 className="h-4 w-4" style={{ animation: 'spin 1s linear infinite' }} />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                ),
-              },
-              {
                 key: 'actions',
                 label: t("common.actions"),
                 align: 'right',
@@ -570,11 +489,7 @@ export function AdminUsersPage() {
                     <ModernButton
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        setResetPasswordUser(row);
-                        setResetPasswordResult(null);
-                        setShowResetPasswordModal(true);
-                      }}
+                      onClick={() => handleResetPassword(row)}
                       leftIcon={<Key className="h-4 w-4" />}
                     >
                       Parola Sıfırla
@@ -821,11 +736,7 @@ export function AdminUsersPage() {
             <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border-primary)" }}>
               <ModernButton
                 variant="ghost"
-                onClick={() => {
-                  setResetPasswordUser(editingUser);
-                  setResetPasswordResult(null);
-                  setShowResetPasswordModal(true);
-                }}
+                onClick={() => handleResetPassword(editingUser)}
                 leftIcon={<Key className="h-4 w-4" />}
               >
                 Parola Sıfırla
@@ -835,80 +746,6 @@ export function AdminUsersPage() {
         </Modal>
       )}
 
-      {/* Reset Password Modal */}
-      {showResetPasswordModal && resetPasswordUser && (
-        <Modal
-          isOpen={showResetPasswordModal}
-          onClose={() => {
-            setShowResetPasswordModal(false);
-            setResetPasswordUser(null);
-            setResetPasswordResult(null);
-          }}
-          title="Şifre Göster"
-          footer={
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn--secondary"
-                onClick={() => {
-                  setShowResetPasswordModal(false);
-                  setResetPasswordUser(null);
-                  setResetPasswordResult(null);
-                }}
-              >
-                Kapat
-              </button>
-            </div>
-          }
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            <p style={{ margin: 0, color: "var(--text-tertiary)" }}>
-              <strong>{resetPasswordUser.email}</strong> kullanıcısının şifresi.
-            </p>
-            {currentPasswordLoading === resetPasswordUser?.id ? (
-              <div style={{ textAlign: "center", padding: "2rem" }}>
-                <Loader2 className="h-8 w-8" style={{ margin: "0 auto", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
-                <p style={{ marginTop: "1rem", color: "var(--text-tertiary)" }}>
-                  Şifre yükleniyor...
-                </p>
-              </div>
-            ) : resetPasswordResult?.current_password ? (
-              <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-primary)" }}>
-                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>Mevcut Şifre:</p>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                  <code style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", fontFamily: "monospace" }}>
-                    {resetPasswordResult.current_password}
-                  </code>
-                  <ModernButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyPassword(resetPasswordResult.current_password!)}
-                    leftIcon={<Copy className="h-4 w-4" />}
-                  >
-                    Kopyala
-                  </ModernButton>
-                </div>
-              </div>
-            ) : resetPasswordResult?.message ? (
-              <div style={{ padding: "1rem", background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--radius-lg)", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
-                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600, color: "#b45309" }}>Şifre Bulunamadı</p>
-                <p style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "#b45309" }}>
-                  {resetPasswordResult.message.includes("Password column was just created") 
-                    ? "Şifre kolonu yeni oluşturuldu. Bu kullanıcının şifresi henüz kaydedilmemiş."
-                    : resetPasswordResult.message.includes("Password not stored") || 
-                      resetPasswordResult.message.includes("not stored") ||
-                      resetPasswordResult.message.includes("encrypted format") ||
-                      resetPasswordResult.message.toLowerCase().includes("password not")
-                    ? "Bu kullanıcının şifresi şifrelenmiş formatta saklanmamış."
-                    : resetPasswordResult.message.includes("does not exist")
-                    ? "Şifre kolonu henüz oluşturulmamış. Lütfen sistem yöneticisine başvurun."
-                    : resetPasswordResult.message}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </Modal>
-      )}
 
       {usersQuery.isError && (
         <ModernCard variant="glass" padding="lg">

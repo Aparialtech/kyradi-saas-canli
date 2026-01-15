@@ -192,6 +192,101 @@ class EmailService:
                 raise
 
     @staticmethod
+    async def send_new_password_notification(
+        to_email: str,
+        new_password: str,
+        full_name: str | None = None,
+        locale: str = "tr-TR",
+    ) -> bool:
+        """Send email notification with newly set password (admin-initiated reset)."""
+        provider = settings.email_provider.lower()
+        
+        greeting = f"Merhaba {full_name}," if full_name else "Merhaba,"
+        greeting_en = f"Hello {full_name}," if full_name else "Hello,"
+        
+        if locale.startswith("tr"):
+            subject = "Yeni Parolanız - Kyradi"
+            body_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #00a389; margin: 0;">KYRADİ</h1>
+                </div>
+                <h2 style="color: #333;">Parola Sıfırlama</h2>
+                <p>{greeting}</p>
+                <p>Sistem yöneticisi tarafından parolanız sıfırlanmıştır. Yeni parolanız:</p>
+                <div style="background: linear-gradient(135deg, #00a389 0%, #6366f1 100%); color: white; font-size: 24px; font-weight: bold; letter-spacing: 4px; text-align: center; padding: 20px; border-radius: 12px; margin: 20px 0; font-family: monospace;">
+                    {new_password}
+                </div>
+                <p style="color: #666;"><strong>Güvenlik uyarısı:</strong> Lütfen ilk girişinizde bu parolayı değiştirin.</p>
+                <p style="color: #666;">Giriş yapmak için: <a href="https://kyradi-saas-canli.vercel.app/login" style="color: #00a389;">kyradi-saas-canli.vercel.app/login</a></p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999;">Bu e-postayı siz talep etmediyseniz, lütfen sistem yöneticinize başvurun.</p>
+                <p style="font-size: 12px; color: #999;">Saygılarımızla,<br>KYRADİ Ekibi</p>
+            </body>
+            </html>
+            """
+            body_text = f"{greeting}\n\nParolanız sistem yöneticisi tarafından sıfırlandı.\n\nYeni parolanız: {new_password}\n\nLütfen ilk girişinizde bu parolayı değiştirin.\n\nSaygılarımızla,\nKYRADİ Ekibi"
+        else:
+            subject = "Your New Password - Kyradi"
+            body_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #00a389; margin: 0;">KYRADİ</h1>
+                </div>
+                <h2 style="color: #333;">Password Reset</h2>
+                <p>{greeting_en}</p>
+                <p>Your password has been reset by a system administrator. Your new password is:</p>
+                <div style="background: linear-gradient(135deg, #00a389 0%, #6366f1 100%); color: white; font-size: 24px; font-weight: bold; letter-spacing: 4px; text-align: center; padding: 20px; border-radius: 12px; margin: 20px 0; font-family: monospace;">
+                    {new_password}
+                </div>
+                <p style="color: #666;"><strong>Security notice:</strong> Please change this password on your first login.</p>
+                <p style="color: #666;">Login at: <a href="https://kyradi-saas-canli.vercel.app/login" style="color: #00a389;">kyradi-saas-canli.vercel.app/login</a></p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999;">If you didn't request this, please contact your system administrator.</p>
+                <p style="font-size: 12px; color: #999;">Best regards,<br>KYRADİ Team</p>
+            </body>
+            </html>
+            """
+            body_text = f"{greeting_en}\n\nYour password has been reset by an administrator.\n\nNew password: {new_password}\n\nPlease change this password on your first login.\n\nBest regards,\nKYRADİ Team"
+        
+        try:
+            if provider == "resend":
+                result = await EmailService._send_via_resend(to_email, subject, body_html, body_text)
+                logger.info(f"✅ New password email sent via Resend to {to_email}")
+                return result
+            elif provider == "sendgrid":
+                result = await EmailService._send_via_sendgrid(to_email, subject, body_html, body_text)
+                logger.info(f"New password email sent via SendGrid to {to_email}")
+                return result
+            elif provider == "mailgun":
+                result = await EmailService._send_via_mailgun(to_email, subject, body_html, body_text)
+                logger.info(f"New password email sent via Mailgun to {to_email}")
+                return result
+            elif provider == "smtp":
+                if not settings.smtp_host or not settings.smtp_user:
+                    logger.warning("SMTP configuration incomplete, logging password instead")
+                    logger.info(f"[EMAIL LOG] New password for {to_email}: {new_password}")
+                    return True
+                result = await EmailService._send_via_smtp(to_email, subject, body_html, body_text)
+                logger.info(f"✅ New password email sent via SMTP to {to_email}")
+                return result
+            else:
+                # Default: log mode for development
+                logger.warning(f"⚠️ EMAIL NOT SENT - Email provider '{provider}' not configured")
+                logger.info(f"[EMAIL LOG] New password for {to_email}: {new_password}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to send new password email to {to_email}: {e}", exc_info=True)
+            is_development = settings.environment.lower() in {"local", "dev", "development"}
+            if is_development:
+                logger.warning(f"Email sending failed, but continuing (development mode). Password: {new_password}")
+                return True
+            else:
+                raise
+
+    @staticmethod
     async def _send_via_resend(to_email: str, subject: str, body_html: str, body_text: str) -> bool:
         """Send email via Resend API (Free: 3000 emails/month)."""
         if not settings.resend_api_key:

@@ -219,7 +219,12 @@ async def reset_admin_user_password(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_super_admin),
 ) -> PasswordResetResponse:
-    """Reset a user's password. Returns the new password if auto-generated."""
+    """Reset a user's password. Returns the new password if auto-generated.
+    
+    Optionally sends the new password to the user's email if send_email=True.
+    """
+    from ...services.messaging import EmailService
+    
     user = await _load_user_or_404(session, user_id)
 
     new_password = payload.password
@@ -241,18 +246,40 @@ async def reset_admin_user_password(
         action="admin.user.reset_password",
         entity="users",
         entity_id=user.id,
-        meta={"auto_generate": payload.auto_generate},
+        meta={"auto_generate": payload.auto_generate, "send_email": getattr(payload, "send_email", False)},
     )
     await session.commit()
+    
+    # Send email notification if requested
+    email_sent = False
+    if getattr(payload, "send_email", False):
+        try:
+            email_sent = await EmailService.send_new_password_notification(
+                to_email=user.email,
+                new_password=new_password,
+                full_name=user.full_name,
+                locale="tr-TR",
+            )
+            logger.info(
+                "Password reset email %s for user id=%s email=%s",
+                "sent" if email_sent else "failed",
+                user.id,
+                user.email,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {user.email}: {e}")
+            # Don't fail the request, just log the error
+    
     logger.info(
-        "Admin reset password for user id=%s email=%s tenant_id=%s auto_generated=%s",
+        "Admin reset password for user id=%s email=%s tenant_id=%s auto_generated=%s email_sent=%s",
         user.id,
         user.email,
         user.tenant_id,
         payload.auto_generate,
+        email_sent,
     )
 
     return PasswordResetResponse(
-        message="Password reset successfully",
+        message="Password reset successfully" + (" and email sent" if email_sent else ""),
         new_password=new_password if payload.auto_generate or not payload.password else None,
     )

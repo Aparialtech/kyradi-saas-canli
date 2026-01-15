@@ -44,6 +44,7 @@ class UserUpdate(BaseModel):
 class UserPasswordReset(BaseModel):
     password: Optional[str] = Field(default=None, min_length=8, description="Yeni parola minimum 8 karakter olmalıdır. Boş bırakılırsa otomatik oluşturulur.")
     auto_generate: bool = Field(default=True, description="Otomatik güvenli parola oluştur")
+    send_email: bool = Field(default=False, description="Yeni parolayı kullanıcının e-posta adresine gönder")
 
 
 class PasswordResetResponse(BaseModel):
