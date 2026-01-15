@@ -16,6 +16,7 @@ from ...models import Tenant, User
 from ...models.enums import UserRole
 from ...schemas import AdminUserCreate, AdminUserRead, AdminUserUpdate, PasswordResetResponse, UserPasswordReset
 from ...services.audit import record_audit
+from ...services.messaging import EmailService
 
 logger = logging.getLogger(__name__)
 
