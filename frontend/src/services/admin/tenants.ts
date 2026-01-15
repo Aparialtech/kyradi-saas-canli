@@ -9,6 +9,7 @@ export interface Tenant {
   brand_color?: string | null;
   logo_url?: string | null;
   legal_name?: string | null;
+  custom_domain?: string | null;
   created_at: string;
 }
 
@@ -20,6 +21,7 @@ export interface TenantCreatePayload {
   brand_color?: string;
   logo_url?: string;
   legal_name?: string;
+  custom_domain?: string;
   metadata?: {
     contact?: {
       email?: string;
@@ -45,6 +47,7 @@ export interface TenantUpdatePayload {
   brand_color?: string;
   logo_url?: string;
   legal_name?: string;
+  custom_domain?: string | null;
   metadata?: {
     contact?: {
       email?: string;

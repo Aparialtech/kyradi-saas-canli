@@ -1,10 +1,11 @@
 """Tenant user management endpoints."""
 
 import logging
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
@@ -18,6 +19,15 @@ from ...services.limits import ensure_user_limit
 from ...services.quota_checks import check_user_quota
 
 logger = logging.getLogger(__name__)
+
+
+class PaginatedUserResponse(BaseModel):
+    """Paginated user list response."""
+    items: List[UserRead]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -36,20 +46,46 @@ def _validate_role(role: UserRole) -> None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role for tenant user")
 
 
-@router.get("", response_model=List[UserRead])
+@router.get("", response_model=PaginatedUserResponse)
 async def list_users(
+    page: int = Query(default=1, ge=1, description="Sayfa numarası"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Sayfa başı kayıt"),
+    search: Optional[str] = Query(default=None, description="E-posta veya isim ile arama"),
     current_user: User = Depends(require_tenant_admin),
     session: AsyncSession = Depends(get_session),
-) -> List[UserRead]:
-    """List users for the current tenant."""
-    stmt = (
-        select(User)
-        .where(User.tenant_id == current_user.tenant_id)
-        .order_by(User.created_at.desc())
-    )
+) -> PaginatedUserResponse:
+    """List users for the current tenant with pagination."""
+    # Base query
+    base_query = select(User).where(User.tenant_id == current_user.tenant_id)
+    
+    # Apply search filter
+    if search:
+        search_term = f"%{search.lower()}%"
+        base_query = base_query.where(
+            User.email.ilike(search_term) | 
+            User.full_name.ilike(search_term)
+        )
+    
+    # Count total
+    count_query = select(func.count()).select_from(base_query.subquery())
+    total = (await session.execute(count_query)).scalar() or 0
+    
+    # Apply pagination
+    offset = (page - 1) * page_size
+    stmt = base_query.order_by(User.created_at.desc()).offset(offset).limit(page_size)
+    
     result = await session.execute(stmt)
     users = result.scalars().all()
-    return [UserRead.model_validate(user) for user in users]
+    
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+    
+    return PaginatedUserResponse(
+        items=[UserRead.model_validate(user) for user in users],
+        page=page,
+        page_size=page_size,
+        total=total,
+        total_pages=total_pages,
+    )
 
 
 @router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)

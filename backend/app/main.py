@@ -118,6 +118,10 @@ logger.info(f"CORS static origins: {STATIC_ORIGINS}")
 # Add custom CORS middleware BEFORE including routers
 app.add_middleware(DynamicCORSMiddleware)
 
+# Tenant resolver middleware (optional - can be enabled when needed)
+# from .middleware import TenantResolverMiddleware
+# app.add_middleware(TenantResolverMiddleware)
+
 app.include_router(api_router)
 
 # Add global exception handler
@@ -174,6 +178,7 @@ async def ensure_critical_schema() -> None:
         # Tenant columns
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS legal_name VARCHAR(255)",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255) UNIQUE",
         # User columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date TIMESTAMPTZ",

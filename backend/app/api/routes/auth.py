@@ -27,7 +27,14 @@ from ...schemas import (
     VerifyLoginSMSRequest,
     VerifyLoginSMSResponse,
 )
-from ...schemas.auth import ResendLoginSMSRequest, ResendLoginSMSResponse
+from ...schemas.auth import (
+    ResendLoginSMSRequest,
+    ResendLoginSMSResponse,
+    SignupRequest,
+    SignupResponse,
+    TenantOnboardingRequest,
+    TenantOnboardingResponse,
+)
 from ...services.audit import record_audit
 from ...services.messaging import email_service, sms_service
 from ...core.config import settings
@@ -45,8 +52,16 @@ async def login(
     stmt = select(User).where(User.email == credentials.email)
     user = (await session.execute(stmt)).scalar_one_or_none()
 
-    if user is None or not verify_password(credentials.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz e-posta veya şifre")
+    # Check if email exists first
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı."
+        )
+    
+    # Then check password
+    if not verify_password(credentials.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz şifre")
 
     # Check if user is active
     if not user.is_active:
@@ -453,4 +468,199 @@ async def reset_password(
     return ResetPasswordResponse(
         message="Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz.",
         success=True,
+    )
+
+
+# =====================
+# Signup Endpoint
+# =====================
+
+@router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
+async def signup(
+    payload: SignupRequest,
+    session: AsyncSession = Depends(get_session),
+) -> SignupResponse:
+    """
+    Register a new user without tenant assignment.
+    User will need to create/join a tenant after signup.
+    """
+    # Check if email already exists
+    stmt = select(User).where(User.email == payload.email)
+    existing_user = (await session.execute(stmt)).scalar_one_or_none()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Bu e-posta adresi zaten kayıtlı."
+        )
+    
+    # Create user without tenant (will be assigned during onboarding)
+    user = User(
+        email=payload.email,
+        password_hash=get_password_hash(payload.password),
+        role=UserRole.TENANT_ADMIN.value,  # Default role, will manage their own tenant
+        is_active=True,
+        full_name=payload.full_name,
+        phone_number=payload.phone_number,
+        tenant_id=None,  # No tenant yet
+    )
+    session.add(user)
+    await session.flush()
+    
+    logger.info(f"New user registered: {user.email} (ID: {user.id})")
+    
+    await record_audit(
+        session,
+        tenant_id=None,
+        actor_user_id=user.id,
+        action="auth.signup",
+        entity="users",
+        entity_id=user.id,
+        meta={"email": user.email},
+    )
+    
+    await session.commit()
+    await session.refresh(user)
+    
+    # Auto-login: Create access token
+    access_token = create_access_token(
+        subject=user.id,
+        tenant_id=None,
+        role=user.role,
+    )
+    
+    return SignupResponse(
+        message="Kayıt başarılı! Şimdi otelinizi oluşturabilirsiniz.",
+        user_id=user.id,
+        access_token=access_token,
+    )
+
+
+# =====================
+# Self-Service Tenant Creation (Onboarding)
+# =====================
+
+@router.post("/onboarding/create-tenant", response_model=TenantOnboardingResponse, status_code=status.HTTP_201_CREATED)
+async def create_tenant_onboarding(
+    payload: TenantOnboardingRequest,
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_session),
+) -> TenantOnboardingResponse:
+    """
+    Create a new tenant and assign the current user as OWNER/ADMIN.
+    This is for self-service onboarding flow.
+    """
+    import re
+    import unicodedata
+    
+    # User must not already have a tenant
+    if current_user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Zaten bir otele atanmışsınız. Yeni otel oluşturamazsınız."
+        )
+    
+    # Normalize slug
+    normalized_slug = payload.slug.strip().lower()
+    
+    # Replace Turkish characters
+    turkish_to_english = {
+        'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
+        'Ç': 'c', 'Ğ': 'g', 'İ': 'i', 'Ö': 'o', 'Ş': 's', 'Ü': 'u'
+    }
+    for turkish, english in turkish_to_english.items():
+        normalized_slug = normalized_slug.replace(turkish, english)
+    
+    # Remove accents
+    normalized_slug = unicodedata.normalize('NFKD', normalized_slug)
+    normalized_slug = ''.join(c for c in normalized_slug if not unicodedata.combining(c))
+    normalized_slug = re.sub(r'[\s_]+', '-', normalized_slug)
+    normalized_slug = re.sub(r'-+', '-', normalized_slug)
+    normalized_slug = re.sub(r'[^a-z0-9_-]', '', normalized_slug)
+    normalized_slug = normalized_slug.strip('-_')
+    
+    # Validate slug
+    if not normalized_slug or len(normalized_slug) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Subdomain en az 3 karakter olmalıdır."
+        )
+    
+    if not re.match(r'^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$', normalized_slug):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Subdomain alfanümerik karakterlerle başlamalı ve bitmelidir."
+        )
+    
+    # Check slug uniqueness
+    stmt = select(Tenant).where(Tenant.slug == normalized_slug)
+    existing_slug = (await session.execute(stmt)).scalar_one_or_none()
+    if existing_slug:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"'{normalized_slug}' subdomain'i zaten kullanımda. Lütfen başka bir subdomain seçin."
+        )
+    
+    # Check custom_domain uniqueness if provided
+    if payload.custom_domain:
+        custom_domain = payload.custom_domain.strip().lower()
+        stmt = select(Tenant).where(Tenant.custom_domain == custom_domain)
+        existing_domain = (await session.execute(stmt)).scalar_one_or_none()
+        if existing_domain:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Bu domain kullanımda, başka bir domain girin veya sadece subdomain ile devam edin."
+            )
+    else:
+        custom_domain = None
+    
+    # Create tenant
+    tenant = Tenant(
+        slug=normalized_slug,
+        name=payload.name,
+        plan="standard",  # Default plan
+        is_active=True,
+        legal_name=payload.legal_name,
+        brand_color=payload.brand_color,
+        custom_domain=custom_domain,
+    )
+    session.add(tenant)
+    await session.flush()
+    
+    # Assign user to tenant as OWNER
+    current_user.tenant_id = tenant.id
+    current_user.role = UserRole.TENANT_ADMIN.value  # Owner role
+    
+    logger.info(f"Tenant created via onboarding: {tenant.slug} (ID: {tenant.id}) by user {current_user.email}")
+    
+    await record_audit(
+        session,
+        tenant_id=tenant.id,
+        actor_user_id=current_user.id,
+        action="auth.onboarding.tenant_created",
+        entity="tenants",
+        entity_id=tenant.id,
+        meta={"slug": tenant.slug, "name": tenant.name},
+    )
+    
+    await session.commit()
+    await session.refresh(tenant)
+    
+    # Generate redirect URL
+    base_domain = settings.frontend_url or "https://kyradi.com"
+    # Extract domain without protocol
+    if "://" in base_domain:
+        protocol, domain = base_domain.split("://", 1)
+    else:
+        protocol = "https"
+        domain = base_domain
+    
+    # Build subdomain URL
+    redirect_url = f"{protocol}://{tenant.slug}.{domain}/app"
+    
+    return TenantOnboardingResponse(
+        message="Otel başarıyla oluşturuldu!",
+        tenant_id=tenant.id,
+        tenant_slug=tenant.slug,
+        redirect_url=redirect_url,
     )

@@ -24,6 +24,8 @@ class Tenant(IdentifiedMixin, TimestampMixin, Base):
     legal_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     metadata_: Mapped[Optional[dict]] = mapped_column("metadata", JSON, default=None)
     default_hourly_rate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=1500, comment="Default hourly rate in minor currency units (e.g., 1500 = 15.00 TRY)")
+    # Custom domain support for white-label (e.g., rezervasyon.otelim.com)
+    custom_domain: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True, index=True)
     
     @property
     def safe_legal_name(self) -> Optional[str]:

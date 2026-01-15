@@ -81,9 +81,32 @@ export interface TenantUserUpdatePayload {
   gender?: Gender | null;
 }
 
+export interface PaginatedUsersResponse {
+  items: TenantUser[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface UserListParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+}
+
 export const tenantUserService = {
   async list(): Promise<TenantUser[]> {
-    const response = await http.get<TenantUser[]>("/users");
+    // For backward compatibility, return items array without params
+    const response = await http.get<PaginatedUsersResponse>("/users");
+    return response.data.items;
+  },
+  async listWithParams(params?: UserListParams): Promise<TenantUser[]> {
+    const response = await http.get<PaginatedUsersResponse>("/users", { params });
+    return response.data.items;
+  },
+  async listPaginated(params?: UserListParams): Promise<PaginatedUsersResponse> {
+    const response = await http.get<PaginatedUsersResponse>("/users", { params });
     return response.data;
   },
   async create(payload: TenantUserCreatePayload): Promise<TenantUser> {
@@ -102,7 +125,15 @@ export const tenantUserService = {
 // Alias for new API
 export const userService = {
   async list(): Promise<TenantUser[]> {
-    const response = await http.get<TenantUser[]>("/users");
+    const response = await http.get<PaginatedUsersResponse>("/users");
+    return response.data.items;
+  },
+  async listWithParams(params?: UserListParams): Promise<TenantUser[]> {
+    const response = await http.get<PaginatedUsersResponse>("/users", { params });
+    return response.data.items;
+  },
+  async listPaginated(params?: UserListParams): Promise<PaginatedUsersResponse> {
+    const response = await http.get<PaginatedUsersResponse>("/users", { params });
     return response.data;
   },
   async get(id: string): Promise<TenantUser> {

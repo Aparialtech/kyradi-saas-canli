@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { useAuth } from "../../context/AuthContext";
@@ -299,6 +299,19 @@ export function LoginPage() {
                   >
                     {t("login.forgot")}
                   </button>
+                  <div style={{ marginTop: "1rem", textAlign: "center" }}>
+                    <span style={{ color: "var(--text-tertiary)" }}>Hesabınız yok mu? </span>
+                    <Link
+                      to="/signup"
+                      style={{ 
+                        color: "var(--primary)", 
+                        fontWeight: 600,
+                        textDecoration: "none"
+                      }}
+                    >
+                      Kayıt Ol
+                    </Link>
+                  </div>
                 </div>
               </motion.div>
             </AnimatePresence>

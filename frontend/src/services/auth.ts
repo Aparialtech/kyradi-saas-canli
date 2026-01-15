@@ -11,6 +11,10 @@ import type {
   ResetPasswordResponse,
   VerifyLoginSMSPayload,
   VerifyLoginSMSResponse,
+  SignupPayload,
+  SignupResponse,
+  TenantOnboardingPayload,
+  TenantOnboardingResponse,
 } from "../types/auth";
 
 export const authService = {
@@ -42,6 +46,14 @@ export const authService = {
     const response = await http.post<{ message: string; verification_id: string }>("/auth/resend-login-sms", {
       verification_id,
     });
+    return response.data;
+  },
+  async signup(payload: SignupPayload): Promise<SignupResponse> {
+    const response = await http.post<SignupResponse>("/auth/signup", payload);
+    return response.data;
+  },
+  async createTenant(payload: TenantOnboardingPayload): Promise<TenantOnboardingResponse> {
+    const response = await http.post<TenantOnboardingResponse>("/auth/onboarding/create-tenant", payload);
     return response.data;
   },
 };

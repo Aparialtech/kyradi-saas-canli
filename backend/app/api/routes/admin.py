@@ -262,6 +262,19 @@ async def create_tenant(
     if exists.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant slug already in use")
 
+    # Check custom_domain uniqueness if provided
+    custom_domain = None
+    if hasattr(payload, 'custom_domain') and payload.custom_domain:
+        custom_domain = payload.custom_domain.strip().lower()
+        existing_domain = await session.execute(
+            select(Tenant).where(Tenant.custom_domain == custom_domain)
+        )
+        if existing_domain.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Bu domain kullanımda, başka bir domain girin."
+            )
+
     tenant = Tenant(
         slug=final_slug,  # Use normalized slug
         name=payload.name,
@@ -269,6 +282,7 @@ async def create_tenant(
         is_active=payload.is_active,
         brand_color=payload.brand_color,
         logo_url=payload.logo_url,
+        custom_domain=custom_domain,
     )
     session.add(tenant)
     await session.flush()

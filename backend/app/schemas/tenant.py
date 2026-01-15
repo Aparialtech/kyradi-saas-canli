@@ -17,7 +17,8 @@ class TenantBase(BaseModel):
 
 
 class TenantCreate(TenantBase):
-    slug: str = Field(min_length=3, max_length=64)
+    slug: str = Field(min_length=3, max_length=64, pattern=r'^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$')
+    custom_domain: Optional[str] = Field(default=None, max_length=255)
 
 
 class TenantUpdate(BaseModel):
@@ -27,6 +28,7 @@ class TenantUpdate(BaseModel):
     brand_color: Optional[str] = Field(default=None, max_length=16)
     logo_url: Optional[str] = Field(default=None, max_length=512)
     legal_name: Optional[str] = Field(default=None, max_length=255)
+    custom_domain: Optional[str] = Field(default=None, max_length=255)
     metadata: Optional[dict] = Field(default=None, description="Tenant metadata (contact, location, working_hours, tax_number)")
 
 
@@ -38,6 +40,7 @@ class TenantRead(IdentifiedModel):
     brand_color: Optional[str]
     logo_url: Optional[str]
     legal_name: Optional[str] = None
+    custom_domain: Optional[str] = None
 
 
 class TenantPlanLimits(BaseModel):

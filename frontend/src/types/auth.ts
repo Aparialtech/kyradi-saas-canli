@@ -69,3 +69,33 @@ export interface VerifyLoginSMSResponse {
   token_type: string;
   message: string;
 }
+
+// Signup types
+export interface SignupPayload {
+  email: string;
+  password: string;
+  full_name?: string;
+  phone_number?: string;
+}
+
+export interface SignupResponse {
+  message: string;
+  user_id: string;
+  access_token?: string | null;
+}
+
+// Onboarding (Tenant Creation) types
+export interface TenantOnboardingPayload {
+  name: string;
+  slug: string;
+  custom_domain?: string | null;
+  legal_name?: string | null;
+  brand_color?: string | null;
+}
+
+export interface TenantOnboardingResponse {
+  message: string;
+  tenant_id: string;
+  tenant_slug: string;
+  redirect_url: string;
+}

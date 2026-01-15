@@ -2,6 +2,8 @@
 
 from .base import Base
 from .session import AsyncSessionMaker, engine, get_session
-from .utils import init_db
 
-__all__ = ["Base", "engine", "AsyncSessionMaker", "get_session", "init_db"]
+# Lazy import to avoid circular imports
+# init_db should be imported directly from app.db.utils when needed
+
+__all__ = ["Base", "engine", "AsyncSessionMaker", "get_session"]

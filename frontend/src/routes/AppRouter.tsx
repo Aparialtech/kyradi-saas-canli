@@ -20,6 +20,8 @@ import {
 import { AdminUserPasswordResetPage } from "../pages/admin/users/AdminUserPasswordResetPage";
 import { AdminTicketsPage } from "../pages/admin/tickets/AdminTicketsPage";
 import { LoginPage } from "../pages/auth/LoginPage";
+import { SignupPage } from "../pages/auth/SignupPage";
+import { OnboardingPage } from "../pages/auth/OnboardingPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
 import { VerifyResetCodePage } from "../pages/auth/VerifyResetCodePage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
@@ -63,6 +65,8 @@ export function AppRouter() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/verify-reset-code" element={<VerifyResetCodePage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />

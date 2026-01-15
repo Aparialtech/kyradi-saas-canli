@@ -92,3 +92,43 @@ class ResendLoginSMSRequest(BaseModel):
 class ResendLoginSMSResponse(BaseModel):
     message: str
     verification_id: str
+
+
+# =====================
+# Signup Schemas
+# =====================
+
+class SignupRequest(BaseModel):
+    """User registration request."""
+    email: EmailStr
+    password: str = Field(min_length=8, description="Şifre minimum 8 karakter olmalıdır.")
+    full_name: Optional[str] = Field(default=None, max_length=255)
+    phone_number: Optional[str] = Field(default=None, max_length=32)
+
+
+class SignupResponse(BaseModel):
+    """User registration response."""
+    message: str
+    user_id: str
+    access_token: Optional[str] = None  # Auto-login after signup
+
+
+# =====================
+# Self-Service Tenant Creation Schemas
+# =====================
+
+class TenantOnboardingRequest(BaseModel):
+    """Request to create a tenant and assign current user as owner."""
+    name: str = Field(min_length=2, max_length=255)
+    slug: str = Field(min_length=3, max_length=64, pattern=r'^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$')
+    custom_domain: Optional[str] = Field(default=None, max_length=255)
+    legal_name: Optional[str] = Field(default=None, max_length=255)
+    brand_color: Optional[str] = Field(default=None, max_length=16)
+
+
+class TenantOnboardingResponse(BaseModel):
+    """Response after tenant creation."""
+    message: str
+    tenant_id: str
+    tenant_slug: str
+    redirect_url: str  # e.g., https://{slug}.kyradi.com/app
