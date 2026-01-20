@@ -30,6 +30,13 @@ export interface TokenResponse {
   verification_id?: string | null; // ID of PhoneLoginVerification when status is "phone_verification_required"
 }
 
+export interface PartnerLoginResponse {
+  access_token: string;
+  token_type: string;
+  tenant_slug?: string | null; // Tenant subdomain for redirect
+  tenant_id?: string | null;
+}
+
 export interface ForgotPasswordPayload {
   email: string;
 }

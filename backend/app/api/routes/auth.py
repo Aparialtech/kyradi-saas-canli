@@ -34,6 +34,7 @@ from ...schemas.auth import (
     SignupResponse,
     TenantOnboardingRequest,
     TenantOnboardingResponse,
+    PartnerLoginResponse,
 )
 from ...services.audit import record_audit
 from ...services.messaging import email_service, sms_service
@@ -99,6 +100,75 @@ async def login(
         role=user.role,
     )
     return TokenResponse(access_token=token)
+
+
+@router.post("/partner/login", response_model=PartnerLoginResponse)
+async def partner_login(
+    credentials: LoginRequest,
+    session: AsyncSession = Depends(get_session),
+) -> PartnerLoginResponse:
+    """
+    Partner login endpoint - returns tenant_slug for redirect to tenant subdomain.
+    Only allows non-admin users (partner/tenant users).
+    """
+    # Find user by email
+    stmt = select(User).where(User.email == credentials.email)
+    user = (await session.execute(stmt)).scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı."
+        )
+    
+    if not verify_password(credentials.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz şifre")
+
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu hesap aktif değil.")
+
+    # Block admin users from partner login
+    if user.role in {UserRole.SUPER_ADMIN.value, UserRole.SUPPORT.value}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Yönetici hesapları partner girişi yapamaz. Lütfen yönetici giriş sayfasını kullanın."
+        )
+
+    # Partner must have a tenant
+    if not user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Hesabınız henüz bir otele atanmamış. Lütfen önce otel oluşturun."
+        )
+
+    # Get tenant info
+    stmt = select(Tenant).where(Tenant.id == user.tenant_id)
+    tenant = (await session.execute(stmt)).scalar_one_or_none()
+    
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Geçersiz otel ataması")
+    
+    if not tenant.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu otel hesabı aktif değil.")
+
+    # Update last login
+    user.last_login_at = datetime.now(timezone.utc)
+    await session.commit()
+
+    token = create_access_token(
+        subject=user.id,
+        tenant_id=tenant.id,
+        role=user.role,
+    )
+    
+    logger.info(f"Partner login successful: {user.email} -> tenant {tenant.slug}")
+    
+    return PartnerLoginResponse(
+        access_token=token,
+        token_type="bearer",
+        tenant_slug=tenant.slug,
+        tenant_id=tenant.id,
+    )
 
 
 @router.post("/verify-login-sms", response_model=VerifyLoginSMSResponse)

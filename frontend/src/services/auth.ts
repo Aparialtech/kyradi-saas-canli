@@ -3,6 +3,7 @@ import type {
   AuthUser,
   LoginPayload,
   TokenResponse,
+  PartnerLoginResponse,
   ForgotPasswordPayload,
   ForgotPasswordResponse,
   VerifyResetCodePayload,
@@ -20,6 +21,10 @@ import type {
 export const authService = {
   async login(payload: LoginPayload): Promise<TokenResponse> {
     const response = await http.post<TokenResponse>("/auth/login", payload);
+    return response.data;
+  },
+  async loginPartner(payload: LoginPayload): Promise<PartnerLoginResponse> {
+    const response = await http.post<PartnerLoginResponse>("/auth/partner/login", payload);
     return response.data;
   },
   async getCurrentUser(): Promise<AuthUser> {
