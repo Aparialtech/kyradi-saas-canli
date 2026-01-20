@@ -37,19 +37,11 @@ export function AdminLoginPage() {
     setSubmitting(true);
 
     try {
-      const response = await authService.login({ email, password });
+      // Use dedicated admin login endpoint
+      const response = await authService.loginAdmin({ email, password });
 
       if (response.access_token) {
         tokenStorage.set(response.access_token);
-        const currentUser = await authService.getCurrentUser();
-        
-        // Only allow admin users
-        if (currentUser.role !== "super_admin" && currentUser.role !== "support") {
-          tokenStorage.clear();
-          setError("Bu giriş sayfası sadece yöneticiler içindir.");
-          return;
-        }
-        
         navigate("/admin", { replace: true });
       }
     } catch (err) {

@@ -27,6 +27,10 @@ export const authService = {
     const response = await http.post<PartnerLoginResponse>("/auth/partner/login", payload);
     return response.data;
   },
+  async loginAdmin(payload: LoginPayload): Promise<TokenResponse> {
+    const response = await http.post<TokenResponse>("/auth/admin/login", payload);
+    return response.data;
+  },
   async getCurrentUser(): Promise<AuthUser> {
     const response = await http.get<AuthUser>("/auth/me");
     return response.data;

@@ -171,6 +171,53 @@ async def partner_login(
     )
 
 
+@router.post("/admin/login", response_model=TokenResponse)
+async def admin_login(
+    credentials: LoginRequest,
+    session: AsyncSession = Depends(get_session),
+) -> TokenResponse:
+    """
+    Admin login endpoint - only allows admin users (super_admin, support).
+    Returns 403 for non-admin users.
+    """
+    # Find user by email
+    stmt = select(User).where(User.email == credentials.email)
+    user = (await session.execute(stmt)).scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı."
+        )
+    
+    if not verify_password(credentials.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz şifre")
+
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu hesap aktif değil.")
+
+    # Only allow admin users
+    if user.role not in {UserRole.SUPER_ADMIN.value, UserRole.SUPPORT.value}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Bu giriş sayfası sadece yöneticiler içindir. Partner girişi için /partner/login kullanın."
+        )
+
+    # Update last login
+    user.last_login_at = datetime.now(timezone.utc)
+    await session.commit()
+
+    token = create_access_token(
+        subject=user.id,
+        tenant_id=None,  # Admin users don't have tenant
+        role=user.role,
+    )
+    
+    logger.info(f"Admin login successful: {user.email} (role: {user.role})")
+    
+    return TokenResponse(access_token=token)
+
+
 @router.post("/verify-login-sms", response_model=VerifyLoginSMSResponse)
 async def verify_login_sms(
     payload: VerifyLoginSMSRequest,
