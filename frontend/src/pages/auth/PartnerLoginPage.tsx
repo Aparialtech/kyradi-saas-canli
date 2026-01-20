@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -13,6 +13,33 @@ import { getTenantUrl, isDevelopment } from "../../lib/hostDetection";
 import { Lock, Mail, Eye, EyeOff, Hotel, Building2, CheckCircle2 } from "../../lib/lucide";
 import styles from "./LoginPage.module.css";
 
+/**
+ * Validate redirect URL for security.
+ * Only allows redirects to kyradi.com subdomains.
+ */
+function isValidRedirectUrl(url: string | null): boolean {
+  if (!url) return false;
+  
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    
+    // Allow kyradi.com subdomains
+    if (host === "kyradi.com" || host.endsWith(".kyradi.com")) {
+      return true;
+    }
+    
+    // Allow localhost for development
+    if (host === "localhost" || host === "127.0.0.1") {
+      return true;
+    }
+    
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export function PartnerLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -24,7 +51,12 @@ export function PartnerLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const redirectUrl = searchParams.get("redirect");
+  const rawRedirectUrl = searchParams.get("redirect");
+  
+  // Validate redirect URL for security - only allow kyradi.com domains
+  const redirectUrl = useMemo(() => {
+    return isValidRedirectUrl(rawRedirectUrl) ? rawRedirectUrl : null;
+  }, [rawRedirectUrl]);
 
   // Redirect if already logged in as partner
   useEffect(() => {

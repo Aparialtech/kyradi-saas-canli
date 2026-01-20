@@ -41,6 +41,7 @@ class TenantRead(IdentifiedModel):
     logo_url: Optional[str]
     legal_name: Optional[str] = None
     custom_domain: Optional[str] = None
+    domain_status: str = "unverified"
 
 
 class TenantPlanLimits(BaseModel):

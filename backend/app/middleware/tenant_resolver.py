@@ -17,6 +17,14 @@ logger = logging.getLogger(__name__)
 # Base domain for Kyradi (subdomains will be *.kyradi.com)
 BASE_DOMAINS = {"kyradi.com", "localhost", "127.0.0.1"}
 
+# Special hosts that skip tenant resolution entirely
+# Admin host: admin.kyradi.com - Admin panel, no tenant context needed
+# App host: app.kyradi.com - Signup, onboarding, no tenant context needed
+SKIP_TENANT_HOSTS = {"admin.kyradi.com", "app.kyradi.com"}
+
+# Subdomains that are NOT tenant subdomains
+RESERVED_SUBDOMAINS = {"admin", "app", "www", "api", "mail", "cdn", "status"}
+
 # Paths that don't require tenant resolution
 PUBLIC_PATHS = {
     "/health",
@@ -24,6 +32,8 @@ PUBLIC_PATHS = {
     "/openapi.json",
     "/redoc",
     "/auth/login",
+    "/auth/admin/login",
+    "/auth/partner/login",
     "/auth/signup",
     "/auth/forgot-password",
     "/auth/verify-reset-code",
@@ -47,6 +57,31 @@ def is_public_path(path: str) -> bool:
     return False
 
 
+def should_skip_tenant_resolution(host: str) -> bool:
+    """
+    Check if this host should skip tenant resolution entirely.
+    Admin and App hosts don't need tenant context.
+    """
+    if not host:
+        return True
+    
+    host_without_port = host.split(":")[0].lower()
+    
+    # Skip for known hosts
+    if host_without_port in SKIP_TENANT_HOSTS:
+        return True
+    
+    # Skip for development
+    if host_without_port in {"localhost", "127.0.0.1"}:
+        return True
+    
+    # Skip for base domains without subdomain
+    if host_without_port in BASE_DOMAINS:
+        return True
+    
+    return False
+
+
 def extract_tenant_from_host(host: str) -> Optional[str]:
     """
     Extract tenant slug from host header.
@@ -56,6 +91,8 @@ def extract_tenant_from_host(host: str) -> Optional[str]:
     - rezervasyon.otelim.com -> None (custom domain, lookup separately)
     - kyradi.com -> None (main domain)
     - localhost:5173 -> None (development)
+    - admin.kyradi.com -> None (reserved subdomain)
+    - app.kyradi.com -> None (reserved subdomain)
     """
     if not host:
         return None
@@ -68,8 +105,8 @@ def extract_tenant_from_host(host: str) -> Optional[str]:
         if host_without_port.endswith(f".{base_domain}"):
             # Extract subdomain
             subdomain = host_without_port.replace(f".{base_domain}", "")
-            # Ignore www or app subdomains
-            if subdomain and subdomain not in {"www", "app", "api"}:
+            # Ignore reserved subdomains
+            if subdomain and subdomain not in RESERVED_SUBDOMAINS:
                 return subdomain
     
     # Check if it's exactly a base domain
@@ -101,14 +138,24 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
     Middleware to resolve tenant from request host.
     
     Resolution order:
-    1. Check if path is public (skip resolution)
-    2. Check X-Tenant-ID header (for API clients)
-    3. Extract subdomain from host (e.g., demo-hotel.kyradi.com)
-    4. Check custom domain (e.g., rezervasyon.otelim.com)
-    5. If no tenant found and required, return 404
+    1. Check if host should skip tenant resolution (admin.kyradi.com, app.kyradi.com, localhost)
+    2. Check if path is public (skip resolution)
+    3. Check X-Tenant-ID header (for API clients)
+    4. Extract subdomain from host (e.g., demo-hotel.kyradi.com)
+    5. Check custom domain (e.g., rezervasyon.otelim.com)
+    6. If no tenant found and required, return 404
     """
     
     async def dispatch(self, request: Request, call_next):
+        host = request.headers.get("host", "")
+        
+        # Skip tenant resolution for admin/app hosts and development
+        if should_skip_tenant_resolution(host):
+            request.state.tenant = None
+            request.state.tenant_id = None
+            logger.debug(f"Skipping tenant resolution for host: {host}")
+            return await call_next(request)
+        
         # Skip tenant resolution for public paths
         if is_public_path(request.url.path):
             request.state.tenant = None
@@ -116,7 +163,6 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         
         tenant: Optional[Tenant] = None
-        host = request.headers.get("host", "")
         
         # 1. Check X-Tenant-ID header first (API clients)
         tenant_id_header = request.headers.get("x-tenant-id")

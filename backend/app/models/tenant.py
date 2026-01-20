@@ -7,7 +7,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base, IdentifiedMixin, TimestampMixin
-from .enums import UserRole
+from .enums import UserRole, DomainStatus
 
 
 class Tenant(IdentifiedMixin, TimestampMixin, Base):
@@ -26,6 +26,12 @@ class Tenant(IdentifiedMixin, TimestampMixin, Base):
     default_hourly_rate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=1500, comment="Default hourly rate in minor currency units (e.g., 1500 = 15.00 TRY)")
     # Custom domain support for white-label (e.g., rezervasyon.otelim.com)
     custom_domain: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True, index=True)
+    domain_status: Mapped[str] = mapped_column(
+        String(20), 
+        default=DomainStatus.UNVERIFIED.value, 
+        nullable=False,
+        comment="Custom domain verification status: unverified, pending, verified, failed"
+    )
     
     @property
     def safe_legal_name(self) -> Optional[str]:

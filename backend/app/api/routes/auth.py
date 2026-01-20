@@ -657,6 +657,17 @@ async def signup(
 # Self-Service Tenant Creation (Onboarding)
 # =====================
 
+# Reserved slugs that cannot be used by tenants
+RESERVED_SLUGS = {
+    "admin", "app", "www", "api", "mail", "smtp", "ftp", "cdn", 
+    "support", "help", "docs", "status", "blog", "news",
+    "billing", "payment", "payments", "checkout", "auth",
+    "login", "signup", "register", "dashboard", "panel",
+    "kyradi", "otel", "hotel", "test", "demo", "staging", "dev",
+    "assets", "static", "images", "img", "css", "js", "fonts",
+}
+
+
 @router.post("/onboarding/create-tenant", response_model=TenantOnboardingResponse, status_code=status.HTTP_201_CREATED)
 async def create_tenant_onboarding(
     payload: TenantOnboardingRequest,
@@ -703,10 +714,23 @@ async def create_tenant_onboarding(
             detail="Subdomain en az 3 karakter olmalıdır."
         )
     
+    if len(normalized_slug) > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Subdomain en fazla 50 karakter olabilir."
+        )
+    
     if not re.match(r'^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$', normalized_slug):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Subdomain alfanümerik karakterlerle başlamalı ve bitmelidir."
+        )
+    
+    # Check reserved slugs
+    if normalized_slug in RESERVED_SLUGS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"'{normalized_slug}' subdomain'i sistem tarafından rezerve edilmiştir. Lütfen başka bir subdomain seçin."
         )
     
     # Check slug uniqueness
@@ -715,7 +739,7 @@ async def create_tenant_onboarding(
     if existing_slug:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"'{normalized_slug}' subdomain'i zaten kullanımda. Lütfen başka bir subdomain seçin."
+            detail="Bu subdomain kullanımda, başka bir subdomain seçin."
         )
     
     # Check custom_domain uniqueness if provided

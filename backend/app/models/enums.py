@@ -64,3 +64,11 @@ class PaymentMode(str, Enum):
     CASH = "CASH"  # Cash payment (offline, no gateway)
     GATEWAY_DEMO = "GATEWAY_DEMO"  # Gateway demo mode (MagicPay demo)
     GATEWAY_LIVE = "GATEWAY_LIVE"  # Gateway live mode (real MagicPay)
+
+
+class DomainStatus(str, Enum):
+    """Domain verification status for tenant custom domains."""
+    UNVERIFIED = "unverified"  # Domain added but not verified
+    PENDING = "pending"  # Verification in progress
+    VERIFIED = "verified"  # Domain ownership verified
+    FAILED = "failed"  # Verification failed

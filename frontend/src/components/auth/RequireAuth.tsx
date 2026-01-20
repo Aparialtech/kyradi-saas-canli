@@ -3,10 +3,36 @@ import { Navigate, Outlet } from "react-router-dom";
 import { FullPageSpinner } from "../common/FullPageSpinner";
 import { useAuth } from "../../context/AuthContext";
 import type { UserRole } from "../../types/auth";
+import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../../lib/hostDetection";
 
 interface RequireAuthProps {
   allowedRoles?: UserRole[];
   redirectTo?: string;
+}
+
+/**
+ * Build redirect URL for partner login with current URL as redirect param.
+ * Only allows redirects to kyradi.com subdomains for security.
+ */
+function buildPartnerLoginRedirect(): string {
+  const currentUrl = window.location.href;
+  
+  // Security: Only allow redirects to kyradi.com domains
+  try {
+    const url = new URL(currentUrl);
+    const isKyradiDomain = url.hostname.endsWith(".kyradi.com") || 
+                          url.hostname === "kyradi.com" ||
+                          url.hostname === "localhost" ||
+                          url.hostname === "127.0.0.1";
+    
+    if (isKyradiDomain) {
+      return getPartnerLoginUrl(currentUrl);
+    }
+  } catch {
+    // Invalid URL, don't add redirect
+  }
+  
+  return getPartnerLoginUrl();
 }
 
 export function RequireAuth({
@@ -14,12 +40,21 @@ export function RequireAuth({
   redirectTo = "/login",
 }: RequireAuthProps) {
   const { user, isLoading, hasRole } = useAuth();
+  const hostType = detectHostType();
 
   if (isLoading) {
     return <FullPageSpinner />;
   }
 
   if (!user) {
+    // For tenant hosts (subdomain), redirect to app host with redirect param
+    if (hostType === "tenant" && !isDevelopment()) {
+      const loginUrl = buildPartnerLoginRedirect();
+      window.location.href = loginUrl;
+      return <FullPageSpinner />;
+    }
+    
+    // For other hosts, use normal React Router redirect
     return <Navigate to={redirectTo} replace />;
   }
 

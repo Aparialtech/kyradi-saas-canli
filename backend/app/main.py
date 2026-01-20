@@ -179,6 +179,7 @@ async def ensure_critical_schema() -> None:
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS metadata JSONB",
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS legal_name VARCHAR(255)",
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255) UNIQUE",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS domain_status VARCHAR(20) NOT NULL DEFAULT 'unverified'",
         # User columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date TIMESTAMPTZ",

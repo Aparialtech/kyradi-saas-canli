@@ -17,7 +17,7 @@ import { quotaService } from "../../../services/partner/reports";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { Modal } from "../../../components/common/Modal";
-import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
+import { usePagination } from "../../../components/common/Pagination";
 import { getErrorMessage } from "../../../lib/httpError";
 import { errorLogger } from "../../../lib/errorLogger";
 import { useConfirm } from "../../../components/common/ConfirmDialog";
@@ -69,9 +69,14 @@ export function UsersPage() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
+  // Server-side pagination - fetch data with page/pageSize/search params
   const usersQuery = useQuery({
-    queryKey: ["tenant", "users"],
-    queryFn: tenantUserService.list,
+    queryKey: ["tenant", "users", page, pageSize, searchTerm],
+    queryFn: () => tenantUserService.listPaginated({ 
+      page, 
+      page_size: pageSize, 
+      search: searchTerm || undefined 
+    }),
   });
 
   const quotaQuery = useQuery({
@@ -79,31 +84,22 @@ export function UsersPage() {
     queryFn: quotaService.getQuotaInfo,
   });
 
-  // Filter users by search term
-  const filteredUsers = useMemo(() => {
-    const users = usersQuery.data ?? [];
-    if (!searchTerm.trim()) return users;
-    
-    const term = searchTerm.toLowerCase();
-    return users.filter((user) => {
-      const email = (user.email ?? "").toLowerCase();
-      const phone = (user.phone_number ?? "").toLowerCase();
-      const role = (roleLabels[user.role] ?? user.role).toLowerCase();
-      
-      return email.includes(term) || phone.includes(term) || role.includes(term);
-    });
-  }, [usersQuery.data, searchTerm]);
-
-  // Paginate data
+  // Use server-provided pagination data
   const paginatedUsers = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    const end = start + pageSize;
-    return filteredUsers.slice(start, end);
-  }, [filteredUsers, page, pageSize]);
+    return usersQuery.data?.items ?? [];
+  }, [usersQuery.data]);
 
   const paginationMeta = useMemo(() => {
-    return calculatePaginationMeta(filteredUsers.length, page, pageSize);
-  }, [filteredUsers.length, page, pageSize]);
+    if (!usersQuery.data) {
+      return { total: 0, totalPages: 1, page: 1, pageSize };
+    }
+    return {
+      total: usersQuery.data.total,
+      totalPages: usersQuery.data.total_pages,
+      page: usersQuery.data.page,
+      pageSize: usersQuery.data.page_size,
+    };
+  }, [usersQuery.data, pageSize]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
@@ -530,7 +526,7 @@ export function UsersPage() {
               {t("users.listTitle")}
             </h2>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-              {filteredUsers.length} / {usersQuery.data?.length ?? 0} {t("common.records")}
+              {paginationMeta.total} {t("common.records")}
             </p>
           </div>
           <div style={{ minWidth: "250px", flex: '1', maxWidth: '400px' }}>
@@ -556,7 +552,7 @@ export function UsersPage() {
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: '0 0 var(--space-2) 0', color: '#dc2626' }}>Personel listesi alınamadı</h3>
             <p style={{ margin: 0 }}>Sayfayı yenileyerek tekrar deneyin.</p>
           </div>
-        ) : filteredUsers.length > 0 ? (
+        ) : paginatedUsers.length > 0 ? (
           <ModernTable
             columns={[
               {

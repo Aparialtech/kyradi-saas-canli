@@ -1,6 +1,7 @@
 """Aggregate models for external imports."""
 
 from .enums import (
+    DomainStatus,
     LockerStatus,
     PaymentMode,
     PaymentProvider,
@@ -22,15 +23,17 @@ from .pricing import PricingRule
 # from .ticket import Ticket, TicketStatus, TicketPriority, TicketTarget
 
 __all__ = [
+    "AuditLog",
+    "DomainStatus",
     "Locker",  # Backward compatibility
     "LockerStatus",  # Backward compatibility
     "Location",
+    "PasswordResetMethod",
+    "PasswordResetToken",
     "Payment",
     "PaymentMode",
     "PaymentProvider",
     "PaymentStatus",
-    "PasswordResetToken",
-    "PasswordResetMethod",
     "PhoneLoginVerification",
     "PricingRule",
     "Reservation",
@@ -43,5 +46,4 @@ __all__ = [
     "TenantPlanLimit",
     "User",
     "UserRole",
-    "AuditLog",
 ]
