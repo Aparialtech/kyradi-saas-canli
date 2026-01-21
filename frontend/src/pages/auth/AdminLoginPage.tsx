@@ -212,9 +212,3 @@ export function AdminLoginPage() {
     </div>
   );
 }
-  const rawRedirectUrl = searchParams.get("redirect");
-  const redirectUrl = useMemo(() => sanitizeRedirect(rawRedirectUrl), [rawRedirectUrl]);
-  const hasValidRedirect = useMemo(() => {
-    if (!rawRedirectUrl) return false;
-    return redirectUrl === rawRedirectUrl.trim();
-  }, [rawRedirectUrl, redirectUrl]);
