@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import { useAuth } from "../../context/AuthContext";
@@ -10,10 +10,12 @@ import { authService } from "../../services/auth";
 import { tokenStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
 import { Lock, Mail, Eye, EyeOff, Shield, Database } from "../../lib/lucide";
+import { sanitizeRedirect } from "../../utils/safeRedirect";
 import styles from "./LoginPage.module.css";
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isLoading } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -42,7 +44,15 @@ export function AdminLoginPage() {
 
       if (response.access_token) {
         tokenStorage.set(response.access_token);
-        navigate("/admin", { replace: true });
+        if (hasValidRedirect) {
+          if (redirectUrl.startsWith("/")) {
+            navigate(redirectUrl, { replace: true });
+          } else {
+            window.location.href = redirectUrl;
+          }
+        } else {
+          navigate("/admin", { replace: true });
+        }
       }
     } catch (err) {
       errorLogger.error(err, { component: "AdminLoginPage", action: "handleSubmit" });
@@ -195,3 +205,9 @@ export function AdminLoginPage() {
     </div>
   );
 }
+  const rawRedirectUrl = searchParams.get("redirect");
+  const redirectUrl = useMemo(() => sanitizeRedirect(rawRedirectUrl), [rawRedirectUrl]);
+  const hasValidRedirect = useMemo(() => {
+    if (!rawRedirectUrl) return false;
+    return redirectUrl === rawRedirectUrl.trim();
+  }, [rawRedirectUrl, redirectUrl]);

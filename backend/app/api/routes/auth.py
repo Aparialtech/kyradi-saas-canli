@@ -39,6 +39,12 @@ from ...schemas.auth import (
 from ...services.audit import record_audit
 from ...services.messaging import email_service, sms_service
 from ...core.config import settings
+from ...utils.safe_redirect import sanitize_redirect_url
+from ...utils.domain_validation import (
+    DomainValidationError,
+    normalize_and_validate_custom_domain,
+    normalize_and_validate_slug,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -105,6 +111,7 @@ async def login(
 @router.post("/partner/login", response_model=PartnerLoginResponse)
 async def partner_login(
     credentials: LoginRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> PartnerLoginResponse:
     """
@@ -163,11 +170,15 @@ async def partner_login(
     
     logger.info(f"Partner login successful: {user.email} -> tenant {tenant.slug}")
     
+    raw_redirect = request.query_params.get("redirect")
+    safe_redirect = sanitize_redirect_url(raw_redirect, default_path="/app")
+
     return PartnerLoginResponse(
         access_token=token,
         token_type="bearer",
         tenant_slug=tenant.slug,
         tenant_id=tenant.id,
+        redirect_url=safe_redirect if raw_redirect else None,
     )
 
 
@@ -657,17 +668,6 @@ async def signup(
 # Self-Service Tenant Creation (Onboarding)
 # =====================
 
-# Reserved slugs that cannot be used by tenants
-RESERVED_SLUGS = {
-    "admin", "app", "www", "api", "mail", "smtp", "ftp", "cdn", 
-    "support", "help", "docs", "status", "blog", "news",
-    "billing", "payment", "payments", "checkout", "auth",
-    "login", "signup", "register", "dashboard", "panel",
-    "kyradi", "otel", "hotel", "test", "demo", "staging", "dev",
-    "assets", "static", "images", "img", "css", "js", "fonts",
-}
-
-
 @router.post("/onboarding/create-tenant", response_model=TenantOnboardingResponse, status_code=status.HTTP_201_CREATED)
 async def create_tenant_onboarding(
     payload: TenantOnboardingRequest,
@@ -678,9 +678,6 @@ async def create_tenant_onboarding(
     Create a new tenant and assign the current user as OWNER/ADMIN.
     This is for self-service onboarding flow.
     """
-    import re
-    import unicodedata
-    
     # User must not already have a tenant
     if current_user.tenant_id:
         raise HTTPException(
@@ -688,50 +685,10 @@ async def create_tenant_onboarding(
             detail="Zaten bir otele atanmışsınız. Yeni otel oluşturamazsınız."
         )
     
-    # Normalize slug
-    normalized_slug = payload.slug.strip().lower()
-    
-    # Replace Turkish characters
-    turkish_to_english = {
-        'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
-        'Ç': 'c', 'Ğ': 'g', 'İ': 'i', 'Ö': 'o', 'Ş': 's', 'Ü': 'u'
-    }
-    for turkish, english in turkish_to_english.items():
-        normalized_slug = normalized_slug.replace(turkish, english)
-    
-    # Remove accents
-    normalized_slug = unicodedata.normalize('NFKD', normalized_slug)
-    normalized_slug = ''.join(c for c in normalized_slug if not unicodedata.combining(c))
-    normalized_slug = re.sub(r'[\s_]+', '-', normalized_slug)
-    normalized_slug = re.sub(r'-+', '-', normalized_slug)
-    normalized_slug = re.sub(r'[^a-z0-9_-]', '', normalized_slug)
-    normalized_slug = normalized_slug.strip('-_')
-    
-    # Validate slug
-    if not normalized_slug or len(normalized_slug) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Subdomain en az 3 karakter olmalıdır."
-        )
-    
-    if len(normalized_slug) > 50:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Subdomain en fazla 50 karakter olabilir."
-        )
-    
-    if not re.match(r'^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$', normalized_slug):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Subdomain alfanümerik karakterlerle başlamalı ve bitmelidir."
-        )
-    
-    # Check reserved slugs
-    if normalized_slug in RESERVED_SLUGS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"'{normalized_slug}' subdomain'i sistem tarafından rezerve edilmiştir. Lütfen başka bir subdomain seçin."
-        )
+    try:
+        normalized_slug = normalize_and_validate_slug(payload.slug)
+    except DomainValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
     
     # Check slug uniqueness
     stmt = select(Tenant).where(Tenant.slug == normalized_slug)
@@ -744,7 +701,11 @@ async def create_tenant_onboarding(
     
     # Check custom_domain uniqueness if provided
     if payload.custom_domain:
-        custom_domain = payload.custom_domain.strip().lower()
+        try:
+            custom_domain = normalize_and_validate_custom_domain(payload.custom_domain)
+        except DomainValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+
         stmt = select(Tenant).where(Tenant.custom_domain == custom_domain)
         existing_domain = (await session.execute(stmt)).scalar_one_or_none()
         if existing_domain:

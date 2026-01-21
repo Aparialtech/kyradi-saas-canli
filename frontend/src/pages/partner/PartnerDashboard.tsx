@@ -17,6 +17,7 @@ import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { KyradiChat } from "../../components/KyradiChat";
 import { env } from "../../config/env";
 import type { TranslationKey } from "../../i18n/translations";
+import { detectHostType, isDevelopment } from "../../lib/hostDetection";
 
 // UX Enhancement Components
 import { QuickActions, useQuickActionsShortcut } from "../../components/common/QuickActions";
@@ -50,6 +51,7 @@ import {
   Users as UsersIcon,
   UserCog,
   BadgePercent,
+  BookOpen,
   Settings2,
   MessageSquare,
   DollarSign,
@@ -757,6 +759,7 @@ export function PartnerDashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const showDomainGuide = isDevelopment() || detectHostType() === "tenant";
 
   // Unread tickets count for menu badge
   const unreadTicketsQuery = useQuery({
@@ -808,9 +811,12 @@ export function PartnerDashboard() {
       badge: unreadCount > 0 ? unreadCount : undefined,
     });
     items.push({ to: "settings", label: t("nav.settings"), icon: <Settings2 className="h-5 w-5" /> });
+    if (showDomainGuide) {
+      items.push({ to: "docs/domain-kurulumu", label: "Domain Kurulum Rehberi", icon: <BookOpen className="h-5 w-5" /> });
+    }
     
     return items;
-  }, [hasRole, t, unreadTicketsQuery.data]);
+  }, [hasRole, showDomainGuide, t, unreadTicketsQuery.data]);
 
   return (
     <ConfirmProvider>

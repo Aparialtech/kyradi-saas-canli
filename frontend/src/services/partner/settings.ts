@@ -4,6 +4,8 @@ export interface PartnerSettings {
   tenant_id: string;
   tenant_name: string;
   tenant_slug: string;
+  custom_domain?: string | null;
+  domain_status?: string | null;
   legal_name?: string | null;
   tax_id?: string | null;
   tax_office?: string | null;
@@ -30,6 +32,7 @@ export interface PartnerSettingsUpdatePayload {
   logo_url?: string;
   notification_email?: string;
   notification_sms?: boolean;
+  custom_domain?: string | null;
 }
 
 export const partnerSettingsService = {
@@ -48,5 +51,9 @@ export const partnerSettingsService = {
     const response = await http.patch<PartnerSettings>("/partners/settings", payload);
     return response.data;
   },
-};
 
+  async verifyDomain(): Promise<PartnerSettings> {
+    const response = await http.post<PartnerSettings>("/partners/settings/verify-domain");
+    return response.data;
+  },
+};

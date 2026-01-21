@@ -11,34 +11,8 @@ import { tokenStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
 import { getTenantUrl, isDevelopment } from "../../lib/hostDetection";
 import { Lock, Mail, Eye, EyeOff, Hotel, Building2, CheckCircle2 } from "../../lib/lucide";
+import { sanitizeRedirect } from "../../utils/safeRedirect";
 import styles from "./LoginPage.module.css";
-
-/**
- * Validate redirect URL for security.
- * Only allows redirects to kyradi.com subdomains.
- */
-function isValidRedirectUrl(url: string | null): boolean {
-  if (!url) return false;
-  
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    
-    // Allow kyradi.com subdomains
-    if (host === "kyradi.com" || host.endsWith(".kyradi.com")) {
-      return true;
-    }
-    
-    // Allow localhost for development
-    if (host === "localhost" || host === "127.0.0.1") {
-      return true;
-    }
-    
-    return false;
-  } catch {
-    return false;
-  }
-}
 
 export function PartnerLoginPage() {
   const navigate = useNavigate();
@@ -53,10 +27,11 @@ export function PartnerLoginPage() {
 
   const rawRedirectUrl = searchParams.get("redirect");
   
-  // Validate redirect URL for security - only allow kyradi.com domains
-  const redirectUrl = useMemo(() => {
-    return isValidRedirectUrl(rawRedirectUrl) ? rawRedirectUrl : null;
-  }, [rawRedirectUrl]);
+  const redirectUrl = useMemo(() => sanitizeRedirect(rawRedirectUrl), [rawRedirectUrl]);
+  const hasValidRedirect = useMemo(() => {
+    if (!rawRedirectUrl) return false;
+    return redirectUrl === rawRedirectUrl.trim();
+  }, [rawRedirectUrl, redirectUrl]);
 
   // Redirect if already logged in as partner
   useEffect(() => {
@@ -69,7 +44,7 @@ export function PartnerLoginPage() {
       
       // Partner user - redirect to their panel
       if (user.tenant_id) {
-        if (redirectUrl) {
+        if (hasValidRedirect) {
           window.location.href = redirectUrl;
         } else {
           navigate("/app", { replace: true });
@@ -96,10 +71,10 @@ export function PartnerLoginPage() {
             navigate("/app", { replace: true });
           } else {
             // In production, redirect to tenant subdomain
-            const targetUrl = redirectUrl || getTenantUrl(response.tenant_slug, "/app");
+            const targetUrl = hasValidRedirect ? redirectUrl : getTenantUrl(response.tenant_slug, "/app");
             window.location.href = targetUrl;
           }
-        } else if (redirectUrl) {
+        } else if (hasValidRedirect) {
           window.location.href = redirectUrl;
         } else {
           navigate("/app", { replace: true });

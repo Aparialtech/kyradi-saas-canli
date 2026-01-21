@@ -1,21 +1,28 @@
 """Partner settings endpoints."""
 
 import logging
+from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.session import get_session
 from ...dependencies import require_tenant_admin
 from ...models import Tenant, User
+from ...models.enums import DomainStatus
 from ...services.audit import record_audit
+from ...services.domain_verification import verify_custom_domain
+from common.rate_limit import RateLimitError, RateLimiter
+from ...utils.domain_validation import DomainValidationError, normalize_and_validate_custom_domain
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/partners/settings", tags=["partner-settings"])
+verify_rate_limiter = RateLimiter(10)
 
 
 class PartnerSettingsResponse(BaseModel):
@@ -24,6 +31,8 @@ class PartnerSettingsResponse(BaseModel):
     tenant_id: str
     tenant_name: str
     tenant_slug: str
+    custom_domain: Optional[str] = None
+    domain_status: str = DomainStatus.UNVERIFIED.value
     legal_name: Optional[str] = None
     tax_id: Optional[str] = None
     tax_office: Optional[str] = None
@@ -52,6 +61,7 @@ class PartnerSettingsUpdatePayload(BaseModel):
     logo_url: Optional[str] = None
     notification_email: Optional[str] = None
     notification_sms: Optional[bool] = None
+    custom_domain: Optional[str] = None
 
 
 def _tenant_to_settings_response(tenant: Tenant) -> PartnerSettingsResponse:
@@ -68,6 +78,8 @@ def _tenant_to_settings_response(tenant: Tenant) -> PartnerSettingsResponse:
         tenant_id=str(tenant.id),
         tenant_name=tenant.name,
         tenant_slug=tenant.slug,
+        custom_domain=tenant.custom_domain,
+        domain_status=tenant.domain_status,
         legal_name=metadata.get("legal_name"),
         tax_id=metadata.get("tax_id"),
         tax_office=metadata.get("tax_office"),
@@ -188,6 +200,24 @@ async def update_partner_settings(
         changed_fields["notification_sms"] = update_data["notification_sms"]
         metadata_changed = True
 
+    if "custom_domain" in update_data:
+        incoming_domain = update_data["custom_domain"]
+        normalized_domain = None
+
+        if incoming_domain:
+            try:
+                normalized_domain = normalize_and_validate_custom_domain(incoming_domain)
+            except DomainValidationError as exc:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+
+        if normalized_domain != tenant.custom_domain:
+            tenant.custom_domain = normalized_domain
+            tenant.domain_status = DomainStatus.UNVERIFIED.value
+            if hasattr(tenant, "updated_at"):
+                tenant.updated_at = datetime.utcnow()
+            changed_fields["custom_domain"] = normalized_domain
+            changed_fields["domain_status"] = tenant.domain_status
+
     if metadata_changed:
         tenant.metadata_ = metadata
 
@@ -202,7 +232,14 @@ async def update_partner_settings(
         meta=changed_fields,
     )
 
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Bu domain kullanımda, başka bir domain girin.",
+        ) from exc
     await session.refresh(tenant)
 
     logger.info(f"Partner settings updated for tenant {tenant.id}: {list(changed_fields.keys())}")
@@ -210,3 +247,51 @@ async def update_partner_settings(
     # Return updated settings
     return await get_partner_settings(current_user, session)
 
+
+@router.post("/verify-domain", response_model=PartnerSettingsResponse)
+async def verify_partner_domain(
+    request: Request,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> PartnerSettingsResponse:
+    tenant = await session.get(Tenant, current_user.tenant_id)
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found",
+        )
+
+    if not tenant.custom_domain:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Custom domain tanımlı değil.",
+        )
+
+    client_host = request.client.host if request.client else "unknown"
+    try:
+        await verify_rate_limiter.check(f"tenant:{tenant.id}:ip:{client_host}")
+    except RateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)) from exc
+
+    tenant.domain_status = DomainStatus.PENDING.value
+    if hasattr(tenant, "updated_at"):
+        tenant.updated_at = datetime.utcnow()
+    await session.commit()
+    await session.refresh(tenant)
+
+    is_verified, error_message = await verify_custom_domain(tenant)
+
+    tenant.domain_status = DomainStatus.VERIFIED.value if is_verified else DomainStatus.FAILED.value
+    if hasattr(tenant, "updated_at"):
+        tenant.updated_at = datetime.utcnow()
+
+    await session.commit()
+    await session.refresh(tenant)
+
+    if not is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_message or "Domain doğrulanamadı. DNS yayılımı tamamlanmamış olabilir. 10 dk sonra tekrar deneyin.",
+        )
+
+    return await get_partner_settings(current_user, session)

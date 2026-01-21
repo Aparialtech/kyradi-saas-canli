@@ -60,8 +60,13 @@ import { SelfServiceReservationPage } from "../pages/public/SelfServiceReservati
 import { WidgetDemoPage } from "../pages/public/WidgetDemoPage";
 import { LandingPage } from "../pages/public/LandingPage";
 import { UserGuidePage } from "../pages/common/UserGuidePage";
+import { DomainSetupGuidePage } from "../pages/partner/docs/DomainSetupGuidePage";
+import { NotFoundPage } from "../pages/common/NotFoundPage";
+import { detectHostType, isDevelopment } from "../lib/hostDetection";
 
 export function AppRouter() {
+  const isTenantHost = isDevelopment() || detectHostType() === "tenant";
+
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
@@ -71,6 +76,8 @@ export function AppRouter() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/partner/login" element={<PartnerLoginPage />} />
+      <Route path="/404" element={<NotFoundPage />} />
+      {!isTenantHost && <Route path="/app/docs/domain-kurulumu" element={<NotFoundPage />} />}
       
       {/* Onboarding Routes */}
       <Route path="/signup" element={<SignupPage />} />
@@ -150,6 +157,7 @@ export function AppRouter() {
           </Route>
           <Route path="settings" element={<PartnerSettingsPage />} />
           <Route path="guide" element={<UserGuidePage />} />
+          {isTenantHost && <Route path="docs/domain-kurulumu" element={<DomainSetupGuidePage />} />}
           <Route path="*" element={<Navigate to="/app" replace />} />
         </Route>
       </Route>

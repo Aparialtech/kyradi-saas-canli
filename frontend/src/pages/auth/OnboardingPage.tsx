@@ -21,6 +21,7 @@ export function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [slugError, setSlugError] = useState("");
+  const shouldWarnCustomDomain = customDomain.trim().length > 0 && !customDomain.startsWith("panel.");
 
   // Redirect if user already has a tenant
   useEffect(() => {
@@ -275,13 +276,18 @@ export function OnboardingPage() {
                 <input
                   type="text"
                   className={styles.input}
-                  placeholder="Örn: rezervasyon.otelim.com"
+                  placeholder="panel.oteliniz.com"
                   value={customDomain}
                   onChange={(e) => setCustomDomain(e.target.value.toLowerCase())}
                 />
                 <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
-                  Kendi domain'inizi bağlamak isterseniz buraya yazın
+                  Önerilen: panel.oteliniz.com (DNS’te CNAME ekleyeceksiniz)
                 </p>
+                {shouldWarnCustomDomain && (
+                  <p style={{ color: "#f59e0b", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+                    Panel için panel.oteliniz.com önerilir.
+                  </p>
+                )}
               </div>
 
               <div className={styles.formField}>

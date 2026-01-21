@@ -28,6 +28,7 @@ class PartnerLoginResponse(BaseModel):
     token_type: str = "bearer"
     tenant_slug: Optional[str] = None  # Tenant subdomain for redirect
     tenant_id: Optional[str] = None
+    redirect_url: Optional[str] = None
 
 
 class TokenPayload(BaseModel):

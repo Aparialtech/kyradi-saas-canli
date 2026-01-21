@@ -33,6 +33,7 @@ from .routes import (
     audit,
     auth,
     demo,
+    domain_check,
     locations,
     lockers,
     magicpay,
@@ -71,6 +72,7 @@ api_router.include_router(demo.router)
 api_router.include_router(locations.router)
 api_router.include_router(lockers.router)
 api_router.include_router(lockers.legacy_router)  # Backward compatibility
+api_router.include_router(domain_check.router)
 
 if settings.enable_internal_reservations:
     api_router.include_router(reservations.router)

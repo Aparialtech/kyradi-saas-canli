@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { motion } from "framer-motion";
-import { Settings, AlertCircle, Loader2, Edit, Save, X } from "../../../lib/lucide";
+import { Settings, AlertCircle, Loader2, Edit, Save, X, Globe, ExternalLink } from "../../../lib/lucide";
 
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -29,6 +29,7 @@ type FormValues = {
   logo_url: string;
   notification_email: string;
   notification_sms: boolean;
+  custom_domain: string;
 };
 
 export function PartnerSettingsPage() {
@@ -60,6 +61,7 @@ export function PartnerSettingsPage() {
       logo_url: "",
       notification_email: "",
       notification_sms: false,
+      custom_domain: "",
     },
   });
 
@@ -83,6 +85,7 @@ export function PartnerSettingsPage() {
         logo_url: settingsQuery.data.logo_url || "",
         notification_email: settingsQuery.data.notification_email || "",
         notification_sms: settingsQuery.data.notification_sms || false,
+        custom_domain: settingsQuery.data.custom_domain || "",
       });
     }
   }, [settingsQuery.data, reset]);
@@ -106,6 +109,7 @@ export function PartnerSettingsPage() {
         logo_url: data.logo_url || "",
         notification_email: data.notification_email || "",
         notification_sms: data.notification_sms || false,
+        custom_domain: data.custom_domain || "",
       }, { keepDirty: false });
     },
     onError: (error: unknown) => {
@@ -129,9 +133,25 @@ export function PartnerSettingsPage() {
       logo_url: values.logo_url || undefined,
       notification_email: values.notification_email || undefined,
       notification_sms: values.notification_sms || false,
+      custom_domain: values.custom_domain.trim() ? values.custom_domain.trim() : null,
     };
 
     updateMutation.mutate(payload);
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: () => partnerSettingsService.verifyDomain(),
+    onSuccess: async () => {
+      push({ title: "Domain doğrulandı", type: "success" });
+      await queryClient.invalidateQueries({ queryKey: ["partner", "settings"] });
+    },
+    onError: (error: unknown) => {
+      push({
+        title: "Domain doğrulama başarısız",
+        description: getErrorMessage(error),
+        type: "error",
+      });
+    },
   });
 
   const handleCancel = () => {
@@ -419,6 +439,58 @@ export function PartnerSettingsPage() {
             </div>
           </ModernCard>
 
+          {/* Custom Domain */}
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-2) 0' }}>
+                Custom Domain
+              </h2>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                Panel adresinizi kendi domaininize bağlayın.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+              <ModernInput
+                label="Custom Domain"
+                {...register("custom_domain")}
+                disabled={!isEditing}
+                placeholder="panel.oteliniz.com"
+                helperText="Örn: panel.oteliniz.com (http/https ve / kullanmayın)"
+                fullWidth
+              />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                <Badge variant={settingsQuery.data?.domain_status === "verified" ? "success" : settingsQuery.data?.domain_status === "failed" ? "danger" : settingsQuery.data?.domain_status === "pending" ? "warning" : "neutral"}>
+                  {settingsQuery.data?.domain_status === "verified"
+                    ? "Doğrulandı"
+                    : settingsQuery.data?.domain_status === "failed"
+                      ? "Doğrulama Başarısız"
+                      : settingsQuery.data?.domain_status === "pending"
+                        ? "Beklemede"
+                        : "Doğrulanmadı"}
+                </Badge>
+
+                <ModernButton
+                  variant="outline"
+                  type="button"
+                  onClick={() => verifyMutation.mutate()}
+                  disabled={!settingsQuery.data?.custom_domain || verifyMutation.isPending}
+                  leftIcon={<Globe className="h-4 w-4" />}
+                >
+                  DNS’i Kontrol Et
+                </ModernButton>
+
+                <a
+                  href="/app/docs/domain-kurulumu"
+                  style={{ color: '#6366f1', textDecoration: 'none', fontWeight: 600, fontSize: 'var(--text-sm)' }}
+                >
+                  Domain Kurulum Rehberi →
+                </a>
+              </div>
+            </div>
+          </ModernCard>
+
           {/* Bildirim Ayarları */}
           <ModernCard variant="glass" padding="lg">
             <div style={{ marginBottom: 'var(--space-4)' }}>
@@ -551,6 +623,51 @@ export function PartnerSettingsPage() {
                 Bu ayarlar sistem yöneticisi tarafından yönetilmektedir. Değişiklik için destek
                 ekibi ile iletişime geçin.
               </p>
+            </div>
+          </ModernCard>
+
+          {/* Domain Kurulum Rehberi */}
+          <ModernCard variant="glass" padding="lg">
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                  <Globe className="h-5 w-5" style={{ color: '#6366f1' }} />
+                  <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', margin: 0 }}>
+                    Domain Kurulum Rehberi
+                  </h2>
+                </div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+                  Kendi domaininizi (örn: panel.oteliniz.com) Kyradi'ye nasıl bağlayacağınızı öğrenin.
+                  Adım adım DNS ayarları ve SSS.
+                </p>
+              </div>
+              <a 
+                href="/app/docs/domain-kurulumu" 
+                style={{ 
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  padding: 'var(--space-2) var(--space-4)',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  color: 'white',
+                  borderRadius: 'var(--radius-lg)',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  fontSize: 'var(--text-sm)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                Rehberi Aç
+                <ExternalLink className="h-4 w-4" />
+              </a>
             </div>
           </ModernCard>
         </form>

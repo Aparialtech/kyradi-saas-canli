@@ -6,11 +6,12 @@ import logging
 import unicodedata
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import Select, case, func, select, cast, String, Date, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 import csv
 import io
 import json
@@ -49,6 +50,14 @@ from ...core.security import get_password_hash, encrypt_password, decrypt_passwo
 from ...db.session import get_session
 from ...dependencies import require_admin_user
 from ...models import AuditLog, Location, Locker, Payment, PaymentStatus, Reservation, ReservationStatus, Settlement, Storage, Tenant, User, UserRole
+from ...models.enums import DomainStatus
+from ...utils.domain_validation import (
+    DomainValidationError,
+    normalize_and_validate_custom_domain,
+    normalize_and_validate_slug,
+)
+from ...services.domain_verification import verify_custom_domain
+from common.rate_limit import RateLimitError, RateLimiter
 from ...schemas import (
     AdminSummary,
     AdminTenantSummary,
@@ -92,6 +101,7 @@ from ...services.messaging import EmailService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
+verify_rate_limiter = RateLimiter(10)
 
 TENANT_USER_ALLOWED_ROLES = {
     UserRole.TENANT_ADMIN,
@@ -213,50 +223,18 @@ async def create_tenant(
             detail="Tenant creation is disabled in the demo environment. Please contact your system administrator or disable DEMO_MODE to enable tenant creation."
         )
     
-    # Normalize slug: lowercase, replace spaces with hyphens, remove special chars
-    import re
-    import unicodedata
-    
-    # Normalize slug
-    normalized_slug = payload.slug.strip().lower()
-    
-    # Replace Turkish characters with English equivalents
-    turkish_to_english = {
-        'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
-        'Ç': 'c', 'Ğ': 'g', 'İ': 'i', 'Ö': 'o', 'Ş': 's', 'Ü': 'u'
-    }
-    for turkish, english in turkish_to_english.items():
-        normalized_slug = normalized_slug.replace(turkish, english)
-    
-    # Remove accents and diacritics
-    normalized_slug = unicodedata.normalize('NFKD', normalized_slug)
-    normalized_slug = ''.join(c for c in normalized_slug if not unicodedata.combining(c))
-    
-    # Replace spaces and multiple hyphens/underscores with single hyphen
-    normalized_slug = re.sub(r'[\s_]+', '-', normalized_slug)
-    normalized_slug = re.sub(r'-+', '-', normalized_slug)
-    
-    # Remove all characters except alphanumeric, hyphens, and underscores
-    normalized_slug = re.sub(r'[^a-z0-9_-]', '', normalized_slug)
-    
-    # Remove leading/trailing hyphens and underscores
-    normalized_slug = normalized_slug.strip('-_')
-    
-    # Validate final slug format
-    if not normalized_slug or len(normalized_slug) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Slug must be at least 3 characters long after normalization"
-        )
-    
-    if not re.match(r'^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$', normalized_slug):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Slug must start and end with alphanumeric characters"
-        )
-    
-    # Use normalized slug
-    final_slug = normalized_slug
+    try:
+        final_slug = normalize_and_validate_slug(payload.slug)
+    except DomainValidationError as exc:
+        if exc.code == "slug_too_short":
+            detail = "Slug must be at least 3 characters long after normalization"
+        elif exc.code == "slug_invalid_format":
+            detail = "Slug must start and end with alphanumeric characters"
+        elif exc.code == "slug_too_long":
+            detail = "Slug must be at most 50 characters long after normalization"
+        else:
+            detail = exc.message
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail) from exc
     
     exists = await session.execute(select(Tenant).where(Tenant.slug == final_slug))
     if exists.scalar_one_or_none():
@@ -265,7 +243,10 @@ async def create_tenant(
     # Check custom_domain uniqueness if provided
     custom_domain = None
     if hasattr(payload, 'custom_domain') and payload.custom_domain:
-        custom_domain = payload.custom_domain.strip().lower()
+        try:
+            custom_domain = normalize_and_validate_custom_domain(payload.custom_domain)
+        except DomainValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
         existing_domain = await session.execute(
             select(Tenant).where(Tenant.custom_domain == custom_domain)
         )
@@ -338,6 +319,22 @@ async def update_tenant(
         if isinstance(metadata_to_update, dict):
             existing_metadata = deep_merge(existing_metadata, metadata_to_update)
         tenant.metadata_ = existing_metadata if existing_metadata else None
+
+    if "custom_domain" in update_data:
+        incoming_domain = update_data.pop("custom_domain")
+        normalized_domain = None
+
+        if incoming_domain:
+            try:
+                normalized_domain = normalize_and_validate_custom_domain(incoming_domain)
+            except DomainValidationError as exc:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+
+        if normalized_domain != tenant.custom_domain:
+            tenant.custom_domain = normalized_domain
+            tenant.domain_status = DomainStatus.UNVERIFIED.value
+            if hasattr(tenant, "updated_at"):
+                tenant.updated_at = datetime.utcnow()
     
     # Update other fields
     for field, value in update_data.items():
@@ -353,8 +350,63 @@ async def update_tenant(
         meta=payload.model_dump(exclude_unset=True),
     )
 
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Bu domain kullanımda, başka bir domain girin.",
+        ) from exc
+    await session.refresh(tenant)
+    return TenantRead.model_validate(tenant)
+
+
+@router.post("/tenants/{tenant_id}/verify-domain", response_model=TenantRead)
+async def verify_tenant_domain(
+    tenant_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_admin_user),
+) -> TenantRead:
+    """Verify tenant custom domain using well-known check."""
+    result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+
+    if not tenant.custom_domain:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Custom domain tanımlı değil.",
+        )
+
+    client_host = request.client.host if request.client else "unknown"
+    try:
+        await verify_rate_limiter.check(f"admin:{tenant.id}:ip:{client_host}")
+    except RateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)) from exc
+
+    tenant.domain_status = DomainStatus.PENDING.value
+    if hasattr(tenant, "updated_at"):
+        tenant.updated_at = datetime.utcnow()
     await session.commit()
     await session.refresh(tenant)
+
+    is_verified, error_message = await verify_custom_domain(tenant)
+    tenant.domain_status = DomainStatus.VERIFIED.value if is_verified else DomainStatus.FAILED.value
+    if hasattr(tenant, "updated_at"):
+        tenant.updated_at = datetime.utcnow()
+
+    await session.commit()
+    await session.refresh(tenant)
+
+    if not is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_message or "Domain doğrulanamadı. DNS yayılımı tamamlanmamış olabilir. 10 dk sonra tekrar deneyin.",
+        )
+
     return TenantRead.model_validate(tenant)
 
 
