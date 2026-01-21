@@ -24,6 +24,13 @@ export function AdminLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  const rawRedirectUrl = searchParams.get("redirect");
+  const redirectUrl = useMemo(() => sanitizeRedirect(rawRedirectUrl, { defaultPath: "/admin" }), [rawRedirectUrl]);
+  const hasValidRedirect = useMemo(() => {
+    if (!rawRedirectUrl) return false;
+    return redirectUrl === rawRedirectUrl.trim();
+  }, [rawRedirectUrl, redirectUrl]);
+
   // Redirect if already logged in as admin
   useEffect(() => {
     if (!isLoading && user) {

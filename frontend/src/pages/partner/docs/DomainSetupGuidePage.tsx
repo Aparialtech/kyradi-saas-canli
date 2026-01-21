@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
   Globe,
-  Server,
+  Database,
   CheckCircle2,
   AlertTriangle,
   Clock,
@@ -233,7 +233,7 @@ export function DomainSetupGuidePage() {
       >
         <ModernCard variant="glass" padding="lg" style={{ marginBottom: "var(--space-6)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
-            <Server className="h-5 w-5" style={{ color: "#6366f1" }} />
+            <Database className="h-5 w-5" style={{ color: "#6366f1" }} />
             <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)", margin: 0 }}>
               2. Domain Seçenekleri
             </h2>

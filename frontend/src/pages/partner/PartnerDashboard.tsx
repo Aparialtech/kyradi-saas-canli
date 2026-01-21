@@ -51,7 +51,7 @@ import {
   Users as UsersIcon,
   UserCog,
   BadgePercent,
-  BookOpen,
+  ClipboardList,
   Settings2,
   MessageSquare,
   DollarSign,
@@ -812,7 +812,7 @@ export function PartnerDashboard() {
     });
     items.push({ to: "settings", label: t("nav.settings"), icon: <Settings2 className="h-5 w-5" /> });
     if (showDomainGuide) {
-      items.push({ to: "docs/domain-kurulumu", label: "Domain Kurulum Rehberi", icon: <BookOpen className="h-5 w-5" /> });
+      items.push({ to: "docs/domain-kurulumu", label: "Domain Kurulum Rehberi", icon: <ClipboardList className="h-5 w-5" /> });
     }
     
     return items;
