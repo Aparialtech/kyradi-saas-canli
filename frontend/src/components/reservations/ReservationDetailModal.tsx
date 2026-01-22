@@ -14,6 +14,11 @@ interface ReservationDetailModalProps {
   onClose: () => void;
 }
 
+interface ReservationDetailContentProps {
+  reservation: Reservation | null;
+  isOpen: boolean;
+}
+
 const statusLabels: Record<string, string> = {
   reserved: "Rezerve",
   active: "Aktif",
@@ -34,7 +39,7 @@ const statusColors: Record<string, string> = {
   confirmed: "#16a34a",
 };
 
-export function ReservationDetailModal({ reservation, isOpen, onClose }: ReservationDetailModalProps) {
+export function ReservationDetailContent({ reservation, isOpen }: ReservationDetailContentProps) {
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
   const { t } = useTranslation();
   const { push } = useToast();
@@ -109,8 +114,10 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
 
   const statusColor = statusColors[reservation.status] ?? "#6b7280";
 
+  const pickupCompleted = Boolean(reservation.handover_at);
+  const deliveryCompleted = Boolean(reservation.returned_at);
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Rezervasyon Detayı" width="600px">
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
         {/* Header with status */}
         <div
@@ -120,6 +127,7 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
             alignItems: "center",
             paddingBottom: "1rem",
             borderBottom: "1px solid #e2e8f0",
+            gap: "1rem",
           }}
         >
           <div>
@@ -130,18 +138,30 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
               {t("common.createdAt")}: {formatDate(reservation.created_at)}
             </p>
           </div>
-          <span
-            style={{
-              padding: "0.375rem 0.875rem",
-              borderRadius: "9999px",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              background: `${statusColor}20`,
-              color: statusColor,
-            }}
-          >
-            {statusLabels[reservation.status] ?? reservation.status}
-          </span>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <span
+              style={{
+                padding: "0.375rem 0.875rem",
+                borderRadius: "9999px",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                background: `${statusColor}20`,
+                color: statusColor,
+              }}
+            >
+              {statusLabels[reservation.status] ?? reservation.status}
+            </span>
+            {pickupCompleted && (
+              <Badge variant="success" size="sm" pill>
+                Teslim Alındı
+              </Badge>
+            )}
+            {deliveryCompleted && (
+              <Badge variant="info" size="sm" pill>
+                Teslim Edildi
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Guest Information */}
@@ -527,6 +547,15 @@ export function ReservationDetailModal({ reservation, isOpen, onClose }: Reserva
           </div>
         )}
       </div>
+  );
+}
+
+export function ReservationDetailModal({ reservation, isOpen, onClose }: ReservationDetailModalProps) {
+  if (!reservation || !isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Rezervasyon Detayı" width="600px">
+      <ReservationDetailContent reservation={reservation} isOpen={isOpen} />
     </Modal>
   );
 }

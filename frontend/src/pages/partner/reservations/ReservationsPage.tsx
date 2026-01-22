@@ -8,7 +8,7 @@ import { reservationService, type Reservation, type ReservationPaymentInfo } fro
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
-import { ReservationDetailModal } from "../../../components/reservations/ReservationDetailModal";
+import { ReservationDetailDrawer } from "../../../components/reservations/ReservationDetailDrawer";
 import { PaymentActionModal } from "../../../components/reservations/PaymentActionModal";
 import { getErrorMessage } from "../../../lib/httpError";
 import { errorLogger } from "../../../lib/errorLogger";
@@ -35,7 +35,7 @@ export function ReservationsPage() {
   const [filterTo, setFilterTo] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
   
   // Payment modal states
@@ -77,6 +77,30 @@ export function ReservationsPage() {
     },
     onError: (error: unknown) =>
       push({ title: t("reservations.toast.cancelError"), description: getErrorMessage(error), type: "error" }),
+  });
+
+  const markPickupMutation = useMutation<Reservation, unknown, string | number>({
+    mutationFn: (id: string | number) => reservationService.markLuggageReceived(String(id)),
+    onSuccess: (data) => {
+      setSelectedReservation(data);
+      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
+      push({ title: "Teslim alındı", type: "success" });
+    },
+    onError: () => {
+      push({ title: "İşlem başarısız. Lütfen tekrar deneyin.", type: "error" });
+    },
+  });
+
+  const markDeliveryMutation = useMutation<Reservation, unknown, string | number>({
+    mutationFn: (id: string | number) => reservationService.markLuggageReturned(String(id)),
+    onSuccess: (data) => {
+      setSelectedReservation(data);
+      void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
+      push({ title: "Teslim edildi", type: "success" });
+    },
+    onError: () => {
+      push({ title: "İşlem başarısız. Lütfen tekrar deneyin.", type: "error" });
+    },
   });
 
   const allReservations = reservationsQuery.data ?? [];
@@ -437,7 +461,7 @@ export function ReservationsPage() {
                       title="Detayları Görüntüle"
                       onClick={() => {
                         setSelectedReservation(row);
-                        setShowDetailModal(true);
+                        setIsDetailDrawerOpen(true);
                       }}
                     >
                       <Eye className="h-4 w-4" />
@@ -501,13 +525,74 @@ export function ReservationsPage() {
         )}
       </ModernCard>
 
-      <ReservationDetailModal
+      <ReservationDetailDrawer
         reservation={selectedReservation}
-        isOpen={showDetailModal}
+        isOpen={isDetailDrawerOpen}
         onClose={useCallback(() => {
-          setShowDetailModal(false);
+          setIsDetailDrawerOpen(false);
           setSelectedReservation(null);
         }, [])}
+        footer={(() => {
+          if (!selectedReservation) return null;
+          const hasHandoverFields = [
+            "handover_at",
+            "returned_at",
+            "handover_by",
+            "returned_by",
+          ].some((field) => Object.prototype.hasOwnProperty.call(selectedReservation, field));
+          const isWidgetReservation = reservationService._isWidgetReservation(selectedReservation.id);
+          const supportsHandover = hasHandoverFields && !isWidgetReservation;
+          if (!supportsHandover) return null;
+
+          const isPickedUp = Boolean(selectedReservation.handover_at);
+          const isDelivered = Boolean(selectedReservation.returned_at);
+          const pickupEnabled =
+            !isPickedUp && ["confirmed", "active"].includes(selectedReservation.status);
+          const deliveryEnabled = isPickedUp && !isDelivered;
+
+          return (
+            <div style={{ display: "flex", gap: "var(--space-3)" }}>
+              <ModernButton
+                variant="outline"
+                disabled={!pickupEnabled || markPickupMutation.isPending || markDeliveryMutation.isPending}
+                title={pickupEnabled ? "Teslim alındı olarak işaretle" : "Bu işlem için uygun değil"}
+                onClick={async () => {
+                  const confirmed = await confirm({
+                    title: "Teslim Onayı",
+                    message: "Bu rezervasyon için bavullar teslim alındı olarak işaretlensin mi?",
+                    confirmText: "Teslim Aldık",
+                    cancelText: "Vazgeç",
+                    variant: "success",
+                  });
+                  if (confirmed) {
+                    markPickupMutation.mutate(selectedReservation.id);
+                  }
+                }}
+              >
+                {markPickupMutation.isPending ? "İşleniyor..." : "Teslim Aldık"}
+              </ModernButton>
+              <ModernButton
+                variant="primary"
+                disabled={!deliveryEnabled || markPickupMutation.isPending || markDeliveryMutation.isPending}
+                title={deliveryEnabled ? "Teslim edildi olarak işaretle" : "Önce teslim alındı olarak işaretleyin"}
+                onClick={async () => {
+                  const confirmed = await confirm({
+                    title: "Teslim Onayı",
+                    message: "Bu rezervasyon için bavullar teslim edildi olarak işaretlensin mi?",
+                    confirmText: "Teslim Ettik",
+                    cancelText: "Vazgeç",
+                    variant: "success",
+                  });
+                  if (confirmed) {
+                    markDeliveryMutation.mutate(selectedReservation.id);
+                  }
+                }}
+              >
+                {markDeliveryMutation.isPending ? "İşleniyor..." : "Teslim Ettik"}
+              </ModernButton>
+            </div>
+          );
+        })()}
       />
 
       {/* Payment Action Modal (for unpaid reservations) */}
