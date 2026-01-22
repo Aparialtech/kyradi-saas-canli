@@ -22,6 +22,23 @@ import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernSelect } from "../../../components/ui/ModernSelect";
 import { DateField } from "../../../components/ui/DateField";
 import { useConfirm } from "../../../components/common/ConfirmDialog";
+import { Badge } from "../../../components/ui/Badge";
+
+export const getHandoverState = (reservation: Reservation) => {
+  const hasHandoverFields = ["handover_at", "returned_at", "handover_by", "returned_by"].some((field) =>
+    Object.prototype.hasOwnProperty.call(reservation, field),
+  );
+  const isWidgetReservation = reservationService._isWidgetReservation(reservation.id);
+  const supportsHandover = hasHandoverFields && !isWidgetReservation;
+  const isPickedUp = Boolean(reservation.handover_at);
+  const isDelivered = Boolean(reservation.returned_at);
+  return { supportsHandover, isWidgetReservation, isPickedUp, isDelivered };
+};
+
+export const isHandoverIdempotentError = (error: unknown) => {
+  const status = (error as { response?: { status?: number } })?.response?.status;
+  return status === 400 || status === 409;
+};
 
 
 export function ReservationsPage() {
@@ -82,11 +99,21 @@ export function ReservationsPage() {
   const markPickupMutation = useMutation<Reservation, unknown, string | number>({
     mutationFn: (id: string | number) => reservationService.markLuggageReceived(String(id)),
     onSuccess: (data) => {
-      setSelectedReservation(data);
+      setSelectedReservation((prev) =>
+        data ?? (prev ? { ...prev, handover_at: prev.handover_at ?? new Date().toISOString() } : prev),
+      );
       void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
       push({ title: "Teslim alındı", type: "success" });
     },
-    onError: () => {
+    onError: (error: unknown) => {
+      if (isHandoverIdempotentError(error)) {
+        setSelectedReservation((prev) =>
+          prev ? { ...prev, handover_at: prev.handover_at ?? new Date().toISOString() } : prev,
+        );
+        void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
+        push({ title: "Zaten teslim alınmış", type: "info" });
+        return;
+      }
       push({ title: "İşlem başarısız. Lütfen tekrar deneyin.", type: "error" });
     },
   });
@@ -94,11 +121,21 @@ export function ReservationsPage() {
   const markDeliveryMutation = useMutation<Reservation, unknown, string | number>({
     mutationFn: (id: string | number) => reservationService.markLuggageReturned(String(id)),
     onSuccess: (data) => {
-      setSelectedReservation(data);
+      setSelectedReservation((prev) =>
+        data ?? (prev ? { ...prev, returned_at: prev.returned_at ?? new Date().toISOString() } : prev),
+      );
       void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
       push({ title: "Teslim edildi", type: "success" });
     },
-    onError: () => {
+    onError: (error: unknown) => {
+      if (isHandoverIdempotentError(error)) {
+        setSelectedReservation((prev) =>
+          prev ? { ...prev, returned_at: prev.returned_at ?? new Date().toISOString() } : prev,
+        );
+        void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
+        push({ title: "Zaten teslim edilmiş", type: "info" });
+        return;
+      }
       push({ title: "İşlem başarısız. Lütfen tekrar deneyin.", type: "error" });
     },
   });
@@ -430,7 +467,7 @@ export function ReservationsPage() {
               {
                 key: 'status',
                 label: t("reservations.table.status"),
-                render: (value) => {
+                render: (value, row) => {
                   const statusKey = `reservations.status.${value}`;
                   let translatedLabel = value;
                   try {
@@ -446,7 +483,22 @@ export function ReservationsPage() {
                       statusKey,
                     });
                   }
-                  return <StatusBadge status={value} label={translatedLabel} />;
+                  const { isPickedUp, isDelivered } = getHandoverState(row);
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", alignItems: "center" }}>
+                      <StatusBadge status={value} label={translatedLabel} />
+                      {isPickedUp && !isDelivered && (
+                        <Badge variant="success" size="sm" pill>
+                          Teslim Alındı
+                        </Badge>
+                      )}
+                      {isDelivered && (
+                        <Badge variant="info" size="sm" pill>
+                          Teslim Edildi
+                        </Badge>
+                      )}
+                    </div>
+                  );
                 },
                 align: 'center',
               },
@@ -534,29 +586,28 @@ export function ReservationsPage() {
         }, [])}
         footer={(() => {
           if (!selectedReservation) return null;
-          const hasHandoverFields = [
-            "handover_at",
-            "returned_at",
-            "handover_by",
-            "returned_by",
-          ].some((field) => Object.prototype.hasOwnProperty.call(selectedReservation, field));
-          const isWidgetReservation = reservationService._isWidgetReservation(selectedReservation.id);
-          const supportsHandover = hasHandoverFields && !isWidgetReservation;
+          const { supportsHandover, isWidgetReservation, isPickedUp, isDelivered } =
+            getHandoverState(selectedReservation);
           if (!supportsHandover) return null;
 
-          const isPickedUp = Boolean(selectedReservation.handover_at);
-          const isDelivered = Boolean(selectedReservation.returned_at);
           const pickupEnabled =
             !isPickedUp && ["confirmed", "active"].includes(selectedReservation.status);
           const deliveryEnabled = isPickedUp && !isDelivered;
+          const isLoading = markPickupMutation.isPending || markDeliveryMutation.isPending;
 
           return (
             <div style={{ display: "flex", gap: "var(--space-3)" }}>
               <ModernButton
                 variant="outline"
-                disabled={!pickupEnabled || markPickupMutation.isPending || markDeliveryMutation.isPending}
+                disabled={!pickupEnabled || isLoading}
+                isLoading={markPickupMutation.isPending}
+                loadingText="İşleniyor..."
                 title={pickupEnabled ? "Teslim alındı olarak işaretle" : "Bu işlem için uygun değil"}
                 onClick={async () => {
+                  if (isWidgetReservation) {
+                    push({ title: "Widget rezervasyonlarında bu işlem yapılamaz.", type: "info" });
+                    return;
+                  }
                   const confirmed = await confirm({
                     title: "Teslim Onayı",
                     message: "Bu rezervasyon için bavullar teslim alındı olarak işaretlensin mi?",
@@ -569,13 +620,19 @@ export function ReservationsPage() {
                   }
                 }}
               >
-                {markPickupMutation.isPending ? "İşleniyor..." : "Teslim Aldık"}
+                Teslim Aldık
               </ModernButton>
               <ModernButton
                 variant="primary"
-                disabled={!deliveryEnabled || markPickupMutation.isPending || markDeliveryMutation.isPending}
+                disabled={!deliveryEnabled || isLoading}
+                isLoading={markDeliveryMutation.isPending}
+                loadingText="İşleniyor..."
                 title={deliveryEnabled ? "Teslim edildi olarak işaretle" : "Önce teslim alındı olarak işaretleyin"}
                 onClick={async () => {
+                  if (isWidgetReservation) {
+                    push({ title: "Widget rezervasyonlarında bu işlem yapılamaz.", type: "info" });
+                    return;
+                  }
                   const confirmed = await confirm({
                     title: "Teslim Onayı",
                     message: "Bu rezervasyon için bavullar teslim edildi olarak işaretlensin mi?",
@@ -588,7 +645,7 @@ export function ReservationsPage() {
                   }
                 }}
               >
-                {markDeliveryMutation.isPending ? "İşleniyor..." : "Teslim Ettik"}
+                Teslim Ettik
               </ModernButton>
             </div>
           );
