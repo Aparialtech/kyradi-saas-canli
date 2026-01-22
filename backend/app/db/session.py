@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.exc import SQLAlchemyError, DisconnectionError
+from fastapi import HTTPException
 
 from ..core.config import settings
 
@@ -67,6 +68,22 @@ async def get_session() -> AsyncIterator[AsyncSession]:
                         db_logger.info("Session rolled back due to database error")
                     except Exception as rollback_exc:
                         db_logger.error(f"Failed to rollback session: {rollback_exc}")
+                raise
+            except HTTPException as exc:
+                status_code = getattr(exc, "status_code", None)
+                if status_code is not None and 400 <= status_code < 500:
+                    db_logger.info(
+                        "HTTPException in session: %s (status=%s)",
+                        exc.detail,
+                        status_code,
+                    )
+                else:
+                    db_logger.error(
+                        "HTTPException in session: %s (status=%s)",
+                        exc.detail,
+                        status_code,
+                        exc_info=True,
+                    )
                 raise
             except Exception as exc:
                 db_logger.error(

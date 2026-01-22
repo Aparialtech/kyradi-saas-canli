@@ -2,12 +2,15 @@ import axios, { AxiosError } from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 
 import { env } from "../config/env";
+import { detectHostType, isDevelopment } from "./hostDetection";
 import { tokenStorage } from "./tokenStorage";
 import { errorLogger, ErrorSeverity } from "./errorLogger";
 
-const baseURL = env.API_URL.replace(/\/+$/, "");
+const hostType = typeof window === "undefined" ? "app" : detectHostType();
+const resolvedBaseUrl =
+  hostType === "tenant" && !isDevelopment() ? "" : env.API_URL.replace(/\/+$/, "");
 // Startup log for debugging deployed envs
-console.info("[HTTP] Using API base URL:", baseURL);
+console.info("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)");
 
 // Callback for handling 401 errors (will be set by AuthContext)
 let onUnauthorized: (() => void) | null = null;
@@ -17,7 +20,7 @@ export const setOnUnauthorized = (callback: () => void) => {
 };
 
 export const http = axios.create({
-  baseURL,
+  baseURL: resolvedBaseUrl,
   withCredentials: false,
   timeout: 30000, // 30 seconds
   headers: {
@@ -33,7 +36,7 @@ http.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    if (env.TENANT_ID) {
+    if (env.TENANT_ID && hostType !== "tenant") {
       config.headers["X-Tenant-ID"] = env.TENANT_ID;
     }
     return config;
