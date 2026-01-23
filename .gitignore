@@ -21,3 +21,8 @@ frontend/.env.local
 .DS_Store
 .idea/
 .vscode/
+
+# Patch artifacts
+*.rej
+*.orig
+*.patch
