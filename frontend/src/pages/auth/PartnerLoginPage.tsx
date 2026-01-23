@@ -9,7 +9,7 @@ import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { authService } from "../../services/auth";
 import { tokenStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
-import { getTenantUrl, isDevelopment } from "../../lib/hostDetection";
+import { detectHostType, getPartnerLoginUrl, getTenantUrl, isDevelopment } from "../../lib/hostDetection";
 import { Lock, Mail, Eye, EyeOff, Hotel, Building2, CheckCircle2 } from "../../lib/lucide";
 import { sanitizeRedirect } from "../../utils/safeRedirect";
 import styles from "./LoginPage.module.css";
@@ -32,6 +32,12 @@ export function PartnerLoginPage() {
     if (!rawRedirectUrl) return false;
     return redirectUrl === rawRedirectUrl.trim();
   }, [rawRedirectUrl, redirectUrl]);
+
+  useEffect(() => {
+    if (!isDevelopment() && detectHostType() !== "app") {
+      window.location.href = getPartnerLoginUrl();
+    }
+  }, []);
 
   // Redirect if already logged in as partner
   useEffect(() => {

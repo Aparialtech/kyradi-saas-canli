@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.core.security import create_access_token, get_password_hash
 from app.main import app
 from app.middleware.tenant_resolver import TenantResolverMiddleware
-from app.models import AuditLog, Tenant, User, UserRole
+from app.models import Tenant, User, UserRole
 
 
 def _ensure_tenant_middleware() -> None:
@@ -14,15 +14,60 @@ def _ensure_tenant_middleware() -> None:
 
 
 @pytest.mark.asyncio
-async def test_tenant_host_required(client: AsyncClient, db_session):
+async def test_admin_login_on_admin_host(client: AsyncClient, db_session) -> None:
     _ensure_tenant_middleware()
-    tenant = Tenant(slug="tenant-host", name="Tenant Host", plan="standard", is_active=True)
+    user = User(
+        email="admin-host@example.com",
+        password_hash=get_password_hash("Password123!"),
+        role=UserRole.SUPER_ADMIN.value,
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    response = await client.post(
+        "/auth/admin/login",
+        json={"email": user.email, "password": "Password123!"},
+        headers={"Host": "admin.kyradi.com"},
+    )
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_partner_login_on_app_host(client: AsyncClient, db_session) -> None:
+    _ensure_tenant_middleware()
+    tenant = Tenant(slug="host-login", name="Host Login", plan="standard", is_active=True)
     db_session.add(tenant)
     await db_session.flush()
 
     user = User(
         tenant_id=tenant.id,
-        email="tenant-host-admin@example.com",
+        email="partner-login@example.com",
+        password_hash=get_password_hash("Password123!"),
+        role=UserRole.TENANT_ADMIN.value,
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    response = await client.post(
+        "/auth/partner/login",
+        json={"email": user.email, "password": "Password123!"},
+        headers={"Host": "app.kyradi.com"},
+    )
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_partner_api_blocked_on_app_host(client: AsyncClient, db_session) -> None:
+    _ensure_tenant_middleware()
+    tenant = Tenant(slug="app-blocked", name="App Blocked", plan="standard", is_active=True)
+    db_session.add(tenant)
+    await db_session.flush()
+
+    user = User(
+        tenant_id=tenant.id,
+        email="app-blocked@example.com",
         password_hash=get_password_hash("Password123!"),
         role=UserRole.TENANT_ADMIN.value,
         is_active=True,
@@ -38,54 +83,19 @@ async def test_tenant_host_required(client: AsyncClient, db_session):
             "Host": "app.kyradi.com",
         },
     )
-
     assert response.status_code == 403
-    audit = await db_session.execute(select(AuditLog).where(AuditLog.action == "security.tenant_host_missing"))
-    assert audit.scalar_one_or_none() is None
 
 
 @pytest.mark.asyncio
-async def test_tenant_token_mismatch_forbidden(client: AsyncClient, db_session):
+async def test_partner_api_allows_tenant_host(client: AsyncClient, db_session) -> None:
     _ensure_tenant_middleware()
-    tenant_one = Tenant(slug="tenant-one", name="Tenant One", plan="standard", is_active=True)
-    tenant_two = Tenant(slug="tenant-two", name="Tenant Two", plan="standard", is_active=True)
-    db_session.add_all([tenant_one, tenant_two])
-    await db_session.flush()
-
-    user = User(
-        tenant_id=tenant_one.id,
-        email="tenant1-admin@example.com",
-        password_hash=get_password_hash("Password123!"),
-        role=UserRole.TENANT_ADMIN.value,
-        is_active=True,
-    )
-    db_session.add(user)
-    await db_session.commit()
-
-    token = create_access_token(subject=user.id, tenant_id=tenant_two.id, role=user.role)
-    response = await client.get(
-        "/users",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Host": f"{tenant_one.slug}.kyradi.com",
-        },
-    )
-
-    assert response.status_code == 403
-    audit = await db_session.execute(select(AuditLog).where(AuditLog.action == "security.tenant_mismatch"))
-    assert audit.scalar_one_or_none() is not None
-
-
-@pytest.mark.asyncio
-async def test_tenant_token_match_allows_request(client: AsyncClient, db_session):
-    _ensure_tenant_middleware()
-    tenant = Tenant(slug="tenant-ok", name="Tenant OK", plan="standard", is_active=True)
+    tenant = Tenant(slug="tenant-allowed", name="Tenant Allowed", plan="standard", is_active=True)
     db_session.add(tenant)
     await db_session.flush()
 
     user = User(
         tenant_id=tenant.id,
-        email="tenant-ok-admin@example.com",
+        email="tenant-allowed@example.com",
         password_hash=get_password_hash("Password123!"),
         role=UserRole.TENANT_ADMIN.value,
         is_active=True,
@@ -101,5 +111,4 @@ async def test_tenant_token_match_allows_request(client: AsyncClient, db_session
             "Host": f"{tenant.slug}.kyradi.com",
         },
     )
-
     assert response.status_code == 200

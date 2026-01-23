@@ -10,6 +10,7 @@ import { authService } from "../../services/auth";
 import { tokenStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
 import { Lock, Mail, Eye, EyeOff, Shield, Database } from "../../lib/lucide";
+import { detectHostType, getAdminLoginUrl, isDevelopment } from "../../lib/hostDetection";
 import { sanitizeRedirect } from "../../utils/safeRedirect";
 import styles from "./LoginPage.module.css";
 
@@ -30,6 +31,12 @@ export function AdminLoginPage() {
     if (!rawRedirectUrl) return false;
     return redirectUrl === rawRedirectUrl.trim();
   }, [rawRedirectUrl, redirectUrl]);
+
+  useEffect(() => {
+    if (!isDevelopment() && detectHostType() !== "admin") {
+      window.location.href = getAdminLoginUrl();
+    }
+  }, []);
 
   // Redirect if already logged in as admin
   useEffect(() => {
