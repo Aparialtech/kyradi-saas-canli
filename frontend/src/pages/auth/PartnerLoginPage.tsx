@@ -175,7 +175,7 @@ export function PartnerLoginPage() {
               </motion.div>
             )}
 
-            <form className={styles.form} onSubmit={handleSubmit} autoComplete="off">
+            <form className={styles.form} onSubmit={handleSubmit} autoComplete="on">
               <div className={styles.formField}>
                 <label className={styles.label}>
                   <Mail className={styles.labelIcon} />
@@ -187,6 +187,8 @@ export function PartnerLoginPage() {
                   placeholder="ornek@oteliniz.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  name="email"
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -203,6 +205,8 @@ export function PartnerLoginPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    name="password"
+                    autoComplete="current-password"
                     required
                   />
                   <button

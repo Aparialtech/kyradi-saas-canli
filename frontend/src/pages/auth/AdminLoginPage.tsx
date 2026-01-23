@@ -157,7 +157,7 @@ export function AdminLoginPage() {
               </motion.div>
             )}
 
-            <form className={styles.form} onSubmit={handleSubmit} autoComplete="off">
+            <form className={styles.form} onSubmit={handleSubmit} autoComplete="on">
               <div className={styles.formField}>
                 <label className={styles.label}>
                   <Mail className={styles.labelIcon} />
@@ -169,6 +169,8 @@ export function AdminLoginPage() {
                   placeholder="admin@kyradi.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  name="email"
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -185,6 +187,8 @@ export function AdminLoginPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    name="password"
+                    autoComplete="current-password"
                     required
                   />
                   <button
