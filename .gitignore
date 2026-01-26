@@ -26,3 +26,8 @@ frontend/.env.local
 *.rej
 *.orig
 *.patch
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
