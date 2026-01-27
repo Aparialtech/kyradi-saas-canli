@@ -27,7 +27,7 @@ from ...models import (
     Tenant,
 )
 from ...models.enums import PaymentStatus
-from ...reservations.models import WidgetReservation
+from app.reservations.models import WidgetReservation
 
 router = APIRouter(prefix="/partners/reports", tags=["partner-reports"])
 logger = logging.getLogger(__name__)

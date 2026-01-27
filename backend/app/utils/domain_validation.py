@@ -19,6 +19,25 @@ RESERVED_SLUGS = {
     "assets", "static", "images", "img", "css", "js", "fonts",
 }
 
+BLOCKED_DOMAIN_SUFFIXES = (
+    ".kyradi.com",
+    ".kyradi.app",
+    ".vercel.app",
+    ".railway.app",
+    ".githubusercontent.com",
+)
+BLOCKED_DOMAINS = {
+    "kyradi.com",
+    "kyradi.app",
+    "vercel.app",
+    "railway.app",
+    "githubusercontent.com",
+    "admin.kyradi.com",
+    "app.kyradi.com",
+    "admin.kyradi.app",
+    "app.kyradi.app",
+}
+
 
 def normalize_and_validate_slug(value: str) -> str:
     if value is None:
@@ -65,18 +84,18 @@ def normalize_and_validate_custom_domain(value: str) -> str:
             "Custom domain örneği: panel.oteliniz.com (http/https ve / kullanmayın)",
         )
 
-    custom_domain = value.strip().lower()
+    custom_domain = normalize_domain(value)
     invalid_custom_domain_message = "Custom domain örneği: panel.oteliniz.com (http/https ve / kullanmayın)"
     blocked_hosts = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
     blocked_suffixes = (".local", ".internal", ".lan")
 
-    if custom_domain.startswith("http://") or custom_domain.startswith("https://"):
+    if not custom_domain or " " in custom_domain:
         raise DomainValidationError("custom_domain_invalid", invalid_custom_domain_message)
 
     if "/" in custom_domain or "?" in custom_domain:
         raise DomainValidationError("custom_domain_invalid", invalid_custom_domain_message)
 
-    if custom_domain in blocked_hosts or custom_domain.endswith(blocked_suffixes):
+    if custom_domain in blocked_hosts or any(custom_domain.endswith(suf) for suf in blocked_suffixes):
         raise DomainValidationError("custom_domain_invalid", invalid_custom_domain_message)
 
     try:
@@ -88,10 +107,45 @@ def normalize_and_validate_custom_domain(value: str) -> str:
     if "." not in custom_domain:
         raise DomainValidationError("custom_domain_invalid", invalid_custom_domain_message)
 
-    if custom_domain == "kyradi.com" or custom_domain.endswith(".kyradi.com"):
+    if custom_domain in BLOCKED_DOMAINS or any(custom_domain.endswith(suf) for suf in BLOCKED_DOMAIN_SUFFIXES):
         raise DomainValidationError("custom_domain_invalid", invalid_custom_domain_message)
 
-    if not re.match(r"^[a-z0-9.-]+$", custom_domain):
+    if "*" in custom_domain or not re.match(r"^[a-z0-9.-]+$", custom_domain):
         raise DomainValidationError("custom_domain_invalid", invalid_custom_domain_message)
 
     return custom_domain
+
+
+def normalize_domain(value: str) -> str:
+    if value is None:
+        return ""
+    normalized = value.strip().lower()
+    normalized = re.sub(r"^https?://", "", normalized)
+    normalized = normalized.strip().strip("/")
+    normalized = normalized.rstrip(".")
+    return normalized
+
+
+def validate_domain_input(value: str) -> str:
+    if value is None:
+        raise DomainValidationError(
+            "domain_invalid",
+            "Domain örneği: panel.oteliniz.com (http/https ve / kullanmayın)",
+        )
+    normalized = normalize_domain(value)
+    if not normalized or " " in normalized:
+        raise DomainValidationError(
+            "domain_invalid",
+            "Domain örneği: panel.oteliniz.com (http/https ve / kullanmayın)",
+        )
+    if "/" in normalized or "?" in normalized:
+        raise DomainValidationError(
+            "domain_invalid",
+            "Domain örneği: panel.oteliniz.com (http/https ve / kullanmayın)",
+        )
+    if "*" in normalized:
+        raise DomainValidationError(
+            "domain_invalid",
+            "Domain örneği: panel.oteliniz.com (http/https ve / kullanmayın)",
+        )
+    return normalized

@@ -10,17 +10,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import AsyncSessionMaker
-from ..models.tenant import Tenant
+from ..models import Tenant, TenantDomain, TenantDomainStatus, DomainStatus
 
 logger = logging.getLogger(__name__)
 
-# Base domain for Kyradi (subdomains will be *.kyradi.com)
-BASE_DOMAINS = {"kyradi.com", "localhost", "127.0.0.1"}
+# Base domains for Kyradi (subdomains will be *.kyradi.com or *.kyradi.app)
+BASE_DOMAINS = {"kyradi.com", "kyradi.app", "localhost", "127.0.0.1"}
 
 # Special hosts that skip tenant resolution entirely
 # Admin host: admin.kyradi.com - Admin panel, no tenant context needed
 # App host: app.kyradi.com - Signup, onboarding, no tenant context needed
-SKIP_TENANT_HOSTS = {"admin.kyradi.com", "app.kyradi.com"}
+SKIP_TENANT_HOSTS = {"admin.kyradi.com", "app.kyradi.com", "admin.kyradi.app", "app.kyradi.app"}
 
 # Subdomains that are NOT tenant subdomains
 RESERVED_SUBDOMAINS = {"admin", "app", "www", "api", "mail", "cdn", "status"}
@@ -57,6 +57,12 @@ def is_public_path(path: str) -> bool:
     return False
 
 
+def normalize_host(host: str) -> str:
+    if not host:
+        return ""
+    return host.split(":")[0].strip().lower()
+
+
 def should_skip_tenant_resolution(host: str) -> bool:
     """
     Check if this host should skip tenant resolution entirely.
@@ -65,7 +71,7 @@ def should_skip_tenant_resolution(host: str) -> bool:
     if not host:
         return True
     
-    host_without_port = host.split(":")[0].lower()
+    host_without_port = normalize_host(host)
     
     # Skip for known hosts
     if host_without_port in SKIP_TENANT_HOSTS:
@@ -97,8 +103,7 @@ def extract_tenant_from_host(host: str) -> Optional[str]:
     if not host:
         return None
     
-    # Remove port if present
-    host_without_port = host.split(":")[0].lower()
+    host_without_port = normalize_host(host)
     
     # Check if it's a subdomain of our base domains
     for base_domain in BASE_DOMAINS:
@@ -128,7 +133,27 @@ async def resolve_tenant_by_slug(slug: str) -> Optional[Tenant]:
 async def resolve_tenant_by_custom_domain(domain: str) -> Optional[Tenant]:
     """Resolve tenant by custom domain."""
     async with AsyncSessionMaker() as session:
-        stmt = select(Tenant).where(Tenant.custom_domain == domain.lower(), Tenant.is_active == True)
+        stmt = select(Tenant).where(
+            Tenant.custom_domain == domain.lower(),
+            Tenant.domain_status == DomainStatus.VERIFIED.value,
+            Tenant.is_active == True,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+
+async def resolve_tenant_by_domain_record(domain: str) -> Optional[Tenant]:
+    """Resolve tenant by verified tenant_domains record."""
+    async with AsyncSessionMaker() as session:
+        stmt = (
+            select(Tenant)
+            .join(TenantDomain, TenantDomain.tenant_id == Tenant.id)
+            .where(
+                TenantDomain.domain == domain.lower(),
+                TenantDomain.status == TenantDomainStatus.VERIFIED.value,
+                Tenant.is_active == True,
+            )
+        )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -148,6 +173,7 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         host = request.headers.get("host", "")
+        host_without_port = normalize_host(host)
         
         # Skip tenant resolution for admin/app hosts and development
         if should_skip_tenant_resolution(host):
@@ -187,11 +213,13 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
                             "code": "TENANT_NOT_FOUND"
                         }
                     )
-        
-        # 3. Try custom domain resolution
-        if not tenant and host:
-            host_without_port = host.split(":")[0].lower()
-            # Only check custom domain if it's not a base domain
+
+        # 3. Try verified tenant_domains record
+        if not tenant and host_without_port:
+            tenant = await resolve_tenant_by_domain_record(host_without_port)
+
+        # 4. Legacy custom domain resolution
+        if not tenant and host_without_port:
             if host_without_port not in BASE_DOMAINS and not any(
                 host_without_port.endswith(f".{bd}") for bd in BASE_DOMAINS
             ):
