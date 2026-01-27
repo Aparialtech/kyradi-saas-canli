@@ -13,8 +13,19 @@ function shouldSkipRedirect(target: string): boolean {
   if (target === currentPath) return true;
 
   const key = `${REDIRECT_PREFIX}${window.location.host}:${target}`;
-  if (sessionStorage.getItem(key)) return true;
-  sessionStorage.setItem(key, "1");
+  const now = Date.now();
+  const raw = sessionStorage.getItem(key);
+  if (raw) {
+    try {
+      const data = JSON.parse(raw) as { ts: number };
+      if (now - data.ts < 1500) {
+        return true;
+      }
+    } catch {
+      // ignore parse errors and overwrite
+    }
+  }
+  sessionStorage.setItem(key, JSON.stringify({ ts: now }));
   return false;
 }
 
