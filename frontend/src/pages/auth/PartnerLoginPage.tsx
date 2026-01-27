@@ -18,7 +18,7 @@ import styles from "./LoginPage.module.css";
 export function PartnerLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshUser } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,10 +66,14 @@ export function PartnerLoginPage() {
     setSubmitting(true);
 
     try {
+      if (import.meta.env.DEV) {
+        console.debug("[login] partner submit", { host: window.location.host });
+      }
       const response = await authService.loginPartner({ email, password });
 
       if (response.access_token) {
         tokenStorage.set(response.access_token);
+        await refreshUser();
         
         // Redirect to tenant URL or app
         if (response.tenant_slug) {

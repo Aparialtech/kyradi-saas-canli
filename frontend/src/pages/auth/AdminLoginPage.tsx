@@ -18,7 +18,7 @@ import styles from "./LoginPage.module.css";
 export function AdminLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshUser } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,6 +59,7 @@ export function AdminLoginPage() {
 
       if (response.access_token) {
         tokenStorage.set(response.access_token);
+        await refreshUser();
         if (hasValidRedirect) {
           if (redirectUrl.startsWith("/")) {
             safeNavigate(navigate, redirectUrl);

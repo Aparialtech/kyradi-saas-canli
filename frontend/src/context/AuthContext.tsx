@@ -22,6 +22,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (payload: LoginPayload) => Promise<AuthUser>;
   logout: () => void;
+  refreshUser: () => Promise<AuthUser | null>;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
 }
 
@@ -79,6 +80,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return currentUser;
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+      return currentUser;
+    } catch (error) {
+      errorLogger.error(error, {
+        component: "AuthContext",
+        action: "refreshUser",
+      });
+      tokenStorage.clear();
+      setToken(null);
+      setUser(null);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     tokenStorage.clear();
     setToken(null);
@@ -119,9 +140,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isLoading,
       login,
       logout,
+      refreshUser,
       hasRole,
     }),
-    [user, token, isLoading, login, logout, hasRole],
+    [user, token, isLoading, login, logout, refreshUser, hasRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

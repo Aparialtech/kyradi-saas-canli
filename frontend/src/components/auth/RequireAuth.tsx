@@ -49,6 +49,9 @@ export function RequireAuth({
   }
 
   if (!user) {
+    if (import.meta.env.DEV) {
+      console.debug("[auth-guard] unauthenticated", { host: window.location.host, path: location.pathname });
+    }
     // For tenant hosts (subdomain), redirect to app host with redirect param
     if (hostType === "tenant" && !isDevelopment()) {
       const loginUrl = buildPartnerLoginRedirect();
