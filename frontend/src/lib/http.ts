@@ -8,12 +8,12 @@ import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
 const resolvedBaseUrl =
-  (hostType === "tenant" || hostType === "app") && !isDevelopment()
+  !isDevelopment()
     ? ""
     : env.API_URL.replace(/\/+$/, "");
 // Startup log for debugging deployed envs
 if (import.meta.env.DEV) {
-  console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)");
+  console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)", "host:", window.location.host);
 }
 
 // Callback for handling 401 errors (will be set by AuthContext)
