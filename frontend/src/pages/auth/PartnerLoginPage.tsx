@@ -79,6 +79,9 @@ export function PartnerLoginPage() {
       if (response.access_token) {
         tokenStorage.set(response.access_token);
         await refreshUser();
+        if (response.tenant_slug) {
+          localStorage.setItem("tenant_slug", response.tenant_slug);
+        }
         if (debugAuth) {
           console.debug("[login] success -> redirect", { tenant: response.tenant_slug });
         }

@@ -109,6 +109,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const logout = useCallback(() => {
     tokenStorage.clear();
+    localStorage.removeItem("tenant_slug");
     setToken(null);
     setUser(null);
     safeNavigate(navigate, "/login");
@@ -123,6 +124,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
       setToken(null);
       setUser(null);
+      localStorage.removeItem("tenant_slug");
       safeNavigate(navigate, "/login");
     });
     

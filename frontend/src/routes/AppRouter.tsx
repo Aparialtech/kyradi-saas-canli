@@ -65,6 +65,8 @@ import { DomainSetupGuidePage } from "../pages/partner/docs/DomainSetupGuidePage
 import { NotFoundPage } from "../pages/common/NotFoundPage";
 import { isDevelopment } from "../lib/hostDetection";
 import { getHostMode } from "../utils/hostMode";
+import { useAuth } from "../context/AuthContext";
+import { safeHardRedirect } from "../utils/safeNavigate";
 
 export function AppRouter() {
   const location = useLocation();
@@ -174,6 +176,17 @@ export function AppRouter() {
   }
 
   if (mode === "app") {
+    const AppHostPanelRedirect = () => {
+      const { user, isLoading } = useAuth();
+      if (isLoading) return null;
+      const slug = localStorage.getItem("tenant_slug");
+      if (user?.tenant_id && slug) {
+        safeHardRedirect(`https://${slug}.kyradi.com/app`);
+        return null;
+      }
+      return <Navigate to="/partner/login" replace />;
+    };
+
     return (
       <Routes>
         <Route path="/" element={<PartnerLoginPage />} />
@@ -192,7 +205,7 @@ export function AppRouter() {
         <Route path="/self-service" element={<SelfServiceReservationPage />} />
         <Route path="/widget-demo" element={<WidgetDemoPage />} />
         <Route path="/payments/magicpay/demo/:sessionId" element={<MagicPayDemoPage />} />
-        {panelRoutes}
+        <Route path="/app" element={<AppHostPanelRedirect />} />
         <Route path="*" element={<Navigate to="/partner/login" replace />} />
       </Routes>
     );
