@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Globe, Plus, RefreshCw, Trash2, ShieldCheck, ShieldAlert } from "../../../lib/lucide";
+import { AlertTriangle, Copy, Globe, Plus, RefreshCw, Shield, Trash2 } from "../../../lib/lucide";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernInput } from "../../../components/ui/ModernInput";
@@ -16,6 +16,7 @@ import {
   type TenantDomain,
   type TenantDomainCreatePayload,
   type TenantDomainType,
+  type TenantDomainUpdatePayload,
 } from "../../../services/admin/tenantDomains";
 
 const statusVariant: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -76,7 +77,7 @@ export function TenantDomainsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (payload: { id: string; data: Partial<TenantDomainCreatePayload> & { status?: string } }) =>
+    mutationFn: (payload: { id: string; data: TenantDomainUpdatePayload }) =>
       adminTenantDomainService.updateDomain(tenantId!, payload.id, payload.data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "tenant-domains", tenantId] });
@@ -120,7 +121,7 @@ export function TenantDomainsPage() {
       if (data.verified) {
         push({ title: "Domain doğrulandı", description: "DNS kaydı başarıyla doğrulandı.", type: "success" });
       } else {
-        push({ title: "Doğrulama sürüyor", description: data.failure_reason || "TXT kaydı bulunamadı.", type: "warning" });
+        push({ title: "Doğrulama sürüyor", description: data.failure_reason || "TXT kaydı bulunamadı.", type: "info" });
       }
     },
     onError: (error: unknown) => {
@@ -270,7 +271,7 @@ export function TenantDomainsPage() {
                     <ModernButton
                       variant="ghost"
                       onClick={() => startVerifyMutation.mutate(domain.id)}
-                      leftIcon={<ShieldCheck className="h-4 w-4" />}
+                      leftIcon={<Shield className="h-4 w-4" />}
                     >
                       Verify
                     </ModernButton>
@@ -380,7 +381,7 @@ export function TenantDomainsPage() {
             )}
             {verifyDomain?.failure_reason && (
               <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--warning)" }}>
-                <ShieldAlert className="h-4 w-4" /> {verifyDomain.failure_reason}
+                <AlertTriangle className="h-4 w-4" /> {verifyDomain.failure_reason}
               </div>
             )}
           </div>
