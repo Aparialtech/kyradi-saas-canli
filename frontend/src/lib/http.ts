@@ -8,7 +8,9 @@ import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
 const resolvedBaseUrl =
-  hostType === "tenant" && !isDevelopment() ? "" : env.API_URL.replace(/\/+$/, "");
+  (hostType === "tenant" || hostType === "app") && !isDevelopment()
+    ? ""
+    : env.API_URL.replace(/\/+$/, "");
 // Startup log for debugging deployed envs
 console.info("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)");
 
