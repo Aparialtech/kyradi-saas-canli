@@ -259,6 +259,26 @@ async def ensure_critical_schema() -> None:
         # Index for payment transfers
         "CREATE INDEX IF NOT EXISTS idx_payment_transfers_tenant ON payment_transfers(tenant_id)",
         "CREATE INDEX IF NOT EXISTS idx_payment_transfers_status ON payment_transfers(status)",
+        # Tenant domains table (critical for domain management)
+        """CREATE TABLE IF NOT EXISTS tenant_domains (
+            id VARCHAR(36) PRIMARY KEY,
+            tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            domain VARCHAR(255) NOT NULL,
+            domain_type VARCHAR(32) NOT NULL,
+            status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+            verification_method VARCHAR(32) NOT NULL DEFAULT 'DNS_TXT',
+            verification_token VARCHAR(128),
+            verification_record_name VARCHAR(255),
+            verification_record_value VARCHAR(255),
+            last_checked_at TIMESTAMPTZ,
+            failure_reason TEXT,
+            is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ
+        )""",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_tenant_domains_domain ON tenant_domains(domain)",
+        "CREATE INDEX IF NOT EXISTS ix_tenant_domains_tenant_id ON tenant_domains(tenant_id)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_tenant_domains_primary ON tenant_domains(tenant_id) WHERE is_primary = TRUE",
     ]
     
     try:
