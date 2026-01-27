@@ -86,6 +86,8 @@ def is_origin_allowed(origin: str) -> bool:
         return False
     if origin in STATIC_ORIGINS:
         return True
+    if origin.endswith(".kyradi.com") or origin.endswith(".kyradi.app"):
+        return True
     for pattern in VERCEL_PATTERNS:
         if pattern.match(origin):
             return True

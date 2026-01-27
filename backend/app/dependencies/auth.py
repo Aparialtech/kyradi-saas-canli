@@ -13,7 +13,7 @@ from ..db.session import get_session
 from ..models import Tenant, User, UserRole
 from ..services.audit import record_audit
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 logger = logging.getLogger(__name__)
 
 
@@ -78,11 +78,15 @@ async def _record_security_audit(
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: str | None = Depends(oauth2_scheme),
     request: Request = None,
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Decode JWT token and return the current user."""
+    if not token and request:
+        token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     try:
         payload = decode_token(token)
     except ValueError as exc:

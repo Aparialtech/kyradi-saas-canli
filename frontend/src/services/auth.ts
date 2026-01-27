@@ -33,8 +33,19 @@ export const authService = {
     return response.data;
   },
   async getCurrentUser(): Promise<AuthUser> {
-    const response = await http.get<AuthUser>("/auth/me", { baseURL: env.API_URL });
-    return response.data;
+    try {
+      const response = await http.get<AuthUser>("/auth/me", { baseURL: env.API_URL });
+      if (import.meta.env.DEV) {
+        console.debug("[auth] /auth/me", response.status, "host:", window.location.host);
+      }
+      return response.data;
+    } catch (err: any) {
+      if (import.meta.env.DEV) {
+        const status = err?.response?.status;
+        console.debug("[auth] /auth/me error", status, "host:", window.location.host);
+      }
+      throw err;
+    }
   },
   async requestPasswordReset(payload: ForgotPasswordPayload): Promise<ForgotPasswordResponse> {
     const response = await http.post<ForgotPasswordResponse>("/auth/forgot-password", payload, { baseURL: env.API_URL });

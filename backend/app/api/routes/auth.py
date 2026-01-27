@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -48,10 +48,30 @@ from ...utils.domain_validation import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+def _set_auth_cookie(response: Response, token: str, request: Request) -> None:
+    is_development = settings.environment.lower() in {"local", "dev", "development"}
+    host = request.headers.get("host", "").split(":")[0].lower()
+    domain = None
+    if host.endswith(".kyradi.com"):
+        domain = ".kyradi.com"
+    elif host.endswith(".kyradi.app"):
+        domain = ".kyradi.app"
+
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=not is_development,
+        samesite="lax",
+        path="/",
+        domain=domain,
+    )
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
     credentials: LoginRequest,
+    request: Request,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     """Authenticate user with email/password. Tenant is auto-detected from user's tenant_id."""
@@ -105,6 +125,7 @@ async def login(
         tenant_id=token_tenant_id,
         role=user.role,
     )
+    _set_auth_cookie(response, token, request)
     return TokenResponse(access_token=token)
 
 
@@ -112,6 +133,7 @@ async def login(
 async def partner_login(
     credentials: LoginRequest,
     request: Request,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> PartnerLoginResponse:
     """
@@ -167,6 +189,7 @@ async def partner_login(
         tenant_id=tenant.id,
         role=user.role,
     )
+    _set_auth_cookie(response, token, request)
     
     logger.info(f"Partner login successful: {user.email} -> tenant {tenant.slug}")
     
@@ -185,6 +208,8 @@ async def partner_login(
 @router.post("/admin/login", response_model=TokenResponse)
 async def admin_login(
     credentials: LoginRequest,
+    request: Request,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     """
@@ -223,6 +248,7 @@ async def admin_login(
         tenant_id=None,  # Admin users don't have tenant
         role=user.role,
     )
+    _set_auth_cookie(response, token, request)
     
     logger.info(f"Admin login successful: {user.email} (role: {user.role})")
     

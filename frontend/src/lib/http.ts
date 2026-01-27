@@ -21,7 +21,7 @@ export const setOnUnauthorized = (callback: () => void) => {
 
 export const http = axios.create({
   baseURL: resolvedBaseUrl,
-  withCredentials: false,
+  withCredentials: true,
   timeout: 30000, // 30 seconds
   headers: {
     "Content-Type": "application/json",
