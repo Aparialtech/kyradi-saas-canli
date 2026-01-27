@@ -268,7 +268,8 @@ export function GoogleMapPicker({
       if (event.message?.includes('Google Maps') || 
           event.message?.includes('BillingNotEnabled') ||
           event.message?.includes('ApiNotActivated') ||
-          event.message?.includes('InvalidKeyMapError')) {
+          event.message?.includes('InvalidKeyMapError') ||
+          event.message?.includes('RefererNotAllowedMapError')) {
         errorLogger.warn(new Error('Google Maps API error detected'), {
           component: "GoogleMapPicker",
           action: "apiError",
@@ -380,6 +381,16 @@ export function GoogleMapPicker({
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
   }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const timer = window.setTimeout(() => {
+      if (!mapRef.current) {
+        setRuntimeError(true);
+      }
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [isLoaded]);
 
   // No API key - show manual entry
   if (!mapApiKey) {
