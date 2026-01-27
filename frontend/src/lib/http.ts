@@ -12,7 +12,9 @@ const resolvedBaseUrl =
     ? ""
     : env.API_URL.replace(/\/+$/, "");
 // Startup log for debugging deployed envs
-console.info("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)");
+if (import.meta.env.DEV) {
+  console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)");
+}
 
 // Callback for handling 401 errors (will be set by AuthContext)
 let onUnauthorized: (() => void) | null = null;
