@@ -71,13 +71,65 @@ export function AppRouter() {
   const hostname = typeof window !== "undefined" ? window.location.hostname : "";
   const mode = getHostMode(hostname);
   const isTenantHost = isDevelopment() || mode === "panel";
+  const debugAuth = import.meta.env.VITE_DEBUG_AUTH === "true";
 
   // Ensure re-render on path changes for dev host detection
   void location;
 
-  if (import.meta.env.DEV) {
+  if (debugAuth) {
     console.debug(`[host-mode] ${hostname} -> ${mode}`);
   }
+
+  const panelRoutes = (
+    <Route
+      element={
+        <RequireAuth allowedRoles={["tenant_admin", "staff", "viewer", "hotel_manager", "storage_operator", "accounting"]} />
+      }
+    >
+      <Route path="/app" element={<PartnerDashboard />}>
+        <Route index element={<PartnerOverview />} />
+        <Route path="export-guide" element={<ExportGuidePage />} />
+        <Route path="locations" element={<PartnerLocationsPlaceholder />} />
+        <Route path="locations/:id/edit" element={<LocationEditPage />} />
+        <Route path="locations/new" element={<LocationEditPage />} />
+        <Route path="lockers" element={<PartnerLockersPage />} />
+        <Route path="lockers/:id/edit" element={<StorageEditPage />} />
+        <Route path="lockers/new" element={<StorageEditPage />} />
+        <Route path="reservations" element={<PartnerReservationsPage />} />
+        <Route path="widget-preview" element={<WidgetPreviewPage />} />
+        <Route path="qr" element={<PartnerQRPage />} />
+        <Route
+          element={<RequireAuth allowedRoles={["accounting", "hotel_manager", "tenant_admin"]} redirectTo="/app" />}
+        >
+          <Route path="reports" element={<PartnerReportsAnalyticsPage />} />
+          <Route path="revenue" element={<PartnerRevenueDashboard />} />
+          <Route path="settlements" element={<PartnerSettlementsPage />} />
+          <Route path="transfers" element={<TransfersPage />} />
+        </Route>
+        <Route
+          element={<RequireAuth allowedRoles={["tenant_admin", "hotel_manager"]} redirectTo="/app" />}
+        >
+          <Route path="users" element={<PartnerUsersPage />} />
+          <Route path="users/:id/edit" element={<UserEditPage />} />
+          <Route path="users/new" element={<UserEditPage />} />
+          <Route path="staff" element={<PartnerStaffPage />} />
+          <Route path="staff/assign" element={<StaffAssignPage />} />
+          <Route path="staff/new" element={<StaffEditPage />} />
+          <Route path="staff/:id/edit" element={<StaffEditPage />} />
+          <Route path="tickets" element={<TicketsPage />} />
+          <Route path="pricing" element={<PartnerPricingPage />} />
+          <Route path="pricing/new" element={<PricingEditPage />} />
+          <Route path="pricing/:id/edit" element={<PricingEditPage />} />
+          <Route path="demo-flow" element={<DemoFlowPage />} />
+          <Route path="demo-payment-flow" element={<DemoPaymentFlowPage />} />
+        </Route>
+        <Route path="settings" element={<PartnerSettingsPage />} />
+        <Route path="guide" element={<UserGuidePage />} />
+        {isTenantHost && <Route path="docs/domain-kurulumu" element={<DomainSetupGuidePage />} />}
+        <Route path="*" element={<Navigate to="/app" replace />} />
+      </Route>
+    </Route>
+  );
 
   if (mode === "branding") {
     return (
@@ -140,7 +192,7 @@ export function AppRouter() {
         <Route path="/self-service" element={<SelfServiceReservationPage />} />
         <Route path="/widget-demo" element={<WidgetDemoPage />} />
         <Route path="/payments/magicpay/demo/:sessionId" element={<MagicPayDemoPage />} />
-
+        {panelRoutes}
         <Route path="*" element={<Navigate to="/partner/login" replace />} />
       </Routes>
     );
@@ -150,54 +202,7 @@ export function AppRouter() {
     return (
       <Routes>
         <Route path="/" element={<Navigate to="/app" replace />} />
-        <Route
-          element={
-            <RequireAuth allowedRoles={["tenant_admin", "staff", "viewer", "hotel_manager", "storage_operator", "accounting"]} />
-          }
-        >
-          <Route path="/app" element={<PartnerDashboard />}>
-            <Route index element={<PartnerOverview />} />
-            <Route path="export-guide" element={<ExportGuidePage />} />
-            <Route path="locations" element={<PartnerLocationsPlaceholder />} />
-            <Route path="locations/:id/edit" element={<LocationEditPage />} />
-            <Route path="locations/new" element={<LocationEditPage />} />
-            <Route path="lockers" element={<PartnerLockersPage />} />
-            <Route path="lockers/:id/edit" element={<StorageEditPage />} />
-            <Route path="lockers/new" element={<StorageEditPage />} />
-            <Route path="reservations" element={<PartnerReservationsPage />} />
-            <Route path="widget-preview" element={<WidgetPreviewPage />} />
-            <Route path="qr" element={<PartnerQRPage />} />
-            <Route
-              element={<RequireAuth allowedRoles={["accounting", "hotel_manager", "tenant_admin"]} redirectTo="/app" />}
-            >
-              <Route path="reports" element={<PartnerReportsAnalyticsPage />} />
-              <Route path="revenue" element={<PartnerRevenueDashboard />} />
-              <Route path="settlements" element={<PartnerSettlementsPage />} />
-              <Route path="transfers" element={<TransfersPage />} />
-            </Route>
-            <Route
-              element={<RequireAuth allowedRoles={["tenant_admin", "hotel_manager"]} redirectTo="/app" />}
-            >
-              <Route path="users" element={<PartnerUsersPage />} />
-              <Route path="users/:id/edit" element={<UserEditPage />} />
-              <Route path="users/new" element={<UserEditPage />} />
-              <Route path="staff" element={<PartnerStaffPage />} />
-              <Route path="staff/assign" element={<StaffAssignPage />} />
-              <Route path="staff/new" element={<StaffEditPage />} />
-              <Route path="staff/:id/edit" element={<StaffEditPage />} />
-              <Route path="tickets" element={<TicketsPage />} />
-              <Route path="pricing" element={<PartnerPricingPage />} />
-              <Route path="pricing/new" element={<PricingEditPage />} />
-              <Route path="pricing/:id/edit" element={<PricingEditPage />} />
-              <Route path="demo-flow" element={<DemoFlowPage />} />
-              <Route path="demo-payment-flow" element={<DemoPaymentFlowPage />} />
-            </Route>
-            <Route path="settings" element={<PartnerSettingsPage />} />
-            <Route path="guide" element={<UserGuidePage />} />
-            {isTenantHost && <Route path="docs/domain-kurulumu" element={<DomainSetupGuidePage />} />}
-            <Route path="*" element={<Navigate to="/app" replace />} />
-          </Route>
-        </Route>
+        {panelRoutes}
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     );

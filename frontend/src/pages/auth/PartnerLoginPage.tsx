@@ -19,6 +19,7 @@ export function PartnerLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isLoading, refreshUser } = useAuth();
+  const debugAuth = import.meta.env.VITE_DEBUG_AUTH === "true";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,6 +44,9 @@ export function PartnerLoginPage() {
   // Redirect if already logged in as partner
   useEffect(() => {
     if (!isLoading && user) {
+      if (debugAuth) {
+        console.debug("[login] already-authenticated", { role: user.role, host: window.location.host });
+      }
       // Admin users shouldn't be here
       if (user.role === "super_admin" || user.role === "support") {
         safeHardRedirect(getAdminLoginUrl());
@@ -62,11 +66,12 @@ export function PartnerLoginPage() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (submitting) return;
     setError("");
     setSubmitting(true);
 
     try {
-      if (import.meta.env.DEV) {
+      if (debugAuth) {
         console.debug("[login] partner submit", { host: window.location.host });
       }
       const response = await authService.loginPartner({ email, password });
@@ -74,6 +79,9 @@ export function PartnerLoginPage() {
       if (response.access_token) {
         tokenStorage.set(response.access_token);
         await refreshUser();
+        if (debugAuth) {
+          console.debug("[login] success -> redirect", { tenant: response.tenant_slug });
+        }
         
         // Redirect to tenant URL or app
         if (response.tenant_slug) {

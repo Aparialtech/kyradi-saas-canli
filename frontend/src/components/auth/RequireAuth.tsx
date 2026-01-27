@@ -43,13 +43,14 @@ export function RequireAuth({
   const { user, isLoading, hasRole } = useAuth();
   const hostType = detectHostType();
   const location = useLocation();
+  const debugAuth = import.meta.env.VITE_DEBUG_AUTH === "true";
 
   if (isLoading) {
     return null;
   }
 
   if (!user) {
-    if (import.meta.env.DEV) {
+    if (debugAuth) {
       console.debug("[auth-guard] unauthenticated", { host: window.location.host, path: location.pathname });
     }
     // For tenant hosts (subdomain), redirect to app host with redirect param
@@ -67,6 +68,9 @@ export function RequireAuth({
   }
 
   if (allowedRoles && allowedRoles.length > 0 && !hasRole(allowedRoles)) {
+    if (debugAuth) {
+      console.debug("[auth-guard] role-mismatch", { role: user?.role, allowedRoles });
+    }
     // Role mismatch → yönlendir
     const fallback = hasRole(["super_admin", "support"]) ? "/admin" : "/app";
     return <Navigate to={fallback} replace />;

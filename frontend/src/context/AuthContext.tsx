@@ -37,17 +37,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const initialize = async () => {
       const storedToken = tokenStorage.get();
+      const debugAuth = import.meta.env.VITE_DEBUG_AUTH === "true";
       try {
         if (storedToken) {
           setToken(storedToken);
         }
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
+        if (debugAuth) {
+          console.debug("[auth] /auth/me ok", { role: currentUser.role, host: window.location.host });
+        }
       } catch (error) {
         errorLogger.error(error, {
           component: "AuthContext",
           action: "getCurrentUser",
         });
+        if (debugAuth) {
+          console.debug("[auth] /auth/me failed", { host: window.location.host });
+        }
         tokenStorage.clear();
         setToken(null);
       } finally {
