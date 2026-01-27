@@ -1,5 +1,4 @@
 import { http } from "../lib/http";
-import { env } from "../config/env";
 import type {
   AuthUser,
   LoginPayload,
