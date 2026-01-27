@@ -90,10 +90,21 @@ async def get_current_user(
     try:
         payload = decode_token(token)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        ) from exc
+        # If header token is invalid, fall back to cookie token (if different).
+        cookie_token = request.cookies.get("access_token") if request else None
+        if cookie_token and cookie_token != token:
+            try:
+                payload = decode_token(cookie_token)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token",
+                ) from exc
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            ) from exc
 
     user_id: str | None = payload.get("sub")
     if not user_id:
