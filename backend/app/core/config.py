@@ -61,6 +61,12 @@ class Settings(BaseSettings):
 
     cors_origins: List[str] = Field(
         default_factory=lambda: [
+            # Primary production hosts
+            "https://app.kyradi.com",
+            "https://admin.kyradi.com",
+            "https://branding.kyradi.com",
+            "https://kyradi.com",
+            "https://www.kyradi.com",
             # Production Vercel
             "https://kyradi-saas-canli.vercel.app",
             "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",

@@ -172,6 +172,9 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
     """
     
     async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         host = request.headers.get("host", "")
         host_without_port = normalize_host(host)
         

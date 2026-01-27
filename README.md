@@ -14,3 +14,6 @@
 
 - `dnspython` bağımlılığı backend deploy paketine dahil edilmelidir.
 - Migrations deploy sırasında çalıştırılmalı (Railway: `alembic upgrade head`).
+- CORS için `CORS_ORIGINS` env'ine şu originler eklenmeli:
+  `https://app.kyradi.com`, `https://admin.kyradi.com`, `https://branding.kyradi.com`,
+  `https://kyradi.com`, `https://www.kyradi.com` (virgülle ayrılmış).

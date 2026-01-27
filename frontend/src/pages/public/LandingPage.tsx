@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
@@ -31,8 +31,8 @@ import {
 import styles from "./LandingPage.module.css";
 
 export function LandingPage() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
+  const panelUrl = "https://app.kyradi.com";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [activeUseCase, setActiveUseCase] = useState<"hotels" | "depots" | "events">("hotels");
@@ -60,6 +60,10 @@ export function LandingPage() {
 
   const handleDemoRequest = () => {
     scrollToSection("contact");
+  };
+
+  const handlePanelLogin = () => {
+    window.location.assign(panelUrl);
   };
 
   const handleContactSubmit = async (e: FormEvent) => {
@@ -120,7 +124,7 @@ export function LandingPage() {
             <button onClick={handleDemoRequest} className={styles.btnSecondary}>
               Demo Talep Et
             </button>
-            <button onClick={() => navigate("/login")} className={styles.btnPrimary}>
+            <button onClick={handlePanelLogin} className={styles.btnPrimary}>
               Panel Girişi
             </button>
           </div>
@@ -165,7 +169,7 @@ export function LandingPage() {
               <button onClick={handleDemoRequest} className={styles.mobileNavLink}>
                 Demo Talep Et
               </button>
-              <button onClick={() => navigate("/login")} className={styles.mobileNavLink}>
+              <button onClick={handlePanelLogin} className={styles.mobileNavLink}>
                 Panel Girişi
               </button>
             </motion.div>
@@ -214,7 +218,7 @@ export function LandingPage() {
                 Demo Talep Et
                 <ArrowRight className="h-5 w-5" />
               </button>
-              <button onClick={() => navigate("/login")} className={styles.btnSecondaryLarge}>
+              <button onClick={handlePanelLogin} className={styles.btnSecondaryLarge}>
                 Panel Girişi
               </button>
             </div>
@@ -1048,7 +1052,7 @@ export function LandingPage() {
                 Demo Talep Et
                 <ArrowRight className="h-5 w-5" />
               </button>
-              <button onClick={() => navigate("/login")} className={styles.btnSecondaryLarge}>
+              <button onClick={handlePanelLogin} className={styles.btnSecondaryLarge}>
                 Panel Girişi
               </button>
             </div>
@@ -1085,7 +1089,7 @@ export function LandingPage() {
                 <button onClick={handleDemoRequest} className={styles.footerLink}>
                   Demo Talep Et
                 </button>
-                <button onClick={() => navigate("/login")} className={styles.footerLink}>
+                <button onClick={handlePanelLogin} className={styles.footerLink}>
                   Panel Girişi
                 </button>
               </div>

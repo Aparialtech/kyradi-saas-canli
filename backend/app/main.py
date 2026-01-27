@@ -50,6 +50,11 @@ app = FastAPI(
 
 # Static allowed origins
 STATIC_ORIGINS = {
+    "https://app.kyradi.com",
+    "https://admin.kyradi.com",
+    "https://branding.kyradi.com",
+    "https://kyradi.com",
+    "https://www.kyradi.com",
     "https://kyradi-saas-canli.vercel.app",
     "https://kyradi-saas-canli-git-main-aparialtechs-projects.vercel.app",
     "http://localhost:3000",
@@ -58,8 +63,15 @@ STATIC_ORIGINS = {
     "http://127.0.0.1:5173",
 }
 
+def normalize_origins(origins):
+    if not origins:
+        return []
+    if isinstance(origins, str):
+        return [item.strip() for item in origins.split(",") if item.strip()]
+    return [item.strip() for item in origins if item and item.strip()]
+
 # Add origins from settings
-STATIC_ORIGINS.update(settings.cors_origins)
+STATIC_ORIGINS.update(normalize_origins(settings.cors_origins))
 
 # Patterns for dynamic Vercel preview deployments
 VERCEL_PATTERNS = [
