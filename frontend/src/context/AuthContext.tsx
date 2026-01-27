@@ -36,13 +36,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const initialize = async () => {
       const storedToken = tokenStorage.get();
-      if (!storedToken) {
-        setIsLoading(false);
-        return;
-      }
-
-      setToken(storedToken);
       try {
+        if (storedToken) {
+          setToken(storedToken);
+        }
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
       } catch (error) {

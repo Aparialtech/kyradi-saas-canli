@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { FullPageSpinner } from "../common/FullPageSpinner";
 import { useAuth } from "../../context/AuthContext";
@@ -42,9 +42,10 @@ export function RequireAuth({
 }: RequireAuthProps) {
   const { user, isLoading, hasRole } = useAuth();
   const hostType = detectHostType();
+  const location = useLocation();
 
   if (isLoading) {
-    return <FullPageSpinner />;
+    return null;
   }
 
   if (!user) {
@@ -56,6 +57,9 @@ export function RequireAuth({
     }
     
     // For other hosts, use normal React Router redirect
+    if (location.pathname + location.search === redirectTo) {
+      return null;
+    }
     return <Navigate to={redirectTo} replace />;
   }
 
