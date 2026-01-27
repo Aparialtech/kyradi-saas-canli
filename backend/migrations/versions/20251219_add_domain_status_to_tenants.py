@@ -17,18 +17,26 @@ depends_on = None
 
 def upgrade() -> None:
     """Add domain_status column for custom domain verification tracking."""
-    op.add_column(
-        "tenants",
-        sa.Column(
-            "domain_status",
-            sa.String(20),
-            nullable=False,
-            server_default="unverified",
-            comment="Custom domain verification status: unverified, pending, verified, failed"
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {col["name"] for col in inspector.get_columns("tenants")}
+    if "domain_status" not in columns:
+        op.add_column(
+            "tenants",
+            sa.Column(
+                "domain_status",
+                sa.String(20),
+                nullable=False,
+                server_default="unverified",
+                comment="Custom domain verification status: unverified, pending, verified, failed"
+            )
         )
-    )
 
 
 def downgrade() -> None:
     """Remove domain_status column."""
-    op.drop_column("tenants", "domain_status")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {col["name"] for col in inspector.get_columns("tenants")}
+    if "domain_status" in columns:
+        op.drop_column("tenants", "domain_status")
