@@ -4,7 +4,7 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import pool
+from sqlalchemy import pool, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -60,6 +60,16 @@ def run_migrations_offline() -> None:
 
 
 def run_sync_migrations(connection: Connection) -> None:
+    # Ensure alembic_version.version_num can hold long revision ids
+    try:
+        connection.exec_driver_sql(
+            "ALTER TABLE IF EXISTS alembic_version "
+            "ALTER COLUMN version_num TYPE VARCHAR(255)"
+        )
+    except Exception:
+        # Best effort; don't block migrations if this fails
+        pass
+
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
