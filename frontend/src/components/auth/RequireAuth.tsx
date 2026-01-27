@@ -4,6 +4,7 @@ import { FullPageSpinner } from "../common/FullPageSpinner";
 import { useAuth } from "../../context/AuthContext";
 import type { UserRole } from "../../types/auth";
 import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../../lib/hostDetection";
+import { safeHardRedirect } from "../../utils/safeNavigate";
 
 interface RequireAuthProps {
   allowedRoles?: UserRole[];
@@ -50,7 +51,7 @@ export function RequireAuth({
     // For tenant hosts (subdomain), redirect to app host with redirect param
     if (hostType === "tenant" && !isDevelopment()) {
       const loginUrl = buildPartnerLoginRedirect();
-      window.location.href = loginUrl;
+      safeHardRedirect(loginUrl);
       return <FullPageSpinner />;
     }
     

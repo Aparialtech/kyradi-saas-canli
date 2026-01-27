@@ -9,9 +9,10 @@ import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { authService } from "../../services/auth";
 import { tokenStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
-import { detectHostType, getPartnerLoginUrl, getTenantUrl, isDevelopment } from "../../lib/hostDetection";
+import { detectHostType, getAdminLoginUrl, getPartnerLoginUrl, getTenantUrl, isDevelopment } from "../../lib/hostDetection";
 import { Lock, Mail, Eye, EyeOff, Hotel, Building2, CheckCircle2 } from "../../lib/lucide";
 import { sanitizeRedirect } from "../../utils/safeRedirect";
+import { safeHardRedirect, safeNavigate } from "../../utils/safeNavigate";
 import styles from "./LoginPage.module.css";
 
 export function PartnerLoginPage() {
@@ -35,7 +36,7 @@ export function PartnerLoginPage() {
 
   useEffect(() => {
     if (!isDevelopment() && detectHostType() !== "app") {
-      window.location.href = getPartnerLoginUrl();
+      safeHardRedirect(getPartnerLoginUrl());
     }
   }, []);
 
@@ -44,16 +45,16 @@ export function PartnerLoginPage() {
     if (!isLoading && user) {
       // Admin users shouldn't be here
       if (user.role === "super_admin" || user.role === "support") {
-        navigate("/admin/login", { replace: true });
+        safeHardRedirect(getAdminLoginUrl());
         return;
       }
       
       // Partner user - redirect to their panel
       if (user.tenant_id) {
         if (hasValidRedirect) {
-          window.location.href = redirectUrl;
+          safeHardRedirect(redirectUrl);
         } else {
-          navigate("/app", { replace: true });
+          safeNavigate(navigate, "/app");
         }
       }
     }
@@ -74,16 +75,16 @@ export function PartnerLoginPage() {
         if (response.tenant_slug) {
           if (isDevelopment()) {
             // In dev, just go to /app
-            navigate("/app", { replace: true });
+            safeNavigate(navigate, "/app");
           } else {
             // In production, redirect to tenant subdomain
             const targetUrl = hasValidRedirect ? redirectUrl : getTenantUrl(response.tenant_slug, "/app");
-            window.location.href = targetUrl;
+            safeHardRedirect(targetUrl);
           }
         } else if (hasValidRedirect) {
-          window.location.href = redirectUrl;
+          safeHardRedirect(redirectUrl);
         } else {
-          navigate("/app", { replace: true });
+          safeNavigate(navigate, "/app");
         }
       }
     } catch (err) {

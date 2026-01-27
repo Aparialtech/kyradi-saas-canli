@@ -14,6 +14,7 @@ import { tokenStorage } from "../lib/tokenStorage";
 import { setOnUnauthorized } from "../lib/http";
 import { errorLogger } from "../lib/errorLogger";
 import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
+import { safeNavigate } from "../utils/safeNavigate";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     tokenStorage.clear();
     setToken(null);
     setUser(null);
-    navigate("/login");
+    safeNavigate(navigate, "/login");
   }, [navigate]);
 
   // Register the 401 handler callback
@@ -97,7 +98,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
       setToken(null);
       setUser(null);
-      navigate("/login");
+      safeNavigate(navigate, "/login");
     });
     
     return () => {

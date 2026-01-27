@@ -63,23 +63,23 @@ import { LandingPage } from "../pages/public/LandingPage";
 import { UserGuidePage } from "../pages/common/UserGuidePage";
 import { DomainSetupGuidePage } from "../pages/partner/docs/DomainSetupGuidePage";
 import { NotFoundPage } from "../pages/common/NotFoundPage";
-import { detectHostType, getCurrentHost, isDevelopment } from "../lib/hostDetection";
+import { isDevelopment } from "../lib/hostDetection";
+import { getHostMode } from "../utils/hostMode";
 
 export function AppRouter() {
   const location = useLocation();
-  const host = getCurrentHost();
-  const hostType = detectHostType();
-  const isTenantHost = isDevelopment() || hostType === "tenant";
-  const isAdminHost = hostType === "admin";
-  const isAppHost = hostType === "app";
-  const isBrandingHost = host === "branding.kyradi.com" || host === "www.kyradi.com";
-  const isPreviewHost = host.endsWith(".vercel.app");
-  const showBranding = isBrandingHost || isPreviewHost;
+  const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+  const mode = getHostMode(hostname);
+  const isTenantHost = isDevelopment() || mode === "panel";
 
   // Ensure re-render on path changes for dev host detection
   void location;
 
-  if (showBranding) {
+  if (import.meta.env.DEV) {
+    console.debug(`[host-mode] ${hostname} -> ${mode}`);
+  }
+
+  if (mode === "branding") {
     return (
       <Routes>
         <Route path="/" element={<LandingPage />} />
@@ -89,7 +89,7 @@ export function AppRouter() {
     );
   }
 
-  if (isAdminHost) {
+  if (mode === "admin") {
     return (
       <Routes>
         <Route path="/admin/login" element={<AdminLoginPage />} />
@@ -121,7 +121,7 @@ export function AppRouter() {
     );
   }
 
-  if (isAppHost || isDevelopment()) {
+  if (mode === "panel") {
     return (
       <Routes>
         <Route path="/" element={<PartnerLoginPage />} />

@@ -8,6 +8,7 @@ import { authService } from "../../services/auth";
 import { useAuth } from "../../context/AuthContext";
 import { errorLogger } from "../../lib/errorLogger";
 import { Building2, Globe, CheckCircle2, Loader2, AlertCircle } from "../../lib/lucide";
+import { safeHardRedirect, safeNavigate } from "../../utils/safeNavigate";
 import styles from "./LoginPage.module.css";
 
 export function OnboardingPage() {
@@ -26,7 +27,7 @@ export function OnboardingPage() {
   // Redirect if user already has a tenant
   useEffect(() => {
     if (!isLoading && user?.tenant_id) {
-      navigate("/app", { replace: true });
+      safeNavigate(navigate, "/app");
     }
   }, [isLoading, user, navigate]);
 
@@ -84,7 +85,7 @@ export function OnboardingPage() {
       });
 
       // Redirect to the new tenant's panel
-      window.location.href = response.redirect_url;
+      safeHardRedirect(response.redirect_url);
     } catch (err) {
       errorLogger.error(err, {
         component: "OnboardingPage",

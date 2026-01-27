@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
+import { safeNavigate } from "../../utils/safeNavigate";
 
 /**
  * Login Page - Auto-redirects based on auth status
@@ -25,13 +26,13 @@ export function LoginPage() {
     if (user) {
       // Already logged in - redirect to appropriate dashboard
       if (user.role === "super_admin" || user.role === "support") {
-        navigate("/admin", { replace: true });
+        safeNavigate(navigate, "/admin");
       } else {
-        navigate("/app", { replace: true });
+        safeNavigate(navigate, "/app");
       }
     } else {
       // Not logged in - redirect to partner login (default)
-      navigate("/partner/login", { replace: true });
+      safeNavigate(navigate, "/partner/login");
     }
   }, [isLoading, user, navigate]);
 

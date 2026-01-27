@@ -12,6 +12,7 @@ import { errorLogger } from "../../lib/errorLogger";
 import { Lock, Mail, Eye, EyeOff, Shield, Database } from "../../lib/lucide";
 import { detectHostType, getAdminLoginUrl, isDevelopment } from "../../lib/hostDetection";
 import { sanitizeRedirect } from "../../utils/safeRedirect";
+import { safeHardRedirect, safeNavigate } from "../../utils/safeNavigate";
 import styles from "./LoginPage.module.css";
 
 export function AdminLoginPage() {
@@ -34,7 +35,7 @@ export function AdminLoginPage() {
 
   useEffect(() => {
     if (!isDevelopment() && detectHostType() !== "admin") {
-      window.location.href = getAdminLoginUrl();
+      safeHardRedirect(getAdminLoginUrl());
     }
   }, []);
 
@@ -42,7 +43,7 @@ export function AdminLoginPage() {
   useEffect(() => {
     if (!isLoading && user) {
       if (user.role === "super_admin" || user.role === "support") {
-        navigate("/admin", { replace: true });
+        safeNavigate(navigate, "/admin");
       }
     }
   }, [isLoading, user, navigate]);
@@ -60,12 +61,12 @@ export function AdminLoginPage() {
         tokenStorage.set(response.access_token);
         if (hasValidRedirect) {
           if (redirectUrl.startsWith("/")) {
-            navigate(redirectUrl, { replace: true });
+            safeNavigate(navigate, redirectUrl);
           } else {
-            window.location.href = redirectUrl;
+            safeHardRedirect(redirectUrl);
           }
         } else {
-          navigate("/admin", { replace: true });
+          safeNavigate(navigate, "/admin");
         }
       }
     } catch (err) {
