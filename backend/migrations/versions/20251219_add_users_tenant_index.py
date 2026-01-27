@@ -1,7 +1,7 @@
 """Add composite index for users pagination performance.
 
 Revision ID: 20251219_users_tenant_idx
-Revises: 20251219_domain_status
+Revises: 20251219_payment_sched
 Create Date: 2024-12-19
 
 """
@@ -9,7 +9,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "20251219_users_tenant_idx"
-down_revision = "20251219_domain_status"
+down_revision = "20251219_payment_sched"
 branch_labels = None
 depends_on = None
 

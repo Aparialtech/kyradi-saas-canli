@@ -32,6 +32,7 @@ export { AdminInvoicePage } from "./invoice/AdminInvoicePage";
 export { TenantsPage as AdminTenantsPage } from "./tenants/TenantsPage";
 export { TenantCreatePage as AdminTenantCreatePage } from "./tenants/TenantCreatePage";
 export { TenantEditPage as AdminTenantEditPage } from "./tenants/TenantEditPage";
+export { TenantDomainsPage as AdminTenantDomainsPage } from "./tenants/TenantDomainsPage";
 export { AdminAuditLogsPage as AdminAuditPage } from "./audit/AdminAuditLogsPage";
 export { AdminRevenuePage } from "./revenue/AdminRevenuePage";
 export { AdminSettlementsPage } from "./settlements/AdminSettlementsPage";
@@ -168,4 +169,3 @@ export function AdminDashboard() {
     </ConfirmProvider>
   );
 }
-

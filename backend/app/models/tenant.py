@@ -72,6 +72,11 @@ class Tenant(IdentifiedMixin, TimestampMixin, Base):
         back_populates="tenant",
         cascade="all, delete-orphan",
     )
+    domains: Mapped[List["TenantDomain"]] = relationship(
+        "TenantDomain",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
     audit_logs: Mapped[List["AuditLog"]] = relationship(
         "AuditLog",
         back_populates="tenant",

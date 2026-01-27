@@ -24,6 +24,7 @@ from app.reservations.router_public import router as widget_public_router
 
 from .routes import (
     admin,
+    admin_tenant_domains,
     admin_users,
     partner_reservations,
     partner_settings,
@@ -62,6 +63,7 @@ api_router = APIRouter()
 
 api_router.include_router(auth.router)
 api_router.include_router(admin.router)
+api_router.include_router(admin_tenant_domains.router)
 api_router.include_router(admin_users.router)
 api_router.include_router(partner_reservations.router)
 api_router.include_router(partner_settings.router)

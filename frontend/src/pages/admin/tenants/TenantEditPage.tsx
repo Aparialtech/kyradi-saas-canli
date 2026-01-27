@@ -271,6 +271,15 @@ export function TenantEditPage() {
             </p>
           </div>
         </div>
+        <div style={{ marginTop: "var(--space-4)" }}>
+          <ModernButton
+            variant="ghost"
+            onClick={() => navigate(`/admin/tenants/${tenant.id}/domains`)}
+            leftIcon={<Globe className="h-4 w-4" />}
+          >
+            Domain Yönetimi
+          </ModernButton>
+        </div>
       </motion.div>
 
       {/* Form */}

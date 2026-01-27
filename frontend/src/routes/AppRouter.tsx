@@ -6,6 +6,7 @@ import {
   AdminTenantsPage,
   AdminTenantCreatePage,
   AdminTenantEditPage,
+  AdminTenantDomainsPage,
   AdminReportsOverview,
   AdminReportsAnalyticsPage,
   AdminInvoicePage,
@@ -99,6 +100,7 @@ export function AppRouter() {
           <Route path="tenants" element={<AdminTenantsPage />} />
           <Route path="tenants/new" element={<AdminTenantCreatePage />} />
           <Route path="tenants/:id/edit" element={<AdminTenantEditPage />} />
+          <Route path="tenants/:tenantId/domains" element={<AdminTenantDomainsPage />} />
           <Route path="revenue" element={<AdminRevenuePage />} />
           <Route path="settlements" element={<AdminSettlementsPage />} />
           <Route path="transfers" element={<AdminTransfersPage />} />

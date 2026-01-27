@@ -72,3 +72,23 @@ class DomainStatus(str, Enum):
     PENDING = "pending"  # Verification in progress
     VERIFIED = "verified"  # Domain ownership verified
     FAILED = "failed"  # Verification failed
+
+
+class TenantDomainType(str, Enum):
+    """Tenant domain type for multi-domain support."""
+    SUBDOMAIN = "SUBDOMAIN"
+    CUSTOM_DOMAIN = "CUSTOM_DOMAIN"
+
+
+class TenantDomainStatus(str, Enum):
+    """Tenant domain lifecycle status for verification."""
+    PENDING = "PENDING"
+    VERIFYING = "VERIFYING"
+    VERIFIED = "VERIFIED"
+    FAILED = "FAILED"
+    DISABLED = "DISABLED"
+
+
+class TenantDomainVerificationMethod(str, Enum):
+    """Tenant domain verification method."""
+    DNS_TXT = "DNS_TXT"

@@ -49,6 +49,13 @@ from .tenant import (
     TenantRead,
     TenantUpdate,
 )
+from .tenant_domain import (
+    TenantDomainCreate,
+    TenantDomainRead,
+    TenantDomainUpdate,
+    TenantDomainVerificationCheck,
+    TenantDomainVerificationStart,
+)
 from .self_service import (
     SelfServiceReservationRequest,
     SelfServiceReservationResponse,
@@ -119,6 +126,11 @@ __all__ = [
     "TenantPlanLimitsUpdate",
     "TenantRead",
     "TenantUpdate",
+    "TenantDomainCreate",
+    "TenantDomainRead",
+    "TenantDomainUpdate",
+    "TenantDomainVerificationCheck",
+    "TenantDomainVerificationStart",
     "SelfServiceReservationRequest",
     "SelfServiceReservationResponse",
     "SelfServiceReservationCreateRequest",
