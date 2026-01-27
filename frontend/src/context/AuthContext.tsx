@@ -14,7 +14,8 @@ import { tokenStorage } from "../lib/tokenStorage";
 import { setOnUnauthorized } from "../lib/http";
 import { errorLogger } from "../lib/errorLogger";
 import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
-import { safeNavigate } from "../utils/safeNavigate";
+import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
+import { safeHardRedirect, safeNavigate } from "../utils/safeNavigate";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -125,6 +126,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setToken(null);
       setUser(null);
       localStorage.removeItem("tenant_slug");
+      const hostType = detectHostType();
+      if (!isDevelopment() && hostType === "tenant") {
+        safeHardRedirect(getPartnerLoginUrl(window.location.href));
+        return;
+      }
+      if (hostType === "admin") {
+        safeNavigate(navigate, "/admin/login");
+        return;
+      }
+      if (hostType === "app") {
+        safeNavigate(navigate, "/partner/login");
+        return;
+      }
       safeNavigate(navigate, "/login");
     });
     
