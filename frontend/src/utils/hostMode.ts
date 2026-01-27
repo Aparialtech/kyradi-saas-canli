@@ -1,4 +1,4 @@
-export type HostMode = "branding" | "admin" | "panel";
+export type HostMode = "branding" | "admin" | "app" | "panel";
 
 const RESERVED_SUBDOMAINS = new Set([
   "admin",
@@ -23,8 +23,8 @@ export function getHostMode(hostname: string): HostMode {
     return "branding";
   }
   if (host === "admin.kyradi.com") return "admin";
-  if (host === "app.kyradi.com") return "panel";
-  if (host === "localhost" || host === "127.0.0.1") return "panel";
+  if (host === "app.kyradi.com") return "app";
+  if (host === "localhost" || host === "127.0.0.1") return "app";
   if (host.endsWith(".vercel.app")) return "branding";
 
   if (host.endsWith(".kyradi.com")) {
