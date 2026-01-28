@@ -47,45 +47,26 @@ export function isDevelopment(): boolean {
  */
 export function detectHostType(): HostType {
   const host = getCurrentHost();
-  const hostWithPort = getCurrentHostWithPort();
-  
-  // Development mode - use path-based routing
+
   if (isDevelopment()) {
-    // In dev, we'll use path to determine context
-    // /admin/* -> admin
-    // /partner/* or /app/* -> app
-    // Default -> app (for signup/onboarding)
     const path = window.location.pathname;
     if (path.startsWith("/admin")) return "admin";
     return "app";
   }
-  
-  // Production mode - use host-based routing
-  
-  // Admin host
-  if (host === ADMIN_HOST || hostWithPort === ADMIN_HOST) {
-    return "admin";
-  }
-  
-  // App host (main application)
-  if (host === APP_HOST || hostWithPort === APP_HOST) {
-    return "app";
-  }
-  
-  // Tenant subdomain ({slug}.kyradi.com)
+
+  if (host === ADMIN_HOST) return "admin";
+  if (host === APP_HOST) return "app";
   if (host.endsWith(`.${ROOT_DOMAIN}`)) {
     const subdomain = host.replace(`.${ROOT_DOMAIN}`, "");
-    // Exclude known subdomains
-    if (!["admin", "app", "www", "api"].includes(subdomain)) {
+    if (!["admin", "app", "www", "api", "branding", "mail", "cdn", "status"].includes(subdomain)) {
       return "tenant";
     }
   }
-  
-  // Custom domain (not our domain at all)
+
   if (!host.endsWith(ROOT_DOMAIN) && !isDevelopment()) {
     return "tenant";
   }
-  
+
   return "unknown";
 }
 

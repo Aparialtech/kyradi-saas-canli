@@ -7,9 +7,10 @@ import { motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { authService } from "../../services/auth";
-import { tokenStorage } from "../../lib/tokenStorage";
+import { tokenStorage, tenantSlugStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
-import { detectHostType, getAdminLoginUrl, getPartnerLoginUrl, getTenantUrl, isDevelopment } from "../../lib/hostDetection";
+import { getAdminLoginUrl, getPartnerLoginUrl, getTenantUrl, isDevelopment } from "../../lib/hostDetection";
+import { getHostMode } from "../../lib/hostMode";
 import { Lock, Mail, Eye, EyeOff, Hotel, Building2, CheckCircle2 } from "../../lib/lucide";
 import { sanitizeRedirect } from "../../utils/safeRedirect";
 import { safeHardRedirect, safeNavigate } from "../../utils/safeNavigate";
@@ -36,8 +37,9 @@ export function PartnerLoginPage() {
   }, [rawRedirectUrl, redirectUrl]);
 
   useEffect(() => {
-    if (!isDevelopment() && detectHostType() !== "app") {
-      safeHardRedirect(getPartnerLoginUrl());
+    if (!isDevelopment() && getHostMode(window.location.hostname) !== "app") {
+      const redirectTarget = `${window.location.origin}/app`;
+      safeHardRedirect(getPartnerLoginUrl(redirectTarget));
     }
   }, []);
 
@@ -80,7 +82,7 @@ export function PartnerLoginPage() {
         tokenStorage.set(response.access_token);
         await refreshUser();
         if (response.tenant_slug) {
-          localStorage.setItem("tenant_slug", response.tenant_slug);
+          tenantSlugStorage.set(response.tenant_slug);
         }
         if (debugAuth) {
           console.debug("[login] success -> redirect", { tenant: response.tenant_slug });

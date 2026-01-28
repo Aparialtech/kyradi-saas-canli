@@ -5,6 +5,10 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/auth/:path*"
     },
     {
+      "source": "/api/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/api/:path*"
+    },
+    {
       "source": "/admin/:path*",
       "has": [
         { "type": "header", "key": "x-requested-with", "value": "XMLHttpRequest" }

@@ -10,11 +10,12 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { authService } from "../services/auth";
-import { tokenStorage } from "../lib/tokenStorage";
+import { tokenStorage, tenantSlugStorage } from "../lib/tokenStorage";
 import { setOnUnauthorized } from "../lib/http";
 import { errorLogger } from "../lib/errorLogger";
 import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
 import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
+import { getHostMode } from "../lib/hostMode";
 import { safeHardRedirect, safeNavigate } from "../utils/safeNavigate";
 
 interface AuthContextValue {
@@ -110,7 +111,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const logout = useCallback(() => {
     tokenStorage.clear();
-    localStorage.removeItem("tenant_slug");
+    tenantSlugStorage.clear();
     setToken(null);
     setUser(null);
     safeNavigate(navigate, "/login");
@@ -125,10 +126,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
       setToken(null);
       setUser(null);
-      localStorage.removeItem("tenant_slug");
+      tenantSlugStorage.clear();
       const hostType = detectHostType();
+      const hostMode = getHostMode(window.location.hostname);
       if (!isDevelopment() && hostType === "tenant") {
-        safeHardRedirect(getPartnerLoginUrl(window.location.href));
+        const redirectTarget = `${window.location.origin}/app`;
+        const loginUrl = getPartnerLoginUrl(redirectTarget);
+        const key = `redir:${window.location.host}:${loginUrl}`;
+        if (!sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, "1");
+          safeHardRedirect(loginUrl);
+        }
         return;
       }
       if (hostType === "admin") {
@@ -137,6 +145,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
       if (hostType === "app") {
         safeNavigate(navigate, "/partner/login");
+        return;
+      }
+      if (hostMode === "public") {
+        safeNavigate(navigate, "/");
         return;
       }
       safeNavigate(navigate, "/login");

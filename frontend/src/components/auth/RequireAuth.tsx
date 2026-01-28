@@ -16,24 +16,8 @@ interface RequireAuthProps {
  * Only allows redirects to kyradi.com subdomains for security.
  */
 function buildPartnerLoginRedirect(): string {
-  const currentUrl = window.location.href;
-  
-  // Security: Only allow redirects to kyradi.com domains
-  try {
-    const url = new URL(currentUrl);
-    const isKyradiDomain = url.hostname.endsWith(".kyradi.com") || 
-                          url.hostname === "kyradi.com" ||
-                          url.hostname === "localhost" ||
-                          url.hostname === "127.0.0.1";
-    
-    if (isKyradiDomain) {
-      return getPartnerLoginUrl(currentUrl);
-    }
-  } catch {
-    // Invalid URL, don't add redirect
-  }
-  
-  return getPartnerLoginUrl();
+  const target = `${window.location.origin}/app`;
+  return getPartnerLoginUrl(target);
 }
 
 export function RequireAuth({
@@ -59,7 +43,11 @@ export function RequireAuth({
     // For tenant hosts (subdomain), redirect to app host with redirect param
     if (hostType === "tenant" && !isDevelopment()) {
       const loginUrl = buildPartnerLoginRedirect();
-      safeHardRedirect(loginUrl);
+      const key = `redir:${window.location.host}:${loginUrl}`;
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        safeHardRedirect(loginUrl);
+      }
       return <FullPageSpinner />;
     }
     

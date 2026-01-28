@@ -64,7 +64,8 @@ import { UserGuidePage } from "../pages/common/UserGuidePage";
 import { DomainSetupGuidePage } from "../pages/partner/docs/DomainSetupGuidePage";
 import { NotFoundPage } from "../pages/common/NotFoundPage";
 import { isDevelopment } from "../lib/hostDetection";
-import { getHostMode } from "../utils/hostMode";
+import { getHostMode } from "../lib/hostMode";
+import { tenantSlugStorage } from "../lib/tokenStorage";
 import { useAuth } from "../context/AuthContext";
 import { safeHardRedirect } from "../utils/safeNavigate";
 
@@ -72,7 +73,7 @@ export function AppRouter() {
   const location = useLocation();
   const hostname = typeof window !== "undefined" ? window.location.hostname : "";
   const mode = getHostMode(hostname);
-  const isTenantHost = isDevelopment() || mode === "panel";
+  const isTenantHost = isDevelopment() || mode === "tenant";
   const debugAuth = import.meta.env.VITE_DEBUG_AUTH === "true";
 
   // Ensure re-render on path changes for dev host detection
@@ -133,7 +134,7 @@ export function AppRouter() {
     </Route>
   );
 
-  if (mode === "branding") {
+  if (mode === "public") {
     return (
       <Routes>
         <Route path="/" element={<LandingPage />} />
@@ -179,7 +180,7 @@ export function AppRouter() {
     const AppHostPanelRedirect = () => {
       const { user, isLoading } = useAuth();
       if (isLoading) return null;
-      const slug = localStorage.getItem("tenant_slug");
+      const slug = tenantSlugStorage.get();
       if (user?.tenant_id && slug) {
         safeHardRedirect(`https://${slug}.kyradi.com/app`);
         return null;
@@ -211,7 +212,7 @@ export function AppRouter() {
     );
   }
 
-  if (mode === "panel") {
+  if (mode === "tenant") {
     return (
       <Routes>
         <Route path="/" element={<Navigate to="/app" replace />} />
