@@ -39,6 +39,7 @@ class PricingService {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({
         ...(request.tenant_id ? { tenant_id: request.tenant_id } : {}),
         ...(request.tenant_slug ? { tenant_slug: request.tenant_slug } : {}),

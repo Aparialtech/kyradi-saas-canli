@@ -164,6 +164,7 @@ export function useKyradiAI({
               method: "POST",
               headers,
               body: JSON.stringify(payload),
+              credentials: "include",
             });
 
             let data: any = null;
