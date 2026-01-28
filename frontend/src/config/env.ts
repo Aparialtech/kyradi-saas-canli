@@ -3,13 +3,8 @@ const parseBoolean = (value: string | undefined, fallback: boolean) => {
   return ["1", "true", "yes", "on"].includes(value.toLowerCase());
 };
 
-const normalize = (url?: string): string => {
-  if (!url || !url.trim()) return "";
-  return url.replace(/\/+$/, "");
-};
-
 export const env = {
-  API_URL: normalize(import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL),
+  API_URL: "", // ALWAYS same-origin
   TENANT_ID: (import.meta.env.VITE_TENANT_ID || "").trim(),
   ENABLE_INTERNAL_RESERVATIONS: parseBoolean(
     import.meta.env.VITE_ENABLE_INTERNAL_RESERVATIONS,
