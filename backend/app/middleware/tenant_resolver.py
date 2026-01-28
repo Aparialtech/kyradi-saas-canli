@@ -12,7 +12,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db.session import AsyncSessionMaker
 from ..models import Tenant, TenantDomain, TenantDomainStatus, DomainStatus
 
+
+
 logger = logging.getLogger(__name__)
+
+
+def get_effective_host(request: Request) -> str:
+    """Get the effective host for proxied requests."""
+    for header in ("x-forwarded-host", "x-vercel-forwarded-host", "host"):
+        value = request.headers.get(header)
+        if value:
+            return value
+    return ""
+
 
 # Base domains for Kyradi (subdomains will be *.kyradi.com or *.kyradi.app)
 BASE_DOMAINS = {"kyradi.com", "kyradi.app", "localhost", "127.0.0.1"}
@@ -39,6 +51,7 @@ PUBLIC_PATHS = {
     "/auth/verify-reset-code",
     "/auth/reset-password",
     "/auth/onboarding/create-tenant",
+    "/auth/me",
     "/admin",
     "/public",
 }
@@ -175,7 +188,7 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        host = request.headers.get("host", "")
+        host = get_effective_host(request)
         host_without_port = normalize_host(host)
         
         # Skip tenant resolution for admin/app hosts and development

@@ -14,7 +14,16 @@ from ..models import Tenant, User, UserRole
 from ..services.audit import record_audit
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+
 logger = logging.getLogger(__name__)
+
+
+def _safe_token_preview(token: str | None) -> str | None:
+    if not token:
+        return None
+    return token[:10]
+
 
 
 async def _record_security_audit(
@@ -83,6 +92,19 @@ async def get_current_user(
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Decode JWT token and return the current user."""
+    if request:
+        if request.url.path.startswith("/auth/me"):
+            auth_header = request.headers.get("authorization")
+            cookie_token = request.cookies.get("access_token")
+            logger.info(
+                "auth_me request host=%s xf_host=%s x_vercel_host=%s origin=%s cookie=%s auth=%s",
+                request.headers.get("host"),
+                request.headers.get("x-forwarded-host"),
+                request.headers.get("x-vercel-forwarded-host"),
+                request.headers.get("origin"),
+                _safe_token_preview(cookie_token),
+                _safe_token_preview(auth_header.split(" ", 1)[1] if auth_header and " " in auth_header else None),
+            )
     if not token and request:
         token = request.cookies.get("access_token")
     if not token:
@@ -119,6 +141,8 @@ async def get_current_user(
     if request:
         request.state.token_tenant_id = tenant_id
     request_tenant_id = getattr(request.state, "tenant_id", None) if request else None
+    if request and not request_tenant_id and tenant_id:
+        request.state.tenant_id = tenant_id
     effective_tenant_id = tenant_id or request_tenant_id
 
     if tenant_id and request_tenant_id and tenant_id != request_tenant_id:
