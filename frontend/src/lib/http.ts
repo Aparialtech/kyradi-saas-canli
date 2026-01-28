@@ -34,6 +34,7 @@ http.interceptors.request.use(
     // Force same-origin for all requests in browser
     config.baseURL = "";
     config.headers = config.headers ?? {};
+    config.headers["X-Requested-With"] = "XMLHttpRequest";
     if (env.TENANT_ID && hostType !== "tenant") {
       config.headers["X-Tenant-ID"] = env.TENANT_ID;
     }

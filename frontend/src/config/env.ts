@@ -9,7 +9,9 @@ const normalize = (url?: string): string => {
 };
 
 export const env = {
-  API_URL: normalize(import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL),
+  API_URL: import.meta.env.DEV
+    ? normalize(import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL)
+    : "",
   TENANT_ID: (import.meta.env.VITE_TENANT_ID || "").trim(),
   ENABLE_INTERNAL_RESERVATIONS: parseBoolean(
     import.meta.env.VITE_ENABLE_INTERNAL_RESERVATIONS,

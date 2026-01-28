@@ -2,17 +2,14 @@
   "rewrites": [
     {
       "source": "/auth/:path*",
-      "has": [
-        { "type": "host", "value": "app.kyradi.com" }
-      ],
       "destination": "https://kyradi-saas-canli-production.up.railway.app/auth/:path*"
     },
     {
-      "source": "/auth/:path*",
+      "source": "/admin/:path*",
       "has": [
-        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+        { "type": "header", "key": "x-requested-with", "value": "XMLHttpRequest" }
       ],
-      "destination": "https://kyradi-saas-canli-production.up.railway.app/auth/:path*"
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/admin/:path*"
     },
     {
       "source": "/partners/:path*",
@@ -83,6 +80,10 @@
         { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
       ],
       "destination": "https://kyradi-saas-canli-production.up.railway.app/public/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ]
 }

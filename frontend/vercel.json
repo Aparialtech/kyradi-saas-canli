@@ -5,6 +5,53 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/auth/:path*"
     },
     {
+      "source": "/admin/:path*",
+      "has": [
+        { "type": "header", "key": "x-requested-with", "value": "XMLHttpRequest" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/admin/:path*"
+    },
+    {
+      "source": "/partners/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/partners/:path*"
+    },
+    {
+      "source": "/users/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/users/:path*"
+    },
+    {
+      "source": "/staff/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/staff/:path*"
+    },
+    {
+      "source": "/reports/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/reports/:path*"
+    },
+    {
+      "source": "/payment-schedules/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/payment-schedules/:path*"
+    },
+    {
+      "source": "/reservations/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/reservations/:path*"
+    },
+    {
+      "source": "/locations/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/locations/:path*"
+    },
+    {
+      "source": "/storages/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/storages/:path*"
+    },
+    {
+      "source": "/pricing-rules/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules/:path*"
+    },
+    {
+      "source": "/public/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/public/:path*"
+    },
+    {
       "source": "/:path*",
       "destination": "/index.html"
     }
