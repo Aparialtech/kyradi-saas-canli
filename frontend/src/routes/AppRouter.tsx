@@ -212,9 +212,14 @@ export function AppRouter() {
   }
 
   if (mode === "panel") {
+    const TenantLoginRedirect = () => {
+      safeHardRedirect(getPartnerLoginUrl(window.location.href));
+      return null;
+    };
     return (
       <Routes>
         <Route path="/" element={<Navigate to="/app" replace />} />
+        <Route path="/partner/login" element={<TenantLoginRedirect />} />
         {panelRoutes}
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
@@ -229,6 +234,7 @@ export function AppRouter() {
         }
       >
         <Route path="/" element={<Navigate to="/app" replace />} />
+        <Route path="/partner/login" element={<TenantLoginRedirect />} />
         <Route path="/app" element={<PartnerDashboard />}>
           <Route index element={<PartnerOverview />} />
           <Route path="export-guide" element={<ExportGuidePage />} />
