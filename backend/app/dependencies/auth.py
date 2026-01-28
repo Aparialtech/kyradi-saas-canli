@@ -93,7 +93,7 @@ async def get_current_user(
 ) -> User:
     """Decode JWT token and return the current user."""
     if request:
-        if request.url.path.startswith("/auth/"):
+        if request.url.path.startswith("/auth/") or request.url.path.startswith("/admin/"):
             auth_header = request.headers.get("authorization")
             cookie_token = request.cookies.get("access_token")
             logger.info(

@@ -7,10 +7,10 @@ import { tokenStorage } from "./tokenStorage";
 import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
-const resolvedBaseUrl = env.API_URL.replace(/\/+$/, "");
+const resolvedBaseUrl = isDevelopment() ? env.API_URL.replace(/\/+$/, "") : "";
 // Startup log for debugging deployed envs
 if (import.meta.env.DEV) {
-  console.debug("[HTTP] Using API base URL:", resolvedBaseUrl, "host:", window.location.host);
+  console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)", "host:", window.location.host);
 }
 
 // Callback for handling 401 errors (will be set by AuthContext)
@@ -33,12 +33,6 @@ export const http = axios.create({
 http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     config.headers = config.headers ?? {};
-    const url = config.url || "";
-    const authSameOrigin = url.startsWith("/auth/");
-    if (authSameOrigin) {
-      config.baseURL = "";
-    }
-
     const token = tokenStorage.get();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
