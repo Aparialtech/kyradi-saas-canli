@@ -16,7 +16,26 @@ from ..services.audit import record_audit
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
+
+
 logger = logging.getLogger(__name__)
+
+
+def get_effective_host(request: Request | None) -> str | None:
+    if not request:
+        return None
+    for header in ("x-forwarded-host", "x-vercel-forwarded-host", "host"):
+        value = request.headers.get(header)
+        if value:
+            return value.split(":")[0].lower()
+    return None
+
+
+def _safe_token_preview(token: str | None) -> str | None:
+    if not token:
+        return None
+    return token[:10]
+
 
 
 def _safe_token_preview(token: str | None) -> str | None:

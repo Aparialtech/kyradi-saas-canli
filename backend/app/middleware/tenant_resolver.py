@@ -201,6 +201,12 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             logger.debug(f"Skipping tenant resolution for host: {host}")
             return await call_next(request)
         
+        # Skip tenant resolution for auth paths
+        if request.url.path.startswith("/auth"):
+            request.state.tenant = None
+            request.state.tenant_id = None
+            return await call_next(request)
+
         # Skip tenant resolution for public paths
         if is_public_path(request.url.path):
             request.state.tenant = None
