@@ -14,6 +14,7 @@ import { getErrorMessage } from "../../lib/httpError";
 import { useTranslation } from "../../hooks/useTranslation";
 import { errorLogger } from "../../lib/errorLogger";
 import styles from "./DemoFlowPage.module.css";
+import { env } from "../../config/env";
 
 declare global {
   interface Window {

@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { getApiBase } from "../../utils/apiBase";
 import { useLocale, type SupportedLocale } from "../../context/LocaleContext";
 import { useTranslation } from "../../hooks/useTranslation";
+import { env } from "../../config/env";
 
 // Demo tenant - fixed ID that matches backend seeding
 const DEMO_TENANT = "7d7417b7-17fe-4857-ab14-dd3f390ec497";

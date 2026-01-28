@@ -3,7 +3,6 @@ import type { InternalAxiosRequestConfig } from "axios";
 
 import { env } from "../config/env";
 import { detectHostType } from "./hostDetection";
-import { tokenStorage } from "./tokenStorage";
 import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
@@ -33,10 +32,6 @@ export const http = axios.create({
 http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     config.headers = config.headers ?? {};
-    const token = tokenStorage.get();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
     if (env.TENANT_ID && hostType !== "tenant") {
       config.headers["X-Tenant-ID"] = env.TENANT_ID;
     }
@@ -90,7 +85,6 @@ http.interceptors.response.use(
           url: axiosError.config?.url,
           method: axiosError.config?.method,
         });
-        tokenStorage.clear();
         // Trigger the logout callback if set
         if (onUnauthorized) {
           onUnauthorized();
