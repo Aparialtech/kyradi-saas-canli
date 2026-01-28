@@ -10,9 +10,6 @@
     },
     {
       "source": "/admin/:path*",
-      "has": [
-        { "type": "header", "key": "x-requested-with", "value": "XMLHttpRequest" }
-      ],
       "destination": "https://kyradi-saas-canli-production.up.railway.app/admin/:path*"
     },
     {
