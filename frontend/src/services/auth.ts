@@ -18,22 +18,24 @@ import type {
   TenantOnboardingResponse,
 } from "../types/auth";
 
+const AUTH_BASE = "https://api.kyradi.com";
+
 export const authService = {
   async login(payload: LoginPayload): Promise<TokenResponse> {
-    const response = await http.post<TokenResponse>("/auth/login", payload);
+    const response = await http.post<TokenResponse>("/auth/login", payload, { baseURL: AUTH_BASE });
     return response.data;
   },
   async loginPartner(payload: LoginPayload): Promise<PartnerLoginResponse> {
-    const response = await http.post<PartnerLoginResponse>("/auth/partner/login", payload);
+    const response = await http.post<PartnerLoginResponse>("/auth/partner/login", payload, { baseURL: AUTH_BASE });
     return response.data;
   },
   async loginAdmin(payload: LoginPayload): Promise<TokenResponse> {
-    const response = await http.post<TokenResponse>("/auth/admin/login", payload);
+    const response = await http.post<TokenResponse>("/auth/admin/login", payload, { baseURL: AUTH_BASE });
     return response.data;
   },
   async getCurrentUser(): Promise<AuthUser> {
     try {
-      const response = await http.get<AuthUser>("/auth/me");
+      const response = await http.get<AuthUser>("/auth/me", { baseURL: AUTH_BASE });
       if (import.meta.env.DEV) {
         console.debug("[auth] /auth/me", response.status, "host:", window.location.host);
       }
