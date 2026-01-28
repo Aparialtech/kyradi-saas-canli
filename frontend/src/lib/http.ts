@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 
 import { env } from "../config/env";
-import { detectHostType, isDevelopment } from "./hostDetection";
+import { detectHostType } from "./hostDetection";
 import { tokenStorage } from "./tokenStorage";
 import { errorLogger, ErrorSeverity } from "./errorLogger";
 
