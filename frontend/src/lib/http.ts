@@ -31,6 +31,8 @@ export const http = axios.create({
 // Request interceptor
 http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Force same-origin for all requests in browser
+    config.baseURL = "";
     config.headers = config.headers ?? {};
     if (env.TENANT_ID && hostType !== "tenant") {
       config.headers["X-Tenant-ID"] = env.TENANT_ID;
