@@ -17,3 +17,11 @@
 - CORS için `CORS_ORIGINS` env'ine şu originler eklenmeli:
   `https://app.kyradi.com`, `https://admin.kyradi.com`, `https://branding.kyradi.com`,
   `https://kyradi.com`, `https://www.kyradi.com` (virgülle ayrılmış).
+
+
+## Manual Auth Checklist
+- app.kyradi.com üzerinde login → /auth/me 200
+- demo-hotel.kyradi.com/app → dashboard (loginli)
+- demo-hotel.kyradi.com/auth/me → 200 (loginli)
+- login değilken demo-hotel.kyradi.com/app → app.kyradi.com/partner/login?redirect=...
+- infinite refresh / loop yok

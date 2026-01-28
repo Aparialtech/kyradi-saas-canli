@@ -6,7 +6,7 @@ import { detectHostType } from "./hostDetection";
 import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
-const resolvedBaseUrl = "";
+const resolvedBaseUrl = env.API_URL;
 // Startup log for debugging deployed envs
 if (import.meta.env.DEV) {
   console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)", "host:", typeof window !== "undefined" ? window.location.host : "");
