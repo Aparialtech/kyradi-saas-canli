@@ -62,6 +62,9 @@ def is_public_path(path: str) -> bool:
     if not path:
         return True
     
+    if path.startswith("/auth/"):
+        return True
+
     # Exact match or prefix match
     for public_path in PUBLIC_PATHS:
         if path == public_path or path.startswith(f"{public_path}/"):
@@ -205,6 +208,7 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         
         tenant: Optional[Tenant] = None
+        is_auth_path = request.url.path.startswith("/auth/")
         
         # 1. Check X-Tenant-ID header first (API clients)
         tenant_id_header = request.headers.get("x-tenant-id")
@@ -219,7 +223,7 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             slug = extract_tenant_from_host(host)
             if slug:
                 tenant = await resolve_tenant_by_slug(slug)
-                if not tenant:
+                if not tenant and not is_auth_path:
                     logger.warning(f"Tenant not found for subdomain: {slug}")
                     return JSONResponse(
                         status_code=404,
@@ -240,7 +244,7 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
                 host_without_port.endswith(f".{bd}") for bd in BASE_DOMAINS
             ):
                 tenant = await resolve_tenant_by_custom_domain(host_without_port)
-                if not tenant:
+                if not tenant and not is_auth_path:
                     logger.warning(f"Tenant not found for custom domain: {host_without_port}")
                     return JSONResponse(
                         status_code=404,

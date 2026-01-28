@@ -33,6 +33,12 @@ export const http = axios.create({
 http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     config.headers = config.headers ?? {};
+    const url = config.url || "";
+    const authSameOrigin = url.startsWith("/auth/");
+    if (authSameOrigin) {
+      config.baseURL = "";
+    }
+
     const token = tokenStorage.get();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

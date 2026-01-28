@@ -93,8 +93,21 @@ async def get_current_user(
 ) -> User:
     """Decode JWT token and return the current user."""
     if request:
-        if request.url.path.startswith("/auth/me"):
+        if request.url.path.startswith("/auth/"):
             auth_header = request.headers.get("authorization")
+            cookie_token = request.cookies.get("access_token")
+            logger.info(
+                "auth_req url=%s host=%s xf_host=%s x_vercel_host=%s origin=%s cookie_present=%s auth_present=%s token_tenant=%s tenant_state=%s",
+                request.url.path,
+                request.headers.get("host"),
+                request.headers.get("x-forwarded-host"),
+                request.headers.get("x-vercel-forwarded-host"),
+                request.headers.get("origin"),
+                bool(cookie_token),
+                bool(auth_header),
+                _safe_token_preview((auth_header.split(" ", 1)[1] if auth_header and " " in auth_header else None)),
+                getattr(request.state, "tenant_id", None),
+            )
             cookie_token = request.cookies.get("access_token")
             logger.info(
                 "auth_me request host=%s xf_host=%s x_vercel_host=%s origin=%s cookie=%s auth=%s",
@@ -154,7 +167,7 @@ async def get_current_user(
             host_tenant_id=request_tenant_id,
             request=request,
         )
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="tenant_mismatch")
 
     if user.role not in {UserRole.SUPER_ADMIN.value, UserRole.SUPPORT.value}:
         if effective_tenant_id is None:
@@ -168,7 +181,7 @@ async def get_current_user(
                 host_tenant_id=request_tenant_id,
                 request=request,
             )
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="tenant_mismatch")
         tenant = await session.execute(select(Tenant).where(Tenant.id == effective_tenant_id, Tenant.is_active == True))
         if tenant.scalar_one_or_none() is None:
             await _record_security_audit(
@@ -179,7 +192,7 @@ async def get_current_user(
                 host_tenant_id=request_tenant_id,
                 request=request,
             )
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="tenant_mismatch")
 
     return user
 
