@@ -2,15 +2,15 @@ import axios, { AxiosError } from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 
 import { env } from "../config/env";
-import { detectHostType, isDevelopment } from "./hostDetection";
+import { detectHostType } from "./hostDetection";
 import { tokenStorage } from "./tokenStorage";
 import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
-const resolvedBaseUrl = isDevelopment() ? env.API_URL.replace(/\/+$/, "") : "";
+const resolvedBaseUrl = "";
 // Startup log for debugging deployed envs
 if (import.meta.env.DEV) {
-  console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)", "host:", window.location.host);
+  console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)", "host:", typeof window !== "undefined" ? window.location.host : "");
 }
 
 // Callback for handling 401 errors (will be set by AuthContext)

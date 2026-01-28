@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 
 import { KyradiChat } from "./KyradiChat";
 import { useAuth } from "../context/AuthContext";
-import { env } from "../config/env";
+import { getApiBase } from "../utils/apiBase";
 import { useTranslation } from "../hooks/useTranslation";
 import { MessageSquare, X } from "../lib/lucide";
 
@@ -212,7 +212,7 @@ export function FloatingChatWidget() {
       <div className={`kyradi-chat-widget__panel ${open ? "" : "kyradi-chat-widget__panel--hidden"}`}>
         {open && userId && (
           <KyradiChat
-            apiBase={env.API_URL}
+            apiBase={getApiBase()}
             tenantId={tenantId || undefined}
             userId={userId}
             userRole={userRole}

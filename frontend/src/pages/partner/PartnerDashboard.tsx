@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 
 import { useAuth } from "../../context/AuthContext";
+import { getApiBase } from "../../utils/apiBase";
 import {
   partnerReportService,
   type PartnerOverviewByPaymentMethodItem,
@@ -15,7 +16,6 @@ import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { KyradiChat } from "../../components/KyradiChat";
-import { env } from "../../config/env";
 import type { TranslationKey } from "../../i18n/translations";
 import { detectHostType, isDevelopment } from "../../lib/hostDetection";
 
@@ -488,7 +488,7 @@ export function PartnerOverview() {
             </p>
             <div style={{ width: '100%' }}>
               <KyradiChat
-                apiBase={env.API_URL}
+                apiBase={getApiBase()}
                 tenantId={user.tenant_id}
                 userId={user.id}
                 locale={locale}

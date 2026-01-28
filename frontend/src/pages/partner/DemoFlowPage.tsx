@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Lock, CheckCircle2 } from "../../lib/lucide";
 
-import { env } from "../../config/env";
+import { getApiBase } from "../../utils/apiBase";
 import { partnerWidgetService } from "../../services/partner/widgetConfig";
 import { demoService, type Storage } from "../../services/partner/demo";
 import { magicpayService } from "../../services/partner/magicpay";
@@ -200,7 +200,7 @@ export function DemoFlowPage() {
       scriptEl = document.createElement("script");
       scriptEl.src = `${cdnBase}/widgets/kyradi-reserve.js`;
       scriptEl.defer = true;
-      scriptEl.dataset.apiBase = env.API_URL;
+      scriptEl.dataset.apiBase = getApiBase();
       scriptEl.dataset.tenantId = tenant_id;
       scriptEl.dataset.widgetKey = widget_public_key;
       scriptEl.dataset.locale = locale;
@@ -241,7 +241,7 @@ export function DemoFlowPage() {
           // Now create and append widget element (connectedCallback will be called)
           const widgetEl = document.createElement("kyradi-reserve");
           // Set data attributes for widget initialization
-          widgetEl.setAttribute("data-api-base", env.API_URL);
+          widgetEl.setAttribute("data-api-base", getApiBase());
           widgetEl.setAttribute("data-tenant-id", tenant_id);
           widgetEl.setAttribute("data-widget-key", widget_public_key);
           widgetEl.setAttribute("data-locale", locale);

@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { env } from "../../config/env";
+import { getApiBase } from "../../utils/apiBase";
 import { useLocale, type SupportedLocale } from "../../context/LocaleContext";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -52,7 +52,7 @@ export function WidgetDemoPage() {
 
   const [tenantId, setTenantId] = useState(searchParams.get("tenant_id") ?? DEMO_TENANT);
   const [widgetKey, setWidgetKey] = useState(searchParams.get("widget_key") ?? DEMO_WIDGET_KEY);
-  const [apiBase, setApiBase] = useState(searchParams.get("api_base") ?? env.API_URL);
+  const [apiBase, setApiBase] = useState(searchParams.get("api_base") ?? getApiBase());
   const [selectedLocale, setSelectedLocale] = useState<SupportedLocale>(resolvedInitialLocale);
   const [status, setStatus] = useState<string>("");
   const [lastSubmitted, setLastSubmitted] = useState<string | null>(null);

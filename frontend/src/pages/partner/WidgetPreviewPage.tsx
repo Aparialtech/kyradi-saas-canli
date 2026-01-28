@@ -21,7 +21,7 @@ import {
   FileText,
 } from "../../lib/lucide";
 
-import { env } from "../../config/env";
+import { getApiBase } from "../../utils/apiBase";
 import { partnerWidgetService } from "../../services/partner/widgetConfig";
 import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
@@ -127,7 +127,7 @@ export function WidgetPreviewPage() {
     if (!tenantQuery.data) return;
     const { tenant_id, widget_public_key } = tenantQuery.data;
     const cdnBase = env.PUBLIC_CDN_BASE || window.location.origin;
-    const code = buildSnippet(cdnBase, env.API_URL, tenant_id, widget_public_key, locale);
+    const code = buildSnippet(cdnBase, getApiBase(), tenant_id, widget_public_key, locale);
     setSnippet(code);
   }, [tenantQuery.data, locale]);
 
