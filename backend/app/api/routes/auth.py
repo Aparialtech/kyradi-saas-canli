@@ -50,11 +50,17 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 def _set_auth_cookie(response: Response, token: str, request: Request) -> None:
     is_development = settings.environment.lower() in {"local", "dev", "development"}
-    host = request.headers.get("host", "").split(":")[0].lower()
+    # Prefer forwarded host headers so cookie domain is correct behind Vercel proxy
+    host = (
+        request.headers.get("x-forwarded-host")
+        or request.headers.get("x-vercel-forwarded-host")
+        or request.headers.get("host", "")
+    )
+    host = host.split(":")[0].lower()
     domain = None
-    if host.endswith(".kyradi.com"):
+    if host == "kyradi.com" or host.endswith(".kyradi.com"):
         domain = ".kyradi.com"
-    elif host.endswith(".kyradi.app"):
+    elif host == "kyradi.app" or host.endswith(".kyradi.app"):
         domain = ".kyradi.app"
 
     response.set_cookie(
