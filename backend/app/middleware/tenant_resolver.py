@@ -62,7 +62,7 @@ def is_public_path(path: str) -> bool:
     if not path:
         return True
     
-    if path.startswith("/auth/"):
+    if path.startswith("/auth/") or path.startswith("/admin/"):
         return True
 
     # Exact match or prefix match
@@ -201,8 +201,8 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             logger.debug(f"Skipping tenant resolution for host: {host}")
             return await call_next(request)
         
-        # Skip tenant resolution for auth paths
-        if request.url.path.startswith("/auth"):
+        # Skip tenant resolution for auth/admin paths
+        if request.url.path.startswith("/auth") or request.url.path.startswith("/admin"):
             request.state.tenant = None
             request.state.tenant_id = None
             return await call_next(request)

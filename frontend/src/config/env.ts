@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = "https://api.kyradi.com";
+const DEFAULT_API_URL = "";
 // Demo tenant ID - matches backend seeding in db/utils.py
 const DEFAULT_TENANT_ID = "7d7417b7-17fe-4857-ab14-dd3f390ec497";
 

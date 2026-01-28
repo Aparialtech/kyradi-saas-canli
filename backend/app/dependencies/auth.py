@@ -116,25 +116,13 @@ async def get_current_user(
             auth_header = request.headers.get("authorization")
             cookie_token = request.cookies.get("access_token")
             logger.info(
-                "auth_req url=%s host=%s xf_host=%s x_vercel_host=%s origin=%s cookie_present=%s auth_present=%s token_tenant=%s tenant_state=%s",
+                "auth_req url=%s host=%s origin=%s cookie_present=%s auth_present=%s tenant_state=%s token_tenant=%s",
                 request.url.path,
-                request.headers.get("host"),
-                request.headers.get("x-forwarded-host"),
-                request.headers.get("x-vercel-forwarded-host"),
+                get_effective_host(request),
                 request.headers.get("origin"),
                 bool(cookie_token),
                 bool(auth_header),
-                _safe_token_preview((auth_header.split(" ", 1)[1] if auth_header and " " in auth_header else None)),
                 getattr(request.state, "tenant_id", None),
-            )
-            cookie_token = request.cookies.get("access_token")
-            logger.info(
-                "auth_me request host=%s xf_host=%s x_vercel_host=%s origin=%s cookie=%s auth=%s",
-                request.headers.get("host"),
-                request.headers.get("x-forwarded-host"),
-                request.headers.get("x-vercel-forwarded-host"),
-                request.headers.get("origin"),
-                _safe_token_preview(cookie_token),
                 _safe_token_preview(auth_header.split(" ", 1)[1] if auth_header and " " in auth_header else None),
             )
     if not token and request:
