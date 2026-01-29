@@ -8,7 +8,11 @@ const DEFAULT_TENANT_ID = "";
 
 const normalize = (url?: string): string => {
   if (!url || !url.trim()) return "";
-  return url.replace(/\/+$/, "");
+  const trimmed = url.trim().replace(/\/+$/, "");
+  if (trimmed.startsWith("http://")) {
+    return trimmed.replace("http://", "https://");
+  }
+  return trimmed;
 };
 
 export const env = {
