@@ -9,6 +9,8 @@ except Exception:  # noqa: BLE001 - uvloop is optional
 
 import logging
 import re
+import time
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,6 +44,7 @@ app = FastAPI(
     version="0.1.0",
     description="FastAPI backend for the KYRADİ SaaS platform.",
 )
+app.router.redirect_slashes = False
 
 # =============================================================================
 # CORS Configuration - Dynamic Origin Support
@@ -131,6 +134,36 @@ logger.info(f"CORS static origins: {STATIC_ORIGINS}")
 
 # Add custom CORS middleware BEFORE including routers
 app.add_middleware(DynamicCORSMiddleware)
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Log partner panel data endpoints with request_id and duration."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("x-request-id") or str(uuid4())
+        request.state.request_id = request_id
+        start = time.perf_counter()
+        response = None
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            duration_ms = (time.perf_counter() - start) * 1000
+            path = request.url.path
+            if path.startswith(("/locations", "/storages", "/reservations", "/tickets", "/partners", "/ai")):
+                tenant_id = getattr(request.state, "tenant_id", None) or getattr(request.state, "token_tenant_id", None)
+                logger.info(
+                    "req %s %s status=%s tenant_id=%s dur_ms=%.2f",
+                    request.method,
+                    path,
+                    getattr(response, "status_code", "err"),
+                    tenant_id,
+                    duration_ms,
+                )
+            if response is not None:
+                response.headers["x-request-id"] = request_id
+
+# Add logging middleware after CORS
+app.add_middleware(RequestLoggingMiddleware)
 
 # Tenant resolver middleware (optional - can be enabled when needed)
 # from .middleware import TenantResolverMiddleware
