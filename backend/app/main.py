@@ -14,7 +14,10 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+try:  # Proxy headers middleware import depends on runtime packages
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # type: ignore
+except Exception:  # pragma: no cover - fallback if uvicorn middleware not available
+    ProxyHeadersMiddleware = None  # type: ignore[assignment]
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
@@ -47,7 +50,8 @@ app = FastAPI(
 )
 app.router.redirect_slashes = False
 # Trust proxy headers so scheme/host are correct behind Vercel/Railway.
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+if ProxyHeadersMiddleware is not None:
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # =============================================================================
 # CORS Configuration - Dynamic Origin Support
