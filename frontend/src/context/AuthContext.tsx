@@ -110,10 +110,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const logout = useCallback(() => {
+    void authService.logout().catch(() => {
+      // best-effort; still clear local state
+    });
     tokenStorage.clear();
     tenantSlugStorage.clear();
     setToken(null);
     setUser(null);
+    const hostType = detectHostType();
+    if (hostType === "admin") {
+      safeNavigate(navigate, "/admin/login");
+      return;
+    }
+    if (hostType === "app") {
+      safeNavigate(navigate, "/partner/login");
+      return;
+    }
+    if (hostType === "tenant") {
+      const redirectTarget = `${window.location.origin}/app`;
+      const loginUrl = getPartnerLoginUrl(redirectTarget);
+      safeHardRedirect(loginUrl);
+      return;
+    }
     safeNavigate(navigate, "/login");
   }, [navigate]);
 

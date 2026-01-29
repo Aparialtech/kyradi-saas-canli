@@ -61,6 +61,19 @@ def _set_auth_cookie(response: Response, token: str, request: Request) -> None:
         path="/",
         domain=domain,
     )
+
+
+def _clear_auth_cookie(response: Response) -> None:
+    """Clear auth cookie for both wildcard and host-only scopes."""
+    response.delete_cookie("access_token", domain=".kyradi.com", path="/")
+    response.delete_cookie("access_token", path="/")
+
+
+@router.post("/logout")
+async def logout(_: Request) -> Response:
+    response = Response(content='{"ok": true}', media_type="application/json")
+    _clear_auth_cookie(response)
+    return response
     logger.info(
         "auth_cookie_set host=%s xfwd=%s xvercel=%s domain=%s secure=%s",
         request.headers.get("host"),
