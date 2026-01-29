@@ -37,6 +37,10 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/reservations/:path*"
     },
     {
+      "source": "/locations",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/locations"
+    },
+    {
       "source": "/locations/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/locations/:path*"
     },
