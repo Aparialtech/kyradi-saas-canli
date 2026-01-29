@@ -6,9 +6,7 @@ import { detectHostType } from "./hostDetection";
 import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
-const resolvedBaseUrl = env.API_URL.startsWith("http://")
-  ? env.API_URL.replace("http://", "https://")
-  : env.API_URL;
+const resolvedBaseUrl = env.API_URL;
 // Startup log for debugging deployed envs
 if (import.meta.env.DEV) {
   console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)", "host:", typeof window !== "undefined" ? window.location.host : "");
@@ -35,6 +33,14 @@ http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Force same-origin for all requests in browser
     config.baseURL = "";
+    if (typeof config.url === "string" && config.url.startsWith("http")) {
+      try {
+        const parsed = new URL(config.url);
+        config.url = `${parsed.pathname}${parsed.search}`;
+      } catch {
+        // leave as-is if parsing fails
+      }
+    }
     config.headers = config.headers ?? {};
     config.headers["X-Requested-With"] = "XMLHttpRequest";
     if (env.TENANT_ID && hostType !== "tenant") {
