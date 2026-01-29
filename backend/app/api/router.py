@@ -57,6 +57,7 @@ from .routes import (
 logger = logging.getLogger("kyradi.api")
 
 api_router = APIRouter()
+api_router.redirect_slashes = False
 
 # =============================================================================
 # CORE ROUTES - These must always work
