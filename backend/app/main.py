@@ -14,10 +14,13 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-try:  # Proxy headers middleware import depends on runtime packages
-    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # type: ignore
-except Exception:  # pragma: no cover - fallback if uvicorn middleware not available
-    ProxyHeadersMiddleware = None  # type: ignore[assignment]
+try:  # Prefer Starlette if available
+    from starlette.middleware.proxy_headers import ProxyHeadersMiddleware  # type: ignore
+except Exception:  # pragma: no cover - fallback to uvicorn
+    try:
+        from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # type: ignore
+    except Exception:
+        ProxyHeadersMiddleware = None  # type: ignore[assignment]
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
