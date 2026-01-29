@@ -5,8 +5,16 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/auth/:path*"
     },
     {
+      "source": "/auth",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/auth"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/api",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/api"
     },
     {
       "source": "/admin/:path*",
