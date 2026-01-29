@@ -19,6 +19,10 @@ import type {
 } from "../types/auth";
 
 export const authService = {
+  async logout(): Promise<{ ok: boolean }> {
+    const response = await http.post<{ ok: boolean }>("/auth/logout");
+    return response.data;
+  },
   async login(payload: LoginPayload): Promise<TokenResponse> {
     const response = await http.post<TokenResponse>("/auth/login", payload);
     return response.data;
