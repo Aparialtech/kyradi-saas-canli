@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import AsyncSessionMaker
 from ..models import Tenant, TenantDomain, TenantDomainStatus, DomainStatus
+from ..core.security import decode_token
 
 
 
@@ -77,6 +78,24 @@ def normalize_host(host: str) -> str:
     if not host:
         return ""
     return host.split(":")[0].strip().lower()
+
+
+def _get_token_tenant_id(request: Request) -> Optional[str]:
+    """Best-effort tenant_id extraction from auth token for fallback routing."""
+    auth_header = request.headers.get("authorization") or ""
+    token = None
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        token = request.cookies.get("access_token")
+    if not token:
+        return None
+    try:
+        payload = decode_token(token)
+    except Exception:
+        return None
+    tenant_id = payload.get("tenant_id")
+    return tenant_id if isinstance(tenant_id, str) and tenant_id else None
 
 
 def should_skip_tenant_resolution(host: str) -> bool:
@@ -230,15 +249,19 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             if slug:
                 tenant = await resolve_tenant_by_slug(slug)
                 if not tenant and not is_auth_path:
-                    logger.warning(f"Tenant not found for subdomain: {slug}")
-                    return JSONResponse(
-                        status_code=404,
-                        content={
-                            "detail": "Tenant bulunamadı",
-                            "message": f"'{slug}' subdomain'i için kayıtlı otel bulunamadı.",
-                            "code": "TENANT_NOT_FOUND"
-                        }
-                    )
+                    token_tenant_id = _get_token_tenant_id(request)
+                    if token_tenant_id:
+                        request.state.tenant_id = token_tenant_id
+                    else:
+                        logger.warning(f"Tenant not found for subdomain: {slug}")
+                        return JSONResponse(
+                            status_code=404,
+                            content={
+                                "detail": "Tenant bulunamadı",
+                                "message": f"'{slug}' subdomain'i için kayıtlı otel bulunamadı.",
+                                "code": "TENANT_NOT_FOUND"
+                            }
+                        )
 
         # 3. Try verified tenant_domains record
         if not tenant and host_without_port:
@@ -251,15 +274,19 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             ):
                 tenant = await resolve_tenant_by_custom_domain(host_without_port)
                 if not tenant and not is_auth_path:
-                    logger.warning(f"Tenant not found for custom domain: {host_without_port}")
-                    return JSONResponse(
-                        status_code=404,
-                        content={
-                            "detail": "Tenant bulunamadı",
-                            "message": f"'{host_without_port}' domain'i için kayıtlı otel bulunamadı.",
-                            "code": "TENANT_NOT_FOUND"
-                        }
-                    )
+                    token_tenant_id = _get_token_tenant_id(request)
+                    if token_tenant_id:
+                        request.state.tenant_id = token_tenant_id
+                    else:
+                        logger.warning(f"Tenant not found for custom domain: {host_without_port}")
+                        return JSONResponse(
+                            status_code=404,
+                            content={
+                                "detail": "Tenant bulunamadı",
+                                "message": f"'{host_without_port}' domain'i için kayıtlı otel bulunamadı.",
+                                "code": "TENANT_NOT_FOUND"
+                            }
+                        )
         
         # Store tenant info in request state
         request.state.tenant = tenant
