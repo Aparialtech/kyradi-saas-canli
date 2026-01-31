@@ -93,6 +93,9 @@ export function RevenueDashboard() {
     queryKey: ["revenue", "history", dateFrom, dateTo, granularity],
     queryFn: () => revenueService.getHistory(dateFrom, dateTo, granularity),
   });
+  const historyItems: DailyRevenueItem[] = Array.isArray((historyQuery.data as any)?.items)
+    ? (historyQuery.data as any).items
+    : [];
 
   const formatCurrency = (minor: number) => {
     return new Intl.NumberFormat("tr-TR", {
@@ -144,7 +147,7 @@ export function RevenueDashboard() {
     }
     
     return items;
-  }, [historyQuery.data?.items, historySearch, minAmount, maxAmount]);
+  }, [historyItems, historySearch, minAmount, maxAmount]);
   
   const paginatedHistoryItems = useMemo(() => {
     const start = (historyPage - 1) * historyPageSize;
@@ -1099,7 +1102,7 @@ export function RevenueDashboard() {
             <Search className="h-4 w-4" />
             <span>
               <strong>{filteredHistoryItems.length}</strong> kayıt filtrelendi
-              {historyQuery.data?.items && ` (toplam ${historyQuery.data.items.length} kayıttan)`}
+              {historyItems.length > 0 && ` (toplam ${historyItems.length} kayıttan)`}
             </span>
           </div>
         )}
@@ -1114,7 +1117,7 @@ export function RevenueDashboard() {
             <AlertCircle className="h-10 w-10" style={{ margin: '0 auto var(--space-3) auto', color: '#dc2626' }} />
             <p style={{ color: "#dc2626", fontWeight: 600, margin: 0 }}>Gelir geçmişi yüklenemedi</p>
           </div>
-        ) : historyQuery.data?.items.length === 0 ? (
+        ) : historyItems.length === 0 ? (
           <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
             <Calendar className="h-12 w-12" style={{ margin: '0 auto var(--space-3) auto', opacity: 0.4 }} />
             <p style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "0.5rem" }}>Bu dönemde gelir kaydı yok</p>
@@ -1274,8 +1277,8 @@ export function RevenueDashboard() {
                   </select>
                   <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
                     {hasActiveHistoryFilters 
-                      ? `${filteredHistoryItems.length} / ${historyQuery.data?.items?.length ?? 0} kayıt`
-                      : `Toplam ${historyQuery.data?.items?.length ?? 0} kayıt`
+                      ? `${filteredHistoryItems.length} / ${historyItems.length} kayıt`
+                      : `Toplam ${historyItems.length} kayıt`
                     }
                   </span>
                 </div>
