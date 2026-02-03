@@ -611,7 +611,7 @@ export function ReservationsPage() {
                   const confirmed = await confirm({
                     title: "Teslim Onayı",
                     message: "Bu rezervasyon için bavullar teslim alındı olarak işaretlensin mi?",
-                    confirmText: "Teslim Aldık",
+                    confirmText: "Bavul teslim alındı",
                     cancelText: "Vazgeç",
                     variant: "success",
                   });
@@ -620,7 +620,7 @@ export function ReservationsPage() {
                   }
                 }}
               >
-                Teslim Aldık
+                Bavul teslim alındı
               </ModernButton>
               <ModernButton
                 variant="primary"
@@ -636,7 +636,7 @@ export function ReservationsPage() {
                   const confirmed = await confirm({
                     title: "Teslim Onayı",
                     message: "Bu rezervasyon için bavullar teslim edildi olarak işaretlensin mi?",
-                    confirmText: "Teslim Ettik",
+                    confirmText: "Bavul teslim edildi",
                     cancelText: "Vazgeç",
                     variant: "success",
                   });
@@ -645,7 +645,7 @@ export function ReservationsPage() {
                   }
                 }}
               >
-                Teslim Ettik
+                Bavul teslim edildi
               </ModernButton>
             </div>
           );
