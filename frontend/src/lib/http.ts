@@ -33,6 +33,12 @@ http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Force same-origin for all requests in browser
     config.baseURL = "";
+    if (typeof config.url === "string") {
+      // Ensure all paths are absolute to origin (prevent /app/* relative paths)
+      if (!config.url.startsWith("/") && !config.url.startsWith("http")) {
+        config.url = `/${config.url}`;
+      }
+    }
     if (typeof config.url === "string" && config.url.startsWith("http")) {
       try {
         const parsed = new URL(config.url);
