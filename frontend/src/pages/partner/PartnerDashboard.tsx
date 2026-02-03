@@ -187,9 +187,8 @@ export function PartnerOverview() {
 
   // Chart data transformations
   const trendData = useMemo(() => {
-    const items = Array.isArray(trendQuery.data) ? trendQuery.data : [];
-    if (!items.length) return [];
-    return items.map((point) => {
+    if (!trendQuery.data) return [];
+    return trendQuery.data.map((point) => {
       const dateLabel = new Date(point.date).toLocaleDateString(locale, {
         day: "2-digit",
         month: "short",
@@ -203,17 +202,15 @@ export function PartnerOverview() {
   }, [trendQuery.data, locale]);
 
   const occupancyData = useMemo(() => {
-    const items = Array.isArray(storageUsageQuery.data) ? storageUsageQuery.data : [];
-    if (!items.length) return [];
-    return items.map((item) => ({
+    if (!storageUsageQuery.data) return [];
+    return storageUsageQuery.data.map((item) => ({
       label: `${item.location_name} / ${item.storage_code}`,
       occupancy_rate: item.occupancy_rate ?? 0,
     }));
   }, [storageUsageQuery.data]);
 
   const revenueDistributionData = useMemo(() => {
-    const items = Array.isArray(paymentMethodQuery.data) ? paymentMethodQuery.data : [];
-    if (!items.length) return [];
+    if (!paymentMethodQuery.data) return [];
     const fallbackColors = ["#6366f1", "#0ea5e9", "#22c55e", "#f59e0b", "#ef4444", "#14b8a6"];
     const methodColors: Record<string, string> = {
       GATEWAY_DEMO: "#6366f1",
@@ -223,7 +220,7 @@ export function PartnerOverview() {
       BANK_TRANSFER: "#f59e0b",
     };
 
-    return items.map((item, index) => {
+    return paymentMethodQuery.data.map((item, index) => {
       const amount = Math.max(0, (item.revenue_minor ?? 0) / 100);
       return {
         name: item.method_name || item.method || `Yöntem ${index + 1}`,

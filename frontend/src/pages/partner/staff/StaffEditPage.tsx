@@ -109,12 +109,12 @@ export function StaffEditPage() {
 
   // Get selected user info
   const selectedUser = useMemo(() => {
-    return (Array.isArray(usersQuery.data) ? usersQuery.data : []).find(u => u.id === selectedUserId);
+    return usersQuery.data?.find(u => u.id === selectedUserId);
   }, [usersQuery.data, selectedUserId]);
 
   // Create maps for display
   const locationsById = useMemo(
-    () => new Map((Array.isArray(locationsQuery.data) ? locationsQuery.data : []).map((l) => [l.id, l])),
+    () => new Map(locationsQuery.data?.map((l) => [l.id, l]) ?? []),
     [locationsQuery.data]
   );
 
@@ -304,7 +304,7 @@ export function StaffEditPage() {
                   }}
                 >
                   <option value="">Personel Seçin...</option>
-                  {(Array.isArray(usersQuery.data) ? usersQuery.data : []).map((user) => (
+                  {usersQuery.data?.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.email} ({user.full_name || user.role})
                     </option>
@@ -399,7 +399,7 @@ export function StaffEditPage() {
               overflowY: 'auto',
               padding: 'var(--space-1)',
             }}>
-              {(Array.isArray(storagesQuery.data) ? storagesQuery.data : []).map((storage) => {
+              {storagesQuery.data?.map((storage) => {
                 const isSelected = selectedStorageIds.includes(storage.id);
                 const location = locationsById.get(storage.location_id);
                 return (
@@ -508,7 +508,7 @@ export function StaffEditPage() {
               overflowY: 'auto',
               padding: 'var(--space-1)',
             }}>
-              {(Array.isArray(locationsQuery.data) ? locationsQuery.data : []).map((location) => {
+              {locationsQuery.data?.map((location) => {
                 const isSelected = selectedLocationIds.includes(location.id);
                 return (
                   <label

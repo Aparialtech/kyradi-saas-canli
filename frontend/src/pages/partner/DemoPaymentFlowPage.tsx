@@ -252,7 +252,7 @@ export function DemoPaymentFlowPage() {
                 <p>Henüz rezervasyon yok. Önce bir rezervasyon oluşturun.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {(Array.isArray(reservationsQuery.data) ? reservationsQuery.data : []).map((res: Reservation) => (
+                  {reservationsQuery.data.map((res: Reservation) => (
                     <button
                       key={res.id}
                       type="button"

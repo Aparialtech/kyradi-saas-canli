@@ -14,13 +14,6 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-try:  # Prefer Starlette if available
-    from starlette.middleware.proxy_headers import ProxyHeadersMiddleware  # type: ignore
-except Exception:  # pragma: no cover - fallback to uvicorn
-    try:
-        from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # type: ignore
-    except Exception:
-        ProxyHeadersMiddleware = None  # type: ignore[assignment]
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
@@ -51,10 +44,6 @@ app = FastAPI(
     version="0.1.0",
     description="FastAPI backend for the KYRADİ SaaS platform.",
 )
-app.router.redirect_slashes = False
-# Trust proxy headers so scheme/host are correct behind Vercel/Railway.
-if ProxyHeadersMiddleware is not None:
-    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # =============================================================================
 # CORS Configuration - Dynamic Origin Support

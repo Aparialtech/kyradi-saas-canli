@@ -84,12 +84,9 @@ export function PricingPage() {
 
   // Filter rules based on search and scope filter
   const filteredRules = useMemo(() => {
-    const rules: PricingRule[] = Array.isArray(pricingQuery.data)
-      ? pricingQuery.data
-      : ((pricingQuery.data as any)?.items ?? []) as PricingRule[];
-    if (!rules.length) return [];
-
-    return rules.filter((rule) => {
+    if (!pricingQuery.data) return [];
+    
+    return pricingQuery.data.filter((rule) => {
       // Apply scope filter
       if (scopeFilter && rule.scope !== scopeFilter) return false;
       

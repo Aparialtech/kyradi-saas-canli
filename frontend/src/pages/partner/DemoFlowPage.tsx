@@ -997,7 +997,7 @@ function StorageSelectionModal({
           </div>
         ) : availableStoragesQuery.data && availableStoragesQuery.data.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {(Array.isArray(availableStoragesQuery.data) ? availableStoragesQuery.data : []).map((storage: Storage) => (
+            {availableStoragesQuery.data.map((storage: Storage) => (
               <div
                 key={storage.id}
                 onClick={() => onSelectStorage(storage.id)}

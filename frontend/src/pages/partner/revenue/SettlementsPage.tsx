@@ -320,7 +320,7 @@ export function SettlementsPage() {
               }}
             >
               <option value="">Tümü</option>
-              {(Array.isArray(locationsQuery.data) ? locationsQuery.data : []).map((loc) => (
+              {locationsQuery.data?.map((loc) => (
                 <option key={loc.id} value={loc.id}>
                   {loc.name}
                 </option>
@@ -512,3 +512,4 @@ export function SettlementsPage() {
     </div>
   );
 }
+
