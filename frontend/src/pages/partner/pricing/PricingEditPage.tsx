@@ -297,7 +297,7 @@ export function PricingEditPage() {
                     }}
                   >
                     <option value="">{t("pricing.form.selectLocation")}</option>
-                    {locationsQuery.data?.map((loc) => (
+                    {(Array.isArray(locationsQuery.data) ? locationsQuery.data : []).map((loc) => (
                       <option key={loc.id} value={loc.id}>{loc.name}</option>
                     ))}
                   </select>

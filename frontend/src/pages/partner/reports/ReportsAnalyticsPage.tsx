@@ -124,8 +124,9 @@ export function ReportsAnalyticsPage() {
   );
 
   const trendData = useMemo(() => {
-    if (!trendQuery.data) return [];
-    return trendQuery.data.map((point) => {
+    const items = Array.isArray(trendQuery.data) ? trendQuery.data : [];
+    if (!items.length) return [];
+    return items.map((point) => {
       const dateLabel = new Date(point.date).toLocaleDateString(locale, {
         day: "2-digit",
         month: "short",
@@ -140,14 +141,16 @@ export function ReportsAnalyticsPage() {
 
   // Get unique locations for filter dropdown
   const occupancyLocations = useMemo(() => {
-    if (!storageUsageQuery.data) return [];
-    const locations = new Set(storageUsageQuery.data.map(item => item.location_name));
+    const items = Array.isArray(storageUsageQuery.data) ? storageUsageQuery.data : [];
+    if (!items.length) return [];
+    const locations = new Set(items.map(item => item.location_name));
     return Array.from(locations).sort();
   }, [storageUsageQuery.data]);
 
   const occupancyData = useMemo(() => {
-    if (!storageUsageQuery.data) return [];
-    let data = storageUsageQuery.data;
+    const items = Array.isArray(storageUsageQuery.data) ? storageUsageQuery.data : [];
+    if (!items.length) return [];
+    let data = items;
     
     // Filter by location if selected
     if (occupancyLocationFilter) {
@@ -166,9 +169,10 @@ export function ReportsAnalyticsPage() {
 
   // Filtered & Sorted Location Data (all items for counting)
   const allFilteredLocationData = useMemo(() => {
-    if (!overviewQuery.data?.by_location) return [];
+    const items = Array.isArray(overviewQuery.data?.by_location) ? overviewQuery.data?.by_location : [];
+    if (!items.length) return [];
     
-    let data = [...overviewQuery.data.by_location];
+    let data = [...items];
     
     // Search filter
     if (debouncedLocationSearch.trim()) {
@@ -453,7 +457,7 @@ export function ReportsAnalyticsPage() {
               }}
             >
               <option value="">Tümü</option>
-              {locationsQuery.data?.map((loc) => (
+              {(Array.isArray(locationsQuery.data) ? locationsQuery.data : []).map((loc) => (
                 <option key={loc.id} value={loc.id}>
                   {loc.name}
                 </option>

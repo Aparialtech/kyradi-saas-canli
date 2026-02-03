@@ -106,15 +106,15 @@ export function StaffPage() {
 
   // Maps for quick lookup
   const usersById = useMemo(
-    () => new Map(usersQuery.data?.map((u) => [u.id, u]) ?? []),
+    () => new Map((Array.isArray(usersQuery.data) ? usersQuery.data : []).map((u) => [u.id, u])),
     [usersQuery.data]
   );
   const storagesById = useMemo(
-    () => new Map(storagesQuery.data?.map((s) => [s.id, s]) ?? []),
+    () => new Map((Array.isArray(storagesQuery.data) ? storagesQuery.data : []).map((s) => [s.id, s])),
     [storagesQuery.data]
   );
   const locationsById = useMemo(
-    () => new Map(locationsQuery.data?.map((l) => [l.id, l]) ?? []),
+    () => new Map((Array.isArray(locationsQuery.data) ? locationsQuery.data : []).map((l) => [l.id, l])),
     [locationsQuery.data]
   );
 
@@ -363,7 +363,7 @@ export function StaffPage() {
                     <div style={{ padding: 'var(--space-3)', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
                       {t("staff.loadingUsers")}
                     </div>
-                  ) : assignableUsersQuery.data && assignableUsersQuery.data.length > 0 ? (
+                  ) : Array.isArray(assignableUsersQuery.data) && assignableUsersQuery.data.length > 0 ? (
                     <select 
                       {...register("user_id", { required: t("staff.userRequired") })} 
                       disabled={Boolean(editingStaff)}
@@ -379,7 +379,7 @@ export function StaffPage() {
                       }}
                     >
                       <option value="">{t("staff.selectPlaceholder")}</option>
-                      {assignableUsersQuery.data.map((user) => (
+                      {(Array.isArray(assignableUsersQuery.data) ? assignableUsersQuery.data : []).map((user) => (
                         <option key={user.id} value={user.id}>
                           {user.email} ({getRoleLabel(user.role)})
                         </option>
@@ -430,7 +430,7 @@ export function StaffPage() {
                       fontSize: 'var(--text-sm)',
                     }}
                   >
-                    {storagesQuery.data?.map((storage) => (
+                    {(Array.isArray(storagesQuery.data) ? storagesQuery.data : []).map((storage) => (
                       <option key={storage.id} value={storage.id}>
                         {storage.code}
                       </option>
@@ -459,7 +459,7 @@ export function StaffPage() {
                       fontSize: 'var(--text-sm)',
                     }}
                   >
-                    {locationsQuery.data?.map((location) => (
+                    {(Array.isArray(locationsQuery.data) ? locationsQuery.data : []).map((location) => (
                       <option key={location.id} value={location.id}>
                         {location.name}
                       </option>
