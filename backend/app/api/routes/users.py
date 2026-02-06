@@ -88,6 +88,18 @@ async def list_users(
     )
 
 
+@router.get("/", response_model=PaginatedUserResponse)
+async def list_users_slash(
+    page: int = Query(default=1, ge=1, description="Sayfa numarası"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Sayfa başı kayıt"),
+    search: Optional[str] = Query(default=None, description="E-posta veya isim ile arama"),
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> PaginatedUserResponse:
+    """List users for the current tenant with pagination (trailing slash)."""
+    return await list_users(page, page_size, search, current_user, session)
+
+
 @router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user(
     payload: UserCreate,

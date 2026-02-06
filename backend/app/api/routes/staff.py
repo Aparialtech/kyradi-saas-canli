@@ -43,6 +43,15 @@ async def list_staff(
     ]
 
 
+@router.get("/", response_model=List[StaffRead])
+async def list_staff_slash(
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> List[StaffRead]:
+    """List all staff for the tenant (trailing slash)."""
+    return await list_staff(current_user, session)
+
+
 @router.post("", response_model=StaffRead, status_code=status.HTTP_201_CREATED)
 async def create_staff(
     payload: StaffCreate,
