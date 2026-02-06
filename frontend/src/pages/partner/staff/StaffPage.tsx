@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Package, MapPin, Loader2, AlertCircle, UserPlus, Edit, Trash2, Eye, Download, X } from "../../../lib/lucide";
 import { staffService, type Staff, type StaffPayload } from "../../../services/partner/staff";
-import { userService } from "../../../services/partner/users";
+import { userService, type TenantUser } from "../../../services/partner/users";
 import { storageService } from "../../../services/partner/storages";
 import { locationService } from "../../../services/partner/locations";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -15,29 +15,12 @@ import { StaffDetailModal } from "../../../components/staff/StaffDetailModal";
 import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
+import { http } from "../../../lib/http";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
 import { Badge } from "../../../components/ui/Badge";
 import { usePagination, calculatePaginationMeta } from "../../../components/common/Pagination";
-
-interface User {
-  id: string;
-  email: string;
-  role: string;
-  is_active: boolean;
-}
-
-interface Storage {
-  id: string;
-  code: string;
-  location_id: string;
-}
-
-interface Location {
-  id: string;
-  name: string;
-}
 
 // Role labels will be handled via i18n in component
 
@@ -63,8 +46,7 @@ export function StaffPage() {
   const usersQuery = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const response = await userService.list(1, 200, "");
-      return response.items ?? [];
+      return userService.list();
     },
   });
 
@@ -72,7 +54,7 @@ export function StaffPage() {
   const assignableUsersQuery = useQuery({
     queryKey: ["users", "assignable"],
     queryFn: async () => {
-      const response = await http.get<User[]>("/users/assignable");
+      const response = await http.get<TenantUser[]>("/users/assignable");
       return response.data;
     },
     retry: (failureCount, error: any) => {
@@ -379,7 +361,7 @@ export function StaffPage() {
                       }}
                     >
                       <option value="">{t("staff.selectPlaceholder")}</option>
-                      {assignableUsersQuery.data.map((user) => (
+                      {assignableUsersQuery.data.map((user: TenantUser) => (
                         <option key={user.id} value={user.id}>
                           {user.email} ({getRoleLabel(user.role)})
                         </option>
