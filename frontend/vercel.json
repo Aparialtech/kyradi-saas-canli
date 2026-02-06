@@ -5,60 +5,120 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/auth/:path*"
     },
     {
+      "source": "/auth",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/auth"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/api",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/api"
     },
     {
       "source": "/admin/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/admin/:path*"
     },
     {
+      "source": "/admin",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/admin"
+    },
+    {
       "source": "/partners/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/partners/:path*"
+    },
+    {
+      "source": "/partners",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/partners"
     },
     {
       "source": "/users/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/users/:path*"
     },
     {
+      "source": "/users",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/users"
+    },
+    {
       "source": "/staff/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/staff/:path*"
+    },
+    {
+      "source": "/staff",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/staff"
     },
     {
       "source": "/reports/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/reports/:path*"
     },
     {
+      "source": "/reports",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/reports"
+    },
+    {
       "source": "/payment-schedules/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/payment-schedules/:path*"
+    },
+    {
+      "source": "/payment-schedules",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/payment-schedules"
     },
     {
       "source": "/reservations/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/reservations/:path*"
     },
     {
+      "source": "/reservations",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/reservations"
+    },
+    {
       "source": "/locations/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/locations/:path*"
+    },
+    {
+      "source": "/locations",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/locations"
     },
     {
       "source": "/storages/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/storages/:path*"
     },
     {
+      "source": "/storages",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/storages"
+    },
+    {
       "source": "/pricing-rules/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules/:path*"
+    },
+    {
+      "source": "/pricing-rules",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules"
     },
     {
       "source": "/tickets/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/tickets/:path*"
     },
     {
+      "source": "/tickets",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/tickets"
+    },
+    {
       "source": "/ai/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/ai/:path*"
     },
     {
+      "source": "/ai",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/ai"
+    },
+    {
       "source": "/public/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/public/:path*"
+    },
+    {
+      "source": "/public",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/public"
     },
     {
       "source": "/:path*",

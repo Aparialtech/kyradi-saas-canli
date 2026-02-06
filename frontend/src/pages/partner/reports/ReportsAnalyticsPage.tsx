@@ -809,7 +809,7 @@ export function ReportsAnalyticsPage() {
           </motion.div>
 
           {/* Daily Revenue Chart */}
-          {overviewQuery.data.daily.length > 0 && (
+          {Array.isArray(overviewQuery.data?.daily) && overviewQuery.data.daily.length > 0 && (
             <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
               <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
                 {t("reports.chart.dailyRevenue")}
@@ -1587,7 +1587,10 @@ export function ReportsAnalyticsPage() {
           )}
 
           {/* Empty State if no data */}
-          {overviewQuery.data.daily.length === 0 &&
+          {Array.isArray(overviewQuery.data?.daily) &&
+            Array.isArray(overviewQuery.data?.by_location) &&
+            Array.isArray(overviewQuery.data?.by_storage) &&
+            overviewQuery.data.daily.length === 0 &&
             overviewQuery.data.by_location.length === 0 &&
             overviewQuery.data.by_storage.length === 0 && (
               <ModernCard variant="glass" padding="lg">
