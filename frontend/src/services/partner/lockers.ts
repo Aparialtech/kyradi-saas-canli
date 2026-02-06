@@ -1,6 +1,6 @@
 import { http } from "../../lib/http";
 
-export type LockerStatus = "idle" | "occupied" | "faulty";
+export type LockerStatus = "idle" | "occupied" | "reserved" | "faulty";
 
 export interface Locker {
   id: string;
