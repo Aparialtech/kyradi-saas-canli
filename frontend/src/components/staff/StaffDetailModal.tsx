@@ -15,21 +15,21 @@ interface User {
   email: string;
   role: string;
   is_active: boolean;
-  last_login_at?: string;
-  created_at?: string;
+  last_login_at?: string | null;
+  created_at?: string | null;
 }
 
 interface Storage {
   id: string;
   code: string;
-  status?: string;
+  status?: string | null;
   location_id: string;
 }
 
 interface Location {
   id: string;
   name: string;
-  address?: string;
+  address?: string | null;
 }
 
 interface StaffDetailModalProps {
@@ -245,4 +245,3 @@ export function StaffDetailModal({
     </Modal>
   );
 }
-
