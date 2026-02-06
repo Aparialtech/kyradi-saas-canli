@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { storageService, type Storage, type StorageStatus, type StorageTodayOccupancy } from "../../../services/partner/storages";
+import { storageService, type StorageTodayOccupancy } from "../../../services/partner/storages";
+import { lockerService, type Locker, type LockerStatus } from "../../../services/partner/lockers";
 import { locationService } from "../../../services/partner/locations";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/common/ToastContainer";
@@ -31,12 +32,12 @@ export function LockersPage() {
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
   
   // Calendar modal state
-  const [calendarStorage, setCalendarStorage] = useState<Storage | null>(null);
+  const [calendarStorage, setCalendarStorage] = useState<Locker | null>(null);
 
   const locationsQuery = useQuery({ queryKey: ["locations"], queryFn: locationService.list });
   const storagesQuery = useQuery({
-    queryKey: ["storages", statusFilter],
-    queryFn: () => storageService.list(statusFilter ? (statusFilter as StorageStatus) : undefined),
+    queryKey: ["lockers", statusFilter],
+    queryFn: () => lockerService.list(statusFilter ? (statusFilter as LockerStatus) : undefined),
     retry: (failureCount, error: any) => {
       if (error?.response?.status === 401) return false;
       if (error?.response?.status === 403) return false;
@@ -65,9 +66,9 @@ export function LockersPage() {
   }, [todayOccupancyQuery.data]);
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => storageService.remove(id),
+    mutationFn: (id: string) => lockerService.remove(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["storages"] });
+      void queryClient.invalidateQueries({ queryKey: ["lockers"] });
       void queryClient.invalidateQueries({ queryKey: ["lockers"] });
       push({ title: t("storages.deleted"), type: "info" });
     },
@@ -127,7 +128,7 @@ export function LockersPage() {
     navigate("/app/lockers/new");
   }, [navigate]);
 
-  const handleEdit = useCallback((storage: Storage) => {
+  const handleEdit = useCallback((storage: Locker) => {
     navigate(`/app/lockers/${storage.id}/edit`);
   }, [navigate]);
 

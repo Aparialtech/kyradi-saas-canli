@@ -89,6 +89,14 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/storages"
     },
     {
+      "source": "/lockers/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/lockers/:path*"
+    },
+    {
+      "source": "/lockers",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/lockers"
+    },
+    {
       "source": "/pricing-rules/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules/:path*"
     },
