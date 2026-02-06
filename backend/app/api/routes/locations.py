@@ -28,6 +28,15 @@ async def list_locations(
     return [LocationRead.model_validate(loc) for loc in locations]
 
 
+@router.get("/", response_model=List[LocationRead])
+async def list_locations_slash(
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> List[LocationRead]:
+    """List locations for the current tenant (trailing slash)."""
+    return await list_locations(current_user, session)
+
+
 @router.get("/{location_id}", response_model=LocationRead)
 async def get_location(
     location_id: str,
