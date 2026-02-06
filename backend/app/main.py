@@ -44,6 +44,7 @@ app = FastAPI(
     version="0.1.0",
     description="FastAPI backend for the KYRADİ SaaS platform.",
 )
+app.router.redirect_slashes = False
 
 # =============================================================================
 # CORS Configuration - Dynamic Origin Support
