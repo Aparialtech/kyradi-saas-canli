@@ -205,6 +205,92 @@ async def list_lockers_slash(
     return await list_storages(status_filter, current_user, session)
 
 
+# -----------------------------------------------------------------------------
+# Legacy /lockers full compatibility (CRUD + calendar + availability)
+# -----------------------------------------------------------------------------
+
+@legacy_router.get("/today-occupancy", response_model=List[StorageTodayOccupancy])
+async def get_today_occupancy_lockers(
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> List[StorageTodayOccupancy]:
+    """Legacy alias for /lockers/today-occupancy."""
+    return await get_today_occupancy(current_user, session)
+
+
+@legacy_router.get("/available", response_model=List[AvailableStorageRead])
+async def list_available_lockers(
+    start_datetime: datetime = Query(..., description="Reservation start datetime"),
+    end_datetime: datetime = Query(..., description="Reservation end datetime"),
+    location_id: Optional[str] = Query(None, description="Filter by location"),
+    min_capacity: int = Query(1, description="Minimum capacity required"),
+    current_user: User = Depends(require_storage_operator),
+    session: AsyncSession = Depends(get_session),
+) -> List[AvailableStorageRead]:
+    """Legacy alias for /lockers/available."""
+    return await list_available_storages(
+        start_datetime,
+        end_datetime,
+        location_id,
+        min_capacity,
+        current_user,
+        session,
+    )
+
+
+@legacy_router.get("/{storage_id}", response_model=StorageRead)
+async def get_locker(
+    storage_id: str,
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> StorageRead:
+    """Legacy alias for /lockers/{id}."""
+    return await get_storage(storage_id, current_user, session)
+
+
+@legacy_router.get("/{storage_id}/calendar", response_model=StorageCalendarResponse)
+async def get_locker_calendar(
+    storage_id: str,
+    start_date: date = Query(..., description="Start date"),
+    end_date: date = Query(..., description="End date"),
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> StorageCalendarResponse:
+    """Legacy alias for /lockers/{id}/calendar."""
+    return await get_storage_calendar(storage_id, start_date, end_date, current_user, session)
+
+
+@legacy_router.post("", response_model=StorageRead, status_code=status.HTTP_201_CREATED)
+async def create_locker(
+    payload: StorageCreate,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> StorageRead:
+    """Legacy alias for /lockers (create)."""
+    return await create_storage(payload, current_user, session)
+
+
+@legacy_router.patch("/{storage_id}", response_model=StorageRead)
+async def update_locker(
+    storage_id: str,
+    payload: StorageUpdate,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> StorageRead:
+    """Legacy alias for /lockers/{id} (update)."""
+    return await update_storage(storage_id, payload, current_user, session)
+
+
+@legacy_router.delete("/{storage_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_locker(
+    storage_id: str,
+    current_user: User = Depends(require_tenant_admin),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Legacy alias for /lockers/{id} (delete)."""
+    return await delete_storage(storage_id, current_user, session)
+
+
 @router.post("", response_model=StorageRead, status_code=status.HTTP_201_CREATED)
 async def create_storage(
     payload: StorageCreate,

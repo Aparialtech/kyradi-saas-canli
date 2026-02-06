@@ -59,34 +59,34 @@ export interface StorageTodayOccupancy {
 
 export const storageService = {
   async list(status?: StorageStatus): Promise<Storage[]> {
-    const response = await http.get<Storage[]>("/storages", { params: status ? { status } : undefined });
+    const response = await http.get<Storage[]>("/lockers", { params: status ? { status } : undefined });
     return response.data;
   },
   async getTodayOccupancy(): Promise<StorageTodayOccupancy[]> {
     // Get today's calendar for all storages to determine current occupancy
     const today = new Date().toISOString().split('T')[0];
-    const response = await http.get<StorageTodayOccupancy[]>("/storages/today-occupancy", { 
+    const response = await http.get<StorageTodayOccupancy[]>("/lockers/today-occupancy", { 
       params: { date: today } 
     });
     return response.data;
   },
   async get(id: string): Promise<Storage> {
-    const response = await http.get<Storage>(`/storages/${id}`);
+    const response = await http.get<Storage>(`/lockers/${id}`);
     return response.data;
   },
   async create(payload: StoragePayload): Promise<Storage> {
-    const response = await http.post<Storage>("/storages", payload);
+    const response = await http.post<Storage>("/lockers", payload);
     return response.data;
   },
   async update(id: string, payload: Partial<StoragePayload>): Promise<Storage> {
-    const response = await http.patch<Storage>(`/storages/${id}`, payload);
+    const response = await http.patch<Storage>(`/lockers/${id}`, payload);
     return response.data;
   },
   async remove(id: string): Promise<void> {
-    await http.delete(`/storages/${id}`);
+    await http.delete(`/lockers/${id}`);
   },
   async getCalendar(id: string, startDate: string, endDate: string): Promise<StorageCalendarResponse> {
-    const response = await http.get<StorageCalendarResponse>(`/storages/${id}/calendar`, {
+    const response = await http.get<StorageCalendarResponse>(`/lockers/${id}/calendar`, {
       params: { start_date: startDate, end_date: endDate },
     });
     return response.data;
@@ -98,4 +98,3 @@ export type LockerStatus = StorageStatus;
 export interface Locker extends Storage {}
 export interface LockerPayload extends StoragePayload {}
 export const lockerService = storageService;
-
