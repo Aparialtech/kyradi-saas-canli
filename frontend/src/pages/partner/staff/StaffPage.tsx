@@ -5,6 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Package, MapPin, Loader2, AlertCircle, UserPlus, Edit, Trash2, Eye, Download, X } from "../../../lib/lucide";
 import { staffService, type Staff, type StaffPayload } from "../../../services/partner/staff";
+import { userService } from "../../../services/partner/users";
+import { storageService } from "../../../services/partner/storages";
+import { locationService } from "../../../services/partner/locations";
 import { ToastContainer } from "../../../components/common/ToastContainer";
 import { useConfirm } from "../../../components/common/ConfirmDialog";
 import { SearchInput } from "../../../components/common/SearchInput";
@@ -12,7 +15,6 @@ import { StaffDetailModal } from "../../../components/staff/StaffDetailModal";
 import { useToast } from "../../../hooks/useToast";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getErrorMessage } from "../../../lib/httpError";
-import { http } from "../../../lib/http";
 import { ModernCard } from "../../../components/ui/ModernCard";
 import { ModernButton } from "../../../components/ui/ModernButton";
 import { ModernTable, type ModernTableColumn } from "../../../components/ui/ModernTable";
@@ -61,8 +63,8 @@ export function StaffPage() {
   const usersQuery = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const response = await http.get<User[]>("/users");
-      return response.data;
+      const response = await userService.list(1, 200, "");
+      return response.items ?? [];
     },
   });
 
@@ -91,32 +93,30 @@ export function StaffPage() {
   const storagesQuery = useQuery({
     queryKey: ["storages"],
     queryFn: async () => {
-      const response = await http.get<Storage[]>("/storages");
-      return response.data;
+      return storageService.list();
     },
   });
 
   const locationsQuery = useQuery({
     queryKey: ["locations"],
     queryFn: async () => {
-      const response = await http.get<Location[]>("/locations");
-      return response.data;
+      return locationService.list();
     },
   });
 
   // Maps for quick lookup
-  const usersById = useMemo(
-    () => new Map(usersQuery.data?.map((u) => [u.id, u]) ?? []),
-    [usersQuery.data]
-  );
-  const storagesById = useMemo(
-    () => new Map(storagesQuery.data?.map((s) => [s.id, s]) ?? []),
-    [storagesQuery.data]
-  );
-  const locationsById = useMemo(
-    () => new Map(locationsQuery.data?.map((l) => [l.id, l]) ?? []),
-    [locationsQuery.data]
-  );
+  const usersById = useMemo(() => {
+    const list = Array.isArray(usersQuery.data) ? usersQuery.data : [];
+    return new Map(list.map((u) => [u.id, u]));
+  }, [usersQuery.data]);
+  const storagesById = useMemo(() => {
+    const list = Array.isArray(storagesQuery.data) ? storagesQuery.data : [];
+    return new Map(list.map((s) => [s.id, s]));
+  }, [storagesQuery.data]);
+  const locationsById = useMemo(() => {
+    const list = Array.isArray(locationsQuery.data) ? locationsQuery.data : [];
+    return new Map(list.map((l) => [l.id, l]));
+  }, [locationsQuery.data]);
 
   // Filter staff by search term and role
   const filteredStaff = useMemo(() => {
