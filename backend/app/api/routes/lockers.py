@@ -175,6 +175,16 @@ async def list_storages(
     return [StorageRead.model_validate(storage) for storage in storages]
 
 
+@router.get("/", response_model=List[StorageRead])
+async def list_storages_slash(
+    status_filter: Optional[str] = Query(default=None, alias="status"),
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> List[StorageRead]:
+    """List storage units for the tenant (trailing slash)."""
+    return await list_storages(status_filter, current_user, session)
+
+
 @legacy_router.get("", response_model=List[StorageRead])
 async def list_lockers(
     status_filter: Optional[str] = Query(default=None, alias="status"),
@@ -182,6 +192,16 @@ async def list_lockers(
     session: AsyncSession = Depends(get_session),
 ) -> List[StorageRead]:
     """List storage units for the tenant (legacy endpoint)."""
+    return await list_storages(status_filter, current_user, session)
+
+
+@legacy_router.get("/", response_model=List[StorageRead])
+async def list_lockers_slash(
+    status_filter: Optional[str] = Query(default=None, alias="status"),
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> List[StorageRead]:
+    """List storage units for the tenant (legacy endpoint, trailing slash)."""
     return await list_storages(status_filter, current_user, session)
 
 
