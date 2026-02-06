@@ -25,12 +25,52 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/admin"
     },
     {
+      "source": "/audit-logs/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/audit-logs/:path*"
+    },
+    {
+      "source": "/audit-logs",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/audit-logs"
+    },
+    {
+      "source": "/health/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/health/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/health"
+    },
+    {
+      "source": "/qr/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/qr/:path*"
+    },
+    {
+      "source": "/qr",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/qr"
+    },
+    {
+      "source": "/demo/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/demo/:path*"
+    },
+    {
+      "source": "/demo",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/demo"
+    },
+    {
       "source": "/partners/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/partners/:path*"
     },
     {
       "source": "/partners",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/partners"
+    },
+    {
+      "source": "/partner/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/partner/:path*"
+    },
+    {
+      "source": "/partner",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/partner"
     },
     {
       "source": "/users/:path*",
@@ -121,6 +161,22 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/tickets"
     },
     {
+      "source": "/payments/magicpay/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/payments/magicpay/:path*"
+    },
+    {
+      "source": "/payments/magicpay",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/payments/magicpay"
+    },
+    {
+      "source": "/payments/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/payments/:path*"
+    },
+    {
+      "source": "/payments",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/payments"
+    },
+    {
       "source": "/revenue/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/revenue/:path*"
     },
@@ -143,6 +199,14 @@
     {
       "source": "/public",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/public"
+    },
+    {
+      "source": "/webhooks/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/webhooks/:path*"
+    },
+    {
+      "source": "/webhooks",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/webhooks"
     },
     {
       "source": "/:path*",
