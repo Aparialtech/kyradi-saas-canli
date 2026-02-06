@@ -57,8 +57,9 @@ export function LockersPage() {
   // Create a map for quick lookup of today's occupancy
   const todayOccupancyMap = useMemo(() => {
     const map = new Map<string, StorageTodayOccupancy>();
-    if (todayOccupancyQuery.data) {
-      todayOccupancyQuery.data.forEach(item => map.set(item.storage_id, item));
+    const list = Array.isArray(todayOccupancyQuery.data) ? todayOccupancyQuery.data : [];
+    for (const item of list) {
+      map.set(item.storage_id, item);
     }
     return map;
   }, [todayOccupancyQuery.data]);
@@ -76,12 +77,13 @@ export function LockersPage() {
   });
 
   const locationOptions = useMemo(() => {
-    return (locationsQuery.data ?? []).map((location) => ({ value: location.id, label: location.name }));
+    const list = Array.isArray(locationsQuery.data) ? locationsQuery.data : [];
+    return list.map((location) => ({ value: location.id, label: location.name }));
   }, [locationsQuery.data]);
 
   // Filter storages by search term and location
   const filteredStorages = useMemo(() => {
-    let storages = storagesQuery.data ?? [];
+    let storages = Array.isArray(storagesQuery.data) ? storagesQuery.data : [];
     
     // Filter by location first
     if (locationFilter) {
@@ -158,7 +160,7 @@ export function LockersPage() {
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
             {storagesQuery.isLoading 
               ? t("common.loading") 
-              : `${filteredStorages.length} / ${storagesQuery.data?.length ?? 0} ${t("common.records")}`}
+              : `${filteredStorages.length} / ${(Array.isArray(storagesQuery.data) ? storagesQuery.data.length : 0)} ${t("common.records")}`}
           </p>
         </div>
         <div style={{ marginBottom: 'var(--space-4)' }}>

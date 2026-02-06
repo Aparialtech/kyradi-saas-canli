@@ -8,15 +8,23 @@ const DEFAULT_TENANT_ID = "";
 
 const normalize = (url?: string): string => {
   if (!url || !url.trim()) return "";
-  return url.replace(/\/+$/, "");
+  const trimmed = url.trim().replace(/\/+$/, "");
+  if (trimmed.startsWith("http://")) {
+    return trimmed.replace("http://", "https://");
+  }
+  return trimmed;
+};
+
+const resolveApiUrl = (): string => {
+  const raw = import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? DEFAULT_API_URL;
+  const normalized = normalize(raw);
+  // In production always use same-origin to avoid mixed-host auth/CSP issues.
+  if (import.meta.env.PROD) return "";
+  return normalized;
 };
 
 export const env = {
-  API_URL: normalize(
-    import.meta.env.VITE_API_BASE_URL ??
-      import.meta.env.VITE_API_URL ??
-      DEFAULT_API_URL
-  ),
+  API_URL: resolveApiUrl(),
   TENANT_ID: (import.meta.env.VITE_TENANT_ID ?? DEFAULT_TENANT_ID).trim(),
   ENABLE_INTERNAL_RESERVATIONS: parseBoolean(
     import.meta.env.VITE_ENABLE_INTERNAL_RESERVATIONS,

@@ -104,8 +104,9 @@ export function RevenueDashboard() {
 
   // Prepare chart data
   const prepareChartData = (data: PaymentModeRevenue[] | undefined) => {
-    if (!data || data.length === 0) return [];
-    return data.map((item, index) => ({
+    const safe = Array.isArray(data) ? data : [];
+    if (safe.length === 0) return [];
+    return safe.map((item, index) => ({
       name: item.label,
       value: item.total_revenue_minor / 100,
       count: item.transaction_count,
@@ -114,11 +115,13 @@ export function RevenueDashboard() {
   };
 
   const chartData = prepareChartData(paymentModeQuery.data);
-  const totalTransactions = paymentModeQuery.data?.reduce((sum, item) => sum + item.transaction_count, 0) || 0;
+  const totalTransactions = (Array.isArray(paymentModeQuery.data)
+    ? paymentModeQuery.data.reduce((sum, item) => sum + (item?.transaction_count ?? 0), 0)
+    : 0);
 
   // Filter and paginate history data
   const filteredHistoryItems = useMemo(() => {
-    let items = historyQuery.data?.items ?? [];
+    let items = Array.isArray(historyQuery.data?.items) ? historyQuery.data?.items ?? [] : [];
     
     // Apply search filter (date)
     if (historySearch.trim()) {
@@ -413,7 +416,7 @@ export function RevenueDashboard() {
               }}
             >
               <option value="">Tüm Lokasyonlar</option>
-              {locationsQuery.data?.map((loc) => (
+              {(Array.isArray(locationsQuery.data) ? locationsQuery.data : []).map((loc) => (
                 <option key={loc.id} value={loc.id}>{loc.name}</option>
               ))}
             </select>
@@ -451,7 +454,7 @@ export function RevenueDashboard() {
               }}
             >
               <option value="">Tüm Depolar</option>
-              {storagesQuery.data?.map((storage) => (
+              {(Array.isArray(storagesQuery.data) ? storagesQuery.data : []).map((storage) => (
                 <option key={storage.id} value={storage.id}>{storage.code}</option>
               ))}
             </select>
@@ -812,7 +815,7 @@ export function RevenueDashboard() {
             
             {/* Details List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              {paymentModeQuery.data?.map((item, index) => (
+              {(Array.isArray(paymentModeQuery.data) ? paymentModeQuery.data : []).map((item, index) => (
                 <motion.div
                   key={item.mode}
                   initial={{ opacity: 0, x: 20 }}
@@ -1109,7 +1112,7 @@ export function RevenueDashboard() {
             <AlertCircle className="h-10 w-10" style={{ margin: '0 auto var(--space-3) auto', color: '#dc2626' }} />
             <p style={{ color: "#dc2626", fontWeight: 600, margin: 0 }}>Gelir geçmişi yüklenemedi</p>
           </div>
-        ) : historyQuery.data?.items.length === 0 ? (
+        ) : Array.isArray(historyQuery.data?.items) && historyQuery.data.items.length === 0 ? (
           <div style={{ textAlign: "center", padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
             <Calendar className="h-12 w-12" style={{ margin: '0 auto var(--space-3) auto', opacity: 0.4 }} />
             <p style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "0.5rem" }}>Bu dönemde gelir kaydı yok</p>

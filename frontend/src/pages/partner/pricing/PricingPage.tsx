@@ -66,7 +66,7 @@ export function PricingPage() {
   const { page, pageSize, setPage, setPageSize } = usePagination(10);
 
   // Fetch pricing rules
-  const pricingQuery = useQuery({
+  const pricingQuery = useQuery<PricingRule[]>({
     queryKey: ["pricing"],
     queryFn: () => pricingService.list(),
   });

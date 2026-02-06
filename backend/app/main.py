@@ -15,6 +15,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from starlette.responses import Response
 
 from .api import api_router
@@ -45,6 +46,7 @@ app = FastAPI(
     description="FastAPI backend for the KYRADİ SaaS platform.",
 )
 app.router.redirect_slashes = False
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # =============================================================================
 # CORS Configuration - Dynamic Origin Support

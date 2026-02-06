@@ -34,9 +34,16 @@ http.interceptors.request.use(
     // Force same-origin for all requests in browser
     config.baseURL = "";
     config.headers = config.headers ?? {};
-    config.headers["X-Requested-With"] = "XMLHttpRequest";
+    // Do not force X-Requested-With; keep requests as simple as possible.
     if (env.TENANT_ID && hostType !== "tenant") {
       config.headers["X-Tenant-ID"] = env.TENANT_ID;
+    }
+    // Safety: never allow http:// absolute URLs in production
+    if (config.baseURL && config.baseURL.startsWith("http://")) {
+      config.baseURL = config.baseURL.replace("http://", "https://");
+    }
+    if (typeof config.url === "string" && config.url.startsWith("http://")) {
+      config.url = config.url.replace("http://", "https://");
     }
     return config;
   },
