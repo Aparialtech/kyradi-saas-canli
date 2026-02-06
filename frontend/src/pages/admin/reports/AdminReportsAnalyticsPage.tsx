@@ -91,8 +91,9 @@ export function AdminReportsAnalyticsPage() {
 
   // Transform trend data for chart
   const trendData = useMemo(() => {
-    if (!trendsQuery.data || trendsQuery.data.length === 0) return [];
-    return trendsQuery.data.map((point) => ({
+    const trends = Array.isArray(trendsQuery.data) ? trendsQuery.data : [];
+    if (trends.length === 0) return [];
+    return trends.map((point) => ({
       date: new Date(point.date).toLocaleDateString("tr-TR", { month: "short", day: "numeric" }),
       reservations: point.reservations,
       revenue: point.revenue_minor / 100, // Convert to major currency
@@ -101,8 +102,9 @@ export function AdminReportsAnalyticsPage() {
 
   // Transform storage usage data for chart (top 10 only)
   const occupancyData = useMemo(() => {
-    if (!storageUsageQuery.data || storageUsageQuery.data.length === 0) return [];
-    return storageUsageQuery.data.slice(0, 10).map((storage) => ({
+    const storages = Array.isArray(storageUsageQuery.data) ? storageUsageQuery.data : [];
+    if (storages.length === 0) return [];
+    return storages.slice(0, 10).map((storage) => ({
       label: `${storage.storage_code} (${storage.tenant_name})`,
       occupancy_rate: storage.occupancy_rate,
       storage_id: storage.storage_id,
@@ -116,16 +118,18 @@ export function AdminReportsAnalyticsPage() {
 
   // Get unique tenants from storage data for filter
   const storageUniqueTenants = useMemo(() => {
-    if (!storageUsageQuery.data) return [];
-    const tenants = new Set(storageUsageQuery.data.map(item => item.tenant_name));
+    const storages = Array.isArray(storageUsageQuery.data) ? storageUsageQuery.data : [];
+    if (storages.length === 0) return [];
+    const tenants = new Set(storages.map(item => item.tenant_name));
     return Array.from(tenants).sort();
   }, [storageUsageQuery.data]);
 
   // Filtered & Sorted Storage Data (all items)
   const allFilteredStorageData = useMemo(() => {
-    if (!storageUsageQuery.data) return [];
-    
-    let data = [...storageUsageQuery.data];
+    const storages = Array.isArray(storageUsageQuery.data) ? storageUsageQuery.data : [];
+    if (storages.length === 0) return [];
+
+    let data = [...storages];
     
     // Search filter
     if (debouncedStorageSearch.trim()) {
@@ -199,11 +203,12 @@ export function AdminReportsAnalyticsPage() {
 
   // Calculate totals from trends data
   const totals = useMemo(() => {
-    if (!trendsQuery.data || trendsQuery.data.length === 0) {
+    const trends = Array.isArray(trendsQuery.data) ? trendsQuery.data : [];
+    if (trends.length === 0) {
       return { totalRevenue: 0, totalCommission: 0 };
     }
-    const totalRevenue = trendsQuery.data.reduce((sum, point) => sum + point.revenue_minor, 0);
-    const totalCommission = trendsQuery.data.reduce((sum, point) => sum + point.commission_minor, 0);
+    const totalRevenue = trends.reduce((sum, point) => sum + point.revenue_minor, 0);
+    const totalCommission = trends.reduce((sum, point) => sum + point.commission_minor, 0);
     return { totalRevenue, totalCommission };
   }, [trendsQuery.data]);
 
@@ -1215,4 +1220,3 @@ export function AdminReportsAnalyticsPage() {
     </div>
   );
 }
-

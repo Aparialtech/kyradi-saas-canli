@@ -187,7 +187,7 @@ export function PartnerOverview() {
 
   // Chart data transformations
   const trendData = useMemo(() => {
-    if (!trendQuery.data) return [];
+    if (!Array.isArray(trendQuery.data)) return [];
     return trendQuery.data.map((point) => {
       const dateLabel = new Date(point.date).toLocaleDateString(locale, {
         day: "2-digit",
@@ -202,7 +202,7 @@ export function PartnerOverview() {
   }, [trendQuery.data, locale]);
 
   const occupancyData = useMemo(() => {
-    if (!storageUsageQuery.data) return [];
+    if (!Array.isArray(storageUsageQuery.data)) return [];
     return storageUsageQuery.data.map((item) => ({
       label: `${item.location_name} / ${item.storage_code}`,
       occupancy_rate: item.occupancy_rate ?? 0,
@@ -210,7 +210,7 @@ export function PartnerOverview() {
   }, [storageUsageQuery.data]);
 
   const revenueDistributionData = useMemo(() => {
-    if (!paymentMethodQuery.data) return [];
+    if (!Array.isArray(paymentMethodQuery.data)) return [];
     const fallbackColors = ["#6366f1", "#0ea5e9", "#22c55e", "#f59e0b", "#ef4444", "#14b8a6"];
     const methodColors: Record<string, string> = {
       GATEWAY_DEMO: "#6366f1",
@@ -400,7 +400,7 @@ export function PartnerOverview() {
       </motion.div>
 
       {/* Warnings */}
-      {summaryQuery.data?.warnings && summaryQuery.data.warnings.length > 0 && (
+      {Array.isArray(summaryQuery.data?.warnings) && summaryQuery.data.warnings.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

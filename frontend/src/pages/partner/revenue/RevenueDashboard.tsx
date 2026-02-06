@@ -1094,7 +1094,7 @@ export function RevenueDashboard() {
             <Search className="h-4 w-4" />
             <span>
               <strong>{filteredHistoryItems.length}</strong> kayıt filtrelendi
-              {historyQuery.data?.items && ` (toplam ${historyQuery.data.items.length} kayıttan)`}
+                    {Array.isArray(historyQuery.data?.items) && ` (toplam ${historyQuery.data.items.length} kayıttan)`}
             </span>
           </div>
         )}

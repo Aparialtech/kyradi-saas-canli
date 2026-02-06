@@ -291,7 +291,7 @@ export function StorageEditPage() {
               ))}
               
               {/* Calendar days */}
-              {calendarQuery.data.days.map((day: StorageCalendarDay) => {
+              {(Array.isArray(calendarQuery.data?.days) ? calendarQuery.data.days : []).map((day: StorageCalendarDay) => {
                 const date = new Date(day.date);
                 const dayNum = date.getDate();
                 const isOccupied = day.status === "occupied";

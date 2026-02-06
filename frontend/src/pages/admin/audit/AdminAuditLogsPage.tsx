@@ -41,7 +41,8 @@ export function AdminAuditLogsPage() {
     if (!auditQuery.data?.items) return [];
     if (!searchTerm.trim()) return auditQuery.data.items;
     const term = searchTerm.toLowerCase();
-    return auditQuery.data.items.filter((log) => {
+    const items = Array.isArray(auditQuery.data?.items) ? auditQuery.data.items : [];
+    return items.filter((log) => {
       return (
         log.action?.toLowerCase().includes(term) ||
         log.entity?.toLowerCase().includes(term) ||
@@ -69,7 +70,7 @@ export function AdminAuditLogsPage() {
 
   // CSV Export handler
   const exportToCsv = useCallback(() => {
-    if (!auditQuery.data?.items || auditQuery.data.items.length === 0) return;
+    if (!Array.isArray(auditQuery.data?.items) || auditQuery.data.items.length === 0) return;
 
     const headers = ["Tarih", "Action", "Kaynak", "Entity", "Tenant", "Aktör", "Detay"];
     const csvRows = [headers.join(";")];

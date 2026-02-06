@@ -57,12 +57,12 @@ export function AdminSettlementsPage() {
   });
 
   const tenantsById = new Map(
-    tenantsQuery.data?.map((tenant) => [tenant.id, tenant]) ?? []
+    (Array.isArray(tenantsQuery.data) ? tenantsQuery.data : []).map((tenant) => [tenant.id, tenant])
   );
 
   // Filter settlements by search term
   const filteredSettlements = useMemo(() => {
-    const settlements = settlementsQuery.data ?? [];
+    const settlements = Array.isArray(settlementsQuery.data) ? settlementsQuery.data : [];
     if (!searchTerm.trim()) return settlements;
     
     const term = searchTerm.toLowerCase();
@@ -334,4 +334,3 @@ export function AdminSettlementsPage() {
     </div>
   );
 }
-

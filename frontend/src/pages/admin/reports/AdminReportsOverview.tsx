@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Building2, Users, Package, DollarSign, HardDrive, Mail, MessageSquare, CreditCard, Loader2, AlertCircle, CheckCircle2, XCircle, Clock, Send, FileText } from "../../../lib/lucide";
 import { ModernButton } from "../../../components/ui/ModernButton";
 
-import { adminReportService, type AdminSummaryResponse } from "../../../services/admin/reports";
+import { adminReportService, type AdminSummaryResponse, type AdminTenantSummary, type AdminTopTenant } from "../../../services/admin/reports";
 import { paymentScheduleService } from "../../../services/partner/paymentSchedules";
 import { adminTenantService } from "../../../services/admin/tenants";
 import type { Tenant } from "../../../services/admin/tenants";
@@ -52,7 +52,8 @@ export function AdminReportsOverview() {
 
   const tenantsById = useMemo(() => {
     const map = new Map<string, Tenant>();
-    for (const tenant of tenantsQuery.data ?? []) {
+    const list = Array.isArray(tenantsQuery.data) ? tenantsQuery.data : [];
+    for (const tenant of list) {
       map.set(tenant.id, tenant);
     }
     return map;
@@ -413,7 +414,7 @@ export function AdminReportsOverview() {
       )}
 
       {/* Top 5 Tenants */}
-      {summaryQuery.data?.top_tenants && summaryQuery.data.top_tenants.length > 0 && (
+      {Array.isArray(summaryQuery.data?.top_tenants) && summaryQuery.data.top_tenants.length > 0 && (
         <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
           <div style={{ marginBottom: 'var(--space-4)' }}>
             <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: '0 0 var(--space-1) 0' }}>
@@ -448,8 +449,8 @@ export function AdminReportsOverview() {
                 render: (value) => formatCurrency(value),
                 align: 'right',
               },
-            ] as ModernTableColumn<typeof summaryQuery.data.top_tenants[0] & { rank?: number }>[]}
-            data={summaryQuery.data.top_tenants.map((t, i) => ({ ...t, rank: i + 1 }))}
+            ] as ModernTableColumn<AdminTopTenant & { rank?: number }>[]}
+            data={(Array.isArray(summaryQuery.data?.top_tenants) ? summaryQuery.data.top_tenants : []).map((t, i) => ({ ...t, rank: i + 1 }))}
             loading={summaryQuery.isLoading}
             striped
             hoverable
@@ -473,7 +474,7 @@ export function AdminReportsOverview() {
             <Loader2 className="h-12 w-12" style={{ margin: '0 auto var(--space-4) auto', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
             <p style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', margin: 0 }}>Veriler yükleniyor...</p>
           </div>
-        ) : summaryQuery.data?.tenants && summaryQuery.data.tenants.length > 0 ? (
+        ) : Array.isArray(summaryQuery.data?.tenants) && summaryQuery.data.tenants.length > 0 ? (
           <ModernTable
             columns={[
               {
@@ -515,8 +516,8 @@ export function AdminReportsOverview() {
                 render: (value) => <span style={{ color: '#dc2626', fontWeight: 'var(--font-semibold)' }}>{formatCurrency(value)}</span>,
                 align: 'right',
               },
-            ] as ModernTableColumn<typeof summaryQuery.data.tenants[0]>[]}
-            data={summaryQuery.data.tenants}
+            ] as ModernTableColumn<AdminTenantSummary>[]}
+            data={Array.isArray(summaryQuery.data?.tenants) ? summaryQuery.data.tenants : []}
             loading={summaryQuery.isLoading}
             striped
             hoverable

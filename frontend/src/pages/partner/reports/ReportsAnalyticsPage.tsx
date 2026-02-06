@@ -166,9 +166,12 @@ export function ReportsAnalyticsPage() {
 
   // Filtered & Sorted Location Data (all items for counting)
   const allFilteredLocationData = useMemo(() => {
-    if (!overviewQuery.data?.by_location) return [];
-    
-    let data = [...overviewQuery.data.by_location];
+    const raw = Array.isArray(overviewQuery.data?.by_location)
+      ? overviewQuery.data.by_location
+      : [];
+    if (raw.length === 0) return [];
+
+    let data = [...raw];
     
     // Search filter
     if (debouncedLocationSearch.trim()) {
@@ -207,16 +210,22 @@ export function ReportsAnalyticsPage() {
 
   // Get unique locations for storage filter
   const storageUniqueLocations = useMemo(() => {
-    if (!overviewQuery.data?.by_storage) return [];
-    const locations = new Set(overviewQuery.data.by_storage.map(item => item.location_name));
+    const raw = Array.isArray(overviewQuery.data?.by_storage)
+      ? overviewQuery.data.by_storage
+      : [];
+    if (raw.length === 0) return [];
+    const locations = new Set(raw.map((item) => item.location_name));
     return Array.from(locations).sort();
   }, [overviewQuery.data?.by_storage]);
 
   // Filtered & Sorted Storage Data (all items for counting)
   const allFilteredStorageData = useMemo(() => {
-    if (!overviewQuery.data?.by_storage) return [];
-    
-    let data = [...overviewQuery.data.by_storage];
+    const raw = Array.isArray(overviewQuery.data?.by_storage)
+      ? overviewQuery.data.by_storage
+      : [];
+    if (raw.length === 0) return [];
+
+    let data = [...raw];
     
     // Search filter
     if (debouncedStorageSearch.trim()) {
@@ -728,9 +737,9 @@ export function ReportsAnalyticsPage() {
                 </div>
               </div>
               <div style={{ height: '350px', minHeight: '350px', minWidth: 0 }}>
-                {overviewQuery.data?.by_payment_method && overviewQuery.data.by_payment_method.length > 0 ? (
+          {Array.isArray(overviewQuery.data?.by_payment_method) && overviewQuery.data.by_payment_method.length > 0 ? (
                   <RevenueDonutChart 
-                    data={overviewQuery.data.by_payment_method.map((item, idx) => {
+                data={overviewQuery.data.by_payment_method.map((item, idx) => {
                       const methodColors: Record<string, string> = {
                         "GATEWAY_DEMO": "#6366f1",
                         "GATEWAY_LIVE": "#3B82F6",
@@ -875,7 +884,7 @@ export function ReportsAnalyticsPage() {
           )}
 
           {/* Payment Method Revenue Table */}
-          {overviewQuery.data.by_payment_method && overviewQuery.data.by_payment_method.length > 0 && (
+          {Array.isArray(overviewQuery.data?.by_payment_method) && overviewQuery.data.by_payment_method.length > 0 && (
             <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
               <h3 style={{ margin: '0 0 var(--space-6) 0', fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
                 💳 Ödeme Yöntemi Dağılımı
@@ -890,7 +899,7 @@ export function ReportsAnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {overviewQuery.data.by_payment_method.map((method, index) => {
+                  {overviewQuery.data.by_payment_method.map((method, index) => {
                       const methodColors: Record<string, string> = {
                         "GATEWAY_DEMO": "#6366f1",
                         "GATEWAY_LIVE": "#3B82F6",
@@ -928,7 +937,7 @@ export function ReportsAnalyticsPage() {
           )}
 
           {/* Location Revenue Table - Enhanced */}
-          {overviewQuery.data.by_location.length > 0 && (
+          {Array.isArray(overviewQuery.data?.by_location) && overviewQuery.data.by_location.length > 0 && (
             <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
               {/* Header */}
               <div style={{ 
@@ -1244,7 +1253,7 @@ export function ReportsAnalyticsPage() {
           )}
 
           {/* Storage Usage Table - Enhanced */}
-          {overviewQuery.data.by_storage.length > 0 && (
+          {Array.isArray(overviewQuery.data?.by_storage) && overviewQuery.data.by_storage.length > 0 && (
             <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
               {/* Header */}
               <div style={{ 
