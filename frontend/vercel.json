@@ -113,6 +113,14 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/tickets"
     },
     {
+      "source": "/revenue/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/revenue/:path*"
+    },
+    {
+      "source": "/revenue",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/revenue"
+    },
+    {
       "source": "/ai/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/ai/:path*"
     },
