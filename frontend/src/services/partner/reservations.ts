@@ -107,25 +107,60 @@ export const reservationService = {
    * List all reservations (combines widget + normal reservations)
    */
   async list(params?: { status?: string; from?: string; to?: string }): Promise<Reservation[]> {
-    // Fetch widget reservations
-    const widgetResponse = await http.get<{ items: Reservation[] }>("/partners/widget-reservations", {
-      params: {
-        status: params?.status,
-        date_from: params?.from,
-        date_to: params?.to,
-      },
-    });
-    
-    // Fetch normal reservations
-    const normalResponse = await http.get<Reservation[]>("/reservations", {
-      params: {
-        status: params?.status,
-        from: params?.from,
-        to: params?.to,
-      },
-    });
-    
+    const widgetReservations: Reservation[] = [];
+    try {
+      const widgetResponse = await http.get<{ items: Reservation[] }>("/partners/widget-reservations", {
+        params: {
+          status: params?.status,
+          date_from: params?.from,
+          date_to: params?.to,
+        },
+      });
+      const items = Array.isArray(widgetResponse.data?.items) ? widgetResponse.data.items : [];
+      widgetReservations.push(
+        ...items.map((r) => ({
+          ...r,
+          origin: r.origin || "widget",
+        }))
+      );
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        throw error;
+      }
+    }
+
+    let normalReservations: Reservation[] = [];
+    try {
+      const normalResponse = await http.get<Reservation[]>("/reservations", {
+        params: {
+          status: params?.status,
+          from: params?.from,
+          to: params?.to,
+        },
+      });
+      normalReservations = (Array.isArray(normalResponse.data) ? normalResponse.data : []).map((r) => ({
+        ...r,
+        origin: r.origin || "panel",
+      }));
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        throw error;
+      }
+    }
+
     // Combine both lists and sort by created_at desc
+    const combined = [...widgetReservations, ...normalReservations];
+    
+    // Sort by created_at descending
+    const allReservations = combined.sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    return allReservations;
+    
+    /* old code kept for reference
     const widgetReservations = (widgetResponse.data.items || []).map(r => ({
       ...r,
       origin: r.origin || 'widget'
@@ -145,6 +180,7 @@ export const reservationService = {
     });
     
     return allReservations;
+    */
   },
 
   async createManual(payload: ManualReservationCreate): Promise<Reservation> {
