@@ -153,7 +153,7 @@ export function LandingPage() {
     };
   }, []);
 
-  const imageSrc = (fileName: string) => `/landing-examples/${encodeURIComponent(fileName)}`;
+  const imageSrc = (fileName: string) => `/landing-examples/${fileName}`;
 
   return (
     <div className={styles.landingPage}>
@@ -705,13 +705,13 @@ export function LandingPage() {
                 title: "Rezervasyon Yönetimi",
                 description: "Rezervasyonları kolayca oluşturun, görüntüleyin ve yönetin",
                 features: ["Hızlı rezervasyon oluşturma", "Durum takibi", "Ödeme yönetimi", "Detaylı raporlar"],
-                image: imageSrc("rezervasyon yönetimi.png"),
+                image: imageSrc("rezervasyon-yonetimi.png"),
               },
               {
                 title: "QR Kod Doğrulama",
                 description: "QR kod ile hızlı ve güvenli teslim alma/etme işlemleri",
                 features: ["Anlık QR tarama", "Manuel kod girişi", "Teslim işlemleri", "Geçmiş kayıtları"],
-                image: imageSrc("qr sayfası.png"),
+                image: imageSrc("qr-sayfasi.png"),
               },
               {
                 title: t("nav.reports"),
@@ -722,7 +722,7 @@ export function LandingPage() {
                   t("landing.screenshots.reportsFeature3"),
                   t("landing.screenshots.reportsFeature4"),
                 ],
-                image: imageSrc("raporlar ve analiz.png"),
+                image: imageSrc("raporlar-analiz.png"),
               },
             ].map((screenshot, index) => (
               <motion.div
