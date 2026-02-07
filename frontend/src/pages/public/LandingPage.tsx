@@ -258,10 +258,6 @@ export function LandingPage() {
             transition={{ duration: 0.6 }}
             className={styles.heroContent}
           >
-            <div className={styles.heroBadge}>
-              <CheckCircle2 className="h-4 w-4" />
-              <span>#1 Otel Bagaj Yönetim Platformu</span>
-            </div>
             <h1 className={styles.heroTitle}>
               Otel Bagaj & Emanet Yönetimi
               <br />
