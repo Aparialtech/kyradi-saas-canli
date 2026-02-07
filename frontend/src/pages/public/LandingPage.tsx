@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,6 +33,7 @@ import styles from "./LandingPage.module.css";
 export function LandingPage() {
   const { t } = useTranslation();
   const panelUrl = "https://app.kyradi.com";
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [activeUseCase, setActiveUseCase] = useState<"hotels" | "depots" | "events">("hotels");
@@ -86,6 +87,73 @@ export function LandingPage() {
       setTimeout(() => setContactSuccess(false), 5000);
     }, 500);
   };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animationId = 0;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const resize = () => {
+      const { clientWidth, clientHeight } = canvas.parentElement ?? canvas;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(clientWidth * dpr);
+      canvas.height = Math.floor(clientHeight * dpr);
+      canvas.style.width = `${clientWidth}px`;
+      canvas.style.height = `${clientHeight}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const blobs = [
+      { x: 120, y: 120, r: 180, vx: 0.18, vy: 0.12, color: "rgba(99, 102, 241, 0.35)" },
+      { x: 420, y: 260, r: 220, vx: -0.14, vy: 0.1, color: "rgba(16, 185, 129, 0.28)" },
+      { x: 680, y: 120, r: 160, vx: 0.12, vy: -0.16, color: "rgba(56, 189, 248, 0.25)" },
+    ];
+
+    const draw = () => {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "rgba(255,255,255,0.03)";
+      ctx.fillRect(0, 0, width, height);
+
+      for (const blob of blobs) {
+        const gradient = ctx.createRadialGradient(blob.x, blob.y, blob.r * 0.1, blob.x, blob.y, blob.r);
+        gradient.addColorStop(0, blob.color);
+        gradient.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(blob.x, blob.y, blob.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (!prefersReducedMotion) {
+          blob.x += blob.vx;
+          blob.y += blob.vy;
+          if (blob.x < -100 || blob.x > width + 100) blob.vx *= -1;
+          if (blob.y < -100 || blob.y > height + 100) blob.vy *= -1;
+        }
+      }
+
+      if (!prefersReducedMotion) {
+        animationId = window.requestAnimationFrame(draw);
+      }
+    };
+
+    resize();
+    draw();
+    window.addEventListener("resize", resize);
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      if (animationId) window.cancelAnimationFrame(animationId);
+    };
+  }, []);
+
+  const imageSrc = (fileName: string) => `/landing-examples/${encodeURIComponent(fileName)}`;
 
   return (
     <div className={styles.landingPage}>
@@ -179,6 +247,10 @@ export function LandingPage() {
 
       {/* Hero Section */}
       <section className={styles.hero}>
+        <div className={styles.heroBackdrop}>
+          <canvas ref={canvasRef} className={styles.heroCanvas} aria-hidden="true" />
+          <div className={styles.heroNoise} aria-hidden="true" />
+        </div>
         <div className={styles.heroContainer}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -627,16 +699,19 @@ export function LandingPage() {
                 title: "Dashboard & Genel Bakış",
                 description: "Tüm önemli metriklerinizi tek ekranda görüntüleyin",
                 features: ["Gelir istatistikleri", "Rezervasyon özeti", "Depo doluluk oranı", "Komisyon takibi"],
+                image: imageSrc("dashboard.png"),
               },
               {
                 title: "Rezervasyon Yönetimi",
                 description: "Rezervasyonları kolayca oluşturun, görüntüleyin ve yönetin",
                 features: ["Hızlı rezervasyon oluşturma", "Durum takibi", "Ödeme yönetimi", "Detaylı raporlar"],
+                image: imageSrc("rezervasyon yönetimi.png"),
               },
               {
                 title: "QR Kod Doğrulama",
                 description: "QR kod ile hızlı ve güvenli teslim alma/etme işlemleri",
                 features: ["Anlık QR tarama", "Manuel kod girişi", "Teslim işlemleri", "Geçmiş kayıtları"],
+                image: imageSrc("qr sayfası.png"),
               },
               {
                 title: t("nav.reports"),
@@ -647,6 +722,7 @@ export function LandingPage() {
                   t("landing.screenshots.reportsFeature3"),
                   t("landing.screenshots.reportsFeature4"),
                 ],
+                image: imageSrc("raporlar ve analiz.png"),
               },
             ].map((screenshot, index) => (
               <motion.div
@@ -667,15 +743,12 @@ export function LandingPage() {
                       </div>
                     </div>
                     <div className={styles.mockBrowserContent}>
-                      <div className={styles.mockContentBar} style={{ width: "85%" }}></div>
-                      <div className={styles.mockContentBar} style={{ width: "70%" }}></div>
-                      <div className={styles.mockContentBar} style={{ width: "90%" }}></div>
-                      <div className={styles.mockContentGrid}>
-                        <div className={styles.mockGridItem}></div>
-                        <div className={styles.mockGridItem}></div>
-                        <div className={styles.mockGridItem}></div>
-                        <div className={styles.mockGridItem}></div>
-                      </div>
+                      <img
+                        src={screenshot.image}
+                        alt={screenshot.title}
+                        className={styles.screenshotImage}
+                        loading="lazy"
+                      />
                     </div>
                   </div>
                 </div>
