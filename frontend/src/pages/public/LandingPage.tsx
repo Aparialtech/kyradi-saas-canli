@@ -315,23 +315,13 @@ export function LandingPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className={styles.heroVisual}
           >
-            <div className={styles.dashboardMock}>
-              <div className={styles.mockHeader}>
-                <div className={styles.mockHeaderDot}></div>
-                <div className={styles.mockHeaderDot}></div>
-                <div className={styles.mockHeaderDot}></div>
-              </div>
-              <div className={styles.mockContent}>
-                <div className={styles.mockCard}>
-                  <div className={styles.mockCardBar} style={{ width: "60%" }}></div>
-                </div>
-                <div className={styles.mockCard}>
-                  <div className={styles.mockCardBar} style={{ width: "80%" }}></div>
-                </div>
-                <div className={styles.mockCard}>
-                  <div className={styles.mockCardBar} style={{ width: "45%" }}></div>
-                </div>
-              </div>
+            <div className={styles.heroImageFrame}>
+              <img
+                src="/landing-examples/dashboard.png"
+                alt="Kyradi Dashboard"
+                className={styles.heroImage}
+                loading="lazy"
+              />
             </div>
           </motion.div>
         </div>
