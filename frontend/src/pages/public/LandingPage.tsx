@@ -328,12 +328,40 @@ export function LandingPage() {
       {/* Stats Section */}
       <section className={styles.statsSection}>
         <div className={styles.container}>
+          <div className={styles.statsIntro}>
+            <h3>Operasyon Gücü, Anlık Görünürlük</h3>
+            <p>Gerçek zamanlı verilerle operasyonunuzu ölçülebilir hale getirin.</p>
+          </div>
           <div className={styles.statsGrid}>
             {[
-              { icon: <Users className="h-6 w-6" />, value: "500+", label: "Aktif Otel", color: "#6366f1" },
-              { icon: <Package className="h-6 w-6" />, value: "50K+", label: "Aylık Rezervasyon", color: "#10b981" },
-              { icon: <TrendingUp className="h-6 w-6" />, value: "%99.9", label: "Sistem Uptime", color: "#f59e0b" },
-              { icon: <CheckCircle2 className="h-6 w-6" />, value: "4.9/5", label: "Müşteri Memnuniyeti", color: "#ef4444" },
+              {
+                icon: <Users className="h-6 w-6" />,
+                value: "Canlı Otel Ağı",
+                label: "Her gün aktif operasyon",
+                note: "Çok şubeli yapılarda tek panel kontrol",
+                color: "#6366f1",
+              },
+              {
+                icon: <Package className="h-6 w-6" />,
+                value: "Yüksek Rezervasyon Hacmi",
+                label: "Yoğun sezonda bile stabil",
+                note: "Rezervasyon → teslim akışı dakikalar içinde",
+                color: "#10b981",
+              },
+              {
+                icon: <TrendingUp className="h-6 w-6" />,
+                value: "7/24 İzleme",
+                label: "SLA ve performans takibi",
+                note: "Operasyon raporları ve finansal görünürlük",
+                color: "#f59e0b",
+              },
+              {
+                icon: <CheckCircle2 className="h-6 w-6" />,
+                value: "Üst Düzey Memnuniyet",
+                label: "Misafir deneyimi odaklı",
+                note: "Hızlı teslim, net kayıt, güvenli süreç",
+                color: "#ef4444",
+              },
             ].map((stat, index) => (
               <motion.div
                 key={index}
@@ -343,11 +371,14 @@ export function LandingPage() {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className={styles.statCard}
               >
-                <div className={styles.statIcon} style={{ color: stat.color }}>
-                  {stat.icon}
+                <div className={styles.statHeader}>
+                  <div className={styles.statIcon} style={{ color: stat.color }}>
+                    {stat.icon}
+                  </div>
+                  <span className={styles.statLabel}>{stat.label}</span>
                 </div>
                 <div className={styles.statValue}>{stat.value}</div>
-                <div className={styles.statLabel}>{stat.label}</div>
+                <div className={styles.statNote}>{stat.note}</div>
               </motion.div>
             ))}
           </div>

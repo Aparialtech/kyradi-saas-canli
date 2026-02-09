@@ -405,9 +405,27 @@
 /* Stats Section */
 .statsSection {
   padding: 4rem 0;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(99, 102, 241, 0.04) 40%, rgba(16, 185, 129, 0.04) 100%);
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.statsIntro {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.statsIntro h3 {
+  font-size: clamp(1.6rem, 1.2vw + 1.2rem, 2.2rem);
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  color: #0f172a;
+}
+
+.statsIntro p {
+  margin: 0;
+  color: #64748b;
+  font-size: 1rem;
 }
 
 .statsGrid {
@@ -417,43 +435,58 @@
 }
 
 .statCard {
-  background: white;
-  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.86);
+  border-radius: 1.25rem;
   padding: 2rem;
-  text-align: center;
-  border: 1px solid #e2e8f0;
+  text-align: left;
+  border: 1px solid rgba(226, 232, 240, 0.9);
   transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
 .statCard:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  border-color: #6366f1;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.statHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .statIcon {
-  width: 48px;
-  height: 48px;
-  margin: 0 auto 1rem;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 0.75rem;
+  background: rgba(99, 102, 241, 0.08);
 }
 
 .statValue {
-  font-size: 2.5rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: #0f172a;
   margin: 0 0 0.5rem;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .statLabel {
   font-size: 0.9375rem;
-  color: #64748b;
-  font-weight: 500;
+  color: #475569;
+  font-weight: 600;
   margin: 0;
+}
+
+.statNote {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
 }
 
 /* Section Header */
