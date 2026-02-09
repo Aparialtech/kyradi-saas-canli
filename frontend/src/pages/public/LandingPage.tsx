@@ -161,7 +161,7 @@ export function LandingPage() {
       <nav className={styles.navbar}>
         <div className={styles.navbarContainer}>
           <Link to="/" className={styles.logo}>
-            <img src="/logo.png" alt="Kyradi" className={styles.logoImage} />
+            <img src="/kyradi_logo.png" alt="Kyradi" className={styles.logoImage} />
             <span className={styles.logoText}>Kyradi</span>
           </Link>
 

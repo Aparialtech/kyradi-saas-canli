@@ -41,6 +41,7 @@
 .logoImage {
   height: 32px;
   width: auto;
+  filter: brightness(0) saturate(100%);
 }
 
 .logoText {
