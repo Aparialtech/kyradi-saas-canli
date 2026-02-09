@@ -1287,9 +1287,19 @@
 }
 
 .footerLogo {
-  height: 40px;
+  height: 56px;
   width: auto;
   filter: brightness(0) saturate(100%);
+  object-fit: contain;
+}
+
+.footerBrand {
+  align-items: flex-start;
+}
+
+.footerBrand img {
+  display: block;
+  padding-top: 6px;
 }
 
 .footerTagline {
