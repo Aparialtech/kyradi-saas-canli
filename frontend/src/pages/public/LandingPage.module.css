@@ -260,6 +260,18 @@
   line-height: 1;
 }
 
+.statLink {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #4f46e5;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.statLink:hover {
+  color: #4338ca;
+}
+
 .statLabel {
   font-size: 0.875rem;
   color: #64748b;

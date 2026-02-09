@@ -269,16 +269,18 @@ export function LandingPage() {
             </p>
             <div className={styles.heroStats}>
               <div className={styles.statItem}>
-                <div className={styles.statValue}>500+</div>
-                <div className={styles.statLabel}>Aktif Otel</div>
+                <a href="#screenshots" className={styles.statLink}>
+                  Aktif Otelleri Gör
+                </a>
+                <div className={styles.statLabel}>Gerçek kullanım örnekleri</div>
               </div>
               <div className={styles.statItem}>
                 <div className={styles.statValue}>50K+</div>
                 <div className={styles.statLabel}>Rezervasyon/Ay</div>
               </div>
               <div className={styles.statItem}>
-                <div className={styles.statValue}>%99.9</div>
-                <div className={styles.statLabel}>Uptime</div>
+                <div className={styles.statValue}>7/24</div>
+                <div className={styles.statLabel}>Kesintisiz İzleme</div>
               </div>
             </div>
             <div className={styles.heroCTAs}>
