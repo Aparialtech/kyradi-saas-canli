@@ -336,9 +336,9 @@ export function LandingPage() {
             {[
               {
                 icon: <Users className="h-6 w-6" />,
-                value: "Canlı Otel Ağı",
-                label: "Her gün aktif operasyon",
-                note: "Çok şubeli yapılarda tek panel kontrol",
+                value: "Aktif Otelleri Gör",
+                label: "Gerçek kullanım örnekleri",
+                note: "Platformda aktif otellerin canlı akışı",
                 color: "#6366f1",
               },
               {
@@ -350,9 +350,9 @@ export function LandingPage() {
               },
               {
                 icon: <TrendingUp className="h-6 w-6" />,
-                value: "7/24 İzleme",
+                value: "7/24 Kesintisiz İzleme",
                 label: "SLA ve performans takibi",
-                note: "Operasyon raporları ve finansal görünürlük",
+                note: "Anlık bildirimler ve operasyon raporları",
                 color: "#f59e0b",
               },
               {
