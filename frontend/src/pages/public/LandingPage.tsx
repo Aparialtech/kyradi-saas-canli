@@ -1124,7 +1124,7 @@ export function LandingPage() {
         <div className={styles.container}>
           <div className={styles.footerContent}>
             <div className={styles.footerBrand}>
-              <img src="/logo.png" alt="Kyradi" className={styles.footerLogo} />
+              <img src="/kyradi_logo.png" alt="Kyradi" className={styles.footerLogo} />
               <p className={styles.footerTagline}>Otel bagaj ve emanet yönetimi için profesyonel çözüm</p>
             </div>
             <div className={styles.footerLinks}>

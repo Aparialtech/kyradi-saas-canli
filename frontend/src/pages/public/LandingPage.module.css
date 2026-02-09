@@ -1289,6 +1289,7 @@
 .footerLogo {
   height: 40px;
   width: auto;
+  filter: brightness(0) saturate(100%);
 }
 
 .footerTagline {
