@@ -259,7 +259,7 @@ export function LandingPage() {
             className={styles.heroContent}
           >
             <h1 className={styles.heroTitle}>
-              Otel Bagaj & Emanet Yönetimi
+              Bavul ve Çanta Takibinde Dijital Dönem
               <br />
               <span className={styles.heroTitleAccent}>Online, Güvenli, Hızlı</span>
             </h1>
