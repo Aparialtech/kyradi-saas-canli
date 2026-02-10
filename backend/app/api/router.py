@@ -42,6 +42,7 @@ from .routes import (
     magicpay,
     payment_schedules,
     pricing,
+    pricing_rules,
     public,
     payments,
     qr,
@@ -87,6 +88,7 @@ api_router.include_router(public.router)
 api_router.include_router(payments.router)
 api_router.include_router(magicpay.router)
 api_router.include_router(pricing.router)
+api_router.include_router(pricing_rules.router)  # Backward compatibility: /pricing-rules/*
 api_router.include_router(users.router)
 api_router.include_router(staff.router)
 api_router.include_router(tickets.router)
