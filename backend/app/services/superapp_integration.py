@@ -26,11 +26,36 @@ def compute_signature(secret: str, raw_body: bytes) -> str:
     return hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
 
 
+def _try_canonicalize_json(raw_body: bytes) -> Optional[bytes]:
+    """Best-effort canonical JSON encoding for signature stability.
+
+    Returns None if body isn't valid JSON.
+    """
+    try:
+        obj = json.loads(raw_body.decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
+    return dumps_canonical(obj)
+
+
 def verify_signature(secret: str, raw_body: bytes, header_value: Optional[str]) -> bool:
     if not header_value:
         return False
+    provided = header_value.strip()
+
+    # 1) Legacy: raw body HMAC
     expected = compute_signature(secret, raw_body)
-    return hmac.compare_digest(expected, header_value)
+    if hmac.compare_digest(expected, provided):
+        return True
+
+    # 2) Canonical JSON HMAC (optional)
+    if not settings.superapp_accept_canonical_signatures:
+        return False
+    canonical = _try_canonicalize_json(raw_body)
+    if not canonical:
+        return False
+    expected2 = compute_signature(secret, canonical)
+    return hmac.compare_digest(expected2, provided)
 
 
 def dumps_canonical(payload: Any) -> bytes:
@@ -89,4 +114,3 @@ async def post_status_update(
 
     if last_exc:
         raise last_exc
-

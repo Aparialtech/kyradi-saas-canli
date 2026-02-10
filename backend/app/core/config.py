@@ -203,6 +203,15 @@ class Settings(BaseSettings):
         default=2,
         validation_alias=AliasChoices("INTEGRATION_RETRY_COUNT", "KYRADI_INTEGRATION_RETRY_COUNT"),
     )
+    superapp_accept_canonical_signatures: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "SUPERAPP_ACCEPT_CANONICAL_SIGNATURES",
+            "KYRADI_SUPERAPP_ACCEPT_CANONICAL_SIGNATURES",
+            "CANONICAL_SIG",
+        ),
+        description="If enabled, integration signature verification will also accept HMAC over canonical JSON.",
+    )
     
     # Email service configuration
     email_provider: str = Field(
