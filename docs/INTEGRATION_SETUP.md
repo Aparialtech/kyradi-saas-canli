@@ -88,7 +88,8 @@ curl -i -X POST "$SAAS_ORIGIN/api/integrations/reservations" \\
 
 Expected:
 - `201 Created` on success
-- `401 Invalid signature` if `SIG` is wrong (this is expected behavior)
+- `401 INVALID_SIGNATURE` if `SIG` is wrong (this is expected behavior)
+- `401 MISSING_SIGNATURE` if signature header is missing
 
 ## Debug Checklist
 
@@ -100,3 +101,11 @@ Expected:
 3. If you see `NO_IDLE_STORAGE_FOR_TENANT`:
    - Ensure tenant has at least 1 storage with `status=idle` and `capacity>0`
 
+## Assign + Status Update (Admin Token)
+
+Endpoint:
+- `PUT /api/integrations/reservations/{id}/assign`
+
+Auth:
+- Bearer JWT required
+- must be `role="tenant_admin"` and have `tenant_id` (tenant-scoped)

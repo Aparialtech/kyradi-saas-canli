@@ -16,8 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
-from app.dependencies.auth import require_admin_user
+from app.dependencies.auth import get_current_active_user
 from app.models import Location, Reservation, Storage, Tenant, User
+from app.models.enums import ReservationStatus, UserRole
 from app.services.superapp_integration import (
     SIGNATURE_HEADER,
     extract_external_reservation_id,
@@ -58,6 +59,7 @@ class IntegrationAssignPayload(BaseModel):
     storageId: Optional[str] = None
     lockerId: Optional[str] = None
     operatorName: Optional[str] = None
+    # Integration status values: assigned|dropped|completed
     status: Optional[str] = None
     note: Optional[str] = None
 
@@ -71,9 +73,20 @@ async def require_integration_signature(request: Request) -> bytes:
 
     raw = await request.body()
     sig = request.headers.get(SIGNATURE_HEADER)
+    if not sig:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="MISSING_SIGNATURE")
     if not verify_signature(settings.superapp_integration_secret, raw, sig):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="INVALID_SIGNATURE")
     return raw
+
+
+async def require_tenant_admin_token(current_user: User = Depends(get_current_active_user)) -> User:
+    """Integration admin token must be tenant-scoped tenant_admin."""
+    if current_user.role != UserRole.TENANT_ADMIN.value:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant context required")
+    return current_user
 
 
 async def _resolve_tenant_id(
@@ -207,7 +220,19 @@ async def create_reservation_from_superapp(
 ) -> dict[str, Any]:
     tenant_id = await _resolve_tenant_id(session, request, payload)
     if not tenant_id:
-        raise HTTPException(status_code=400, detail="tenant_id_required")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "tenant_id_required",
+                "hint": "Send one of: tenantId (uuid or slug), tenantSlug, locationId; or call via tenant host so request.state.tenant_id is set.",
+                "received": {
+                    "tenantId": bool(payload.tenantId),
+                    "tenantSlug": bool(payload.tenantSlug),
+                    "locationId": bool(payload.locationId),
+                    "tenant_state": bool(getattr(request.state, "tenant_id", None)),
+                },
+            },
+        )
 
     storage_id = await _resolve_storage_id(session, tenant_id, payload)
 
@@ -244,7 +269,7 @@ async def assign_reservation_and_notify(
     reservation_id: str,
     payload: IntegrationAssignPayload,
     background: BackgroundTasks,
-    _: User = Depends(require_admin_user),
+    _: User = Depends(require_tenant_admin_token),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     res = await session.get(Reservation, reservation_id)
@@ -263,6 +288,17 @@ async def assign_reservation_and_notify(
 
     if payload.note:
         res.notes = (res.notes or "").rstrip() + f"\nSUPERAPP_NOTE:{payload.note}"
+
+    # Map integration status values to internal ReservationStatus without schema changes.
+    if payload.status:
+        normalized = payload.status.strip().lower()
+        if normalized not in {"assigned", "dropped", "completed"}:
+            raise HTTPException(status_code=400, detail="Invalid status (allowed: assigned|dropped|completed)")
+        if normalized == "dropped":
+            res.status = ReservationStatus.ACTIVE.value
+        elif normalized == "completed":
+            res.status = ReservationStatus.COMPLETED.value
+        # assigned -> keep RESERVED (default)
 
     await session.commit()
     await session.refresh(res)
