@@ -995,13 +995,13 @@ export function LandingPage() {
                     <div className={styles.contactMethodValue}>info@kyradi.com</div>
                   </div>
                 </a>
-                <a href="tel:+905551234567" className={styles.contactMethod}>
+                <a href="tel:+905307745555" className={styles.contactMethod}>
                   <div className={styles.contactMethodIcon}>
                     <Phone className="h-5 w-5" />
                   </div>
                   <div>
                     <div className={styles.contactMethodLabel}>Telefon</div>
-                    <div className={styles.contactMethodValue}>+90 555 123 45 67</div>
+                    <div className={styles.contactMethodValue}>+90 530 774 55 55</div>
                   </div>
                 </a>
                 <div className={styles.contactMethod}>
@@ -1081,7 +1081,7 @@ export function LandingPage() {
                       id="contact-phone"
                       value={contactForm.phone}
                       onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                      placeholder="+90 555 123 45 67"
+                      placeholder="+90 530 774 55 55"
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -1190,8 +1190,8 @@ export function LandingPage() {
                 <a href="mailto:info@kyradi.com" className={styles.footerLink}>
                   info@kyradi.com
                 </a>
-                <a href="tel:+905551234567" className={styles.footerLink}>
-                  +90 555 123 45 67
+                <a href="tel:+905307745555" className={styles.footerLink}>
+                  +90 530 774 55 55
                 </a>
               </div>
             </div>
