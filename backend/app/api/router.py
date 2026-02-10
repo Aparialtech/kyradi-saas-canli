@@ -27,6 +27,7 @@ from .routes import (
     admin_diagnostics,
     admin_tenant_domains,
     admin_users,
+    integrations,
     partner_reservations,
     partner_settings,
     partner_storages,
@@ -77,6 +78,7 @@ api_router.include_router(locations.router)
 api_router.include_router(lockers.router)
 api_router.include_router(lockers.legacy_router)  # Backward compatibility
 api_router.include_router(domain_check.router)
+api_router.include_router(integrations.router)
 
 if settings.enable_internal_reservations:
     api_router.include_router(reservations.router)

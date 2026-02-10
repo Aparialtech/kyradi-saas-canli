@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import List, Optional
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -180,6 +180,28 @@ class Settings(BaseSettings):
     payment_webhook_secret: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("PAYMENT_WEBHOOK_SECRET", "KYRADI_PAYMENT_WEBHOOK_SECRET"),
+    )
+
+    # =========================================================================
+    # SuperApp integration (server-to-server)
+    # =========================================================================
+    superapp_base_url: Optional[HttpUrl] = Field(
+        default=None,
+        validation_alias=AliasChoices("SUPERAPP_BASE_URL", "KYRADI_SUPERAPP_BASE_URL"),
+        description="Base URL of SuperApp for status update callbacks.",
+    )
+    superapp_integration_secret: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("SUPERAPP_INTEGRATION_SECRET", "KYRADI_SUPERAPP_INTEGRATION_SECRET"),
+        description="Shared HMAC secret for SuperApp integration requests.",
+    )
+    integration_timeout_ms: int = Field(
+        default=5000,
+        validation_alias=AliasChoices("INTEGRATION_TIMEOUT_MS", "KYRADI_INTEGRATION_TIMEOUT_MS"),
+    )
+    integration_retry_count: int = Field(
+        default=2,
+        validation_alias=AliasChoices("INTEGRATION_RETRY_COUNT", "KYRADI_INTEGRATION_RETRY_COUNT"),
     )
     
     # Email service configuration
