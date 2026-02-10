@@ -45,10 +45,30 @@
 }
 
 .logoText {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  background: linear-gradient(90deg, #6366f1 0%, #4f46e5 35%, #14b8a6 70%, #6366f1 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  background-size: 220% 100%;
+  animation: logoGradientShift 6s ease-in-out infinite;
+}
+
+@keyframes logoGradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logoText {
+    animation: none;
+  }
 }
 
 .navLinks {
