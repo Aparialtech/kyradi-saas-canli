@@ -70,6 +70,16 @@ SaaS posts to:
 - `POST ${SUPERAPP_BASE_URL}/integrations/saas/status-update`
 Signed with canonical JSON.
 
+Payload (backward compatible):
+```json
+{
+  "reservationId": "SAAS_RESERVATION_UUID",
+  "externalReservationId": "SUPERAPP_RESERVATION_ID",
+  "status": "dropped",
+  "storageUnit": "STORAGE_UUID_OR_LABEL"
+}
+```
+
 ## Quick Local Signing (curl)
 
 Example with **raw-body signature** (make sure the body string is exactly the same bytes):

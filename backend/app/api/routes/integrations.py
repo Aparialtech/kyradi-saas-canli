@@ -306,7 +306,10 @@ async def assign_reservation_and_notify(
     external_id = extract_external_reservation_id(res.notes)
     if external_id:
         out = {
-            "reservationId": external_id,
+            # Keep reservationId as SaaS reservation UUID.
+            "reservationId": res.id,
+            # Backward-compatible optional externalReservationId for SuperApp lookup.
+            "externalReservationId": external_id,
             "status": payload.status or "assigned",
             "storageUnit": res.storage_id,
             "operator": {"name": payload.operatorName},
