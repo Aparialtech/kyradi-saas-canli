@@ -314,6 +314,47 @@ export function LandingPage() {
             className={styles.heroVisual}
           >
             <div className={styles.heroImageFrame}>
+              <div className={styles.heroFloatLayer} aria-hidden="true">
+                <div className={`${styles.heroFloatIcon} ${styles.floatQr}`}>
+                  <div className={styles.heroFloatGlyph}>
+                    <QrCode className="h-5 w-5" />
+                  </div>
+                  <div className={styles.heroFloatText}>
+                    <div className={styles.heroFloatTitle}>QR</div>
+                    <div className={styles.heroFloatSubtitle}>Doğrulama</div>
+                  </div>
+                </div>
+
+                <div className={`${styles.heroFloatIcon} ${styles.floatReservation}`}>
+                  <div className={styles.heroFloatGlyph}>
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div className={styles.heroFloatText}>
+                    <div className={styles.heroFloatTitle}>Rezervasyon</div>
+                    <div className={styles.heroFloatSubtitle}>Akışı</div>
+                  </div>
+                </div>
+
+                <div className={`${styles.heroFloatIcon} ${styles.floatReports}`}>
+                  <div className={styles.heroFloatGlyph}>
+                    <BarChart3 className="h-5 w-5" />
+                  </div>
+                  <div className={styles.heroFloatText}>
+                    <div className={styles.heroFloatTitle}>Rapor</div>
+                    <div className={styles.heroFloatSubtitle}>Analiz</div>
+                  </div>
+                </div>
+
+                <div className={`${styles.heroFloatIcon} ${styles.floatPayments}`}>
+                  <div className={styles.heroFloatGlyph}>
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <div className={styles.heroFloatText}>
+                    <div className={styles.heroFloatTitle}>Ödeme</div>
+                    <div className={styles.heroFloatSubtitle}>Takibi</div>
+                  </div>
+                </div>
+              </div>
               <img
                 src="/landing-examples/dashboard.png"
                 alt="Kyradi Dashboard"
