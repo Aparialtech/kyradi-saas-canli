@@ -11,13 +11,13 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
 from app.dependencies.auth import require_admin_user
-from app.models import Reservation, Storage, User
+from app.models import Location, Reservation, Storage, Tenant, User
 from app.services.superapp_integration import (
     SIGNATURE_HEADER,
     extract_external_reservation_id,
@@ -39,7 +39,11 @@ class IntegrationCustomer(BaseModel):
 class IntegrationReservationCreatePayload(BaseModel):
     externalReservationId: str = Field(..., min_length=1)
     paid: bool = False
+    # Tenant resolver middleware may set request.state.tenant_id based on host.
+    # For server-to-server calls, SuperApp can send a tenant UUID or slug.
     tenantId: Optional[str] = None
+    tenantSlug: Optional[str] = None
+    locationId: Optional[str] = None
     storageId: Optional[str] = None
     lockerId: Optional[str] = None
     storageUnit: Optional[str] = None
@@ -72,16 +76,42 @@ async def require_integration_signature(request: Request) -> bytes:
     return raw
 
 
-async def _resolve_tenant_id(request: Request, payload_tenant_id: Optional[str]) -> Optional[str]:
+async def _resolve_tenant_id(
+    session: AsyncSession,
+    request: Request,
+    payload: IntegrationReservationCreatePayload,
+) -> Optional[str]:
     tenant_id = getattr(request.state, "tenant_id", None)
     if tenant_id:
         return tenant_id
-    if payload_tenant_id:
-        return payload_tenant_id
+
+    # tenantId can be UUID (tenants.id) or slug for backward compatibility.
+    if payload.tenantId:
+        t = await session.get(Tenant, payload.tenantId)
+        if t:
+            return t.id
+        resolved = (
+            await session.execute(select(Tenant.id).where(Tenant.slug == payload.tenantId).limit(1))
+        ).scalar_one_or_none()
+        if resolved:
+            return resolved
+
+    if payload.tenantSlug:
+        resolved = (
+            await session.execute(select(Tenant.id).where(Tenant.slug == payload.tenantSlug).limit(1))
+        ).scalar_one_or_none()
+        if resolved:
+            return resolved
+
+    if payload.locationId:
+        loc = await session.get(Location, payload.locationId)
+        if loc:
+            return loc.tenant_id
+
     return None
 
 
-async def _resolve_storage_id(session: AsyncSession, tenant_id: str, payload: IntegrationReservationCreatePayload) -> Optional[str]:
+async def _resolve_storage_id(session: AsyncSession, tenant_id: str, payload: IntegrationReservationCreatePayload) -> str:
     storage_id = payload.storageId or payload.lockerId or payload.storageUnit
     if storage_id:
         storage = await session.get(Storage, storage_id)
@@ -89,8 +119,76 @@ async def _resolve_storage_id(session: AsyncSession, tenant_id: str, payload: In
             return storage.id
         raise HTTPException(status_code=400, detail="Invalid storageId for tenant")
 
-    stmt = select(Storage.id).where(Storage.tenant_id == tenant_id).order_by(Storage.created_at.asc()).limit(1)
-    return (await session.execute(stmt)).scalar_one_or_none()
+    # Prefer idle storages with capacity > 0. If a locationId is provided, try that
+    # location first, then fall back to any location for the tenant.
+    base_all = select(Storage.id).where(Storage.tenant_id == tenant_id)
+
+    base_loc = None
+    if payload.locationId:
+        base_loc = base_all.where(Storage.location_id == payload.locationId)
+
+    def preferred(stmt):
+        return (
+            stmt.where(Storage.status == "idle", Storage.capacity > 0)
+            .order_by(Storage.created_at.asc())
+            .limit(1)
+        )
+
+    if base_loc is not None:
+        found = (await session.execute(preferred(base_loc))).scalar_one_or_none()
+        if found:
+            return found
+
+    found = (await session.execute(preferred(base_all))).scalar_one_or_none()
+    if found:
+        return found
+
+    total = await session.scalar(
+        select(func.count()).select_from(Storage).where(Storage.tenant_id == tenant_id)
+    )
+    idle = await session.scalar(
+        select(func.count()).select_from(Storage).where(
+            Storage.tenant_id == tenant_id,
+            Storage.status == "idle",
+            Storage.capacity > 0,
+        )
+    )
+    occupied = await session.scalar(
+        select(func.count()).select_from(Storage).where(
+            Storage.tenant_id == tenant_id,
+            Storage.status == "occupied",
+        )
+    )
+    faulty = await session.scalar(
+        select(func.count()).select_from(Storage).where(
+            Storage.tenant_id == tenant_id,
+            Storage.status == "faulty",
+        )
+    )
+
+    error_code = "NO_STORAGE_FOR_TENANT" if (total or 0) == 0 else "NO_IDLE_STORAGE_FOR_TENANT"
+    logger.warning(
+        "Integration %s tenant_id=%s total=%s idle=%s occupied=%s faulty=%s location_id=%s",
+        error_code,
+        tenant_id,
+        total,
+        idle,
+        occupied,
+        faulty,
+        payload.locationId,
+    )
+    raise HTTPException(
+        status_code=400,
+        detail={
+            "error_code": error_code,
+            "tenant_id": tenant_id,
+            "location_id": payload.locationId,
+            "totalStorages": int(total or 0),
+            "idleStorages": int(idle or 0),
+            "occupiedStorages": int(occupied or 0),
+            "faultyStorages": int(faulty or 0),
+        },
+    )
 
 
 def _integration_notes(external_id: str, extra: Optional[str]) -> str:
@@ -107,13 +205,11 @@ async def create_reservation_from_superapp(
     _: bytes = Depends(require_integration_signature),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    tenant_id = await _resolve_tenant_id(request, payload.tenantId)
+    tenant_id = await _resolve_tenant_id(session, request, payload)
     if not tenant_id:
         raise HTTPException(status_code=400, detail="tenant_id_required")
 
     storage_id = await _resolve_storage_id(session, tenant_id, payload)
-    if not storage_id:
-        raise HTTPException(status_code=400, detail="no_storage_available")
 
     now = datetime.now(timezone.utc)
     start_at = payload.startAt or now
