@@ -137,20 +137,28 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/lockers"
     },
     {
-      "source": "/pricing-rules/:path*",
-      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules/:path*"
-    },
-    {
       "source": "/pricing-rules",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules"
     },
     {
-      "source": "/pricing/:path*",
-      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing/:path*"
+      "source": "/pricing-rules/",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules/"
+    },
+    {
+      "source": "/pricing-rules/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules/:path*"
     },
     {
       "source": "/pricing",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing"
+    },
+    {
+      "source": "/pricing/",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing/"
+    },
+    {
+      "source": "/pricing/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing/:path*"
     },
     {
       "source": "/tickets/:path*",
