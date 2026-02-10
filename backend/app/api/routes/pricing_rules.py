@@ -30,6 +30,7 @@ router = APIRouter(prefix="/pricing-rules", tags=["pricing"])
 
 
 @router.post("/estimate", response_model=PriceEstimateResponse)
+@router.post("/estimate/", response_model=PriceEstimateResponse)
 async def estimate_price_alias(
     payload: PriceEstimateRequest,
     current_user: User = Depends(require_tenant_operator),
@@ -39,6 +40,7 @@ async def estimate_price_alias(
 
 
 @router.get("", response_model=List[PricingRuleRead])
+@router.get("/", response_model=List[PricingRuleRead])
 async def list_pricing_rules_alias(
     scope: Optional[str] = Query(None, description="Filter by scope: GLOBAL, TENANT, LOCATION, STORAGE"),
     current_user: User = Depends(require_tenant_admin),
@@ -48,6 +50,7 @@ async def list_pricing_rules_alias(
 
 
 @router.post("", response_model=PricingRuleRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=PricingRuleRead, status_code=status.HTTP_201_CREATED)
 async def create_pricing_rule_alias(
     payload: PricingRuleCreate,
     current_user: User = Depends(require_tenant_admin),
@@ -82,4 +85,3 @@ async def delete_pricing_rule_alias(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     return await _delete_pricing_rule(rule_id=rule_id, current_user=current_user, session=session)
-

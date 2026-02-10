@@ -53,6 +53,7 @@ class PriceEstimateResponse(BaseModel):
 
 
 @router.post("/estimate", response_model=PriceEstimateResponse)
+@router.post("/estimate/", response_model=PriceEstimateResponse)
 async def estimate_price(
     payload: PriceEstimateRequest,
     current_user: User = Depends(require_tenant_operator),
@@ -145,6 +146,7 @@ async def _enrich_rule_with_names(rule: PricingRule, session: AsyncSession) -> d
 
 
 @router.get("", response_model=List[PricingRuleRead])
+@router.get("/", response_model=List[PricingRuleRead])
 async def list_pricing_rules(
     scope: Optional[str] = Query(None, description="Filter by scope: GLOBAL, TENANT, LOCATION, STORAGE"),
     current_user: User = Depends(require_tenant_admin),
@@ -180,6 +182,7 @@ async def list_pricing_rules(
 
 
 @router.post("", response_model=PricingRuleRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=PricingRuleRead, status_code=status.HTTP_201_CREATED)
 async def create_pricing_rule(
     payload: PricingRuleCreate,
     current_user: User = Depends(require_tenant_admin),
@@ -349,4 +352,3 @@ async def delete_pricing_rule(
     await session.commit()
     
     logger.info(f"Deleted pricing rule {rule_id}")
-
