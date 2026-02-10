@@ -304,12 +304,16 @@ async def assign_reservation_and_notify(
     await session.refresh(res)
 
     external_id = extract_external_reservation_id(res.notes)
-    if external_id:
+    if not external_id:
+        # SuperApp cannot match SaaS reservation UUIDs. Skip notify if we don't have the
+        # external ID recorded in notes.
+        logger.info("SUPERAPP_NOTIFY_SKIPPED_MISSING_EXTERNAL_ID reservation_id=%s", res.id)
+    else:
         out = {
-            # Keep reservationId as SaaS reservation UUID.
-            "reservationId": res.id,
-            # Backward-compatible optional externalReservationId for SuperApp lookup.
+            # Primary lookup key for SuperApp.
             "externalReservationId": external_id,
+            # Optional trace field (SuperApp must not use this for lookup).
+            "saasReservationId": res.id,
             "status": payload.status or "assigned",
             "storageUnit": res.storage_id,
             "operator": {"name": payload.operatorName},

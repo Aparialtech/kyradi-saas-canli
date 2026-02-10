@@ -73,12 +73,16 @@ Signed with canonical JSON.
 Payload (backward compatible):
 ```json
 {
-  "reservationId": "SAAS_RESERVATION_UUID",
   "externalReservationId": "SUPERAPP_RESERVATION_ID",
+  "saasReservationId": "SAAS_RESERVATION_UUID",
   "status": "dropped",
   "storageUnit": "STORAGE_UUID_OR_LABEL"
 }
 ```
+
+Expected SuperApp lookup behavior:
+- first try `externalReservationId` (primary)
+- optionally log/attach `saasReservationId` for tracing only
 
 ## Quick Local Signing (curl)
 
