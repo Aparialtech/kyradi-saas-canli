@@ -16,14 +16,38 @@ from ..models import Tenant, TenantDomain, TenantDomainStatus, DomainStatus
 logger = logging.getLogger(__name__)
 
 
+def _split_host_candidates(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [part.strip() for part in value.split(",") if part and part.strip()]
+
+
+def is_infra_host(host: str) -> bool:
+    host_without_port = normalize_host(host)
+    return bool(host_without_port and host_without_port.endswith(INFRA_HOST_SUFFIXES))
+
+
 def get_effective_host(request: Request) -> str:
-    """Get the effective host for proxied requests."""
+    """Get the effective host for proxied requests.
+
+    Prefer the first non-infra host from forwarded headers.
+    """
+    candidates: list[str] = []
     for header in ("x-forwarded-host", "x-vercel-forwarded-host", "host"):
-        value = request.headers.get(header)
-        if value:
-            # Proxy headers may contain comma-separated values.
-            return value.split(",")[0].strip()
-    return ""
+        candidates.extend(_split_host_candidates(request.headers.get(header)))
+
+    origin_host = extract_host_from_url(request.headers.get("origin"))
+    referer_host = extract_host_from_url(request.headers.get("referer"))
+    if origin_host:
+        candidates.append(origin_host)
+    if referer_host:
+        candidates.append(referer_host)
+
+    for candidate in candidates:
+        if not is_infra_host(candidate):
+            return candidate
+
+    return candidates[0] if candidates else ""
 
 
 def extract_host_from_url(value: str | None) -> str:
@@ -106,7 +130,7 @@ def should_skip_tenant_resolution(host: str) -> bool:
         return True
 
     # Skip for infra hosts (backend direct hostnames behind proxies)
-    if host_without_port.endswith(INFRA_HOST_SUFFIXES):
+    if is_infra_host(host_without_port):
         return True
     
     # Skip for base domains without subdomain
@@ -198,13 +222,6 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         host = get_effective_host(request)
-        if host and host.endswith(INFRA_HOST_SUFFIXES):
-            # When proxy headers lose the original host, recover from Origin/Referer.
-            fallback_host = extract_host_from_url(request.headers.get("origin")) or extract_host_from_url(
-                request.headers.get("referer")
-            )
-            if fallback_host:
-                host = fallback_host
         host_without_port = normalize_host(host)
         
         # Skip tenant resolution for admin/app hosts and development
@@ -251,7 +268,7 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
                     )
 
         # 4. Legacy custom domain resolution
-        if not tenant and host_without_port:
+        if not tenant and host_without_port and not is_infra_host(host_without_port):
             if host_without_port not in BASE_DOMAINS and not any(
                 host_without_port.endswith(f".{bd}") for bd in BASE_DOMAINS
             ):

@@ -65,6 +65,14 @@
       "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules/:path*"
     },
     {
+      "source": "/pricing",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing"
+    },
+    {
+      "source": "/pricing/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing/:path*"
+    },
+    {
       "source": "/payment-schedules",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/payment-schedules"
     },
@@ -127,6 +135,14 @@
     {
       "source": "/public/:path*",
       "destination": "https://kyradi-saas-canli-production.up.railway.app/public/:path*"
+    },
+    {
+      "source": "/demo",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/demo"
+    },
+    {
+      "source": "/demo/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/demo/:path*"
     },
     {
       "source": "/payments",
