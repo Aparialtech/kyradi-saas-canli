@@ -10,13 +10,11 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { authService } from "../services/auth";
-import { tokenStorage, tenantSlugStorage } from "../lib/tokenStorage";
+import { tokenStorage } from "../lib/tokenStorage";
 import { setOnUnauthorized } from "../lib/http";
 import { errorLogger } from "../lib/errorLogger";
 import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
 import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
-import { getHostMode } from "../lib/hostMode";
-import { safeHardRedirect, safeNavigate } from "../utils/safeNavigate";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -24,7 +22,6 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (payload: LoginPayload) => Promise<AuthUser>;
   logout: () => void;
-  refreshUser: () => Promise<AuthUser | null>;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
 }
 
@@ -39,26 +36,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const initialize = async () => {
       const storedToken = tokenStorage.get();
-      const debugAuth = import.meta.env.VITE_DEBUG_AUTH === "true";
+      if (storedToken) {
+        setToken(storedToken);
+      }
       try {
-        if (storedToken) {
-          setToken(storedToken);
-        }
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
-        if (debugAuth) {
-          console.debug("[auth] /auth/me ok", { role: currentUser.role, host: window.location.host });
-        }
       } catch (error) {
         errorLogger.error(error, {
           component: "AuthContext",
           action: "getCurrentUser",
         });
-        if (debugAuth) {
-          console.debug("[auth] /auth/me failed", { host: window.location.host });
+        if (storedToken) {
+          tokenStorage.clear();
+          setToken(null);
         }
-        tokenStorage.clear();
-        setToken(null);
       } finally {
         setIsLoading(false);
       }
@@ -89,50 +81,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return currentUser;
   }, []);
 
-  const refreshUser = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
-      return currentUser;
-    } catch (error) {
-      errorLogger.error(error, {
-        component: "AuthContext",
-        action: "refreshUser",
-      });
-      tokenStorage.clear();
-      setToken(null);
-      setUser(null);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const logout = useCallback(() => {
-    void authService.logout().catch(() => {
-      // best-effort; still clear local state
-    });
     tokenStorage.clear();
-    tenantSlugStorage.clear();
     setToken(null);
     setUser(null);
-    const hostType = detectHostType();
-    if (hostType === "admin") {
-      safeNavigate(navigate, "/admin/login");
-      return;
-    }
-    if (hostType === "app") {
-      safeNavigate(navigate, "/partner/login");
-      return;
-    }
-    if (hostType === "tenant") {
-      const redirectTarget = `${window.location.origin}/app`;
-      const loginUrl = getPartnerLoginUrl(redirectTarget);
-      safeHardRedirect(loginUrl);
-      return;
-    }
-    safeNavigate(navigate, "/login");
+    navigate("/login");
   }, [navigate]);
 
   // Register the 401 handler callback
@@ -144,32 +97,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
       setToken(null);
       setUser(null);
-      tenantSlugStorage.clear();
+      tokenStorage.clear();
+
       const hostType = detectHostType();
-      const hostMode = getHostMode(window.location.hostname);
-      if (!isDevelopment() && hostType === "tenant") {
-        const redirectTarget = `${window.location.origin}/app`;
-        const loginUrl = getPartnerLoginUrl(redirectTarget);
-        const key = `redir:${window.location.host}:${loginUrl}`;
-        if (!sessionStorage.getItem(key)) {
-          sessionStorage.setItem(key, "1");
-          safeHardRedirect(loginUrl);
-        }
+      if (hostType === "tenant" && !isDevelopment()) {
+        window.location.href = getPartnerLoginUrl(window.location.href);
         return;
       }
       if (hostType === "admin") {
-        safeNavigate(navigate, "/admin/login");
+        navigate("/admin/login");
         return;
       }
-      if (hostType === "app") {
-        safeNavigate(navigate, "/partner/login");
-        return;
-      }
-      if (hostMode === "public") {
-        safeNavigate(navigate, "/");
-        return;
-      }
-      safeNavigate(navigate, "/login");
+      navigate("/partner/login");
     });
     
     return () => {
@@ -193,10 +132,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isLoading,
       login,
       logout,
-      refreshUser,
       hasRole,
     }),
-    [user, token, isLoading, login, logout, refreshUser, hasRole],
+    [user, token, isLoading, login, logout, hasRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

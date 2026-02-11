@@ -14,35 +14,7 @@ from ..models import Tenant, User, UserRole
 from ..services.audit import record_audit
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
-
-
-
-
 logger = logging.getLogger(__name__)
-
-
-def get_effective_host(request: Request | None) -> str | None:
-    if not request:
-        return None
-    for header in ("x-forwarded-host", "x-vercel-forwarded-host", "host"):
-        value = request.headers.get(header)
-        if value:
-            return value.split(":")[0].lower()
-    return None
-
-
-def _safe_token_preview(token: str | None) -> str | None:
-    if not token:
-        return None
-    return token[:10]
-
-
-
-def _safe_token_preview(token: str | None) -> str | None:
-    if not token:
-        return None
-    return token[:10]
-
 
 
 async def _record_security_audit(
@@ -111,24 +83,16 @@ async def get_current_user(
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Decode JWT token and return the current user."""
-    if request:
-        if request.url.path.startswith("/auth/") or request.url.path.startswith("/admin/"):
-            auth_header = request.headers.get("authorization")
-            cookie_token = request.cookies.get("access_token")
-            logger.info(
-                "auth_req url=%s host=%s origin=%s cookie_present=%s auth_present=%s tenant_state=%s token_tenant=%s",
-                request.url.path,
-                get_effective_host(request),
-                request.headers.get("origin"),
-                bool(cookie_token),
-                bool(auth_header),
-                getattr(request.state, "tenant_id", None),
-                _safe_token_preview(auth_header.split(" ", 1)[1] if auth_header and " " in auth_header else None),
-            )
-    if not token and request:
-        token = request.cookies.get("access_token")
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        cookie_token = request.cookies.get("access_token") if request else None
+        if cookie_token:
+            token = cookie_token
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+            )
+
     try:
         payload = decode_token(token)
     except ValueError as exc:
@@ -163,6 +127,7 @@ async def get_current_user(
     request_tenant_id = getattr(request.state, "tenant_id", None) if request else None
     if request and not request_tenant_id and tenant_id:
         request.state.tenant_id = tenant_id
+        request_tenant_id = tenant_id
     effective_tenant_id = tenant_id or request_tenant_id
 
     if tenant_id and request_tenant_id and tenant_id != request_tenant_id:
