@@ -73,19 +73,25 @@ def _auth_trace(request: Request | None, *, path: str, status_code: int, note: s
     )
 
 
-def _cookie_domain() -> str | None:
+def _cookie_domain(request: Request | None = None) -> str | None:
+    if request is not None:
+        host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(",")[0].strip().lower()
+        if ":" in host:
+            host = host.split(":", 1)[0]
+        if host == "kyradi.com" or host.endswith(".kyradi.com"):
+            return ".kyradi.com"
     env = (settings.environment or "").lower()
     if env in {"local", "dev", "development"}:
         return None
     return ".kyradi.com"
 
 
-def _set_access_token_cookie(response: Response, token: str) -> None:
+def _set_access_token_cookie(response: Response, token: str, request: Request | None = None) -> None:
     env = (settings.environment or "").lower()
-    secure_cookie = env not in {"local", "dev", "development"}
+    domain = _cookie_domain(request)
+    secure_cookie = env not in {"local", "dev", "development"} or domain == ".kyradi.com"
     same_site = "none" if secure_cookie else "lax"
     max_age = int(settings.access_token_expire_minutes) * 60
-    domain = _cookie_domain()
 
     # Clear stale cookies first to avoid duplicate-name cookie ambiguity.
     response.delete_cookie("access_token", path="/", domain=".kyradi.com")
@@ -169,7 +175,7 @@ async def login(
         tenant_id=token_tenant_id,
         role=user.role,
     )
-    _set_access_token_cookie(response, token)
+    _set_access_token_cookie(response, token, request)
     _auth_trace(request, path="/auth/login", status_code=200, note="login_ok")
     return TokenResponse(access_token=token)
 
@@ -234,7 +240,7 @@ async def partner_login(
         tenant_id=tenant.id,
         role=user.role,
     )
-    _set_access_token_cookie(response, token)
+    _set_access_token_cookie(response, token, request)
     _auth_trace(request, path="/auth/partner/login", status_code=200, note=f"tenant_slug={tenant.slug}")
     logger.info(f"Partner login successful: {user.email} -> tenant {tenant.slug}")
     
@@ -293,7 +299,7 @@ async def admin_login(
         tenant_id=None,  # Admin users don't have tenant
         role=user.role,
     )
-    _set_access_token_cookie(response, token)
+    _set_access_token_cookie(response, token, request)
     _auth_trace(request, path="/auth/admin/login", status_code=200, note=f"role={user.role}")
     
     logger.info(f"Admin login successful: {user.email} (role: {user.role})")
@@ -387,7 +393,7 @@ async def verify_login_sms(
         tenant_id=tenant_id,
         role=user.role,
     )
-    _set_access_token_cookie(response, token)
+    _set_access_token_cookie(response, token, request)
     
     return VerifyLoginSMSResponse(
         access_token=token,
@@ -751,6 +757,7 @@ async def reset_password(
 @router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
 async def signup(
     payload: SignupRequest,
+    request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> SignupResponse:
@@ -802,7 +809,7 @@ async def signup(
         tenant_id=None,
         role=user.role,
     )
-    _set_access_token_cookie(response, access_token)
+    _set_access_token_cookie(response, access_token, request)
     
     return SignupResponse(
         message="Kayıt başarılı! Şimdi otelinizi oluşturabilirsiniz.",
