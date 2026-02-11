@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { RequireAuth } from "../components/auth/RequireAuth";
@@ -65,6 +66,15 @@ import { DomainSetupGuidePage } from "../pages/partner/docs/DomainSetupGuidePage
 import { NotFoundPage } from "../pages/common/NotFoundPage";
 import { detectHostType, getAppUrl, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
 
+function TenantPartnerLoginRedirect() {
+  useEffect(() => {
+    const target = getPartnerLoginUrl(`${window.location.origin}/app`);
+    window.location.replace(target);
+  }, []);
+
+  return null;
+}
+
 export function AppRouter() {
   const hostType = detectHostType();
   const isTenantHost = isDevelopment() || hostType === "tenant";
@@ -80,7 +90,7 @@ export function AppRouter() {
     );
   const partnerLoginElement =
     hostType === "tenant" && !isDevelopment() ? (
-      <Navigate to={getPartnerLoginUrl(`${window.location.origin}/app`)} replace />
+      <TenantPartnerLoginRedirect />
     ) : (
       <PartnerLoginPage />
     );
