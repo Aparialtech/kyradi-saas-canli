@@ -59,6 +59,11 @@ class Settings(BaseSettings):
         default=60,
         validation_alias=AliasChoices("JWT_EXPIRES_MIN", "KYRADI_ACCESS_TOKEN_EXPIRE_MINUTES"),
     )
+    auth_cookie_samesite_none: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("AUTH_COOKIE_SAMESITE_NONE", "KYRADI_AUTH_COOKIE_SAMESITE_NONE"),
+        description="Enable SameSite=None for auth cookies in production when cross-site flow requires it.",
+    )
 
     cors_origins: List[str] = Field(
         default_factory=lambda: [

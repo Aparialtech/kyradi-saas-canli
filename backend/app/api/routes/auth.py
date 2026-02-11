@@ -73,13 +73,33 @@ def _auth_trace(request: Request | None, *, path: str, status_code: int, note: s
     )
 
 
+def _extract_effective_host(request: Request | None = None) -> str:
+    if request is None:
+        return ""
+    host = (
+        request.headers.get("x-forwarded-host")
+        or request.headers.get("x-vercel-forwarded-host")
+        or request.headers.get("host")
+        or ""
+    ).split(",")[0].strip().lower()
+    if ":" in host:
+        host = host.split(":", 1)[0]
+    return host
+
+
 def _cookie_domain(request: Request | None = None) -> str | None:
-    if request is not None:
-        host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(",")[0].strip().lower()
-        if ":" in host:
-            host = host.split(":", 1)[0]
+    host = _extract_effective_host(request)
+    if host:
         if host == "kyradi.com" or host.endswith(".kyradi.com"):
             return ".kyradi.com"
+        if host == "kyradi.app" or host.endswith(".kyradi.app"):
+            return ".kyradi.app"
+        # Custom domain: keep host-only cookie to avoid invalid domain scoping.
+        return None
+
+    if request is not None:
+        return None
+
     env = (settings.environment or "").lower()
     if env in {"local", "dev", "development"}:
         return None
@@ -90,7 +110,7 @@ def _set_access_token_cookie(response: Response, token: str, request: Request | 
     env = (settings.environment or "").lower()
     domain = _cookie_domain(request)
     secure_cookie = env not in {"local", "dev", "development"} or domain == ".kyradi.com"
-    same_site = "none" if secure_cookie else "lax"
+    same_site = "none" if (secure_cookie and settings.auth_cookie_samesite_none) else "lax"
     max_age = int(settings.access_token_expire_minutes) * 60
 
     # Clear stale cookies first to avoid duplicate-name cookie ambiguity.

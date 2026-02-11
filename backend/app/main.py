@@ -9,19 +9,18 @@ except Exception:  # noqa: BLE001 - uvloop is optional
 
 import logging
 import re
-import time
-from uuid import uuid4
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from starlette.responses import Response
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from .api import api_router
+from ai.router import api_router as ai_router
 from .core.config import settings
 from .core.exceptions import global_exception_handler
 from .db.utils import init_db
+from .middleware import TenantResolverMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -40,19 +39,6 @@ db_error_logger.setLevel(logging.ERROR)
 db_session_logger = logging.getLogger("kyradi.db_session")
 db_session_logger.setLevel(logging.WARNING)
 
-app = FastAPI(
-    title="KYRADİ API",
-    version="0.1.0",
-    description="FastAPI backend for the KYRADİ SaaS platform.",
-)
-app.router.redirect_slashes = False
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
-
-# =============================================================================
-# CORS Configuration - Dynamic Origin Support
-# =============================================================================
-# Custom CORS handling for Vercel preview deployments + static origins
-
 # Static allowed origins
 STATIC_ORIGINS = {
     "https://app.kyradi.com",
@@ -68,15 +54,8 @@ STATIC_ORIGINS = {
     "http://127.0.0.1:5173",
 }
 
-def normalize_origins(origins):
-    if not origins:
-        return []
-    if isinstance(origins, str):
-        return [item.strip() for item in origins.split(",") if item.strip()]
-    return [item.strip() for item in origins if item and item.strip()]
-
 # Add origins from settings
-STATIC_ORIGINS.update(normalize_origins(settings.cors_origins))
+STATIC_ORIGINS.update(settings.cors_origins)
 
 # Patterns for dynamic Vercel preview deployments
 VERCEL_PATTERNS = [
@@ -89,12 +68,13 @@ def is_origin_allowed(origin: str) -> bool:
     """Check if origin is allowed (static list or Vercel pattern)."""
     if not origin:
         return False
-    if origin in STATIC_ORIGINS:
+    normalized = origin.strip().lower()
+    if normalized.endswith(".kyradi.com") or normalized.endswith(".kyradi.app"):
         return True
-    if origin.endswith(".kyradi.com") or origin.endswith(".kyradi.app"):
+    if normalized in STATIC_ORIGINS:
         return True
     for pattern in VERCEL_PATTERNS:
-        if pattern.match(origin):
+        if pattern.match(normalized):
             return True
     return False
 
@@ -106,6 +86,8 @@ class DynamicCORSMiddleware(BaseHTTPMiddleware):
         
         # Handle preflight OPTIONS request
         if request.method == "OPTIONS":
+            if not origin:
+                return Response(status_code=200)
             if is_origin_allowed(origin):
                 return Response(
                     status_code=200,
@@ -131,85 +113,66 @@ class DynamicCORSMiddleware(BaseHTTPMiddleware):
         
         return response
 
-logger.info("Starting Kyradi backend...")
-logger.info(f"CORS static origins: {STATIC_ORIGINS}")
 
-# Add custom CORS middleware BEFORE including routers
-app.add_middleware(DynamicCORSMiddleware)
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="KYRADİ API",
+        version="0.1.0",
+        description="FastAPI backend for the KYRADİ SaaS platform.",
+    )
+    app.router.redirect_slashes = False
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Log partner panel data endpoints with request_id and duration."""
+    logger.info("Starting Kyradi backend...")
+    logger.info(f"CORS static origins: {STATIC_ORIGINS}")
 
-    async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("x-request-id") or str(uuid4())
-        request.state.request_id = request_id
-        start = time.perf_counter()
-        response = None
-        try:
-            response = await call_next(request)
-            return response
-        finally:
-            duration_ms = (time.perf_counter() - start) * 1000
-            path = request.url.path
-            if path.startswith(("/locations", "/storages", "/reservations", "/tickets", "/partners", "/ai")):
-                tenant_id = getattr(request.state, "tenant_id", None) or getattr(request.state, "token_tenant_id", None)
-                logger.info(
-                    "req %s %s status=%s tenant_id=%s dur_ms=%.2f",
-                    request.method,
-                    path,
-                    getattr(response, "status_code", "err"),
-                    tenant_id,
-                    duration_ms,
-                )
-            if response is not None:
-                response.headers["x-request-id"] = request_id
+    # Add custom CORS middleware BEFORE including routers
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+    app.add_middleware(DynamicCORSMiddleware)
+    app.add_middleware(TenantResolverMiddleware)
 
-# Add logging middleware after CORS
-app.add_middleware(RequestLoggingMiddleware)
+    app.include_router(ai_router, prefix="/ai", tags=["ai"])
+    app.include_router(api_router)
 
-# Tenant resolver middleware (optional - can be enabled when needed)
-# from .middleware import TenantResolverMiddleware
-# app.add_middleware(TenantResolverMiddleware)
+    # Add global exception handler
+    app.add_exception_handler(Exception, global_exception_handler)
 
-app.include_router(api_router)
+    @app.on_event("startup")
+    async def startup_event() -> None:
+        """Auto-create database tables and log AI status."""
 
-# Add global exception handler
-app.add_exception_handler(Exception, global_exception_handler)
+        # Always run critical schema migrations in all environments
+        await ensure_critical_schema()
 
+        # Full init_db (create tables + seeding) only in local/dev
+        if settings.environment.lower() in {"local", "dev"}:
+            await init_db()
 
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Auto-create database tables and log AI status."""
-    
-    # Always run critical schema migrations in all environments
-    await ensure_critical_schema()
-    
-    # Full init_db (create tables + seeding) only in local/dev
-    if settings.environment.lower() in {"local", "dev"}:
-        await init_db()
-    
-    # Log Email configuration status
-    logger.info(f"📧 Email provider: {settings.email_provider}")
-    
-    if settings.email_provider.lower() == "resend":
-        if settings.resend_api_key:
-            logger.info(f"✅ Resend API key configured (starts with: {settings.resend_api_key[:10]}...)")
+        # Log Email configuration status
+        logger.info(f"📧 Email provider: {settings.email_provider}")
+
+        if settings.email_provider.lower() == "resend":
+            if settings.resend_api_key:
+                logger.info(f"✅ Resend API key configured (starts with: {settings.resend_api_key[:10]}...)")
+            else:
+                logger.warning("⚠️ EMAIL_PROVIDER=resend but RESEND_API_KEY is missing!")
+        elif settings.email_provider.lower() == "smtp":
+            logger.info(f"📧 SMTP: {settings.smtp_host}:{settings.smtp_port}")
+        elif settings.email_provider.lower() == "log":
+            logger.warning("⚠️ Email provider is 'log' - emails will NOT be sent, only logged!")
+            logger.warning("   To fix: Set EMAIL_PROVIDER=resend and RESEND_API_KEY in Railway")
+
+        # Log AI configuration status
+        # OpenAI API key'i değiştirmek için Railway'de OPENAI_API_KEY env değişkenini güncellemeniz yeterlidir.
+        # Kod içinde hiçbir yerde key hard-coded değildir.
+        if settings.openai_api_key:
+            logger.info(f"AI service configured: model={settings.ai_model}, org_id={settings.openai_org_id or 'none'}")
         else:
-            logger.warning("⚠️ EMAIL_PROVIDER=resend but RESEND_API_KEY is missing!")
-    elif settings.email_provider.lower() == "smtp":
-        logger.info(f"📧 SMTP: {settings.smtp_host}:{settings.smtp_port}")
-    elif settings.email_provider.lower() == "log":
-        logger.warning("⚠️ Email provider is 'log' - emails will NOT be sent, only logged!")
-        logger.warning("   To fix: Set EMAIL_PROVIDER=resend and RESEND_API_KEY in Railway")
-    
-    # Log AI configuration status
-    # OpenAI API key'i değiştirmek için Railway'de OPENAI_API_KEY env değişkenini güncellemeniz yeterlidir.
-    # Kod içinde hiçbir yerde key hard-coded değildir.
-    if settings.openai_api_key:
-        logger.info(f"AI service configured: model={settings.ai_model}, org_id={settings.openai_org_id or 'none'}")
-    else:
-        logger.warning("AI service NOT configured: OPENAI_API_KEY missing. AI chat will use fallback provider.")
+            logger.warning("AI service NOT configured: OPENAI_API_KEY missing. AI chat will use fallback provider.")
 
+    return app
+
+
+app = create_app()
 
 async def ensure_critical_schema() -> None:
     """Ensure critical schema columns exist in all environments.
@@ -294,26 +257,6 @@ async def ensure_critical_schema() -> None:
         # Index for payment transfers
         "CREATE INDEX IF NOT EXISTS idx_payment_transfers_tenant ON payment_transfers(tenant_id)",
         "CREATE INDEX IF NOT EXISTS idx_payment_transfers_status ON payment_transfers(status)",
-        # Tenant domains table (critical for domain management)
-        """CREATE TABLE IF NOT EXISTS tenant_domains (
-            id VARCHAR(36) PRIMARY KEY,
-            tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-            domain VARCHAR(255) NOT NULL,
-            domain_type VARCHAR(32) NOT NULL,
-            status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
-            verification_method VARCHAR(32) NOT NULL DEFAULT 'DNS_TXT',
-            verification_token VARCHAR(128),
-            verification_record_name VARCHAR(255),
-            verification_record_value VARCHAR(255),
-            last_checked_at TIMESTAMPTZ,
-            failure_reason TEXT,
-            is_primary BOOLEAN NOT NULL DEFAULT FALSE,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ
-        )""",
-        "CREATE UNIQUE INDEX IF NOT EXISTS ux_tenant_domains_domain ON tenant_domains(domain)",
-        "CREATE INDEX IF NOT EXISTS ix_tenant_domains_tenant_id ON tenant_domains(tenant_id)",
-        "CREATE UNIQUE INDEX IF NOT EXISTS ux_tenant_domains_primary ON tenant_domains(tenant_id) WHERE is_primary = TRUE",
     ]
     
     try:
