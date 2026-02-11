@@ -119,43 +119,53 @@ export function PartnerLoginPage() {
 
       if (response.access_token) {
         tokenStorage.set(response.access_token);
-        const cachedTenantSlug = localStorage.getItem(TENANT_SLUG_CACHE_KEY);
-        const directTenantSlug = response.tenant_slug || cachedTenantSlug;
-        if (directTenantSlug) {
-          localStorage.setItem(TENANT_SLUG_CACHE_KEY, directTenantSlug);
-          const targetUrl = isDevelopment() ? "/app" : resolveTenantRedirect(directTenantSlug);
-          window.location.href = targetUrl;
-          return;
-        }
-
-        if (hasValidRedirect) {
-          window.location.href = redirectUrl;
-          return;
-        }
-
-        if (!isDevelopment()) {
-          try {
-            const settings = await partnerSettingsService.getSettings();
-            if (settings.tenant_slug) {
-              localStorage.setItem(TENANT_SLUG_CACHE_KEY, settings.tenant_slug);
-              window.location.href = getTenantUrl(settings.tenant_slug, "/app");
-              return;
-            }
-          } catch (err) {
-            errorLogger.warn(err, { component: "PartnerLoginPage", action: "resolveTenantSlugAfterLogin" });
-          }
-        }
-
-        window.location.href = "/app";
+      } else {
+        throw new Error("No access token received");
       }
+
+      // Safe redirect flow:
+      // Never redirect right after login; first verify session by /auth/me.
+      const currentUser = await authService.getCurrentUser();
+      if (!currentUser?.tenant_id) {
+        throw new Error("Tenant not found for current user");
+      }
+
+      const cachedTenantSlug = localStorage.getItem(TENANT_SLUG_CACHE_KEY);
+      const directTenantSlug = response.tenant_slug || cachedTenantSlug;
+      if (directTenantSlug) {
+        localStorage.setItem(TENANT_SLUG_CACHE_KEY, directTenantSlug);
+        const targetUrl = isDevelopment() ? "/app" : resolveTenantRedirect(directTenantSlug);
+        window.location.href = targetUrl;
+        return;
+      }
+
+      if (hasValidRedirect) {
+        window.location.href = redirectUrl;
+        return;
+      }
+
+      if (!isDevelopment()) {
+        try {
+          const settings = await partnerSettingsService.getSettings();
+          if (settings.tenant_slug) {
+            localStorage.setItem(TENANT_SLUG_CACHE_KEY, settings.tenant_slug);
+            window.location.href = getTenantUrl(settings.tenant_slug, "/app");
+            return;
+          }
+        } catch (err) {
+          errorLogger.warn(err, { component: "PartnerLoginPage", action: "resolveTenantSlugAfterLogin" });
+        }
+      }
+
+      window.location.href = "/app";
     } catch (err) {
       errorLogger.error(err, { component: "PartnerLoginPage", action: "handleSubmit" });
       
       if (axios.isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: string })?.detail;
-        setError(detail || "Giriş başarısız");
+        setError(detail || "Oturum doğrulanamadı. Lütfen tekrar deneyin.");
       } else {
-        setError("Beklenmeyen bir hata oluştu");
+        setError("Oturum doğrulanamadı. Lütfen tekrar deneyin.");
       }
     } finally {
       setSubmitting(false);
