@@ -12,10 +12,11 @@ import { useNavigate } from "react-router-dom";
 
 import { authService } from "../services/auth";
 import { tokenStorage } from "../lib/tokenStorage";
-import { setOnUnauthorized } from "../lib/http";
+import { setAuthBooting, setOnUnauthorized } from "../lib/http";
 import { errorLogger } from "../lib/errorLogger";
 import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
 import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
+import { dumpAuthDebug } from "../lib/authDebug";
 
 const JUST_LOGGED_IN_AT_KEY = "kyradi.justLoggedInAt";
 const JUST_LOGGED_IN_COOKIE_KEY = "kyradi_just_logged_in";
@@ -86,6 +87,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const [authState, setAuthState] = useState<"booting" | "authenticated" | "unauthenticated">("booting");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(tokenStorage.get());
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -94,6 +96,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     const initialize = async () => {
+      setAuthBooting(true);
+      setAuthState("booting");
+      dumpAuthDebug("BOOT_START");
       const storedToken = tokenStorage.get();
       if (storedToken) {
         setToken(storedToken);
@@ -102,6 +107,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       try {
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
+        setAuthState("authenticated");
+        dumpAuthDebug("ME_200");
         clearJustLoggedIn();
       } catch (error) {
         let recovered = false;
@@ -111,6 +118,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
             try {
               const currentUser = await authService.getCurrentUser();
               setUser(currentUser);
+              setAuthState("authenticated");
+              dumpAuthDebug("ME_200_RETRY");
               recovered = true;
               clearJustLoggedIn();
               break;
@@ -120,6 +129,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
           }
         }
         if (!recovered) {
+          setAuthState("unauthenticated");
+          dumpAuthDebug("ME_401");
           errorLogger.error(error, {
             component: "AuthContext",
             action: "getCurrentUser",
@@ -131,6 +142,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           }
         }
       } finally {
+        setAuthBooting(false);
         setIsLoading(false);
       }
     };
@@ -157,6 +169,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     const currentUser = await authService.getCurrentUser();
     setUser(currentUser);
+    setAuthState("authenticated");
     clearJustLoggedIn();
 
     return currentUser;
@@ -193,12 +206,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
         component: "AuthContext",
         action: "sessionExpired",
       });
+      if (authState === "booting") {
+        releaseGuard();
+        return;
+      }
       if (isWithinJustLoggedInWindow()) {
         releaseGuard();
         return;
       }
       setToken(null);
       setUser(null);
+      setAuthState("unauthenticated");
       tokenStorage.clear();
 
       const hostType = detectHostType();
@@ -220,7 +238,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       handlingUnauthorizedRef.current = false;
       setOnUnauthorized(() => {}); // Cleanup
     };
-  }, [navigate]);
+  }, [authState, navigate]);
 
   const hasRole = useCallback(
     (roles: UserRole | UserRole[]) => {

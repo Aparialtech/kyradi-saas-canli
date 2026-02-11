@@ -21,9 +21,14 @@ if (import.meta.env.DEV) {
 
 // Callback for handling 401 errors (will be set by AuthContext)
 let onUnauthorized: (() => void) | null = null;
+let authBooting = true;
 
 export const setOnUnauthorized = (callback: () => void) => {
   onUnauthorized = callback;
+};
+
+export const setAuthBooting = (value: boolean) => {
+  authBooting = value;
 };
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
@@ -166,8 +171,11 @@ http.interceptors.response.use(
           url.includes("/auth/partner/login") ||
           url.includes("/auth/admin/login") ||
           url.includes("/auth/login");
-        // /auth/me: normal unauthorized handling applies only after grace retries are exhausted.
+        // /auth/me: during bootstrap do not force logout/redirect.
         if (url.includes("/auth/me")) {
+          if (authBooting) {
+            return Promise.reject(error);
+          }
           tokenStorage.clear();
           if (onUnauthorized) {
             onUnauthorized();

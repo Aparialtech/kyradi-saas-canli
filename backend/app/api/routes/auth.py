@@ -83,6 +83,7 @@ def _cookie_domain() -> str | None:
 def _set_access_token_cookie(response: Response, token: str) -> None:
     env = (settings.environment or "").lower()
     secure_cookie = env not in {"local", "dev", "development"}
+    same_site = "none" if secure_cookie else "lax"
     max_age = int(settings.access_token_expire_minutes) * 60
     domain = _cookie_domain()
 
@@ -97,7 +98,7 @@ def _set_access_token_cookie(response: Response, token: str) -> None:
         value=token,
         httponly=True,
         secure=secure_cookie,
-        samesite="lax",
+        samesite=same_site,
         domain=domain,
         path="/",
         max_age=max_age,
