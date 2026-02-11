@@ -63,20 +63,35 @@ import { LandingPage } from "../pages/public/LandingPage";
 import { UserGuidePage } from "../pages/common/UserGuidePage";
 import { DomainSetupGuidePage } from "../pages/partner/docs/DomainSetupGuidePage";
 import { NotFoundPage } from "../pages/common/NotFoundPage";
-import { detectHostType, isDevelopment } from "../lib/hostDetection";
+import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
 
 export function AppRouter() {
-  const isTenantHost = isDevelopment() || detectHostType() === "tenant";
+  const hostType = detectHostType();
+  const isTenantHost = isDevelopment() || hostType === "tenant";
+  const rootElement =
+    hostType === "admin" ? (
+      <Navigate to="/admin" replace />
+    ) : hostType === "tenant" ? (
+      <Navigate to="/app" replace />
+    ) : (
+      <LandingPage />
+    );
+  const partnerLoginElement =
+    hostType === "tenant" && !isDevelopment() ? (
+      <Navigate to={getPartnerLoginUrl(`${window.location.origin}/app`)} replace />
+    ) : (
+      <PartnerLoginPage />
+    );
 
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={rootElement} />
       <Route path="/landing" element={<LandingPage />} />
       
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
-      <Route path="/partner/login" element={<PartnerLoginPage />} />
+      <Route path="/partner/login" element={partnerLoginElement} />
       <Route path="/404" element={<NotFoundPage />} />
       {!isTenantHost && <Route path="/app/docs/domain-kurulumu" element={<NotFoundPage />} />}
       

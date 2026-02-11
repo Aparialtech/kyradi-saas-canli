@@ -2,14 +2,16 @@ import axios, { AxiosError } from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 
 import { env } from "../config/env";
-import { detectHostType } from "./hostDetection";
+import { detectHostType, isDevelopment } from "./hostDetection";
+import { tokenStorage } from "./tokenStorage";
 import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
-const resolvedBaseUrl = env.API_URL;
+const resolvedBaseUrl = isDevelopment() ? env.API_URL.replace(/\/+$/, "") : "";
+const shouldAttachBearer = isDevelopment();
 // Startup log for debugging deployed envs
 if (import.meta.env.DEV) {
-  console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)", "host:", typeof window !== "undefined" ? window.location.host : "");
+  console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)");
 }
 
 // Callback for handling 401 errors (will be set by AuthContext)
@@ -31,19 +33,14 @@ export const http = axios.create({
 // Request interceptor
 http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Force same-origin for all requests in browser
-    config.baseURL = "";
     config.headers = config.headers ?? {};
-    // Do not force X-Requested-With; keep requests as simple as possible.
+    const token = tokenStorage.get();
+    // In production we rely on HttpOnly cookies to avoid stale bearer/header conflicts.
+    if (token && shouldAttachBearer) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     if (env.TENANT_ID && hostType !== "tenant") {
       config.headers["X-Tenant-ID"] = env.TENANT_ID;
-    }
-    // Safety: never allow http:// absolute URLs in production
-    if (config.baseURL && config.baseURL.startsWith("http://")) {
-      config.baseURL = config.baseURL.replace("http://", "https://");
-    }
-    if (typeof config.url === "string" && config.url.startsWith("http://")) {
-      config.url = config.url.replace("http://", "https://");
     }
     return config;
   },
@@ -95,9 +92,18 @@ http.interceptors.response.use(
           url: axiosError.config?.url,
           method: axiosError.config?.method,
         });
-        // Trigger the logout callback if set
-        if (onUnauthorized) {
-          onUnauthorized();
+        const url = axiosError.config?.url || "";
+        const isAuthEndpoint =
+          url.includes("/auth/me") ||
+          url.includes("/auth/partner/login") ||
+          url.includes("/auth/admin/login") ||
+          url.includes("/auth/login");
+        // Avoid hard logout loops on auth endpoints; let AuthContext handle /auth/me failures.
+        if (!isAuthEndpoint) {
+          tokenStorage.clear();
+          if (onUnauthorized) {
+            onUnauthorized();
+          }
         }
       }
       
