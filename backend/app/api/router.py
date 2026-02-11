@@ -64,7 +64,7 @@ api_router = APIRouter()
 # CORE ROUTES - These must always work
 # =============================================================================
 
-api_router.include_router(auth.router)
+api_router.include_router(auth.router, prefix="/auth")
 api_router.include_router(admin.router)
 api_router.include_router(admin_diagnostics.router, prefix="/admin/diagnostics", tags=["admin"])
 api_router.include_router(admin_tenant_domains.router)
