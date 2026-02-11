@@ -16,7 +16,10 @@ from starlette.responses import Response
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from .api import api_router
-from ai.router import api_router as ai_router
+try:
+    from ai.router import api_router as ai_router
+except ImportError:  # Backward compatibility for deployments exporting `router`
+    from ai.router import router as ai_router
 from .core.config import settings
 from .core.exceptions import global_exception_handler
 from .db.utils import init_db
