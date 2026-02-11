@@ -119,18 +119,21 @@ export function PartnerLoginPage() {
 
       if (response.access_token) {
         tokenStorage.set(response.access_token);
-        if (response.tenant_slug) {
-          localStorage.setItem(TENANT_SLUG_CACHE_KEY, response.tenant_slug);
-        }
-        
-        // Redirect to tenant URL or app
-        if (response.tenant_slug) {
-          // Force full reload so AuthContext initializes from cookie/token cleanly.
-          const targetUrl = isDevelopment() ? "/app" : resolveTenantRedirect(response.tenant_slug);
+        const cachedTenantSlug = localStorage.getItem(TENANT_SLUG_CACHE_KEY);
+        const directTenantSlug = response.tenant_slug || cachedTenantSlug;
+        if (directTenantSlug) {
+          localStorage.setItem(TENANT_SLUG_CACHE_KEY, directTenantSlug);
+          const targetUrl = isDevelopment() ? "/app" : resolveTenantRedirect(directTenantSlug);
           window.location.href = targetUrl;
-        } else if (hasValidRedirect) {
+          return;
+        }
+
+        if (hasValidRedirect) {
           window.location.href = redirectUrl;
-        } else if (!isDevelopment()) {
+          return;
+        }
+
+        if (!isDevelopment()) {
           try {
             const settings = await partnerSettingsService.getSettings();
             if (settings.tenant_slug) {
@@ -141,9 +144,9 @@ export function PartnerLoginPage() {
           } catch (err) {
             errorLogger.warn(err, { component: "PartnerLoginPage", action: "resolveTenantSlugAfterLogin" });
           }
-        } else {
-          window.location.href = "/app";
         }
+
+        window.location.href = "/app";
       }
     } catch (err) {
       errorLogger.error(err, { component: "PartnerLoginPage", action: "handleSubmit" });

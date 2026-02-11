@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
 import { detectHostType, getTenantUrl, isDevelopment } from "../../lib/hostDetection";
-import { safeNavigate } from "../../utils/safeNavigate";
 
 /**
  * Login Page - Auto-redirects based on auth status
@@ -28,7 +27,7 @@ export function LoginPage() {
     if (user) {
       // Already logged in - redirect to appropriate dashboard
       if (user.role === "super_admin" || user.role === "support") {
-        safeNavigate(navigate, "/admin");
+        navigate("/admin", { replace: true });
       } else {
         const hostType = detectHostType();
         if (!isDevelopment() && hostType === "app") {
@@ -38,11 +37,11 @@ export function LoginPage() {
             return;
           }
         }
-        safeNavigate(navigate, "/app");
+        navigate("/app", { replace: true });
       }
     } else {
       // Not logged in - redirect to partner login (default)
-      safeNavigate(navigate, "/partner/login");
+      navigate("/partner/login", { replace: true });
     }
   }, [isLoading, user, navigate]);
 
