@@ -16,10 +16,37 @@ import { sanitizeRedirect } from "../../utils/safeRedirect";
 import styles from "./LoginPage.module.css";
 
 const JUST_LOGGED_IN_KEY = "kyradi.justLoggedIn";
+const JUST_LOGGED_IN_COOKIE_KEY = "kyradi_just_logged_in";
 const POST_LOGIN_ME_RETRY_DELAYS_MS = [150, 300, 600, 1000];
 
 async function wait(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function markJustLoggedInFlag(): void {
+  try {
+    sessionStorage.setItem(JUST_LOGGED_IN_KEY, Date.now().toString());
+  } catch {
+    // ignore storage failures
+  }
+  try {
+    document.cookie = `${JUST_LOGGED_IN_COOKIE_KEY}=1; Domain=.kyradi.com; Path=/; Max-Age=20; SameSite=Lax; Secure`;
+  } catch {
+    // ignore cookie failures
+  }
+}
+
+function clearJustLoggedInFlag(): void {
+  try {
+    sessionStorage.removeItem(JUST_LOGGED_IN_KEY);
+  } catch {
+    // ignore storage failures
+  }
+  try {
+    document.cookie = `${JUST_LOGGED_IN_COOKIE_KEY}=; Domain=.kyradi.com; Path=/; Max-Age=0; SameSite=Lax; Secure`;
+  } catch {
+    // ignore cookie failures
+  }
 }
 
 async function getCurrentUserWithRetry() {
@@ -140,11 +167,7 @@ export function PartnerLoginPage() {
       const response = await authService.loginPartner({ email, password });
 
       if (response.access_token) {
-        try {
-          sessionStorage.setItem(JUST_LOGGED_IN_KEY, Date.now().toString());
-        } catch {
-          // ignore storage failures
-        }
+        markJustLoggedInFlag();
         tokenStorage.set(response.access_token);
       } else {
         throw new Error("No access token received");
@@ -156,11 +179,7 @@ export function PartnerLoginPage() {
       if (!currentUser?.tenant_id) {
         throw new Error("Tenant not found for current user");
       }
-      try {
-        sessionStorage.removeItem(JUST_LOGGED_IN_KEY);
-      } catch {
-        // ignore storage failures
-      }
+      clearJustLoggedInFlag();
 
       const cachedTenantSlug = localStorage.getItem(TENANT_SLUG_CACHE_KEY);
       const directTenantSlug = response.tenant_slug || cachedTenantSlug;
@@ -191,11 +210,7 @@ export function PartnerLoginPage() {
 
       window.location.href = "/app";
     } catch (err) {
-      try {
-        sessionStorage.removeItem(JUST_LOGGED_IN_KEY);
-      } catch {
-        // ignore storage failures
-      }
+      clearJustLoggedInFlag();
       errorLogger.error(err, { component: "PartnerLoginPage", action: "handleSubmit" });
       
       if (axios.isAxiosError(err)) {

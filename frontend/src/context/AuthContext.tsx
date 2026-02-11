@@ -18,6 +18,7 @@ import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
 import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
 
 const JUST_LOGGED_IN_KEY = "kyradi.justLoggedIn";
+const JUST_LOGGED_IN_COOKIE_KEY = "kyradi_just_logged_in";
 const JUST_LOGGED_IN_WINDOW_MS = 10_000;
 const BOOTSTRAP_RETRY_DELAYS_MS = [150, 300, 600];
 
@@ -27,6 +28,11 @@ function markJustLoggedIn(): void {
   } catch {
     // ignore storage failures (private mode, quota, etc.)
   }
+  try {
+    document.cookie = `${JUST_LOGGED_IN_COOKIE_KEY}=1; Domain=.kyradi.com; Path=/; Max-Age=20; SameSite=Lax; Secure`;
+  } catch {
+    // ignore cookie failures
+  }
 }
 
 function clearJustLoggedIn(): void {
@@ -35,6 +41,16 @@ function clearJustLoggedIn(): void {
   } catch {
     // ignore storage failures
   }
+  try {
+    document.cookie = `${JUST_LOGGED_IN_COOKIE_KEY}=; Domain=.kyradi.com; Path=/; Max-Age=0; SameSite=Lax; Secure`;
+  } catch {
+    // ignore cookie failures
+  }
+}
+
+function hasCrossSubdomainJustLoggedInFlag(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.cookie.split(";").some((part) => part.trim().startsWith(`${JUST_LOGGED_IN_COOKIE_KEY}=`));
 }
 
 function isWithinJustLoggedInWindow(): boolean {
@@ -43,10 +59,13 @@ function isWithinJustLoggedInWindow(): boolean {
     if (!raw) return false;
     const ts = Number(raw);
     if (!Number.isFinite(ts)) return false;
-    return Date.now() - ts <= JUST_LOGGED_IN_WINDOW_MS;
+    if (Date.now() - ts <= JUST_LOGGED_IN_WINDOW_MS) {
+      return true;
+    }
   } catch {
-    return false;
+    // ignore storage failures
   }
+  return hasCrossSubdomainJustLoggedInFlag();
 }
 
 async function wait(ms: number): Promise<void> {
