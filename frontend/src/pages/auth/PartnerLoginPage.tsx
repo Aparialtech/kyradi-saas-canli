@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { FormEvent } from "react";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -33,6 +33,36 @@ export function PartnerLoginPage() {
     return redirectUrl === rawRedirectUrl.trim();
   }, [rawRedirectUrl, redirectUrl]);
 
+  const resolveTenantRedirect = useCallback(
+    (tenantSlug: string) => {
+      const tenantAppUrl = getTenantUrl(tenantSlug, "/app");
+      if (!hasValidRedirect) {
+        return tenantAppUrl;
+      }
+
+      // Keep tenant-intended absolute redirects, ignore app/admin/self-host redirects.
+      try {
+        const parsed = new URL(redirectUrl);
+        const host = parsed.hostname.toLowerCase();
+        const isKyradi = host === "kyradi.com" || host.endsWith(".kyradi.com");
+        const isReservedHost =
+          host === "app.kyradi.com" ||
+          host === "admin.kyradi.com" ||
+          host === "www.kyradi.com" ||
+          host === "kyradi.com";
+
+        if (isKyradi && !isReservedHost) {
+          return redirectUrl;
+        }
+      } catch {
+        // Relative path redirects (e.g. "/app") should stay on tenant host.
+      }
+
+      return tenantAppUrl;
+    },
+    [hasValidRedirect, redirectUrl],
+  );
+
   // Redirect if already logged in as partner
   useEffect(() => {
     if (!isLoading && user) {
@@ -51,7 +81,7 @@ export function PartnerLoginPage() {
         }
       }
     }
-  }, [isLoading, user, navigate, redirectUrl]);
+  }, [isLoading, user, navigate, redirectUrl, hasValidRedirect]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -67,11 +97,7 @@ export function PartnerLoginPage() {
         // Redirect to tenant URL or app
         if (response.tenant_slug) {
           // Force full reload so AuthContext initializes from cookie/token cleanly.
-          const targetUrl = isDevelopment()
-            ? "/app"
-            : hasValidRedirect
-              ? redirectUrl
-              : getTenantUrl(response.tenant_slug, "/app");
+          const targetUrl = isDevelopment() ? "/app" : resolveTenantRedirect(response.tenant_slug);
           window.location.href = targetUrl;
         } else if (hasValidRedirect) {
           window.location.href = redirectUrl;
