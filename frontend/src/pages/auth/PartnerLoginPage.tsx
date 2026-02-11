@@ -7,14 +7,16 @@ import { motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { authService } from "../../services/auth";
+import { partnerSettingsService } from "../../services/partner/settings";
 import { tokenStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
-import { getTenantUrl, isDevelopment } from "../../lib/hostDetection";
+import { detectHostType, getTenantUrl, isDevelopment } from "../../lib/hostDetection";
 import { Lock, Mail, Eye, EyeOff, Hotel, Building2, CheckCircle2 } from "../../lib/lucide";
 import { sanitizeRedirect } from "../../utils/safeRedirect";
 import styles from "./LoginPage.module.css";
 
 export function PartnerLoginPage() {
+  const TENANT_SLUG_CACHE_KEY = "kyradi:tenant_slug";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isLoading } = useAuth();
@@ -65,22 +67,46 @@ export function PartnerLoginPage() {
 
   // Redirect if already logged in as partner
   useEffect(() => {
-    if (!isLoading && user) {
-      // Admin users shouldn't be here
-      if (user.role === "super_admin" || user.role === "support") {
-        navigate("/admin/login", { replace: true });
-        return;
-      }
-      
-      // Partner user - redirect to their panel
-      if (user.tenant_id) {
-        if (hasValidRedirect) {
-          window.location.href = redirectUrl;
-        } else {
-          navigate("/app", { replace: true });
-        }
-      }
+    if (isLoading || !user) {
+      return;
     }
+    if (user.role === "super_admin" || user.role === "support") {
+      navigate("/admin/login", { replace: true });
+      return;
+    }
+    if (!user.tenant_id) {
+      return;
+    }
+    if (hasValidRedirect) {
+      window.location.href = redirectUrl;
+      return;
+    }
+
+    const hostType = detectHostType();
+    if (hostType !== "app" || isDevelopment()) {
+      navigate("/app", { replace: true });
+      return;
+    }
+
+    const cachedTenantSlug = localStorage.getItem(TENANT_SLUG_CACHE_KEY);
+    if (cachedTenantSlug) {
+      window.location.href = getTenantUrl(cachedTenantSlug, "/app");
+      return;
+    }
+
+    void (async () => {
+      try {
+        const settings = await partnerSettingsService.getSettings();
+        if (settings.tenant_slug) {
+          localStorage.setItem(TENANT_SLUG_CACHE_KEY, settings.tenant_slug);
+          window.location.href = getTenantUrl(settings.tenant_slug, "/app");
+          return;
+        }
+      } catch (err) {
+        errorLogger.warn(err, { component: "PartnerLoginPage", action: "resolveTenantSlugAfterSession" });
+      }
+      navigate("/app", { replace: true });
+    })();
   }, [isLoading, user, navigate, redirectUrl, hasValidRedirect]);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -93,6 +119,9 @@ export function PartnerLoginPage() {
 
       if (response.access_token) {
         tokenStorage.set(response.access_token);
+        if (response.tenant_slug) {
+          localStorage.setItem(TENANT_SLUG_CACHE_KEY, response.tenant_slug);
+        }
         
         // Redirect to tenant URL or app
         if (response.tenant_slug) {
@@ -101,6 +130,17 @@ export function PartnerLoginPage() {
           window.location.href = targetUrl;
         } else if (hasValidRedirect) {
           window.location.href = redirectUrl;
+        } else if (!isDevelopment()) {
+          try {
+            const settings = await partnerSettingsService.getSettings();
+            if (settings.tenant_slug) {
+              localStorage.setItem(TENANT_SLUG_CACHE_KEY, settings.tenant_slug);
+              window.location.href = getTenantUrl(settings.tenant_slug, "/app");
+              return;
+            }
+          } catch (err) {
+            errorLogger.warn(err, { component: "PartnerLoginPage", action: "resolveTenantSlugAfterLogin" });
+          }
         } else {
           window.location.href = "/app";
         }
