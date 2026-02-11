@@ -117,6 +117,22 @@ class DynamicCORSMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class NormalizePathMiddleware(BaseHTTPMiddleware):
+    """Normalize API paths to avoid trailing-slash 404s without redirects.
+
+    We keep `redirect_slashes=False` to prevent proxy-induced 307/http redirects.
+    This middleware rewrites `/path/` -> `/path` internally before routing.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.scope.get("path") or ""
+        if path and path != "/" and path.endswith("/"):
+            normalized = path.rstrip("/")
+            request.scope["path"] = normalized
+            request.scope["raw_path"] = normalized.encode("utf-8")
+        return await call_next(request)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="KYRADİ API",
@@ -130,6 +146,7 @@ def create_app() -> FastAPI:
 
     # Add custom CORS middleware BEFORE including routers
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+    app.add_middleware(NormalizePathMiddleware)
     app.add_middleware(DynamicCORSMiddleware)
     app.add_middleware(TenantResolverMiddleware)
 

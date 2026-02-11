@@ -96,10 +96,11 @@ def is_public_path(path: str) -> bool:
     """Check if path is public (doesn't require tenant)."""
     if not path:
         return True
+    normalized_path = path if path == "/" else path.rstrip("/")
     
     # Exact match or prefix match
     for public_path in PUBLIC_PATHS:
-        if path == public_path or path.startswith(f"{public_path}/"):
+        if normalized_path == public_path or normalized_path.startswith(f"{public_path}/"):
             return True
     
     return False
