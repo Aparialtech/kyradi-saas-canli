@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/auth/:path*",
-      "destination": "https://kyradi-saas-canli-production.up.railway.app/:path*"
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/auth/:path*"
     },
     {
       "source": "/admin/:path*",

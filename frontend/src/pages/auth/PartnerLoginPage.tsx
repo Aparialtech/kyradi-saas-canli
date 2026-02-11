@@ -7,20 +7,17 @@ import { motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { authService } from "../../services/auth";
-import { tokenStorage, tenantSlugStorage } from "../../lib/tokenStorage";
+import { tokenStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
-import { getAdminLoginUrl, getPartnerLoginUrl, getTenantUrl, isDevelopment } from "../../lib/hostDetection";
-import { getHostMode } from "../../lib/hostMode";
+import { getTenantUrl, isDevelopment } from "../../lib/hostDetection";
 import { Lock, Mail, Eye, EyeOff, Hotel, Building2, CheckCircle2 } from "../../lib/lucide";
 import { sanitizeRedirect } from "../../utils/safeRedirect";
-import { safeHardRedirect, safeNavigate } from "../../utils/safeNavigate";
 import styles from "./LoginPage.module.css";
 
 export function PartnerLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isLoading, refreshUser } = useAuth();
-  const debugAuth = import.meta.env.VITE_DEBUG_AUTH === "true";
+  const { user, isLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,31 +33,21 @@ export function PartnerLoginPage() {
     return redirectUrl === rawRedirectUrl.trim();
   }, [rawRedirectUrl, redirectUrl]);
 
-  useEffect(() => {
-    if (!isDevelopment() && getHostMode(window.location.hostname) !== "app") {
-      const redirectTarget = `${window.location.origin}/app`;
-      safeHardRedirect(getPartnerLoginUrl(redirectTarget));
-    }
-  }, []);
-
   // Redirect if already logged in as partner
   useEffect(() => {
     if (!isLoading && user) {
-      if (debugAuth) {
-        console.debug("[login] already-authenticated", { role: user.role, host: window.location.host });
-      }
       // Admin users shouldn't be here
       if (user.role === "super_admin" || user.role === "support") {
-        safeHardRedirect(getAdminLoginUrl());
+        navigate("/admin/login", { replace: true });
         return;
       }
       
       // Partner user - redirect to their panel
       if (user.tenant_id) {
         if (hasValidRedirect) {
-          safeHardRedirect(redirectUrl);
+          window.location.href = redirectUrl;
         } else {
-          safeNavigate(navigate, "/app");
+          navigate("/app", { replace: true });
         }
       }
     }
@@ -68,40 +55,28 @@ export function PartnerLoginPage() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitting) return;
     setError("");
     setSubmitting(true);
 
     try {
-      if (debugAuth) {
-        console.debug("[login] partner submit", { host: window.location.host });
-      }
       const response = await authService.loginPartner({ email, password });
 
       if (response.access_token) {
         tokenStorage.set(response.access_token);
-        await refreshUser();
-        if (response.tenant_slug) {
-          tenantSlugStorage.set(response.tenant_slug);
-        }
-        if (debugAuth) {
-          console.debug("[login] success -> redirect", { tenant: response.tenant_slug });
-        }
         
         // Redirect to tenant URL or app
         if (response.tenant_slug) {
-          if (isDevelopment()) {
-            // In dev, just go to /app
-            safeNavigate(navigate, "/app");
-          } else {
-            // In production, redirect to tenant subdomain
-            const targetUrl = hasValidRedirect ? redirectUrl : getTenantUrl(response.tenant_slug, "/app");
-            safeHardRedirect(targetUrl);
-          }
+          // Force full reload so AuthContext initializes from cookie/token cleanly.
+          const targetUrl = isDevelopment()
+            ? "/app"
+            : hasValidRedirect
+              ? redirectUrl
+              : getTenantUrl(response.tenant_slug, "/app");
+          window.location.href = targetUrl;
         } else if (hasValidRedirect) {
-          safeHardRedirect(redirectUrl);
+          window.location.href = redirectUrl;
         } else {
-          safeNavigate(navigate, "/app");
+          window.location.href = "/app";
         }
       }
     } catch (err) {

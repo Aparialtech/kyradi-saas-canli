@@ -67,16 +67,35 @@ def _set_access_token_cookie(response: Response, token: str) -> None:
     env = (settings.environment or "").lower()
     secure_cookie = env not in {"local", "dev", "development"}
     max_age = int(settings.access_token_expire_minutes) * 60
+    domain = _cookie_domain()
+
+    # Clear stale cookies first to avoid duplicate-name cookie ambiguity.
+    response.delete_cookie("access_token", path="/", domain=".kyradi.com")
+    response.delete_cookie("access_token", path="/")
+
+    # Domain cookie for cross-subdomain auth.
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         secure=secure_cookie,
         samesite="lax",
-        domain=_cookie_domain(),
+        domain=domain,
         path="/",
         max_age=max_age,
     )
+
+    # Also set host-only cookie so current-host requests never pick stale values.
+    if domain:
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,
+            secure=secure_cookie,
+            samesite="lax",
+            path="/",
+            max_age=max_age,
+        )
 
 
 def _clear_access_token_cookie(response: Response) -> None:

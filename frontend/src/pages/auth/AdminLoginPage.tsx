@@ -10,15 +10,13 @@ import { authService } from "../../services/auth";
 import { tokenStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
 import { Lock, Mail, Eye, EyeOff, Shield, Database } from "../../lib/lucide";
-import { detectHostType, getAdminLoginUrl, isDevelopment } from "../../lib/hostDetection";
 import { sanitizeRedirect } from "../../utils/safeRedirect";
-import { safeHardRedirect, safeNavigate } from "../../utils/safeNavigate";
 import styles from "./LoginPage.module.css";
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isLoading, refreshUser } = useAuth();
+  const { user, isLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,17 +31,11 @@ export function AdminLoginPage() {
     return redirectUrl === rawRedirectUrl.trim();
   }, [rawRedirectUrl, redirectUrl]);
 
-  useEffect(() => {
-    if (!isDevelopment() && detectHostType() !== "admin") {
-      safeHardRedirect(getAdminLoginUrl());
-    }
-  }, []);
-
   // Redirect if already logged in as admin
   useEffect(() => {
     if (!isLoading && user) {
       if (user.role === "super_admin" || user.role === "support") {
-        safeNavigate(navigate, "/admin");
+        navigate("/admin", { replace: true });
       }
     }
   }, [isLoading, user, navigate]);
@@ -59,15 +51,11 @@ export function AdminLoginPage() {
 
       if (response.access_token) {
         tokenStorage.set(response.access_token);
-        await refreshUser();
-        if (hasValidRedirect) {
-          if (redirectUrl.startsWith("/")) {
-            safeNavigate(navigate, redirectUrl);
-          } else {
-            safeHardRedirect(redirectUrl);
-          }
+        const target = hasValidRedirect ? redirectUrl : "/admin";
+        if (target.startsWith("/")) {
+          window.location.href = target;
         } else {
-          safeNavigate(navigate, "/admin");
+          window.location.href = target;
         }
       }
     } catch (err) {

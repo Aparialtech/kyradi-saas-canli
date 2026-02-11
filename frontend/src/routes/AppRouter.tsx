@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { RequireAuth } from "../components/auth/RequireAuth";
 import {
@@ -6,7 +6,6 @@ import {
   AdminTenantsPage,
   AdminTenantCreatePage,
   AdminTenantEditPage,
-  AdminTenantDomainsPage,
   AdminReportsOverview,
   AdminReportsAnalyticsPage,
   AdminInvoicePage,
@@ -17,6 +16,7 @@ import {
   AdminUserCreatePage,
   AdminSettingsPage,
   AdminTransfersPage,
+  AdminTenantDomainsPage,
 } from "../pages/admin/AdminDashboard";
 import { AdminUserPasswordResetPage } from "../pages/admin/users/AdminUserPasswordResetPage";
 import { AdminTicketsPage } from "../pages/admin/tickets/AdminTicketsPage";
@@ -63,173 +63,66 @@ import { LandingPage } from "../pages/public/LandingPage";
 import { UserGuidePage } from "../pages/common/UserGuidePage";
 import { DomainSetupGuidePage } from "../pages/partner/docs/DomainSetupGuidePage";
 import { NotFoundPage } from "../pages/common/NotFoundPage";
-import { isDevelopment } from "../lib/hostDetection";
-import { getHostMode } from "../lib/hostMode";
-import { tenantSlugStorage } from "../lib/tokenStorage";
-import { useAuth } from "../context/AuthContext";
-import { safeHardRedirect } from "../utils/safeNavigate";
+import { detectHostType, isDevelopment } from "../lib/hostDetection";
 
 export function AppRouter() {
-  const location = useLocation();
-  const hostname = typeof window !== "undefined" ? window.location.hostname : "";
-  const mode = getHostMode(hostname);
-  const isTenantHost = isDevelopment() || mode === "tenant";
-  const debugAuth = import.meta.env.VITE_DEBUG_AUTH === "true";
-
-  // Ensure re-render on path changes for dev host detection
-  void location;
-
-  if (debugAuth) {
-    console.debug(`[host-mode] ${hostname} -> ${mode}`);
-  }
-
-  const panelRoutes = (
-    <Route
-      element={
-        <RequireAuth allowedRoles={["tenant_admin", "staff", "viewer", "hotel_manager", "storage_operator", "accounting"]} />
-      }
-    >
-      <Route path="/app" element={<PartnerDashboard />}>
-        <Route index element={<PartnerOverview />} />
-        <Route path="export-guide" element={<ExportGuidePage />} />
-        <Route path="locations" element={<PartnerLocationsPlaceholder />} />
-        <Route path="locations/:id/edit" element={<LocationEditPage />} />
-        <Route path="locations/new" element={<LocationEditPage />} />
-        <Route path="lockers" element={<PartnerLockersPage />} />
-        <Route path="lockers/:id/edit" element={<StorageEditPage />} />
-        <Route path="lockers/new" element={<StorageEditPage />} />
-        <Route path="reservations" element={<PartnerReservationsPage />} />
-        <Route path="widget-preview" element={<WidgetPreviewPage />} />
-        <Route path="qr" element={<PartnerQRPage />} />
-        <Route
-          element={<RequireAuth allowedRoles={["accounting", "hotel_manager", "tenant_admin"]} redirectTo="/app" />}
-        >
-          <Route path="reports" element={<PartnerReportsAnalyticsPage />} />
-          <Route path="revenue" element={<PartnerRevenueDashboard />} />
-          <Route path="settlements" element={<PartnerSettlementsPage />} />
-          <Route path="transfers" element={<TransfersPage />} />
-        </Route>
-        <Route
-          element={<RequireAuth allowedRoles={["tenant_admin", "hotel_manager"]} redirectTo="/app" />}
-        >
-          <Route path="users" element={<PartnerUsersPage />} />
-          <Route path="users/:id/edit" element={<UserEditPage />} />
-          <Route path="users/new" element={<UserEditPage />} />
-          <Route path="staff" element={<PartnerStaffPage />} />
-          <Route path="staff/assign" element={<StaffAssignPage />} />
-          <Route path="staff/new" element={<StaffEditPage />} />
-          <Route path="staff/:id/edit" element={<StaffEditPage />} />
-          <Route path="tickets" element={<TicketsPage />} />
-          <Route path="pricing" element={<PartnerPricingPage />} />
-          <Route path="pricing/new" element={<PricingEditPage />} />
-          <Route path="pricing/:id/edit" element={<PricingEditPage />} />
-          <Route path="demo-flow" element={<DemoFlowPage />} />
-          <Route path="demo-payment-flow" element={<DemoPaymentFlowPage />} />
-        </Route>
-        <Route path="settings" element={<PartnerSettingsPage />} />
-        <Route path="guide" element={<UserGuidePage />} />
-        {isTenantHost && <Route path="docs/domain-kurulumu" element={<DomainSetupGuidePage />} />}
-        <Route path="*" element={<Navigate to="/app" replace />} />
-      </Route>
-    </Route>
-  );
-
-  if (mode === "public") {
-    return (
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/landing" element={<LandingPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    );
-  }
-
-  if (mode === "admin") {
-    return (
-      <Routes>
-        <Route path="/admin/login" element={<AdminLoginPage />} />
-        <Route element={<RequireAuth allowedRoles={["super_admin", "support"]} />}>
-          <Route path="/admin" element={<AdminDashboard />}>
-            <Route index element={<AdminReportsOverview />} />
-            <Route path="overview" element={<AdminReportsOverview />} />
-            <Route path="reports" element={<AdminReportsAnalyticsPage />} />
-            <Route path="invoice" element={<AdminInvoicePage />} />
-            <Route path="tenants" element={<AdminTenantsPage />} />
-            <Route path="tenants/new" element={<AdminTenantCreatePage />} />
-            <Route path="tenants/:id/edit" element={<AdminTenantEditPage />} />
-            <Route path="tenants/:tenantId/domains" element={<AdminTenantDomainsPage />} />
-            <Route path="revenue" element={<AdminRevenuePage />} />
-            <Route path="settlements" element={<AdminSettlementsPage />} />
-            <Route path="transfers" element={<AdminTransfersPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-            <Route path="users/new" element={<AdminUserCreatePage />} />
-            <Route path="users/:userId/reset-password" element={<AdminUserPasswordResetPage />} />
-            <Route path="tickets" element={<AdminTicketsPage />} />
-            <Route path="settings" element={<AdminSettingsPage />} />
-            <Route path="audit" element={<AdminAuditPage />} />
-            <Route path="guide" element={<UserGuidePage />} />
-            <Route path="*" element={<Navigate to="/admin/overview" replace />} />
-          </Route>
-        </Route>
-        <Route path="*" element={<Navigate to="/admin/login" replace />} />
-      </Routes>
-    );
-  }
-
-  if (mode === "app") {
-    const AppHostPanelRedirect = () => {
-      const { user, isLoading } = useAuth();
-      if (isLoading) return null;
-      const slug = tenantSlugStorage.get();
-      if (user?.tenant_id && slug) {
-        safeHardRedirect(`https://${slug}.kyradi.com/app`);
-        return null;
-      }
-      return <Navigate to="/partner/login" replace />;
-    };
-
-    return (
-      <Routes>
-        <Route path="/" element={<PartnerLoginPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/partner/login" element={<PartnerLoginPage />} />
-        <Route path="/404" element={<NotFoundPage />} />
-        {!isTenantHost && <Route path="/app/docs/domain-kurulumu" element={<NotFoundPage />} />}
-        
-        {/* Onboarding Routes */}
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/verify-reset-code" element={<VerifyResetCodePage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/verify-sms" element={<SMSVerificationPage />} />
-        <Route path="/self-service" element={<SelfServiceReservationPage />} />
-        <Route path="/widget-demo" element={<WidgetDemoPage />} />
-        <Route path="/payments/magicpay/demo/:sessionId" element={<MagicPayDemoPage />} />
-        <Route path="/app" element={<AppHostPanelRedirect />} />
-        <Route path="*" element={<Navigate to="/partner/login" replace />} />
-      </Routes>
-    );
-  }
-
-  if (mode === "tenant") {
-    return (
-      <Routes>
-        <Route path="/" element={<Navigate to="/app" replace />} />
-        {panelRoutes}
-        <Route path="*" element={<Navigate to="/app" replace />} />
-      </Routes>
-    );
-  }
+  const isTenantHost = isDevelopment() || detectHostType() === "tenant";
 
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/landing" element={<LandingPage />} />
+      
+      {/* Auth Routes */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route path="/partner/login" element={<PartnerLoginPage />} />
+      <Route path="/404" element={<NotFoundPage />} />
+      {!isTenantHost && <Route path="/app/docs/domain-kurulumu" element={<NotFoundPage />} />}
+      
+      {/* Onboarding Routes */}
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/verify-reset-code" element={<VerifyResetCodePage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-sms" element={<SMSVerificationPage />} />
+      <Route path="/self-service" element={<SelfServiceReservationPage />} />
+      <Route path="/widget-demo" element={<WidgetDemoPage />} />
+      <Route path="/payments/magicpay/demo/:sessionId" element={<MagicPayDemoPage />} />
+
+      <Route element={<RequireAuth allowedRoles={["super_admin", "support"]} redirectTo="/admin/login" />}>
+        <Route path="/admin" element={<AdminDashboard />}>
+          <Route index element={<AdminReportsOverview />} />
+          <Route path="overview" element={<AdminReportsOverview />} />
+          <Route path="reports" element={<AdminReportsAnalyticsPage />} />
+          <Route path="invoice" element={<AdminInvoicePage />} />
+          <Route path="tenants" element={<AdminTenantsPage />} />
+          <Route path="tenants/new" element={<AdminTenantCreatePage />} />
+          <Route path="tenants/:id/edit" element={<AdminTenantEditPage />} />
+          <Route path="tenants/:tenantId/domains" element={<AdminTenantDomainsPage />} />
+          <Route path="revenue" element={<AdminRevenuePage />} />
+          <Route path="settlements" element={<AdminSettlementsPage />} />
+          <Route path="transfers" element={<AdminTransfersPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/new" element={<AdminUserCreatePage />} />
+          <Route path="users/:userId/reset-password" element={<AdminUserPasswordResetPage />} />
+          <Route path="tickets" element={<AdminTicketsPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
+          <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="guide" element={<UserGuidePage />} />
+          <Route path="*" element={<Navigate to="/admin/overview" replace />} />
+        </Route>
+      </Route>
+
       <Route
         element={
-          <RequireAuth allowedRoles={["tenant_admin", "staff", "viewer", "hotel_manager", "storage_operator", "accounting"]} />
+          <RequireAuth
+            allowedRoles={["tenant_admin", "staff", "viewer", "hotel_manager", "storage_operator", "accounting"]}
+            redirectTo="/partner/login"
+          />
         }
       >
-        <Route path="/" element={<Navigate to="/app" replace />} />
         <Route path="/app" element={<PartnerDashboard />}>
           <Route index element={<PartnerOverview />} />
           <Route path="export-guide" element={<ExportGuidePage />} />
@@ -274,7 +167,7 @@ export function AppRouter() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/app" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
