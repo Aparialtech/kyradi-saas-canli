@@ -5,7 +5,7 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,9 +56,39 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
+def _cookie_domain() -> str | None:
+    env = (settings.environment or "").lower()
+    if env in {"local", "dev", "development"}:
+        return None
+    return ".kyradi.com"
+
+
+def _set_access_token_cookie(response: Response, token: str) -> None:
+    env = (settings.environment or "").lower()
+    secure_cookie = env not in {"local", "dev", "development"}
+    max_age = int(settings.access_token_expire_minutes) * 60
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=secure_cookie,
+        samesite="lax",
+        domain=_cookie_domain(),
+        path="/",
+        max_age=max_age,
+    )
+
+
+def _clear_access_token_cookie(response: Response) -> None:
+    # Clear both domain-scoped and host-only variations safely.
+    response.delete_cookie("access_token", path="/", domain=".kyradi.com")
+    response.delete_cookie("access_token", path="/")
+
+
 @router.post("/login", response_model=TokenResponse)
 async def login(
     credentials: LoginRequest,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     """Authenticate user with email/password. Tenant is auto-detected from user's tenant_id."""
@@ -112,6 +142,7 @@ async def login(
         tenant_id=token_tenant_id,
         role=user.role,
     )
+    _set_access_token_cookie(response, token)
     return TokenResponse(access_token=token)
 
 
@@ -119,6 +150,7 @@ async def login(
 async def partner_login(
     credentials: LoginRequest,
     request: Request,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> PartnerLoginResponse:
     """
@@ -174,6 +206,7 @@ async def partner_login(
         tenant_id=tenant.id,
         role=user.role,
     )
+    _set_access_token_cookie(response, token)
     
     logger.info(f"Partner login successful: {user.email} -> tenant {tenant.slug}")
     
@@ -192,6 +225,7 @@ async def partner_login(
 @router.post("/admin/login", response_model=TokenResponse)
 async def admin_login(
     credentials: LoginRequest,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     """
@@ -230,6 +264,7 @@ async def admin_login(
         tenant_id=None,  # Admin users don't have tenant
         role=user.role,
     )
+    _set_access_token_cookie(response, token)
     
     logger.info(f"Admin login successful: {user.email} (role: {user.role})")
     
@@ -239,6 +274,7 @@ async def admin_login(
 @router.post("/verify-login-sms", response_model=VerifyLoginSMSResponse)
 async def verify_login_sms(
     payload: VerifyLoginSMSRequest,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> VerifyLoginSMSResponse:
     """Verify SMS code for first login after password reset."""
@@ -321,6 +357,7 @@ async def verify_login_sms(
         tenant_id=tenant_id,
         role=user.role,
     )
+    _set_access_token_cookie(response, token)
     
     return VerifyLoginSMSResponse(
         access_token=token,
@@ -683,6 +720,7 @@ async def reset_password(
 @router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
 async def signup(
     payload: SignupRequest,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> SignupResponse:
     """
@@ -733,12 +771,19 @@ async def signup(
         tenant_id=None,
         role=user.role,
     )
+    _set_access_token_cookie(response, access_token)
     
     return SignupResponse(
         message="Kayıt başarılı! Şimdi otelinizi oluşturabilirsiniz.",
         user_id=user.id,
         access_token=access_token,
     )
+
+
+@router.post("/logout")
+async def logout(response: Response) -> dict[str, bool]:
+    _clear_access_token_cookie(response)
+    return {"ok": True}
 
 
 # =====================
