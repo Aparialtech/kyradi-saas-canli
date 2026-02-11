@@ -74,6 +74,7 @@ def _set_access_token_cookie(response: Response, token: str) -> None:
     response.delete_cookie("access_token", path="/")
 
     # Domain cookie for cross-subdomain auth.
+    # Keep a single cookie variant to avoid duplicate-name ambiguity across browsers.
     response.set_cookie(
         key="access_token",
         value=token,
@@ -84,18 +85,6 @@ def _set_access_token_cookie(response: Response, token: str) -> None:
         path="/",
         max_age=max_age,
     )
-
-    # Also set host-only cookie so current-host requests never pick stale values.
-    if domain:
-        response.set_cookie(
-            key="access_token",
-            value=token,
-            httponly=True,
-            secure=secure_cookie,
-            samesite="lax",
-            path="/",
-            max_age=max_age,
-        )
 
 
 def _clear_access_token_cookie(response: Response) -> None:

@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(tokenStorage.get());
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const handlingUnauthorizedRef = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,13 +45,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
       } catch (error) {
-        errorLogger.error(error, {
-          component: "AuthContext",
-          action: "getCurrentUser",
-        });
+        let recovered = false;
         if (storedToken) {
-          tokenStorage.clear();
-          setToken(null);
+          // Retry once to avoid transient post-login cookie propagation races.
+          await new Promise((resolve) => setTimeout(resolve, 250));
+          try {
+            const currentUser = await authService.getCurrentUser();
+            setUser(currentUser);
+            recovered = true;
+          } catch {
+            recovered = false;
+          }
+        }
+        if (!recovered) {
+          errorLogger.error(error, {
+            component: "AuthContext",
+            action: "getCurrentUser",
+          });
+          if (storedToken) {
+            tokenStorage.clear();
+            setToken(null);
+          }
         }
       } finally {
         setIsLoading(false);
@@ -82,15 +98,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const logout = useCallback(() => {
+    void authService.logout().catch((error) => {
+      errorLogger.warn(error, { component: "AuthContext", action: "logout" });
+    });
     tokenStorage.clear();
     setToken(null);
     setUser(null);
-    navigate("/login");
+    const hostType = detectHostType();
+    if (hostType === "admin") {
+      navigate("/admin/login");
+      return;
+    }
+    navigate("/partner/login");
   }, [navigate]);
 
   // Register the 401 handler callback
   useEffect(() => {
     setOnUnauthorized(() => {
+      if (handlingUnauthorizedRef.current) {
+        return;
+      }
+      handlingUnauthorizedRef.current = true;
+      const releaseGuard = () => {
+        window.setTimeout(() => {
+          handlingUnauthorizedRef.current = false;
+        }, 1000);
+      };
       errorLogger.warn(new Error("Session expired"), {
         component: "AuthContext",
         action: "sessionExpired",
@@ -101,17 +134,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       const hostType = detectHostType();
       if (hostType === "tenant" && !isDevelopment()) {
+        releaseGuard();
         window.location.href = getPartnerLoginUrl(window.location.href);
         return;
       }
       if (hostType === "admin") {
+        releaseGuard();
         navigate("/admin/login");
         return;
       }
+      releaseGuard();
       navigate("/partner/login");
     });
     
     return () => {
+      handlingUnauthorizedRef.current = false;
       setOnUnauthorized(() => {}); // Cleanup
     };
   }, [navigate]);

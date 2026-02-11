@@ -8,7 +8,9 @@ import { errorLogger, ErrorSeverity } from "./errorLogger";
 
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
 const resolvedBaseUrl = isDevelopment() ? env.API_URL.replace(/\/+$/, "") : "";
-const shouldAttachBearer = isDevelopment();
+// Keep bearer as fallback in all environments.
+// This prevents post-login /auth/me races when HttpOnly cookie propagation lags.
+const shouldAttachBearer = true;
 // Startup log for debugging deployed envs
 if (import.meta.env.DEV) {
   console.debug("[HTTP] Using API base URL:", resolvedBaseUrl || "(relative)");
