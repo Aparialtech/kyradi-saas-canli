@@ -15,6 +15,28 @@ import { Lock, Mail, Eye, EyeOff, Hotel, Building2, CheckCircle2 } from "../../l
 import { sanitizeRedirect } from "../../utils/safeRedirect";
 import styles from "./LoginPage.module.css";
 
+const JUST_LOGGED_IN_KEY = "kyradi.justLoggedIn";
+const POST_LOGIN_ME_RETRY_DELAYS_MS = [150, 300, 600, 1000];
+
+async function wait(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getCurrentUserWithRetry() {
+  let lastError: unknown = null;
+  for (const delayMs of [0, ...POST_LOGIN_ME_RETRY_DELAYS_MS]) {
+    if (delayMs > 0) {
+      await wait(delayMs);
+    }
+    try {
+      return await authService.getCurrentUser();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError ?? new Error("Failed to verify current user");
+}
+
 export function PartnerLoginPage() {
   const TENANT_SLUG_CACHE_KEY = "kyradi:tenant_slug";
   const navigate = useNavigate();
@@ -118,6 +140,11 @@ export function PartnerLoginPage() {
       const response = await authService.loginPartner({ email, password });
 
       if (response.access_token) {
+        try {
+          sessionStorage.setItem(JUST_LOGGED_IN_KEY, Date.now().toString());
+        } catch {
+          // ignore storage failures
+        }
         tokenStorage.set(response.access_token);
       } else {
         throw new Error("No access token received");
@@ -125,9 +152,14 @@ export function PartnerLoginPage() {
 
       // Safe redirect flow:
       // Never redirect right after login; first verify session by /auth/me.
-      const currentUser = await authService.getCurrentUser();
+      const currentUser = await getCurrentUserWithRetry();
       if (!currentUser?.tenant_id) {
         throw new Error("Tenant not found for current user");
+      }
+      try {
+        sessionStorage.removeItem(JUST_LOGGED_IN_KEY);
+      } catch {
+        // ignore storage failures
       }
 
       const cachedTenantSlug = localStorage.getItem(TENANT_SLUG_CACHE_KEY);
@@ -159,6 +191,11 @@ export function PartnerLoginPage() {
 
       window.location.href = "/app";
     } catch (err) {
+      try {
+        sessionStorage.removeItem(JUST_LOGGED_IN_KEY);
+      } catch {
+        // ignore storage failures
+      }
       errorLogger.error(err, { component: "PartnerLoginPage", action: "handleSubmit" });
       
       if (axios.isAxiosError(err)) {
