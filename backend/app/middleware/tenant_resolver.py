@@ -2,6 +2,7 @@
 
 import logging
 from typing import Optional
+from urllib.parse import urlparse
 
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -12,8 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db.session import AsyncSessionMaker
 from ..models import Tenant, TenantDomain, TenantDomainStatus, DomainStatus
 
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -22,12 +21,24 @@ def get_effective_host(request: Request) -> str:
     for header in ("x-forwarded-host", "x-vercel-forwarded-host", "host"):
         value = request.headers.get(header)
         if value:
-            return value
+            # Proxy headers may contain comma-separated values.
+            return value.split(",")[0].strip()
     return ""
 
 
-# Base domains for Kyradi (subdomains will be *.kyradi.com or *.kyradi.app)
+def extract_host_from_url(value: str | None) -> str:
+    """Extract hostname from Origin/Referer style URL."""
+    if not value:
+        return ""
+    try:
+        parsed = urlparse(value)
+        return parsed.hostname or ""
+    except Exception:
+        return ""
+
+# Base domain for Kyradi (subdomains will be *.kyradi.com / *.kyradi.app)
 BASE_DOMAINS = {"kyradi.com", "kyradi.app", "localhost", "127.0.0.1"}
+INFRA_HOST_SUFFIXES = ("railway.app", "up.railway.app", "vercel.app")
 
 # Special hosts that skip tenant resolution entirely
 # Admin host: admin.kyradi.com - Admin panel, no tenant context needed
@@ -62,9 +73,6 @@ def is_public_path(path: str) -> bool:
     if not path:
         return True
     
-    if path.startswith("/auth/") or path.startswith("/admin/"):
-        return True
-
     # Exact match or prefix match
     for public_path in PUBLIC_PATHS:
         if path == public_path or path.startswith(f"{public_path}/"):
@@ -96,6 +104,10 @@ def should_skip_tenant_resolution(host: str) -> bool:
     # Skip for development
     if host_without_port in {"localhost", "127.0.0.1"}:
         return True
+
+    # Skip for infra hosts (backend direct hostnames behind proxies)
+    if host_without_port.endswith(INFRA_HOST_SUFFIXES):
+        return True
     
     # Skip for base domains without subdomain
     if host_without_port in BASE_DOMAINS:
@@ -119,6 +131,7 @@ def extract_tenant_from_host(host: str) -> Optional[str]:
     if not host:
         return None
     
+    # Remove port if present
     host_without_port = normalize_host(host)
     
     # Check if it's a subdomain of our base domains
@@ -149,11 +162,7 @@ async def resolve_tenant_by_slug(slug: str) -> Optional[Tenant]:
 async def resolve_tenant_by_custom_domain(domain: str) -> Optional[Tenant]:
     """Resolve tenant by custom domain."""
     async with AsyncSessionMaker() as session:
-        stmt = select(Tenant).where(
-            Tenant.custom_domain == domain.lower(),
-            Tenant.domain_status == DomainStatus.VERIFIED.value,
-            Tenant.is_active == True,
-        )
+        stmt = select(Tenant).where(Tenant.custom_domain == domain.lower(), Tenant.is_active == True)
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -188,10 +197,14 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
     """
     
     async def dispatch(self, request: Request, call_next):
-        if request.method == "OPTIONS":
-            return await call_next(request)
-
         host = get_effective_host(request)
+        if host and host.endswith(INFRA_HOST_SUFFIXES):
+            # When proxy headers lose the original host, recover from Origin/Referer.
+            fallback_host = extract_host_from_url(request.headers.get("origin")) or extract_host_from_url(
+                request.headers.get("referer")
+            )
+            if fallback_host:
+                host = fallback_host
         host_without_port = normalize_host(host)
         
         # Skip tenant resolution for admin/app hosts and development
@@ -201,12 +214,6 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             logger.debug(f"Skipping tenant resolution for host: {host}")
             return await call_next(request)
         
-        # Skip tenant resolution for auth/admin paths
-        if request.url.path.startswith("/auth") or request.url.path.startswith("/admin"):
-            request.state.tenant = None
-            request.state.tenant_id = None
-            return await call_next(request)
-
         # Skip tenant resolution for public paths
         if is_public_path(request.url.path):
             request.state.tenant = None
@@ -214,7 +221,6 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         
         tenant: Optional[Tenant] = None
-        is_auth_path = request.url.path.startswith("/auth/")
         
         # 1. Check X-Tenant-ID header first (API clients)
         tenant_id_header = request.headers.get("x-tenant-id")
@@ -225,11 +231,15 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
                 tenant = result.scalar_one_or_none()
         
         # 2. Try subdomain resolution
-        if not tenant:
+        if not tenant and host_without_port:
+            tenant = await resolve_tenant_by_domain_record(host_without_port)
+
+        # 3. Try subdomain resolution
+        if not tenant and host:
             slug = extract_tenant_from_host(host)
             if slug:
                 tenant = await resolve_tenant_by_slug(slug)
-                if not tenant and not is_auth_path:
+                if not tenant:
                     logger.warning(f"Tenant not found for subdomain: {slug}")
                     return JSONResponse(
                         status_code=404,
@@ -240,17 +250,15 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
                         }
                     )
 
-        # 3. Try verified tenant_domains record
-        if not tenant and host_without_port:
-            tenant = await resolve_tenant_by_domain_record(host_without_port)
-
         # 4. Legacy custom domain resolution
         if not tenant and host_without_port:
             if host_without_port not in BASE_DOMAINS and not any(
                 host_without_port.endswith(f".{bd}") for bd in BASE_DOMAINS
             ):
                 tenant = await resolve_tenant_by_custom_domain(host_without_port)
-                if not tenant and not is_auth_path:
+                if tenant and tenant.domain_status != DomainStatus.VERIFIED.value:
+                    tenant = None
+                if not tenant:
                     logger.warning(f"Tenant not found for custom domain: {host_without_port}")
                     return JSONResponse(
                         status_code=404,
