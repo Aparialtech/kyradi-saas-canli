@@ -4,6 +4,7 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, select
@@ -82,6 +83,18 @@ def _extract_effective_host(request: Request | None = None) -> str:
         or request.headers.get("host")
         or ""
     ).split(",")[0].strip().lower()
+    if host and host.endswith("railway.app"):
+        host = ""
+    if not host:
+        origin = (request.headers.get("origin") or "").strip()
+        referer = (request.headers.get("referer") or "").strip()
+        parsed_origin = urlparse(origin) if origin else None
+        parsed_referer = urlparse(referer) if referer else None
+        host = (
+            (parsed_origin.hostname or "").strip().lower()
+            if parsed_origin and parsed_origin.hostname
+            else ((parsed_referer.hostname or "").strip().lower() if parsed_referer and parsed_referer.hostname else "")
+        )
     if ":" in host:
         host = host.split(":", 1)[0]
     return host
