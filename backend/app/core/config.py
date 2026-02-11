@@ -3,8 +3,9 @@
 from functools import lru_cache
 from typing import List, Optional
 
-from pydantic import AliasChoices, Field, HttpUrl
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import HttpUrl
 
 
 class Settings(BaseSettings):
@@ -61,12 +62,6 @@ class Settings(BaseSettings):
 
     cors_origins: List[str] = Field(
         default_factory=lambda: [
-            # Primary production hosts
-            "https://app.kyradi.com",
-            "https://admin.kyradi.com",
-            "https://branding.kyradi.com",
-            "https://kyradi.com",
-            "https://www.kyradi.com",
             # Production Vercel
             "https://kyradi-saas-canli.vercel.app",
             "https://kyradi-saas-canli-cqly0ovkl-aparialtechs-projects.vercel.app",
@@ -203,14 +198,37 @@ class Settings(BaseSettings):
         default=2,
         validation_alias=AliasChoices("INTEGRATION_RETRY_COUNT", "KYRADI_INTEGRATION_RETRY_COUNT"),
     )
-    superapp_accept_canonical_signatures: bool = Field(
+
+    forgot_password_reveal_user_not_found: bool = Field(
         default=True,
         validation_alias=AliasChoices(
-            "SUPERAPP_ACCEPT_CANONICAL_SIGNATURES",
-            "KYRADI_SUPERAPP_ACCEPT_CANONICAL_SIGNATURES",
-            "CANONICAL_SIG",
+            "FORGOT_PASSWORD_REVEAL_USER_NOT_FOUND",
+            "KYRADI_FORGOT_PASSWORD_REVEAL_USER_NOT_FOUND",
         ),
-        description="If enabled, integration signature verification will also accept HMAC over canonical JSON.",
+        description="Return explicit not-found message for forgot-password requests.",
+    )
+    forgot_password_rate_limit_count: int = Field(
+        default=5,
+        validation_alias=AliasChoices(
+            "FORGOT_PASSWORD_RATE_LIMIT_COUNT",
+            "KYRADI_FORGOT_PASSWORD_RATE_LIMIT_COUNT",
+        ),
+        description="Max forgot-password requests per user in the rate-limit window.",
+    )
+    forgot_password_rate_limit_window_minutes: int = Field(
+        default=10,
+        validation_alias=AliasChoices(
+            "FORGOT_PASSWORD_RATE_LIMIT_WINDOW_MINUTES",
+            "KYRADI_FORGOT_PASSWORD_RATE_LIMIT_WINDOW_MINUTES",
+        ),
+    )
+    forgot_password_cooldown_seconds: int = Field(
+        default=60,
+        validation_alias=AliasChoices(
+            "FORGOT_PASSWORD_COOLDOWN_SECONDS",
+            "KYRADI_FORGOT_PASSWORD_COOLDOWN_SECONDS",
+        ),
+        description="Cooldown between forgot-password requests for same user.",
     )
     
     # Email service configuration

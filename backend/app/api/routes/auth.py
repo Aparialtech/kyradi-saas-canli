@@ -1,11 +1,12 @@
 """Authentication endpoints."""
 
+import hashlib
 import logging
-from datetime import datetime, timezone
 import secrets
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.security import create_access_token, verify_password, get_password_hash
@@ -42,52 +43,22 @@ from ...core.config import settings
 from ...utils.safe_redirect import sanitize_redirect_url
 from ...utils.domain_validation import (
     DomainValidationError,
+    RESERVED_SLUGS,
     normalize_and_validate_custom_domain,
     normalize_and_validate_slug,
 )
 
-router = APIRouter(prefix="/auth", tags=["auth"])
-
-def _set_auth_cookie(response: Response, token: str, request: Request) -> None:
-    is_development = settings.environment.lower() in {"local", "dev", "development"}
-    domain = ".kyradi.com"
-
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=not is_development,
-        samesite="lax",
-        path="/",
-        domain=domain,
-    )
+router = APIRouter(tags=["auth"])
 
 
-def _clear_auth_cookie(response: Response) -> None:
-    """Clear auth cookie for both wildcard and host-only scopes."""
-    response.delete_cookie("access_token", domain=".kyradi.com", path="/")
-    response.delete_cookie("access_token", path="/")
+def normalize_email(email: str) -> str:
+    """Normalize email for stable lookups."""
+    return email.strip().lower()
 
-
-@router.post("/logout")
-async def logout(_: Request) -> Response:
-    response = Response(content='{"ok": true}', media_type="application/json")
-    _clear_auth_cookie(response)
-    return response
-    logger.info(
-        "auth_cookie_set host=%s xfwd=%s xvercel=%s domain=%s secure=%s",
-        request.headers.get("host"),
-        request.headers.get("x-forwarded-host"),
-        request.headers.get("x-vercel-forwarded-host"),
-        domain,
-        not is_development,
-    )
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
     credentials: LoginRequest,
-    request: Request,
-    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     """Authenticate user with email/password. Tenant is auto-detected from user's tenant_id."""
@@ -141,7 +112,6 @@ async def login(
         tenant_id=token_tenant_id,
         role=user.role,
     )
-    _set_auth_cookie(response, token, request)
     return TokenResponse(access_token=token)
 
 
@@ -149,7 +119,6 @@ async def login(
 async def partner_login(
     credentials: LoginRequest,
     request: Request,
-    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> PartnerLoginResponse:
     """
@@ -205,7 +174,6 @@ async def partner_login(
         tenant_id=tenant.id,
         role=user.role,
     )
-    _set_auth_cookie(response, token, request)
     
     logger.info(f"Partner login successful: {user.email} -> tenant {tenant.slug}")
     
@@ -224,8 +192,6 @@ async def partner_login(
 @router.post("/admin/login", response_model=TokenResponse)
 async def admin_login(
     credentials: LoginRequest,
-    request: Request,
-    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     """
@@ -264,7 +230,6 @@ async def admin_login(
         tenant_id=None,  # Admin users don't have tenant
         role=user.role,
     )
-    _set_auth_cookie(response, token, request)
     
     logger.info(f"Admin login successful: {user.email} (role: {user.role})")
     
@@ -453,12 +418,71 @@ async def forgot_password(
     session: AsyncSession = Depends(get_session),
 ) -> ForgotPasswordResponse:
     """Request password reset via email with 6-digit verification code."""
-    stmt = select(User).where(User.email == payload.email)
+    normalized_email = normalize_email(payload.email)
+    stmt = select(User).where(func.lower(User.email) == normalized_email)
     user = (await session.execute(stmt)).scalar_one_or_none()
     if user is None:
+        email_hash = hashlib.sha256(normalized_email.encode("utf-8")).hexdigest()[:12]
+        logger.info(
+            "forgot_password_request user_found=%s otp_created=%s mail_sent=%s reason=%s email_hash=%s",
+            False,
+            False,
+            False,
+            "NOT_FOUND",
+            email_hash,
+        )
+        if settings.forgot_password_reveal_user_not_found:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Bu e-posta adresi kayıtlı değil.",
+            )
         # Don't reveal if user exists for security
         return ForgotPasswordResponse(
             message="Eğer bu e-posta adresi kayıtlıysa, doğrulama kodu gönderilmiştir.",
+        )
+
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(minutes=settings.forgot_password_rate_limit_window_minutes)
+    cooldown_start = now - timedelta(seconds=settings.forgot_password_cooldown_seconds)
+
+    recent_count_stmt = select(func.count()).select_from(PasswordResetToken).where(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.created_at >= window_start,
+    )
+    recent_count = int((await session.execute(recent_count_stmt)).scalar_one() or 0)
+    if recent_count >= settings.forgot_password_rate_limit_count:
+        logger.warning(
+            "forgot_password_request user_found=%s otp_created=%s mail_sent=%s reason=%s user_id=%s",
+            True,
+            False,
+            False,
+            "RATE_LIMIT_WINDOW",
+            user.id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Çok fazla deneme yaptınız. Lütfen daha sonra tekrar deneyin.",
+        )
+
+    latest_token_stmt = (
+        select(PasswordResetToken)
+        .where(PasswordResetToken.user_id == user.id)
+        .order_by(PasswordResetToken.created_at.desc())
+        .limit(1)
+    )
+    latest_token = (await session.execute(latest_token_stmt)).scalar_one_or_none()
+    if latest_token and latest_token.created_at and latest_token.created_at >= cooldown_start:
+        logger.warning(
+            "forgot_password_request user_found=%s otp_created=%s mail_sent=%s reason=%s user_id=%s",
+            True,
+            False,
+            False,
+            "RATE_LIMIT_COOLDOWN",
+            user.id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Kod zaten gonderildi. Lutfen 60 saniye sonra tekrar deneyin.",
         )
 
     # Get client IP and user agent
@@ -483,12 +507,14 @@ async def forgot_password(
     await session.flush()
     
     # Send email with verification code
+    mail_sent = False
     try:
         await email_service.send_password_reset_code(
             to_email=user.email,
             code=verification_code,
             locale="tr-TR",
         )
+        mail_sent = True
         logger.info(f"Password reset code sent to {user.email}")
     except Exception as e:
         logger.error(f"Failed to send password reset code to {user.email}: {e}", exc_info=True)
@@ -504,6 +530,15 @@ async def forgot_password(
         meta={"email": user.email, "method": "email_code"},
     )
     await session.commit()
+
+    logger.info(
+        "forgot_password_request user_found=%s otp_created=%s mail_sent=%s reason=%s user_id=%s",
+        True,
+        True,
+        mail_sent,
+        "OK",
+        user.id,
+    )
     
     # In development mode, return code in response for testing
     is_development = settings.environment.lower() in {"local", "dev", "development"}
@@ -521,7 +556,7 @@ async def verify_reset_code(
 ) -> VerifyResetCodeResponse:
     """Verify the 6-digit code sent to email and return reset token."""
     # Find user by email
-    stmt = select(User).where(User.email == payload.email)
+    stmt = select(User).where(func.lower(User.email) == normalize_email(payload.email))
     user = (await session.execute(stmt)).scalar_one_or_none()
     if user is None:
         raise HTTPException(

@@ -21,7 +21,9 @@ export function ForgotPasswordPage() {
     event.preventDefault();
     setError("");
 
-    if (!email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
       setError("Lütfen e-posta adresinizi girin.");
       return;
     }
@@ -29,13 +31,13 @@ export function ForgotPasswordPage() {
     setSubmitting(true);
 
     try {
-      const response = await authService.requestPasswordReset({ email: email.trim() });
+      const response = await authService.requestPasswordReset({ email: normalizedEmail });
       
       // Navigate to code verification page with email
       navigate("/verify-reset-code", { 
         state: { 
-          email: email.trim(),
-          message: response.message || "Doğrulama kodu e-posta adresinize gönderildi."
+          email: normalizedEmail,
+          message: response.message || "Eğer e-posta adresiniz kayıtlıysa doğrulama kodu gönderildi."
         },
         replace: true 
       });
