@@ -63,7 +63,7 @@ import { LandingPage } from "../pages/public/LandingPage";
 import { UserGuidePage } from "../pages/common/UserGuidePage";
 import { DomainSetupGuidePage } from "../pages/partner/docs/DomainSetupGuidePage";
 import { NotFoundPage } from "../pages/common/NotFoundPage";
-import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
+import { detectHostType, getAppUrl, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
 
 export function AppRouter() {
   const hostType = detectHostType();
@@ -73,6 +73,8 @@ export function AppRouter() {
       <Navigate to="/admin" replace />
     ) : hostType === "tenant" ? (
       <Navigate to="/app" replace />
+    ) : hostType === "app" ? (
+      <Navigate to={getAppUrl("/partner/login")} replace />
     ) : (
       <LandingPage />
     );

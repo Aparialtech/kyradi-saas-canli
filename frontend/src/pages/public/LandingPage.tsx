@@ -32,7 +32,7 @@ import styles from "./LandingPage.module.css";
 
 export function LandingPage() {
   const { t } = useTranslation();
-  const panelUrl = "https://app.kyradi.com";
+  const panelUrl = "https://app.kyradi.com/partner/login";
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
