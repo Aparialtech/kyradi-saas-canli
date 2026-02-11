@@ -3,6 +3,8 @@
  * Used by widget and self-service reservation forms.
  */
 
+import { env } from "../../config/env";
+
 export interface PriceEstimateRequest {
   tenant_id?: string;
   tenant_slug?: string; // Alternative to tenant_id
@@ -32,12 +34,14 @@ class PricingService {
    * Get price estimate for a reservation (public endpoint, no auth required).
    */
   async estimatePrice(request: PriceEstimateRequest): Promise<PriceEstimateResponse> {
-    const response = await fetch(`/demo/public/price-estimate`, {
+    const base = env.API_URL || "";
+    const endpoint = `${base}/demo/public/price-estimate`;
+    const response = await fetch(endpoint, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include",
       body: JSON.stringify({
         ...(request.tenant_id ? { tenant_id: request.tenant_id } : {}),
         ...(request.tenant_slug ? { tenant_slug: request.tenant_slug } : {}),
@@ -59,4 +63,3 @@ class PricingService {
 }
 
 export const pricingService = new PricingService();
-

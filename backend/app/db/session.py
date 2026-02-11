@@ -17,15 +17,24 @@ from ..core.config import settings
 logger = logging.getLogger(__name__)
 db_logger = logging.getLogger("kyradi.db_session")
 
-engine: AsyncEngine = create_async_engine(
-    settings.database_url,
-    future=True,
-    echo=False,
-    pool_pre_ping=True,  # Verify connections before using
-    pool_recycle=3600,  # Recycle connections after 1 hour
-    pool_size=10,
-    max_overflow=20,
-)
+def _create_engine(database_url: str) -> AsyncEngine:
+    common_kwargs = {
+        "future": True,
+        "echo": False,
+    }
+    if database_url.startswith("sqlite+aiosqlite"):
+        return create_async_engine(database_url, **common_kwargs)
+    return create_async_engine(
+        database_url,
+        **common_kwargs,
+        pool_pre_ping=True,  # Verify connections before using
+        pool_recycle=3600,  # Recycle connections after 1 hour
+        pool_size=10,
+        max_overflow=20,
+    )
+
+
+engine: AsyncEngine = _create_engine(settings.database_url)
 
 AsyncSessionMaker = async_sessionmaker(
     bind=engine,
@@ -105,6 +114,31 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         except Exception as dispose_exc:
             db_logger.error(f"Failed to dispose engine: {dispose_exc}")
         raise
+    except HTTPException as exc:
+        status_code = getattr(exc, "status_code", None)
+        if status_code is not None and 400 <= status_code < 500:
+            db_logger.info(
+                "Session ended with HTTPException: %s (status=%s)",
+                exc.detail,
+                status_code,
+            )
+        else:
+            db_logger.error(
+                "Session ended with HTTPException: %s (status=%s)",
+                exc.detail,
+                status_code,
+                exc_info=True,
+            )
+        raise
     except Exception as exc:
-        db_logger.error(f"Failed to create session: {type(exc).__name__}: {exc}")
+        status_code = getattr(exc, "status_code", None)
+        if status_code is not None and 400 <= status_code < 500:
+            db_logger.info(
+                "Failed to create session: %s: %s (status=%s)",
+                type(exc).__name__,
+                exc,
+                status_code,
+            )
+        else:
+            db_logger.error(f"Failed to create session: {type(exc).__name__}: {exc}")
         raise

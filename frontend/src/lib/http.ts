@@ -35,6 +35,9 @@ export const http = axios.create({
 http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     config.headers = config.headers ?? {};
+    if (!config.headers["X-Requested-With"]) {
+      config.headers["X-Requested-With"] = "XMLHttpRequest";
+    }
     const token = tokenStorage.get();
     // In production we rely on HttpOnly cookies to avoid stale bearer/header conflicts.
     if (token && shouldAttachBearer) {

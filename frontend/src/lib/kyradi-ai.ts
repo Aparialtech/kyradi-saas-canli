@@ -98,12 +98,8 @@ export function useKyradiAI({
 
   // Select endpoint - always use /ai/assistant for simplicity
   const endpoint = useMemo(() => {
-    const rawBase = apiBase?.trim() ?? "";
-    const normalized = rawBase ? rawBase.replace(/\/$/, "") : "";
-    const safeBase = normalized.startsWith("http://")
-      ? normalized.replace("http://", "https://")
-      : normalized;
-    return useAssistantEndpoint ? `${safeBase}/ai/assistant` : `${safeBase}/ai/chat`;
+    const base = apiBase.replace(/\/$/, "");
+    return useAssistantEndpoint ? `${base}/ai/assistant` : `${base}/ai/chat`;
   }, [apiBase, useAssistantEndpoint]);
 
   const clearError = useCallback(() => {
@@ -166,9 +162,9 @@ export function useKyradiAI({
 
             const response = await fetch(endpoint, {
               method: "POST",
+              credentials: "include",
               headers,
               body: JSON.stringify(payload),
-              credentials: "include",
             });
 
             let data: any = null;

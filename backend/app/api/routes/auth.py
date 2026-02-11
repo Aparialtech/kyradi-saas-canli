@@ -56,6 +56,23 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
+def _auth_trace(request: Request | None, *, path: str, status_code: int, note: str = "") -> None:
+    if request is None:
+        return
+    host = request.headers.get("host")
+    origin = request.headers.get("origin")
+    has_cookie = bool(request.cookies.get("access_token"))
+    logger.info(
+        "auth_trace path=%s status=%s host=%s origin=%s cookie_present=%s note=%s",
+        path,
+        status_code,
+        host,
+        origin,
+        has_cookie,
+        note,
+    )
+
+
 def _cookie_domain() -> str | None:
     env = (settings.environment or "").lower()
     if env in {"local", "dev", "development"}:
@@ -96,6 +113,7 @@ def _clear_access_token_cookie(response: Response) -> None:
 @router.post("/login", response_model=TokenResponse)
 async def login(
     credentials: LoginRequest,
+    request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
@@ -151,6 +169,7 @@ async def login(
         role=user.role,
     )
     _set_access_token_cookie(response, token)
+    _auth_trace(request, path="/auth/login", status_code=200, note="login_ok")
     return TokenResponse(access_token=token)
 
 
@@ -215,7 +234,7 @@ async def partner_login(
         role=user.role,
     )
     _set_access_token_cookie(response, token)
-    
+    _auth_trace(request, path="/auth/partner/login", status_code=200, note=f"tenant_slug={tenant.slug}")
     logger.info(f"Partner login successful: {user.email} -> tenant {tenant.slug}")
     
     raw_redirect = request.query_params.get("redirect")
@@ -233,6 +252,7 @@ async def partner_login(
 @router.post("/admin/login", response_model=TokenResponse)
 async def admin_login(
     credentials: LoginRequest,
+    request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
@@ -273,6 +293,7 @@ async def admin_login(
         role=user.role,
     )
     _set_access_token_cookie(response, token)
+    _auth_trace(request, path="/auth/admin/login", status_code=200, note=f"role={user.role}")
     
     logger.info(f"Admin login successful: {user.email} (role: {user.role})")
     
@@ -451,8 +472,9 @@ async def resend_login_sms(
 
 
 @router.get("/me", response_model=UserRead)
-async def read_me(current_user: User = Depends(get_current_active_user)) -> UserRead:
+async def read_me(request: Request, current_user: User = Depends(get_current_active_user)) -> UserRead:
     """Return information about the authenticated user."""
+    _auth_trace(request, path="/auth/me", status_code=200, note=f"user_id={current_user.id}")
     return UserRead.model_validate(current_user)
 
 

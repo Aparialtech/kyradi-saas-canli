@@ -17,6 +17,42 @@ import { errorLogger } from "../lib/errorLogger";
 import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
 import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
 
+const JUST_LOGGED_IN_KEY = "kyradi.justLoggedIn";
+const JUST_LOGGED_IN_WINDOW_MS = 10_000;
+const BOOTSTRAP_RETRY_DELAYS_MS = [150, 300, 600];
+
+function markJustLoggedIn(): void {
+  try {
+    sessionStorage.setItem(JUST_LOGGED_IN_KEY, Date.now().toString());
+  } catch {
+    // ignore storage failures (private mode, quota, etc.)
+  }
+}
+
+function clearJustLoggedIn(): void {
+  try {
+    sessionStorage.removeItem(JUST_LOGGED_IN_KEY);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function isWithinJustLoggedInWindow(): boolean {
+  try {
+    const raw = sessionStorage.getItem(JUST_LOGGED_IN_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!Number.isFinite(ts)) return false;
+    return Date.now() - ts <= JUST_LOGGED_IN_WINDOW_MS;
+  } catch {
+    return false;
+  }
+}
+
+async function wait(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
@@ -41,20 +77,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (storedToken) {
         setToken(storedToken);
       }
+      const shouldUseRaceRetry = isWithinJustLoggedInWindow();
       try {
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
+        clearJustLoggedIn();
       } catch (error) {
         let recovered = false;
-        if (storedToken) {
-          // Retry once to avoid transient post-login cookie propagation races.
-          await new Promise((resolve) => setTimeout(resolve, 250));
-          try {
-            const currentUser = await authService.getCurrentUser();
-            setUser(currentUser);
-            recovered = true;
-          } catch {
-            recovered = false;
+        if (storedToken || shouldUseRaceRetry) {
+          for (const delayMs of BOOTSTRAP_RETRY_DELAYS_MS) {
+            await wait(delayMs);
+            try {
+              const currentUser = await authService.getCurrentUser();
+              setUser(currentUser);
+              recovered = true;
+              clearJustLoggedIn();
+              break;
+            } catch {
+              recovered = false;
+            }
           }
         }
         if (!recovered) {
@@ -62,6 +103,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             component: "AuthContext",
             action: "getCurrentUser",
           });
+          clearJustLoggedIn();
           if (storedToken) {
             tokenStorage.clear();
             setToken(null);
@@ -88,11 +130,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       throw new Error("No access token received");
     }
     
+    markJustLoggedIn();
     tokenStorage.set(response.access_token);
     setToken(response.access_token);
 
     const currentUser = await authService.getCurrentUser();
     setUser(currentUser);
+    clearJustLoggedIn();
 
     return currentUser;
   }, []);
@@ -128,6 +172,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         component: "AuthContext",
         action: "sessionExpired",
       });
+      if (isWithinJustLoggedInWindow()) {
+        releaseGuard();
+        return;
+      }
       setToken(null);
       setUser(null);
       tokenStorage.clear();
