@@ -6,6 +6,10 @@ import { detectHostType, isDevelopment } from "./hostDetection";
 import { tokenStorage } from "./tokenStorage";
 import { errorLogger, ErrorSeverity } from "./errorLogger";
 
+const JUST_LOGGED_IN_AT_KEY = "kyradi.justLoggedInAt";
+const JUST_LOGGED_IN_GRACE_MS = 10_000;
+const AUTH_ME_RETRY_DELAYS_MS = [150, 300, 600] as const;
+
 const hostType = typeof window === "undefined" ? "app" : detectHostType();
 const resolvedBaseUrl = isDevelopment() ? env.API_URL.replace(/\/+$/, "") : "";
 // In production, prefer HttpOnly cookie auth to avoid stale bearer token mismatches.
@@ -21,6 +25,44 @@ let onUnauthorized: (() => void) | null = null;
 export const setOnUnauthorized = (callback: () => void) => {
   onUnauthorized = callback;
 };
+
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _authMeRetryCount?: number;
+};
+
+function isBrowser(): boolean {
+  return typeof window !== "undefined";
+}
+
+function clearJustLoggedInAt(): void {
+  if (!isBrowser()) return;
+  try {
+    sessionStorage.removeItem(JUST_LOGGED_IN_AT_KEY);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function isGraceWindowActive(): boolean {
+  if (!isBrowser()) return false;
+  try {
+    const raw = sessionStorage.getItem(JUST_LOGGED_IN_AT_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!Number.isFinite(ts)) return false;
+    return Date.now() - ts < JUST_LOGGED_IN_GRACE_MS;
+  } catch {
+    return false;
+  }
+}
+
+function isAuthMeRequest(config?: InternalAxiosRequestConfig): boolean {
+  if (!config?.url) return false;
+  const method = (config.method || "get").toLowerCase();
+  if (method !== "get") return false;
+  const normalized = config.url.split("?")[0].replace(/\/+$/, "");
+  return normalized.endsWith("/auth/me") || normalized === "auth/me";
+}
 
 export const http = axios.create({
   baseURL: resolvedBaseUrl,
@@ -55,7 +97,12 @@ http.interceptors.request.use(
 
 // Response interceptor with network error handling
 http.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (isAuthMeRequest(response.config)) {
+      clearJustLoggedInAt();
+    }
+    return response;
+  },
   (error: AxiosError | Error) => {
     // Handle network errors (ERR_NETWORK_CHANGED, connection resets)
     if (axios.isAxiosError(error)) {
@@ -88,8 +135,25 @@ http.interceptors.response.use(
         }
       }
       
-      // 401 Unauthorized - clear token and trigger logout
+      // 401 Unauthorized
       if (axiosError.response?.status === 401) {
+        const requestConfig = axiosError.config as RetryableRequestConfig | undefined;
+        if (requestConfig && isAuthMeRequest(requestConfig) && isGraceWindowActive()) {
+          const retryCount = requestConfig._authMeRetryCount ?? 0;
+          if (retryCount < AUTH_ME_RETRY_DELAYS_MS.length) {
+            const delayMs = AUTH_ME_RETRY_DELAYS_MS[retryCount];
+            requestConfig._authMeRetryCount = retryCount + 1;
+            return new Promise((resolve, reject) => {
+              window.setTimeout(() => {
+                http
+                  .request(requestConfig)
+                  .then(resolve)
+                  .catch(reject);
+              }, delayMs);
+            });
+          }
+        }
+
         errorLogger.warn(axiosError, {
           component: "HTTP",
           action: "unauthorized",
@@ -102,8 +166,13 @@ http.interceptors.response.use(
           url.includes("/auth/partner/login") ||
           url.includes("/auth/admin/login") ||
           url.includes("/auth/login");
-        // Avoid hard logout loops on auth endpoints; let AuthContext handle /auth/me failures.
-        if (!isAuthEndpoint) {
+        // /auth/me: normal unauthorized handling applies only after grace retries are exhausted.
+        if (url.includes("/auth/me")) {
+          tokenStorage.clear();
+          if (onUnauthorized) {
+            onUnauthorized();
+          }
+        } else if (!isAuthEndpoint) {
           tokenStorage.clear();
           if (onUnauthorized) {
             onUnauthorized();

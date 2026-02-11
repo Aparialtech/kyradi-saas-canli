@@ -17,14 +17,14 @@ import { errorLogger } from "../lib/errorLogger";
 import type { AuthUser, LoginPayload, UserRole } from "../types/auth";
 import { detectHostType, getPartnerLoginUrl, isDevelopment } from "../lib/hostDetection";
 
-const JUST_LOGGED_IN_KEY = "kyradi.justLoggedIn";
+const JUST_LOGGED_IN_AT_KEY = "kyradi.justLoggedInAt";
 const JUST_LOGGED_IN_COOKIE_KEY = "kyradi_just_logged_in";
 const JUST_LOGGED_IN_WINDOW_MS = 10_000;
 const BOOTSTRAP_RETRY_DELAYS_MS = [150, 300, 600];
 
 function markJustLoggedIn(): void {
   try {
-    sessionStorage.setItem(JUST_LOGGED_IN_KEY, Date.now().toString());
+    sessionStorage.setItem(JUST_LOGGED_IN_AT_KEY, Date.now().toString());
   } catch {
     // ignore storage failures (private mode, quota, etc.)
   }
@@ -37,7 +37,9 @@ function markJustLoggedIn(): void {
 
 function clearJustLoggedIn(): void {
   try {
-    sessionStorage.removeItem(JUST_LOGGED_IN_KEY);
+    sessionStorage.removeItem(JUST_LOGGED_IN_AT_KEY);
+    // clean old key from previous builds
+    sessionStorage.removeItem("kyradi.justLoggedIn");
   } catch {
     // ignore storage failures
   }
@@ -55,7 +57,7 @@ function hasCrossSubdomainJustLoggedInFlag(): boolean {
 
 function isWithinJustLoggedInWindow(): boolean {
   try {
-    const raw = sessionStorage.getItem(JUST_LOGGED_IN_KEY);
+    const raw = sessionStorage.getItem(JUST_LOGGED_IN_AT_KEY) ?? sessionStorage.getItem("kyradi.justLoggedIn");
     if (!raw) return false;
     const ts = Number(raw);
     if (!Number.isFinite(ts)) return false;
