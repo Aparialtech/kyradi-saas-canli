@@ -111,6 +111,13 @@ def normalize_host(host: str) -> str:
     return host.split(":")[0].strip().lower()
 
 
+def has_auth_identity(request: Request) -> bool:
+    """Whether request already carries authenticated identity material."""
+    has_cookie = bool(request.cookies.get("access_token"))
+    has_auth_header = bool((request.headers.get("authorization") or "").strip())
+    return has_cookie or has_auth_header
+
+
 def should_skip_tenant_resolution(host: str) -> bool:
     """
     Check if this host should skip tenant resolution entirely.
@@ -257,6 +264,15 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
             if slug:
                 tenant = await resolve_tenant_by_slug(slug)
                 if not tenant:
+                    if has_auth_identity(request):
+                        logger.info(
+                            "Skipping tenant 404 for authenticated request (subdomain unresolved): host=%s path=%s",
+                            host,
+                            request.url.path,
+                        )
+                        request.state.tenant = None
+                        request.state.tenant_id = None
+                        return await call_next(request)
                     logger.warning(f"Tenant not found for subdomain: {slug}")
                     return JSONResponse(
                         status_code=404,
@@ -276,6 +292,15 @@ class TenantResolverMiddleware(BaseHTTPMiddleware):
                 if tenant and tenant.domain_status != DomainStatus.VERIFIED.value:
                     tenant = None
                 if not tenant:
+                    if has_auth_identity(request):
+                        logger.info(
+                            "Skipping tenant 404 for authenticated request (custom domain unresolved): host=%s path=%s",
+                            host_without_port,
+                            request.url.path,
+                        )
+                        request.state.tenant = None
+                        request.state.tenant_id = None
+                        return await call_next(request)
                     logger.warning(f"Tenant not found for custom domain: {host_without_port}")
                     return JSONResponse(
                         status_code=404,

@@ -21,6 +21,8 @@ import { dumpAuthDebug } from "../lib/authDebug";
 const JUST_LOGGED_IN_AT_KEY = "kyradi.justLoggedInAt";
 const JUST_LOGGED_IN_COOKIE_KEY = "kyradi_just_logged_in";
 const JUST_LOGGED_IN_WINDOW_MS = 10_000;
+const LOGOUT_AT_KEY = "kyradi.logoutAt";
+const LOGOUT_GRACE_MS = 3_000;
 const BOOTSTRAP_RETRY_DELAYS_MS = [150, 300, 600];
 
 function markJustLoggedIn(): void {
@@ -96,9 +98,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     const initialize = async () => {
-      setAuthBooting(true);
+    setAuthBooting(true);
       setAuthState("booting");
       dumpAuthDebug("BOOT_START");
+      try {
+        const rawLogoutAt = localStorage.getItem(LOGOUT_AT_KEY);
+        if (rawLogoutAt) {
+          const logoutAt = Number(rawLogoutAt);
+          if (Number.isFinite(logoutAt) && Date.now() - logoutAt < LOGOUT_GRACE_MS) {
+            setAuthState("unauthenticated");
+            setUser(null);
+            setToken(null);
+            setIsLoading(false);
+            setAuthBooting(false);
+            return;
+          }
+          localStorage.removeItem(LOGOUT_AT_KEY);
+        }
+      } catch {
+        // ignore storage failures
+      }
       const storedToken = tokenStorage.get();
       if (storedToken) {
         setToken(storedToken);
@@ -179,6 +198,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     void authService.logout().catch((error) => {
       errorLogger.warn(error, { component: "AuthContext", action: "logout" });
     });
+    clearJustLoggedIn();
+    try {
+      localStorage.setItem(LOGOUT_AT_KEY, Date.now().toString());
+    } catch {
+      // ignore storage failures
+    }
     tokenStorage.clear();
     setToken(null);
     setUser(null);

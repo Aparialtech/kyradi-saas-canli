@@ -7,6 +7,8 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import RedirectResponse
+from jose import JWTError, jwt
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,6 +52,8 @@ from ...utils.domain_validation import (
 )
 
 router = APIRouter(tags=["auth"])
+TENANT_EXCHANGE_TOKEN_TYPE = "tenant_exchange"
+TENANT_EXCHANGE_TTL_SECONDS = 60
 
 
 def normalize_email(email: str) -> str:
@@ -122,12 +126,13 @@ def _cookie_domain(request: Request | None = None) -> str | None:
 def _set_access_token_cookie(response: Response, token: str, request: Request | None = None) -> None:
     env = (settings.environment or "").lower()
     domain = _cookie_domain(request)
-    secure_cookie = env not in {"local", "dev", "development"} or domain == ".kyradi.com"
+    secure_cookie = env not in {"local", "dev", "development"} or domain in {".kyradi.com", ".kyradi.app"}
     same_site = "none" if (secure_cookie and settings.auth_cookie_samesite_none) else "lax"
     max_age = int(settings.access_token_expire_minutes) * 60
 
     # Clear stale cookies first to avoid duplicate-name cookie ambiguity.
     response.delete_cookie("access_token", path="/", domain=".kyradi.com")
+    response.delete_cookie("access_token", path="/", domain=".kyradi.app")
     response.delete_cookie("access_token", path="/")
 
     # Domain cookie for cross-subdomain auth.
@@ -144,10 +149,59 @@ def _set_access_token_cookie(response: Response, token: str, request: Request | 
     )
 
 
-def _clear_access_token_cookie(response: Response) -> None:
+def _clear_access_token_cookie(response: Response, request: Request | None = None) -> None:
     # Clear both domain-scoped and host-only variations safely.
     response.delete_cookie("access_token", path="/", domain=".kyradi.com")
+    response.delete_cookie("access_token", path="/", domain=".kyradi.app")
     response.delete_cookie("access_token", path="/")
+    effective_domain = _cookie_domain(request)
+    if effective_domain:
+        response.delete_cookie("access_token", path="/", domain=effective_domain)
+
+
+def _set_no_store_headers(response: Response) -> None:
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+
+
+def _is_kyradi_host(host: str) -> bool:
+    return host == "kyradi.com" or host.endswith(".kyradi.com") or host == "kyradi.app" or host.endswith(".kyradi.app")
+
+
+def _infer_root_domain(request: Request | None) -> str:
+    host = _extract_effective_host(request)
+    if host == "kyradi.app" or host.endswith(".kyradi.app"):
+        return "kyradi.app"
+    return "kyradi.com"
+
+
+def _create_tenant_exchange_code(*, user_id: str, tenant_id: str, role: str) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "typ": TENANT_EXCHANGE_TOKEN_TYPE,
+        "sub": user_id,
+        "tenant_id": tenant_id,
+        "role": role,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(seconds=TENANT_EXCHANGE_TTL_SECONDS)).timestamp()),
+        "nonce": secrets.token_urlsafe(12),
+    }
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+
+
+def _decode_tenant_exchange_code(code: str) -> dict:
+    try:
+        payload = jwt.decode(
+            code,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except JWTError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid exchange code") from exc
+
+    if payload.get("typ") != TENANT_EXCHANGE_TOKEN_TYPE:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid exchange code")
+    return payload
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -343,6 +397,7 @@ async def admin_login(
 @router.post("/verify-login-sms", response_model=VerifyLoginSMSResponse)
 async def verify_login_sms(
     payload: VerifyLoginSMSRequest,
+    request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> VerifyLoginSMSResponse:
@@ -852,9 +907,87 @@ async def signup(
 
 
 @router.post("/logout")
-async def logout(response: Response) -> dict[str, bool]:
-    _clear_access_token_cookie(response)
+async def logout(request: Request, response: Response) -> dict[str, bool]:
+    _clear_access_token_cookie(response, request)
+    _set_no_store_headers(response)
     return {"ok": True}
+
+
+@router.get("/redirect-to-tenant")
+async def redirect_to_tenant(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    """Return safe post-login tenant redirect URL.
+
+    For kyradi.com/.app tenants we return direct subdomain URL.
+    For custom domains we return short-lived accept URL to set host-only cookie.
+    """
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant not found")
+
+    stmt = select(Tenant).where(Tenant.id == current_user.tenant_id)
+    tenant = (await session.execute(stmt)).scalar_one_or_none()
+
+    if tenant is None or not tenant.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+
+    current_host = _extract_effective_host(request)
+    root_domain = _infer_root_domain(request)
+    target_path = "/app"
+
+    # Kyradi-managed subdomain flow
+    if not tenant.custom_domain:
+        return {"redirect_url": f"https://{tenant.slug}.{root_domain}{target_path}"}
+
+    custom_host = tenant.custom_domain.strip().lower()
+    if not custom_host:
+        return {"redirect_url": f"https://{tenant.slug}.{root_domain}{target_path}"}
+
+    # If custom host is still under kyradi root we can redirect directly.
+    if _is_kyradi_host(custom_host):
+        return {"redirect_url": f"https://{custom_host}{target_path}"}
+
+    exchange_code = _create_tenant_exchange_code(
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        role=current_user.role,
+    )
+    accept_url = f"https://{custom_host}/auth/accept?code={exchange_code}"
+    logger.info("auth_redirect tenant=%s host=%s target_host=%s", tenant.id, current_host, custom_host)
+    return {"redirect_url": accept_url}
+
+
+@router.get("/accept")
+async def accept_tenant_session(
+    code: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> RedirectResponse:
+    """Accept short-lived exchange code and set host-only cookie on target host."""
+    payload = _decode_tenant_exchange_code(code)
+    user_id = payload.get("sub")
+    tenant_id = payload.get("tenant_id")
+    role = payload.get("role")
+
+    if not user_id or not tenant_id or not role:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid exchange code")
+
+    stmt = select(User).where(User.id == user_id, User.is_active == True)
+    user = (await session.execute(stmt)).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid exchange code")
+
+    # Ensure the exchanged token cannot cross tenant boundaries.
+    if user.tenant_id != tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="tenant_mismatch")
+
+    token = create_access_token(subject=user.id, tenant_id=tenant_id, role=role)
+    redirect = RedirectResponse(url="/app", status_code=status.HTTP_302_FOUND)
+    _set_access_token_cookie(redirect, token, request)
+    _set_no_store_headers(redirect)
+    return redirect
 
 
 # =====================

@@ -181,6 +181,20 @@ export function PartnerLoginPage() {
       if (!currentUser?.tenant_id) {
         throw new Error("Tenant not found for current user");
       }
+      if (!isDevelopment()) {
+        try {
+          const redirectResponse = await authService.getTenantRedirectUrl(
+            hasValidRedirect ? redirectUrl : undefined,
+          );
+          if (redirectResponse.redirect_url) {
+            window.location.href = redirectResponse.redirect_url;
+            return;
+          }
+        } catch (err) {
+          errorLogger.warn(err, { component: "PartnerLoginPage", action: "getTenantRedirectUrl" });
+        }
+      }
+
       const cachedTenantSlug = localStorage.getItem(TENANT_SLUG_CACHE_KEY);
       const directTenantSlug = response.tenant_slug || cachedTenantSlug;
       if (directTenantSlug) {
