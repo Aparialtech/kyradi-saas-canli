@@ -181,8 +181,6 @@ export function PartnerLoginPage() {
       if (!currentUser?.tenant_id) {
         throw new Error("Tenant not found for current user");
       }
-      clearJustLoggedInFlag();
-
       const cachedTenantSlug = localStorage.getItem(TENANT_SLUG_CACHE_KEY);
       const directTenantSlug = response.tenant_slug || cachedTenantSlug;
       if (directTenantSlug) {
