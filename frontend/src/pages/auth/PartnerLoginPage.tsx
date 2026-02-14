@@ -260,7 +260,15 @@ export function PartnerLoginPage() {
               transition={{ delay: 0.2, duration: 0.4 }}
             >
               <div className={styles.logoIcon}>
-                <img src="/kyradi_logo.png" alt="Kyradi" className={styles.brandLogoImage} />
+                <img
+                  src="/kyradi_app_icon.png"
+                  alt="Kyradi"
+                  className={styles.brandLogoImage}
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = "/kyradi_logo.png";
+                  }}
+                />
               </div>
               <h1 className={styles.brandName}>KYRADI</h1>
             </motion.div>
