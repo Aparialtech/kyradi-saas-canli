@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { authService } from "../../services/auth";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { errorLogger } from "../../lib/errorLogger";
+import { detectHostType, isDevelopment } from "../../lib/hostDetection";
 import { Mail, Database, Shield, ArrowLeft, CheckCircle, Loader2, RefreshCw } from "../../lib/lucide";
 import styles from "./VerifyResetCodePage.module.css";
 
@@ -28,10 +29,15 @@ export function VerifyResetCodePage() {
 
   // Redirect if no email
   useEffect(() => {
+    const hostType = detectHostType();
+    if (hostType === "admin" && !isDevelopment()) {
+      navigate("/admin/verify-reset-code", { state: location.state, replace: true });
+      return;
+    }
     if (!email) {
       navigate("/forgot-password", { replace: true });
     }
-  }, [email, navigate]);
+  }, [email, navigate, location.state]);
 
   // Cooldown timer
   useEffect(() => {

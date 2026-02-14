@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { authService } from "../../services/auth";
 import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { errorLogger } from "../../lib/errorLogger";
+import { detectHostType, isDevelopment } from "../../lib/hostDetection";
 import { Lock, Database, Shield, CheckCircle, ArrowLeft, Eye, EyeOff } from "../../lib/lucide";
 import styles from "./ResetPasswordPage.module.css";
 
@@ -46,11 +47,16 @@ export function ResetPasswordPage() {
   const passwordStrength = getPasswordStrength(newPassword);
 
   useEffect(() => {
+    const hostType = detectHostType();
+    if (hostType === "admin" && !isDevelopment()) {
+      navigate("/admin/reset-password", { state: location.state, replace: true });
+      return;
+    }
     if (!token) {
       // Redirect to forgot password if no token
       navigate("/forgot-password", { replace: true });
     }
-  }, [token, navigate]);
+  }, [token, navigate, location.state]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
