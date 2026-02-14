@@ -209,7 +209,7 @@ export function AdminLoginPage() {
             </form>
 
             <div className={styles.formFooter}>
-              <Link to="/forgot-password" style={{ color: "var(--text-tertiary)", textDecoration: "none" }}>
+              <Link to="/admin/forgot-password" style={{ color: "var(--text-tertiary)", textDecoration: "none" }}>
                 Şifremi unuttum
               </Link>
             </div>

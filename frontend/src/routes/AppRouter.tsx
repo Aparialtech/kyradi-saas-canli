@@ -27,6 +27,7 @@ import { PartnerLoginPage } from "../pages/auth/PartnerLoginPage";
 import { SignupPage } from "../pages/auth/SignupPage";
 import { OnboardingPage } from "../pages/auth/OnboardingPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
+import { AdminForgotPasswordPage } from "../pages/auth/AdminForgotPasswordPage";
 import { VerifyResetCodePage } from "../pages/auth/VerifyResetCodePage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SMSVerificationPage } from "../pages/auth/SMSVerificationPage";
@@ -104,6 +105,7 @@ export function AppRouter() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/partner/login" element={partnerLoginElement} />
+      <Route path="/admin/forgot-password" element={<AdminForgotPasswordPage />} />
       <Route path="/404" element={<NotFoundPage />} />
       {!isTenantHost && <Route path="/app/docs/domain-kurulumu" element={<NotFoundPage />} />}
       
