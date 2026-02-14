@@ -732,7 +732,7 @@ async def forgot_password(
         request=request,
         session=session,
         allowed_roles=PARTNER_RESET_ROLES,
-        not_found_message="Bu mail adresine ait partner kaydı bulunamadı.",
+        not_found_message="Böyle bir mail adresi bulunamadı.",
     )
 
 
@@ -748,7 +748,7 @@ async def partner_forgot_password(
         request=request,
         session=session,
         allowed_roles=PARTNER_RESET_ROLES,
-        not_found_message="Bu mail adresine ait partner kaydı bulunamadı.",
+        not_found_message="Böyle bir mail adresi bulunamadı.",
     )
 
 

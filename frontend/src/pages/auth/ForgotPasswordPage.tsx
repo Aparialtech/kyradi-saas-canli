@@ -32,6 +32,11 @@ export function ForgotPasswordPage() {
 
     try {
       const response = await authService.requestPartnerPasswordReset({ email: normalizedEmail });
+      const responseMessage = response.message?.toLowerCase() ?? "";
+      if (responseMessage.includes("eğer bu e-posta adresi kayıtlıysa")) {
+        setError("Böyle bir mail adresi bulunamadı.");
+        return;
+      }
       
       // Navigate to code verification page with email
       navigate("/verify-reset-code", { 
