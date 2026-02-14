@@ -29,7 +29,7 @@ export function AdminForgotPasswordPage() {
     setSubmitting(true);
     try {
       const response = await authService.requestAdminPasswordReset({ email: normalizedEmail });
-      navigate("/verify-reset-code", {
+      navigate("/admin/verify-reset-code", {
         state: {
           email: normalizedEmail,
           message: response.message || "Doğrulama kodu e-posta adresinize gönderildi.",
