@@ -161,7 +161,7 @@ export function LandingPage() {
       <nav className={styles.navbar}>
         <div className={styles.navbarContainer}>
           <Link to="/" className={styles.logo}>
-            <img src="/kyradi_logo.png" alt="Kyradi" className={styles.logoImage} />
+            <img src="/kyradi_app_icon.png?v=20260214" alt="Kyradi" className={styles.logoImage} />
             <span className={styles.logoText}>Kyradi</span>
           </Link>
 
@@ -1191,7 +1191,7 @@ export function LandingPage() {
         <div className={styles.container}>
           <div className={styles.footerContent}>
             <div className={styles.footerBrand}>
-              <img src="/kyradi_logo.png" alt="Kyradi" className={styles.footerLogo} />
+              <img src="/kyradi_app_icon.png?v=20260214" alt="Kyradi" className={styles.footerLogo} />
               <p className={styles.footerTagline}>Otel bagaj ve emanet yönetimi için profesyonel çözüm</p>
             </div>
             <div className={styles.footerLinks}>

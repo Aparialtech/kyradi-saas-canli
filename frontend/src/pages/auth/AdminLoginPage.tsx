@@ -60,7 +60,7 @@ export function AdminLoginPage() {
       }
     } catch (err) {
       errorLogger.error(err, { component: "AdminLoginPage", action: "handleSubmit" });
-      
+
       if (axios.isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: string })?.detail;
         setError(detail || "Giriş başarısız");
@@ -95,7 +95,7 @@ export function AdminLoginPage() {
               transition={{ delay: 0.2, duration: 0.4 }}
             >
               <div className={styles.logoIcon} style={{ background: "rgba(255,255,255,0.15)" }}>
-                <img src="/kyradi_logo.png" alt="Kyradi" className={styles.brandLogoImage} />
+                <img src="/kyradi_app_icon.png?v=20260214" alt="Kyradi" className={styles.brandLogoImage} />
               </div>
               <h1 className={styles.brandName}>KYRADI</h1>
             </motion.div>
