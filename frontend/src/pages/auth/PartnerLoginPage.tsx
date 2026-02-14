@@ -11,7 +11,7 @@ import { partnerSettingsService } from "../../services/partner/settings";
 import { tokenStorage } from "../../lib/tokenStorage";
 import { errorLogger } from "../../lib/errorLogger";
 import { detectHostType, getTenantUrl, isDevelopment } from "../../lib/hostDetection";
-import { Lock, Mail, Eye, EyeOff, Hotel, Building2, CheckCircle2 } from "../../lib/lucide";
+import { Lock, Mail, Eye, EyeOff, Building2, CheckCircle2 } from "../../lib/lucide";
 import { sanitizeRedirect } from "../../utils/safeRedirect";
 import styles from "./LoginPage.module.css";
 
@@ -260,7 +260,7 @@ export function PartnerLoginPage() {
               transition={{ delay: 0.2, duration: 0.4 }}
             >
               <div className={styles.logoIcon}>
-                <Hotel style={{ width: "32px", height: "32px", color: "white" }} />
+                <img src="/kyradi_logo.png" alt="Kyradi" className={styles.brandLogoImage} />
               </div>
               <h1 className={styles.brandName}>KYRADI</h1>
             </motion.div>

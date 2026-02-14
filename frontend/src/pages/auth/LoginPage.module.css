@@ -92,6 +92,14 @@
   color: white;
 }
 
+.brandLogoImage {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+  filter: brightness(0) invert(1);
+}
+
 .brandName {
   font-size: 2rem;
   font-weight: 700;
@@ -400,4 +408,3 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
-
