@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { FormEvent } from "react";
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import { useAuth } from "../../context/AuthContext";
@@ -207,6 +207,12 @@ export function AdminLoginPage() {
                 {submitting ? "Giriş yapılıyor..." : "Yönetici Girişi"}
               </button>
             </form>
+
+            <div className={styles.formFooter}>
+              <Link to="/forgot-password" style={{ color: "var(--text-tertiary)", textDecoration: "none" }}>
+                Şifremi unuttum
+              </Link>
+            </div>
           </div>
         </motion.div>
       </div>

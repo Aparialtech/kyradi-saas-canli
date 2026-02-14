@@ -593,14 +593,9 @@ async def forgot_password(
             "NOT_FOUND",
             email_hash,
         )
-        if settings.forgot_password_reveal_user_not_found:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Bu e-posta adresi kayıtlı değil.",
-            )
-        # Don't reveal if user exists for security
-        return ForgotPasswordResponse(
-            message="Eğer bu e-posta adresi kayıtlıysa, doğrulama kodu gönderilmiştir.",
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bu mail adresine ait bir kayıt bulunamadı.",
         )
 
     now = datetime.now(timezone.utc)
