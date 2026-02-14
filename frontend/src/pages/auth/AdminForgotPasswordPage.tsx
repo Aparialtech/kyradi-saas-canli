@@ -28,7 +28,7 @@ export function AdminForgotPasswordPage() {
 
     setSubmitting(true);
     try {
-      const response = await authService.requestPasswordReset({ email: normalizedEmail });
+      const response = await authService.requestAdminPasswordReset({ email: normalizedEmail });
       navigate("/verify-reset-code", {
         state: {
           email: normalizedEmail,

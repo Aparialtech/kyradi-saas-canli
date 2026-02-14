@@ -54,6 +54,15 @@ from ...utils.domain_validation import (
 router = APIRouter(tags=["auth"])
 TENANT_EXCHANGE_TOKEN_TYPE = "tenant_exchange"
 TENANT_EXCHANGE_TTL_SECONDS = 60
+ADMIN_RESET_ROLES = {UserRole.SUPER_ADMIN.value, UserRole.SUPPORT.value}
+PARTNER_RESET_ROLES = {
+    UserRole.TENANT_ADMIN.value,
+    UserRole.HOTEL_MANAGER.value,
+    UserRole.STAFF.value,
+    UserRole.STORAGE_OPERATOR.value,
+    UserRole.ACCOUNTING.value,
+    UserRole.VIEWER.value,
+}
 
 
 def normalize_email(email: str) -> str:
@@ -573,29 +582,31 @@ async def read_me(request: Request, current_user: User = Depends(get_current_act
     return UserRead.model_validate(current_user)
 
 
-@router.post("/forgot-password", response_model=ForgotPasswordResponse)
-async def forgot_password(
+async def _forgot_password_by_role_scope(
     payload: ForgotPasswordRequest,
     request: Request,
+    *,
+    allowed_roles: set[str],
+    not_found_message: str,
     session: AsyncSession = Depends(get_session),
 ) -> ForgotPasswordResponse:
     """Request password reset via email with 6-digit verification code."""
     normalized_email = normalize_email(payload.email)
     stmt = select(User).where(func.lower(User.email) == normalized_email)
     user = (await session.execute(stmt)).scalar_one_or_none()
-    if user is None:
+    if user is None or user.role not in allowed_roles:
         email_hash = hashlib.sha256(normalized_email.encode("utf-8")).hexdigest()[:12]
         logger.info(
             "forgot_password_request user_found=%s otp_created=%s mail_sent=%s reason=%s email_hash=%s",
             False,
             False,
             False,
-            "NOT_FOUND",
+            "NOT_FOUND_OR_SCOPE_MISMATCH",
             email_hash,
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Bu mail adresine ait bir kayıt bulunamadı.",
+            detail=not_found_message,
         )
 
     now = datetime.now(timezone.utc)
@@ -703,6 +714,57 @@ async def forgot_password(
     return ForgotPasswordResponse(
         message="Doğrulama kodu e-posta adresinize gönderildi.",
         reset_token=verification_code if is_development else None,  # Only in dev mode (for testing)
+    )
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> ForgotPasswordResponse:
+    """
+    Backward-compatible partner forgot-password endpoint.
+    Admin users must use /auth/admin/forgot-password.
+    """
+    return await _forgot_password_by_role_scope(
+        payload=payload,
+        request=request,
+        session=session,
+        allowed_roles=PARTNER_RESET_ROLES,
+        not_found_message="Bu mail adresine ait partner kaydı bulunamadı.",
+    )
+
+
+@router.post("/partner/forgot-password", response_model=ForgotPasswordResponse)
+async def partner_forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> ForgotPasswordResponse:
+    """Partner panel şifre sıfırlama endpointi."""
+    return await _forgot_password_by_role_scope(
+        payload=payload,
+        request=request,
+        session=session,
+        allowed_roles=PARTNER_RESET_ROLES,
+        not_found_message="Bu mail adresine ait partner kaydı bulunamadı.",
+    )
+
+
+@router.post("/admin/forgot-password", response_model=ForgotPasswordResponse)
+async def admin_forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> ForgotPasswordResponse:
+    """Admin panel şifre sıfırlama endpointi."""
+    return await _forgot_password_by_role_scope(
+        payload=payload,
+        request=request,
+        session=session,
+        allowed_roles=ADMIN_RESET_ROLES,
+        not_found_message="Bu mail adresine ait admin kaydı bulunamadı.",
     )
 
 

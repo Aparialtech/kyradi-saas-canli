@@ -49,6 +49,14 @@ export const authService = {
     const response = await http.post<ForgotPasswordResponse>("/auth/forgot-password", payload);
     return response.data;
   },
+  async requestPartnerPasswordReset(payload: ForgotPasswordPayload): Promise<ForgotPasswordResponse> {
+    const response = await http.post<ForgotPasswordResponse>("/auth/partner/forgot-password", payload);
+    return response.data;
+  },
+  async requestAdminPasswordReset(payload: ForgotPasswordPayload): Promise<ForgotPasswordResponse> {
+    const response = await http.post<ForgotPasswordResponse>("/auth/admin/forgot-password", payload);
+    return response.data;
+  },
   async verifyResetCode(payload: VerifyResetCodePayload): Promise<VerifyResetCodeResponse> {
     const response = await http.post<VerifyResetCodeResponse>("/auth/verify-reset-code", payload);
     return response.data;

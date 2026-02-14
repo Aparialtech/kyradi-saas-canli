@@ -31,7 +31,7 @@ export function ForgotPasswordPage() {
     setSubmitting(true);
 
     try {
-      const response = await authService.requestPasswordReset({ email: normalizedEmail });
+      const response = await authService.requestPartnerPasswordReset({ email: normalizedEmail });
       
       // Navigate to code verification page with email
       navigate("/verify-reset-code", { 
