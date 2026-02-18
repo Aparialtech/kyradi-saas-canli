@@ -123,6 +123,7 @@ export function AppRouter() {
       <Route path="/self-service" element={<SelfServiceReservationPage />} />
       <Route path="/widget-demo" element={<WidgetDemoPage />} />
       <Route path="/payments/magicpay/demo/:sessionId" element={<MagicPayDemoPage />} />
+      <Route path="/app/magicpay/demo/:sessionId" element={<MagicPayDemoPage />} />
 
       <Route element={<RequireAuth allowedRoles={["super_admin", "support"]} redirectTo="/admin/login" />}>
         <Route path="/admin" element={<AdminDashboard />}>
