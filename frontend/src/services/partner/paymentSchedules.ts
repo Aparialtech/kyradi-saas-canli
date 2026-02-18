@@ -122,6 +122,8 @@ export interface MagicPayTransferResponse {
   amount: number;
   currency: string;
   fee: number;
+  gateway_provider?: string;
+  gateway_mode?: string;
 }
 
 export interface MagicPayConfigStatus {
@@ -129,6 +131,7 @@ export interface MagicPayConfigStatus {
   api_key_configured: boolean;
   gateway_name: string;
   gateway_status: string;
+  missing_config?: string[];
   supported_currencies: string[];
   min_transfer_amount: number;
   max_transfer_amount: number;

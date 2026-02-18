@@ -78,6 +78,16 @@ export function TransfersPage() {
         page,
         pageSize,
       }),
+    refetchInterval: (query) => {
+      const rows = query.state.data?.data ?? [];
+      const hasPendingLike = rows.some((item) => item?.status === "pending" || item?.status === "processing");
+      return hasPendingLike ? 5000 : false;
+    },
+  });
+
+  const gatewayStatusQuery = useQuery({
+    queryKey: ["partner-magicpay-status"],
+    queryFn: () => paymentScheduleService.getMagicPayStatus(),
   });
 
   // Mutations
@@ -283,6 +293,11 @@ export function TransfersPage() {
   ];
 
   const commission = commissionQuery.data;
+  const gatewayStatus = gatewayStatusQuery.data;
+  const liveConfigMissing = useMemo(() => {
+    if (!gatewayStatus || gatewayStatus.is_demo_mode) return [];
+    return gatewayStatus.missing_config ?? [];
+  }, [gatewayStatus]);
 
   return (
     <div className={styles.container}>
@@ -298,9 +313,9 @@ export function TransfersPage() {
             <p className={styles.subtitle}>{t("transfers.commissionPaymentsSubtitle")}</p>
           </div>
           <div className={styles.headerActions}>
-            <Badge variant="info">
+            <Badge variant={gatewayStatus?.is_demo_mode ? "warning" : "success"}>
               <Zap className="h-3 w-3" style={{ marginRight: 4 }} />
-              MagicPay Demo
+              {gatewayStatus?.is_demo_mode ? "MagicPay Demo" : "Gateway Live"}
             </Badge>
             <ModernButton
               variant="primary"
@@ -313,6 +328,24 @@ export function TransfersPage() {
           </div>
         </div>
       </motion.div>
+
+      {liveConfigMissing.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            marginBottom: "1rem",
+            padding: "0.75rem 1rem",
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
+            color: "#991b1b",
+            borderRadius: "0.5rem",
+            fontSize: "0.875rem",
+          }}
+        >
+          Live gateway eksik konfig: {liveConfigMissing.join(", ")}
+        </motion.div>
+      )}
 
       {/* Stats Cards */}
       <motion.div
@@ -456,6 +489,11 @@ export function TransfersPage() {
                 </ModernButton>
               </div>
             </div>
+            {(transfersQuery.data?.data ?? []).some((t) => t?.status === "pending" || t?.status === "processing") && (
+              <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                Bekleyen transferler için liste otomatik yenileniyor (5 sn).
+              </p>
+            )}
             
             {/* Search and Filters */}
             <AnimatePresence>

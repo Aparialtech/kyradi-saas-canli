@@ -61,6 +61,11 @@ export function AdminTransfersPage() {
         page,
         pageSize,
       }),
+    refetchInterval: (query) => {
+      const rows = query.state.data?.data ?? [];
+      const hasPendingLike = rows.some((item) => item?.status === "pending" || item?.status === "processing");
+      return hasPendingLike ? 5000 : false;
+    },
   });
 
   const magicPayStatusQuery = useQuery({
@@ -250,6 +255,10 @@ export function AdminTransfersPage() {
   ];
 
   const magicPayStatus = magicPayStatusQuery.data;
+  const liveConfigMissing = useMemo(() => {
+    if (!magicPayStatus || magicPayStatus.is_demo_mode) return [];
+    return magicPayStatus.missing_config ?? [];
+  }, [magicPayStatus]);
 
   return (
     <div className={styles.container}>
@@ -270,6 +279,22 @@ export function AdminTransfersPage() {
           </Badge>
         </div>
       </motion.div>
+
+      {liveConfigMissing.length > 0 && (
+        <div
+          style={{
+            marginBottom: "1rem",
+            padding: "0.75rem 1rem",
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
+            color: "#991b1b",
+            borderRadius: "0.5rem",
+            fontSize: "0.875rem",
+          }}
+        >
+          Live gateway eksik konfig: {liveConfigMissing.join(", ")}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <motion.div
@@ -347,6 +372,11 @@ export function AdminTransfersPage() {
                 </ModernButton>
               </div>
             </div>
+            {(transfersQuery.data?.data ?? []).some((t) => t?.status === "pending" || t?.status === "processing") && (
+              <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                Bekleyen işlemler için liste otomatik yenileniyor (5 sn).
+              </p>
+            )}
           </CardHeader>
           <CardBody noPadding>
             {transfersQuery.isLoading ? (
