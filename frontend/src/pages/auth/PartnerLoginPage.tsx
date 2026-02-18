@@ -239,7 +239,7 @@ export function PartnerLoginPage() {
   };
 
   return (
-    <div className={styles.loginPage}>
+    <div className={`${styles.loginPage} ${styles.partnerTheme}`}>
       <div className={styles.languageSwitcher}>
         <LanguageSwitcher />
       </div>
@@ -267,6 +267,9 @@ export function PartnerLoginPage() {
 
             <p className={styles.tagline}>
               Otel Partner Paneli
+            </p>
+            <p className={styles.themeHint}>
+              Rezervasyon, depo ve gelir operasyonlarını tek ekranda yönetin.
             </p>
 
             <div className={styles.features}>
@@ -375,16 +378,16 @@ export function PartnerLoginPage() {
             <div className={styles.formFooter}>
               <Link
                 to="/forgot-password"
-                style={{ color: "var(--text-tertiary)", textDecoration: "none" }}
+                className={styles.footerLink}
               >
                 Şifremi unuttum
               </Link>
               
-              <div style={{ marginTop: "1rem", textAlign: "center" }}>
-                <span style={{ color: "var(--text-tertiary)" }}>Hesabınız yok mu? </span>
+              <div className={styles.signupHint}>
+                <span>Hesabınız yok mu? </span>
                 <Link
                   to="/signup"
-                  style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}
+                  className={styles.signupLink}
                 >
                   Kayıt Ol
                 </Link>

@@ -73,7 +73,7 @@ export function AdminLoginPage() {
   };
 
   return (
-    <div className={styles.loginPage}>
+    <div className={`${styles.loginPage} ${styles.adminTheme}`}>
       <div className={styles.languageSwitcher}>
         <LanguageSwitcher />
       </div>
@@ -85,7 +85,6 @@ export function AdminLoginPage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)" }}
         >
           <div className={styles.brandingContent}>
             <motion.div
@@ -94,14 +93,17 @@ export function AdminLoginPage() {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.4 }}
             >
-              <div className={styles.logoIcon} style={{ background: "rgba(255,255,255,0.15)" }}>
+              <div className={styles.logoIcon}>
                 <img src="/kyradi_logo.png?v=20260214c" alt="Kyradi" className={styles.brandLogoImage} />
               </div>
               <h1 className={styles.brandName}>KYRADI</h1>
             </motion.div>
 
-            <p className={styles.tagline} style={{ color: "rgba(255,255,255,0.9)" }}>
+            <p className={styles.tagline}>
               Yönetim Paneli
+            </p>
+            <p className={styles.themeHint}>
+              Merkezi tenant yönetimi, güvenlik denetimi ve finans kontrolleri.
             </p>
 
             <div className={styles.features}>
@@ -201,7 +203,6 @@ export function AdminLoginPage() {
               <button
                 type="submit"
                 className={styles.submitButton}
-                style={{ background: "linear-gradient(135deg, #4338ca 0%, #6366f1 100%)" }}
                 disabled={submitting}
               >
                 {submitting ? "Giriş yapılıyor..." : "Yönetici Girişi"}
@@ -209,7 +210,7 @@ export function AdminLoginPage() {
             </form>
 
             <div className={styles.formFooter}>
-              <Link to="/admin/forgot-password" style={{ color: "var(--text-tertiary)", textDecoration: "none" }}>
+              <Link to="/admin/forgot-password" className={styles.footerLink}>
                 Şifremi unuttum
               </Link>
             </div>
