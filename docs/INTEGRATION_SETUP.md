@@ -129,3 +129,23 @@ Expected:
    - Send `tenantId` (UUID or slug) or `tenantSlug`, or `locationId`
 3. If you see `NO_IDLE_STORAGE_FOR_TENANT`:
    - Ensure tenant has at least 1 storage with `status=idle` and `capacity>0`
+
+## Smoke Script (Read-Only by default)
+
+Use the repo script to verify public/auth/transfer endpoints in one run:
+
+```bash
+SAAS_BASE_URL="https://app.kyradi.com" \
+PARTNER_EMAIL="admin@demo.com" \
+PARTNER_PASSWORD="***" \
+ADMIN_EMAIL="superadmin@kyradi.com" \
+ADMIN_PASSWORD="***" \
+./scripts/smoke_e2e.sh
+```
+
+- Default mode: **read-only** checks (no write operations).
+- Optional mutation mode (creates+processes one transfer):
+
+```bash
+SMOKE_MUTATE=true SMOKE_TRANSFER_AMOUNT=10.00 ./scripts/smoke_e2e.sh
+```
