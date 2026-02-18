@@ -90,11 +90,20 @@ class LiveHttpTransferGateway(TransferGatewayClient):
         self.timeout_seconds = max(settings.transfer_gateway_timeout_ms / 1000.0, 1.0)
 
     def _is_configured(self) -> bool:
-        return bool(self.base_url and self.api_key)
+        return not self.get_missing_config_fields()
+
+    def get_missing_config_fields(self) -> list[str]:
+        missing: list[str] = []
+        if not self.base_url:
+            missing.append("TRANSFER_GATEWAY_API_URL")
+        if not self.api_key:
+            missing.append("TRANSFER_GATEWAY_API_KEY")
+        return missing
 
     async def process_transfer(self, transfer: PaymentTransfer) -> TransferGatewayResult:
         if not self._is_configured():
-            raise RuntimeError("TRANSFER_GATEWAY_NOT_CONFIGURED")
+            missing = ",".join(self.get_missing_config_fields())
+            raise RuntimeError(f"TRANSFER_GATEWAY_NOT_CONFIGURED:{missing}")
 
         payload = {
             "transferId": transfer.id,
@@ -148,4 +157,3 @@ def get_transfer_gateway_client() -> TransferGatewayClient:
     if mode == "live":
         return LiveHttpTransferGateway()
     return DemoMagicPayTransferGateway()
-

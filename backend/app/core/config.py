@@ -211,6 +211,19 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("TRANSFER_GATEWAY_TIMEOUT_MS", "KYRADI_TRANSFER_GATEWAY_TIMEOUT_MS"),
         description="Timeout for live transfer gateway API calls.",
     )
+    transfer_gateway_webhook_secret: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("TRANSFER_GATEWAY_WEBHOOK_SECRET", "KYRADI_TRANSFER_GATEWAY_WEBHOOK_SECRET"),
+        description="HMAC secret used to verify async transfer gateway callbacks.",
+    )
+    transfer_gateway_webhook_tolerance_seconds: int = Field(
+        default=300,
+        validation_alias=AliasChoices(
+            "TRANSFER_GATEWAY_WEBHOOK_TOLERANCE_SECONDS",
+            "KYRADI_TRANSFER_GATEWAY_WEBHOOK_TOLERANCE_SECONDS",
+        ),
+        description="Allowed timestamp skew for signed transfer callbacks.",
+    )
 
     # =========================================================================
     # SuperApp integration (server-to-server)

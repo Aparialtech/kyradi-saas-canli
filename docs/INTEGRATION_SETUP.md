@@ -19,6 +19,15 @@ host if Vercel rewrites proxy requests (same-origin).
 - `INTEGRATION_RETRY_COUNT` (default `2`)
 - `SUPERAPP_ACCEPT_CANONICAL_SIGNATURES` (default `true`)
   - Aliases: `CANONICAL_SIG`
+- Transfer gateway (partner/admin transfer flow):
+  - `TRANSFER_GATEWAY_PROVIDER` (default `magicpay`)
+  - `TRANSFER_GATEWAY_MODE` (default `demo`, set `live` for real gateway)
+  - `TRANSFER_GATEWAY_API_URL` (required in live mode)
+  - `TRANSFER_GATEWAY_API_KEY` (required in live mode)
+  - `TRANSFER_GATEWAY_API_SECRET` (optional)
+  - `TRANSFER_GATEWAY_WEBHOOK_SECRET` (recommended in live mode, callback HMAC)
+  - `TRANSFER_GATEWAY_WEBHOOK_TOLERANCE_SECONDS` (default `300`)
+  - `TRANSFER_GATEWAY_TIMEOUT_MS` (default `10000`)
 
 ## Signature (HMAC)
 
@@ -31,7 +40,7 @@ SaaS verification is **backward compatible**:
 1. HMAC over the **raw request body** (legacy)
 2. If enabled, HMAC over **canonical JSON**:
    - UTF-8
-   - no whitespace
+   - `JSON.stringify` without whitespace
    - keys sorted (recursively)
 
 This solves signature mismatches caused by JSON key order/whitespace differences.
@@ -70,19 +79,26 @@ SaaS posts to:
 - `POST ${SUPERAPP_BASE_URL}/integrations/saas/status-update`
 Signed with canonical JSON.
 
-Payload (backward compatible):
-```json
-{
-  "externalReservationId": "SUPERAPP_RESERVATION_ID",
-  "saasReservationId": "SAAS_RESERVATION_UUID",
-  "status": "dropped",
-  "storageUnit": "STORAGE_UUID_OR_LABEL"
-}
-```
+## Partner/Admin Transfer Gateway
 
-Expected SuperApp lookup behavior:
-- first try `externalReservationId` (primary)
-- optionally log/attach `saasReservationId` for tracing only
+Existing endpoint path is unchanged:
+- `POST /payment-schedules/transfers/{transfer_id}/process-magicpay`
+
+Behavior:
+- `TRANSFER_GATEWAY_MODE=demo`: transfer is processed by demo adapter (safe simulation)
+- `TRANSFER_GATEWAY_MODE=live`: same endpoint calls external gateway API
+  - request target: `${TRANSFER_GATEWAY_API_URL}/transfers`
+  - payload includes: `transferId`, `tenantId`, `amount`, `currency`, `recipientIban`, `recipientName`
+
+Status endpoint:
+- `GET /payment-schedules/magicpay/status`
+  - reports demo/live mode and configuration state.
+
+Gateway callback endpoint (new, backward-compatible):
+- `POST /payment-schedules/transfers/callback`
+  - headers: `x-transfer-signature` (or `x-kyradi-signature`), optional `x-transfer-timestamp`
+  - body: `{ "transferId": "...", "status": "completed|failed|processing", "referenceId": "...", "transactionId": "..." }`
+  - idempotent: duplicate callbacks for terminal transfers return `idempotent=true` and do not rewrite state.
 
 ## Quick Local Signing (curl)
 
@@ -102,8 +118,7 @@ curl -i -X POST "$SAAS_ORIGIN/api/integrations/reservations" \\
 
 Expected:
 - `201 Created` on success
-- `401 INVALID_SIGNATURE` if `SIG` is wrong (this is expected behavior)
-- `401 MISSING_SIGNATURE` if signature header is missing
+- `401 Invalid signature` if `SIG` is wrong (this is expected behavior)
 
 ## Debug Checklist
 
@@ -114,12 +129,3 @@ Expected:
    - Send `tenantId` (UUID or slug) or `tenantSlug`, or `locationId`
 3. If you see `NO_IDLE_STORAGE_FOR_TENANT`:
    - Ensure tenant has at least 1 storage with `status=idle` and `capacity>0`
-
-## Assign + Status Update (Admin Token)
-
-Endpoint:
-- `PUT /api/integrations/reservations/{id}/assign`
-
-Auth:
-- Bearer JWT required
-- must be `role="tenant_admin"` and have `tenant_id` (tenant-scoped)

@@ -3,9 +3,11 @@
 from typing import List, Optional
 from datetime import datetime, timezone
 from decimal import Decimal
+import hashlib
+import hmac
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -16,6 +18,7 @@ from ...models.tenant import User, Tenant
 from ...models.payment_schedule import PaymentSchedule, PaymentTransfer, PaymentPeriod, TransferStatus
 from ...services.audit import record_audit
 from ...services.transfer_gateway import get_transfer_gateway_client
+from ...core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -554,6 +557,70 @@ class MagicPayTransferResponse(BaseModel):
     gateway_mode: Optional[str] = None
 
 
+class TransferCallbackPayload(BaseModel):
+    transferId: Optional[str] = None
+    referenceId: Optional[str] = None
+    transactionId: Optional[str] = None
+    status: str
+    amount: Optional[Decimal] = None
+    currency: Optional[str] = None
+    errorMessage: Optional[str] = None
+    processedAt: Optional[datetime] = None
+
+
+class TransferCallbackResponse(BaseModel):
+    ok: bool = True
+    idempotent: bool = False
+    transfer_id: str
+    status: str
+    reference_id: Optional[str] = None
+
+
+def _normalize_transfer_status(status_value: str) -> str:
+    normalized = (status_value or "").strip().lower()
+    if normalized in {"success", "succeeded", "paid", "completed"}:
+        return TransferStatus.COMPLETED.value
+    if normalized in {"failed", "error"}:
+        return TransferStatus.FAILED.value
+    if normalized in {"cancelled", "canceled"}:
+        return TransferStatus.CANCELLED.value
+    if normalized in {"processing", "pending"}:
+        return TransferStatus.PROCESSING.value if normalized == "processing" else TransferStatus.PENDING.value
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Unsupported transfer status",
+    )
+
+
+def _select_transfer_webhook_secret() -> Optional[str]:
+    return (
+        settings.transfer_gateway_webhook_secret
+        or settings.payment_webhook_secret
+        or settings.transfer_gateway_api_secret
+    )
+
+
+def _verify_transfer_callback_signature(raw_body: bytes, signature: str, timestamp: Optional[str]) -> bool:
+    secret = _select_transfer_webhook_secret()
+    if not secret:
+        return False
+
+    candidates: list[str] = []
+    if timestamp:
+        signed = f"{timestamp}.".encode("utf-8") + raw_body
+        candidates.append(hmac.new(secret.encode("utf-8"), signed, hashlib.sha256).hexdigest())
+    candidates.append(hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest())
+
+    normalized_signature = signature.strip().lower()
+    if normalized_signature.startswith("sha256="):
+        normalized_signature = normalized_signature.split("=", 1)[1]
+
+    for candidate in candidates:
+        if hmac.compare_digest(candidate, normalized_signature):
+            return True
+    return False
+
+
 class CommissionSummary(BaseModel):
     total_commission: Decimal
     pending_commission: Decimal
@@ -634,13 +701,44 @@ async def process_transfer_with_magicpay(
     if not transfer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer bulunamadı.")
     
+    gateway = get_transfer_gateway_client()
+    if gateway.mode == "live":
+        missing: list[str] = []
+        if not settings.transfer_gateway_api_url:
+            missing.append("TRANSFER_GATEWAY_API_URL")
+        if not settings.transfer_gateway_api_key:
+            missing.append("TRANSFER_GATEWAY_API_KEY")
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "error_code": "TRANSFER_GATEWAY_NOT_CONFIGURED",
+                    "missing": missing,
+                },
+            )
+
+    # Idempotent behavior for repeated admin clicks/retries.
+    if transfer.status == TransferStatus.COMPLETED.value:
+        return MagicPayTransferResponse(
+            success=True,
+            transaction_id=transfer.reference_id or transfer.id,
+            reference_id=transfer.reference_id or transfer.id,
+            status=TransferStatus.COMPLETED.value,
+            message="Transfer already processed",
+            processed_at=transfer.processed_at or transfer.transfer_date or datetime.now(timezone.utc),
+            amount=transfer.net_amount,
+            currency="TRY",
+            fee=Decimal("0.00"),
+            gateway_provider=gateway.provider,
+            gateway_mode=gateway.mode,
+        )
+
     if transfer.status != TransferStatus.PENDING.value:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Bu transfer zaten işlenmiş. Mevcut durum: {transfer.status}"
+            detail=f"Bu transfer işlenemez. Mevcut durum: {transfer.status}"
         )
-    
-    gateway = get_transfer_gateway_client()
+
     logger.info(
         "Processing transfer via gateway: transfer_id=%s provider=%s mode=%s amount=%s",
         transfer_id,
@@ -712,6 +810,102 @@ async def process_transfer_with_magicpay(
         fee=result.fee,
         gateway_provider=gateway.provider,
         gateway_mode=gateway.mode,
+    )
+
+
+@router.post("/transfers/callback", response_model=TransferCallbackResponse)
+async def transfer_gateway_callback(
+    request: Request,
+    payload: TransferCallbackPayload,
+    session: AsyncSession = Depends(get_session),
+) -> TransferCallbackResponse:
+    """
+    Async callback receiver for transfer gateways.
+
+    - Verifies HMAC signature if callback secret is configured.
+    - Applies idempotent updates (safe for retries/out-of-order notifications).
+    """
+    raw_body = await request.body()
+    signature = request.headers.get("x-transfer-signature") or request.headers.get("x-kyradi-signature")
+    timestamp = request.headers.get("x-transfer-timestamp")
+
+    secret = _select_transfer_webhook_secret()
+    if secret:
+        if not signature:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing callback signature")
+        if timestamp:
+            try:
+                ts_int = int(timestamp)
+            except ValueError as exc:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid callback timestamp") from exc
+            skew = abs(int(datetime.now(timezone.utc).timestamp()) - ts_int)
+            if skew > settings.transfer_gateway_webhook_tolerance_seconds:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Callback timestamp outside tolerance")
+        if not _verify_transfer_callback_signature(raw_body=raw_body, signature=signature, timestamp=timestamp):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid callback signature")
+
+    transfer: Optional[PaymentTransfer] = None
+    if payload.transferId:
+        transfer = (
+            await session.execute(select(PaymentTransfer).where(PaymentTransfer.id == payload.transferId))
+        ).scalar_one_or_none()
+    if not transfer and payload.referenceId:
+        transfer = (
+            await session.execute(select(PaymentTransfer).where(PaymentTransfer.reference_id == payload.referenceId))
+        ).scalar_one_or_none()
+    if not transfer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer bulunamadı.")
+
+    incoming_status = _normalize_transfer_status(payload.status)
+    terminal_statuses = {
+        TransferStatus.COMPLETED.value,
+        TransferStatus.FAILED.value,
+        TransferStatus.CANCELLED.value,
+    }
+
+    if transfer.status in terminal_statuses:
+        # Idempotent no-op for duplicate callbacks.
+        return TransferCallbackResponse(
+            ok=True,
+            idempotent=True,
+            transfer_id=transfer.id,
+            status=transfer.status,
+            reference_id=transfer.reference_id,
+        )
+
+    transfer.status = incoming_status
+    transfer.processed_at = payload.processedAt or datetime.now(timezone.utc)
+    if incoming_status == TransferStatus.COMPLETED.value:
+        transfer.transfer_date = transfer.processed_at
+        transfer.error_message = None
+    elif payload.errorMessage:
+        transfer.error_message = payload.errorMessage
+
+    if payload.referenceId:
+        transfer.reference_id = payload.referenceId
+
+    await record_audit(
+        session,
+        tenant_id=transfer.tenant_id,
+        actor_user_id=None,
+        action=f"payment_transfer.gateway_callback_{incoming_status}",
+        entity="payment_transfers",
+        entity_id=transfer.id,
+        meta={
+            "transaction_id": payload.transactionId,
+            "reference_id": payload.referenceId,
+            "amount": str(payload.amount) if payload.amount is not None else None,
+            "currency": payload.currency,
+        },
+    )
+    await session.commit()
+
+    return TransferCallbackResponse(
+        ok=True,
+        idempotent=False,
+        transfer_id=transfer.id,
+        status=transfer.status,
+        reference_id=transfer.reference_id,
     )
 
 
@@ -806,6 +1000,7 @@ class MagicPayConfigStatus(BaseModel):
     api_key_configured: bool = False
     gateway_name: str = "MagicPay"
     gateway_status: str = "demo"
+    missing_config: List[str] = Field(default_factory=list)
     supported_currencies: List[str] = ["TRY", "USD", "EUR"]
     min_transfer_amount: Decimal = Decimal("10.00")
     max_transfer_amount: Decimal = Decimal("100000.00")
@@ -820,10 +1015,16 @@ async def get_magicpay_status(
     
     Returns demo mode status and configuration info.
     """
-    from ...core.config import settings
-
     gateway = get_transfer_gateway_client()
-    configured = bool(settings.transfer_gateway_api_key and settings.transfer_gateway_api_url)
+    missing: List[str] = []
+    if gateway.mode == "live":
+        if not settings.transfer_gateway_api_url:
+            missing.append("TRANSFER_GATEWAY_API_URL")
+        if not settings.transfer_gateway_api_key:
+            missing.append("TRANSFER_GATEWAY_API_KEY")
+        if not _select_transfer_webhook_secret():
+            missing.append("TRANSFER_GATEWAY_WEBHOOK_SECRET")
+    configured = len(missing) == 0
     is_demo_mode = gateway.mode != "live"
 
     return MagicPayConfigStatus(
@@ -831,6 +1032,7 @@ async def get_magicpay_status(
         api_key_configured=configured,
         gateway_name="MagicPay",
         gateway_status="active" if (configured and gateway.mode == "live") else "demo",
+        missing_config=missing,
         supported_currencies=["TRY", "USD", "EUR"],
         min_transfer_amount=Decimal("10.00"),
         max_transfer_amount=Decimal("100000.00"),
