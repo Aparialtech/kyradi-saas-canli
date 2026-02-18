@@ -46,6 +46,13 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
+  const reservationQuery = useQuery({
+    queryKey: ["reservation-detail", reservation?.id],
+    queryFn: () => reservationService.getById(reservation!.id),
+    enabled: !!reservation?.id && isOpen,
+    staleTime: 10000,
+  });
+
   // Fetch payment info for this reservation
   const paymentQuery = useQuery({
     queryKey: ["reservation-payment", reservation?.id],
@@ -112,13 +119,31 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
   // Early return AFTER all hooks (this is safe)
   if (!reservation) return null;
 
-  const statusColor = statusColors[reservation.status] ?? "#6b7280";
+  const displayReservation = reservationQuery.data ?? reservation;
+  const displayPayment = paymentQuery.data ?? displayReservation.payment ?? null;
 
-  const pickupCompleted = Boolean(reservation.handover_at);
-  const deliveryCompleted = Boolean(reservation.returned_at);
+  const guestName =
+    displayReservation.full_name ??
+    displayReservation.customer_name ??
+    displayReservation.guest_name ??
+    "—";
+  const guestEmail =
+    displayReservation.customer_email ??
+    displayReservation.guest_email ??
+    "—";
+  const guestPhone =
+    displayReservation.customer_phone ??
+    displayReservation.guest_phone ??
+    displayReservation.phone_number ??
+    "—";
+
+  const statusColor = statusColors[displayReservation.status] ?? "#6b7280";
+
+  const isPickupDone = Boolean(displayReservation.handover_at);
+  const isDelivered = Boolean(displayReservation.returned_at);
 
   return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
         {/* Header with status */}
         <div
           style={{
@@ -127,41 +152,33 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
             alignItems: "center",
             paddingBottom: "1rem",
             borderBottom: "1px solid #e2e8f0",
-            gap: "1rem",
           }}
         >
           <div>
             <h4 style={{ margin: 0, fontSize: "1.125rem", fontWeight: 600 }}>
-              #{reservation.id}
+              #{displayReservation.id}
             </h4>
-            <p style={{ margin: "0.25rem 0 0", color: "#64748b", fontSize: "0.875rem" }}>
-              {t("common.createdAt")}: {formatDate(reservation.created_at)}
+              <p style={{ margin: "0.25rem 0 0", color: "#64748b", fontSize: "0.875rem" }}>
+              {t("common.createdAt")}: {formatDate(displayReservation.created_at)}
             </p>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <span
-              style={{
-                padding: "0.375rem 0.875rem",
-                borderRadius: "9999px",
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                background: `${statusColor}20`,
-                color: statusColor,
-              }}
-            >
-              {statusLabels[reservation.status] ?? reservation.status}
-            </span>
-            {pickupCompleted && (
-              <Badge variant="success" size="sm" pill>
-                Teslim Alındı
-              </Badge>
-            )}
-            {deliveryCompleted && (
-              <Badge variant="info" size="sm" pill>
-                Teslim Edildi
-              </Badge>
-            )}
-          </div>
+          <span
+            style={{
+              padding: "0.375rem 0.875rem",
+              borderRadius: "9999px",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              background: `${statusColor}20`,
+              color: statusColor,
+            }}
+          >
+            {statusLabels[displayReservation.status] ?? displayReservation.status}
+          </span>
+          {isDelivered ? (
+            <Badge variant="success">Teslim Edildi</Badge>
+          ) : isPickupDone ? (
+            <Badge variant="info">Teslim Alındı</Badge>
+          ) : null}
         </div>
 
         {/* Guest Information */}
@@ -183,36 +200,36 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ad Soyad</span>
               <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                {reservation.full_name ?? reservation.guest_name ?? "—"}
+                {guestName}
               </p>
             </div>
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>E-posta</span>
-              <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{reservation.guest_email ?? "—"}</p>
+              <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{guestEmail}</p>
             </div>
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Telefon</span>
               <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                {reservation.guest_phone ?? reservation.phone_number ?? "—"}
+                {guestPhone}
               </p>
             </div>
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Oda No</span>
-              <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{reservation.hotel_room_number ?? "—"}</p>
+              <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{displayReservation.hotel_room_number ?? "—"}</p>
             </div>
-            {reservation.tc_identity_number && (
+            {displayReservation.tc_identity_number && (
               <div>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>TC Kimlik No</span>
                 <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                  ****{reservation.tc_identity_number.slice(-2)}
+                  ****{displayReservation.tc_identity_number.slice(-2)}
                 </p>
               </div>
             )}
-            {reservation.passport_number && (
+            {displayReservation.passport_number && (
               <div>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Pasaport No</span>
                 <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                  ****{reservation.passport_number.slice(-2)}
+                  ****{displayReservation.passport_number.slice(-2)}
                 </p>
               </div>
             )}
@@ -238,29 +255,29 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Giriş Tarihi</span>
               <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                {formatDate(reservation.start_datetime || reservation.start_at || reservation.checkin_date)}
+                {formatDate(displayReservation.start_datetime || displayReservation.start_at || displayReservation.checkin_date)}
               </p>
             </div>
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Çıkış Tarihi</span>
               <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                {formatDate(reservation.end_datetime || reservation.end_at || reservation.checkout_date)}
+                {formatDate(displayReservation.end_datetime || displayReservation.end_at || displayReservation.checkout_date)}
               </p>
             </div>
-            {reservation.duration_hours && (
+            {displayReservation.duration_hours && (
               <div>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Süre</span>
-                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{reservation.duration_hours.toFixed(1)} saat</p>
+                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{displayReservation.duration_hours.toFixed(1)} saat</p>
               </div>
             )}
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Depo</span>
               <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                {reservation.storage_code || reservation.storage_id || "Atanmadı"}
+                {displayReservation.storage_code || displayReservation.storage_id || "Atanmadı"}
               </p>
-              {reservation.location_name && (
+              {displayReservation.location_name && (
                 <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#64748b" }}>
-                  Lokasyon: {reservation.location_name}
+                  Lokasyon: {displayReservation.location_name}
                 </p>
               )}
             </div>
@@ -285,32 +302,32 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
             <div>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Bavul Sayısı</span>
               <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                {reservation.baggage_count ?? reservation.luggage_count ?? 1} adet
+                {displayReservation.baggage_count ?? displayReservation.luggage_count ?? 1} adet
               </p>
             </div>
-            {reservation.luggage_type && (
+            {displayReservation.luggage_type && (
               <div>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Bavul Tipi</span>
-                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{reservation.luggage_type}</p>
+                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{displayReservation.luggage_type}</p>
               </div>
             )}
-            {reservation.locker_size && (
+            {displayReservation.locker_size && (
               <div>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Dolap Boyutu</span>
-                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{reservation.locker_size}</p>
+                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{displayReservation.locker_size}</p>
               </div>
             )}
-            {reservation.luggage_description && (
+            {displayReservation.luggage_description && (
               <div style={{ gridColumn: "1 / -1" }}>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Açıklama</span>
-                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{reservation.luggage_description}</p>
+                <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>{displayReservation.luggage_description}</p>
               </div>
             )}
           </div>
         </section>
 
         {/* Price Information */}
-        {(reservation.estimated_total_price || reservation.hourly_rate) && (
+        {(displayReservation.estimated_total_price || displayReservation.hourly_rate) && (
           <section>
             <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <DollarSign className="h-4 w-4" />
@@ -327,19 +344,19 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
                 border: "1px solid #bbf7d0",
               }}
             >
-              {reservation.hourly_rate && (
+              {displayReservation.hourly_rate && (
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Saatlik Ücret</span>
                   <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                    {formatCurrency(reservation.hourly_rate)}
+                    {formatCurrency(displayReservation.hourly_rate)}
                   </p>
                 </div>
               )}
-              {reservation.estimated_total_price && (
+              {displayReservation.estimated_total_price && (
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Toplam Tutar</span>
                   <p style={{ margin: "0.25rem 0 0", fontWeight: 600, fontSize: "1.125rem", color: "#16a34a" }}>
-                    {formatCurrency(reservation.estimated_total_price)}
+                    {formatCurrency(displayReservation.estimated_total_price)}
                   </p>
                 </div>
               )}
@@ -353,68 +370,68 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
             <CreditCard className="h-4 w-4" />
             Ödeme Bilgileri
           </h5>
-          {paymentQuery.isLoading ? (
+          {paymentQuery.isLoading && !displayPayment ? (
             <div style={{ padding: "1rem", textAlign: "center", color: "#64748b" }}>
               Ödeme bilgileri yükleniyor...
             </div>
-          ) : paymentQuery.data ? (
+          ) : displayPayment ? (
             <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(2, 1fr)",
                 gap: "0.75rem",
-                background: paymentQuery.data.status === 'paid' || paymentQuery.data.status === 'captured' ? "#f0fdf4" : "#fefce8",
+                background: displayPayment.status === 'paid' || displayPayment.status === 'captured' ? "#f0fdf4" : "#fefce8",
                 padding: "1rem",
                 borderRadius: "8px",
-                border: `1px solid ${paymentQuery.data.status === 'paid' || paymentQuery.data.status === 'captured' ? "#bbf7d0" : "#fef08a"}`,
+                border: `1px solid ${displayPayment.status === 'paid' || displayPayment.status === 'captured' ? "#bbf7d0" : "#fef08a"}`,
               }}
             >
               <div>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ödeme Durumu</span>
                 <p style={{ margin: "0.25rem 0 0" }}>
                   <Badge variant={
-                    paymentQuery.data.status === 'paid' || paymentQuery.data.status === 'captured' ? 'success' :
-                    paymentQuery.data.status === 'pending' ? 'warning' :
-                    paymentQuery.data.status === 'failed' ? 'danger' : 'neutral'
+                    displayPayment.status === 'paid' || displayPayment.status === 'captured' ? 'success' :
+                    displayPayment.status === 'pending' ? 'warning' :
+                    displayPayment.status === 'failed' ? 'danger' : 'neutral'
                   }>
-                    {paymentQuery.data.status === 'paid' ? 'Ödendi' :
-                     paymentQuery.data.status === 'captured' ? 'Tahsil Edildi' :
-                     paymentQuery.data.status === 'pending' ? 'Beklemede' :
-                     paymentQuery.data.status === 'failed' ? 'Başarısız' :
-                     paymentQuery.data.status}
+                    {displayPayment.status === 'paid' ? 'Ödendi' :
+                     displayPayment.status === 'captured' ? 'Tahsil Edildi' :
+                     displayPayment.status === 'pending' ? 'Beklemede' :
+                     displayPayment.status === 'failed' ? 'Başarısız' :
+                     displayPayment.status}
                   </Badge>
                 </p>
               </div>
               <div>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ödeme Tutarı</span>
                 <p style={{ margin: "0.25rem 0 0", fontWeight: 600, color: "#16a34a" }}>
-                  {formatCurrency(paymentQuery.data.amount_minor)}
+                  {formatCurrency(displayPayment.amount_minor)}
                 </p>
               </div>
-              {paymentQuery.data.mode && (
+              {displayPayment.mode && (
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ödeme Yöntemi</span>
                   <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                    {paymentQuery.data.mode === 'CASH' ? 'Nakit' :
-                     paymentQuery.data.mode === 'POS' ? 'POS / Kart' :
-                     paymentQuery.data.mode === 'GATEWAY_LIVE' ? 'Online Ödeme' :
-                     paymentQuery.data.mode}
+                    {displayPayment.mode === 'CASH' ? 'Nakit' :
+                     displayPayment.mode === 'POS' ? 'POS / Kart' :
+                     displayPayment.mode === 'GATEWAY_LIVE' ? 'Online Ödeme' :
+                     displayPayment.mode}
                   </p>
                 </div>
               )}
-              {paymentQuery.data.paid_at && (
+              {displayPayment.paid_at && (
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ödeme Tarihi</span>
                   <p style={{ margin: "0.25rem 0 0", fontWeight: 500 }}>
-                    {formatDate(paymentQuery.data.paid_at)}
+                    {formatDate(displayPayment.paid_at)}
                   </p>
                 </div>
               )}
-              {paymentQuery.data.transaction_id && (
+              {displayPayment.transaction_id && (
                 <div style={{ gridColumn: "1 / -1" }}>
                   <span style={{ fontSize: "0.75rem", color: "#64748b" }}>İşlem ID</span>
                   <p style={{ margin: "0.25rem 0 0", fontWeight: 500, fontFamily: "monospace", fontSize: "0.75rem" }}>
-                    {paymentQuery.data.transaction_id}
+                    {displayPayment.transaction_id}
                   </p>
                 </div>
               )}
@@ -436,7 +453,7 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
         </section>
 
         {/* QR Code */}
-        {(reservation.qr_code || reservation.qr_token) && (
+        {(displayReservation.qr_code || displayReservation.qr_token) && (
           <section>
             <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <QrCode className="h-4 w-4" /> QR Kod
@@ -516,7 +533,7 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
         )}
 
         {/* Notes */}
-        {reservation.notes && (
+        {displayReservation.notes && (
           <section>
             <h5 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#475569" }}>
               📝 Notlar
@@ -529,19 +546,19 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
                 border: "1px solid #fef08a",
               }}
             >
-              <p style={{ margin: 0, fontSize: "0.875rem" }}>{reservation.notes}</p>
+              <p style={{ margin: 0, fontSize: "0.875rem" }}>{displayReservation.notes}</p>
             </div>
           </section>
         )}
 
         {/* Source */}
-        {reservation.origin && (
+        {displayReservation.origin && (
           <div style={{ fontSize: "0.75rem", color: "#64748b", textAlign: "right" }}>
             Kaynak: {(() => {
               try {
-                return new URL(reservation.origin).hostname;
+                return new URL(displayReservation.origin).hostname;
               } catch {
-                return reservation.origin;
+                return displayReservation.origin;
               }
             })()}
           </div>
@@ -551,8 +568,6 @@ export function ReservationDetailContent({ reservation, isOpen }: ReservationDet
 }
 
 export function ReservationDetailModal({ reservation, isOpen, onClose }: ReservationDetailModalProps) {
-  if (!reservation || !isOpen) return null;
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Rezervasyon Detayı" width="600px">
       <ReservationDetailContent reservation={reservation} isOpen={isOpen} />
