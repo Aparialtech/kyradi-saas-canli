@@ -46,13 +46,33 @@ export interface PaymentInfo {
   } | null;
 }
 
+const DEMO_CHECKOUT_PATH = /\/payments\/magicpay\/demo\/([^/?#]+)/i;
+
+export function normalizeMagicPayCheckoutUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl;
+  if (typeof window === "undefined") return rawUrl;
+
+  const parsed = new URL(rawUrl, window.location.origin);
+  const match = parsed.pathname.match(DEMO_CHECKOUT_PATH);
+
+  if (match?.[1]) {
+    return `${window.location.origin}/app/magicpay/demo/${match[1]}`;
+  }
+
+  // Keep existing behavior for already-correct app routes or external URLs.
+  return parsed.toString();
+}
+
 export const magicpayService = {
   async createCheckoutSession(reservationId: string): Promise<CheckoutSessionResponse> {
     const response = await http.post<CheckoutSessionResponse>(
       "/payments/magicpay/checkout-session",
       { reservation_id: reservationId }
     );
-    return response.data;
+    return {
+      ...response.data,
+      checkout_url: normalizeMagicPayCheckoutUrl(response.data.checkout_url),
+    };
   },
 
   async completeDemoPayment(sessionId: string, result: "success" | "failed"): Promise<DemoCompleteResponse> {
@@ -68,4 +88,3 @@ export const magicpayService = {
     return response.data;
   },
 };
-

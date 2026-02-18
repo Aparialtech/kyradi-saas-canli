@@ -5,6 +5,7 @@ import { Loader2, CreditCard, CheckCircle2, Wallet, Building2, Banknote } from "
 
 import { reservationService, type Reservation, type ReservationPaymentInfo } from "../../services/partner/reservations";
 import { paymentService } from "../../services/partner/payments";
+import { normalizeMagicPayCheckoutUrl } from "../../services/partner/magicpay";
 import { useToast } from "../../hooks/useToast";
 import { useTranslation } from "../../hooks/useTranslation";
 import { getErrorMessage } from "../../lib/httpError";
@@ -53,9 +54,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
     onSuccess: (data) => {
       if (data.checkout_url) {
         setIsRedirecting(true);
-        const checkoutUrl = data.checkout_url.startsWith('http') 
-          ? data.checkout_url 
-          : `${window.location.origin}${data.checkout_url}`;
+        const checkoutUrl = normalizeMagicPayCheckoutUrl(data.checkout_url);
         window.open(checkoutUrl, '_blank');
         setTimeout(() => {
           void queryClient.invalidateQueries({ queryKey: ["widget-reservations"] });
@@ -124,7 +123,7 @@ export const PaymentActionModal: React.FC<PaymentActionModalProps> = ({
       const checkoutUrl = paymentInfo?.checkout_url;
       if (checkoutUrl) {
         setIsRedirecting(true);
-        const url = checkoutUrl.startsWith("http") ? checkoutUrl : `${window.location.origin}${checkoutUrl}`;
+        const url = normalizeMagicPayCheckoutUrl(checkoutUrl);
         window.open(url, "_blank");
         setTimeout(() => setIsRedirecting(false), 1200);
         return;
