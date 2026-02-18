@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Lock, CheckCircle2 } from "../../lib/lucide";
 
-import { getApiBase } from "../../utils/apiBase";
+import { env } from "../../config/env";
 import { partnerWidgetService } from "../../services/partner/widgetConfig";
 import { demoService, type Storage } from "../../services/partner/demo";
 import { magicpayService } from "../../services/partner/magicpay";
@@ -14,7 +14,6 @@ import { getErrorMessage } from "../../lib/httpError";
 import { useTranslation } from "../../hooks/useTranslation";
 import { errorLogger } from "../../lib/errorLogger";
 import styles from "./DemoFlowPage.module.css";
-import { env } from "../../config/env";
 
 declare global {
   interface Window {
@@ -94,6 +93,19 @@ export function DemoFlowPage() {
     onSuccess: (data) => {
       setMagicpayCheckoutUrl(data.checkout_url);
       setPaymentAmount(data.amount_minor);
+      setWidgetPriceInfo((prev) => ({
+        amount_minor: data.amount_minor,
+        amount_formatted: new Intl.NumberFormat(locale, {
+          style: "currency",
+          currency: data.currency || "TRY",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format((data.amount_minor || 0) / 100),
+        duration_hours: prev?.duration_hours ?? null,
+        pricing_type: prev?.pricing_type ?? null,
+        currency: data.currency || prev?.currency || "TRY",
+        luggage_count: prev?.luggage_count ?? 1,
+      }));
       push({
         title: "MagicPay Ödeme Hazır",
         description: "MagicPay ile ödemeye yönlendiriliyorsunuz...",
@@ -201,7 +213,7 @@ export function DemoFlowPage() {
       scriptEl = document.createElement("script");
       scriptEl.src = `${cdnBase}/widgets/kyradi-reserve.js`;
       scriptEl.defer = true;
-      scriptEl.dataset.apiBase = getApiBase();
+      scriptEl.dataset.apiBase = env.API_URL;
       scriptEl.dataset.tenantId = tenant_id;
       scriptEl.dataset.widgetKey = widget_public_key;
       scriptEl.dataset.locale = locale;
@@ -242,7 +254,7 @@ export function DemoFlowPage() {
           // Now create and append widget element (connectedCallback will be called)
           const widgetEl = document.createElement("kyradi-reserve");
           // Set data attributes for widget initialization
-          widgetEl.setAttribute("data-api-base", getApiBase());
+          widgetEl.setAttribute("data-api-base", env.API_URL);
           widgetEl.setAttribute("data-tenant-id", tenant_id);
           widgetEl.setAttribute("data-widget-key", widget_public_key);
           widgetEl.setAttribute("data-locale", locale);
@@ -705,7 +717,14 @@ export function DemoFlowPage() {
                 💳 Ödenecek Tutar
               </div>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
-                {widgetPriceInfo?.amount_formatted || `₺${(paymentAmount / 100).toFixed(2)}`}
+                {paymentAmount > 0
+                  ? new Intl.NumberFormat(locale, {
+                      style: "currency",
+                      currency: widgetPriceInfo?.currency || "TRY",
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }).format(paymentAmount / 100)
+                  : widgetPriceInfo?.amount_formatted || `₺${(paymentAmount / 100).toFixed(2)}`}
               </div>
             </div>
             

@@ -238,46 +238,8 @@ async def convert_widget_reservation_to_reservation(
         start_at = now.replace(second=0, microsecond=0)
         end_at = start_at + timedelta(hours=1)
     
-    # Calculate amount using pricing service BEFORE any storage operations
-    # PRIORITY: Use pre-calculated amount from widget if available (for consistency)
-    # Otherwise recalculate using pricing_calculator
+    # Base baggage count used by pricing and reservation records.
     baggage_count = widget_reservation.luggage_count or widget_reservation.baggage_count or 1
-    
-    # Check if widget already calculated the price
-    widget_amount_minor = getattr(widget_reservation, 'amount_minor', None)
-    widget_currency = getattr(widget_reservation, 'currency', 'TRY') or 'TRY'
-    widget_pricing_type = getattr(widget_reservation, 'pricing_type', None)
-    
-    if widget_amount_minor is not None and widget_amount_minor > 0:
-        # Use the pre-calculated amount from widget for consistency
-        amount_minor = widget_amount_minor
-        logger.info(
-            f"Using widget pre-calculated price: {amount_minor} {widget_currency} "
-            f"(pricing_type={widget_pricing_type}, baggage={baggage_count})"
-        )
-    else:
-        # Fallback: Recalculate using pricing_calculator
-        try:
-            from .pricing_calculator import calculate_reservation_price as calc_price
-            price_result = await calc_price(
-                session=session,
-                tenant_id=tenant_id,
-                start_datetime=start_at,
-                end_datetime=end_at,
-                baggage_count=baggage_count,
-                location_id=preferred_location_id,
-            )
-            amount_minor = price_result.total_minor
-            logger.info(
-                f"Widget conversion pricing (recalculated): {amount_minor} {price_result.currency} "
-                f"for {price_result.duration_hours:.1f}h, {baggage_count} items, type={price_result.pricing_type}"
-            )
-        except Exception as pricing_exc:
-            # If pricing calculation fails, use default pricing
-            # Default: 15 TL per hour per item, minimum 1 hour
-            logger.warning(f"Pricing calculation failed, using default: {pricing_exc}")
-            duration_hours = max(int((end_at - start_at).total_seconds() // 3600) or 1, 1)
-            amount_minor = duration_hours * 1500 * baggage_count  # 15 TL per hour per item in kuruş
     
     # Find or assign storage
     if storage_id:
@@ -380,7 +342,60 @@ async def convert_widget_reservation_to_reservation(
     storage.status = StorageStatus.OCCUPIED.value
     await session.flush()
     
-    # Calculate duration and pricing (pricing kuralı sonucu amount_minor ile uyumlu)
+    # Calculate amount using centralized pricing rules with the ACTUAL selected storage/location.
+    amount_minor: int
+    try:
+        from .pricing_calculator import calculate_reservation_price as calc_price
+
+        price_result = await calc_price(
+            session=session,
+            tenant_id=tenant_id,
+            start_datetime=start_at,
+            end_datetime=end_at,
+            baggage_count=baggage_count,
+            location_id=storage.location_id,
+            storage_id=storage.id,
+        )
+        amount_minor = price_result.total_minor
+
+        # Keep widget record in sync with the final backend-calculated amount.
+        widget_reservation.amount_minor = amount_minor
+        widget_reservation.currency = price_result.currency
+        widget_reservation.pricing_type = price_result.pricing_type
+        widget_reservation.pricing_rule_id = price_result.rule_id
+        await session.flush()
+
+        logger.info(
+            "Widget conversion pricing (final): %s %s for %.1fh, %s items, type=%s, storage=%s",
+            amount_minor,
+            price_result.currency,
+            price_result.duration_hours,
+            baggage_count,
+            price_result.pricing_type,
+            storage.id,
+        )
+    except Exception as pricing_exc:
+        # Fallback to widget amount (if present), then hardcoded default.
+        widget_amount_minor = getattr(widget_reservation, "amount_minor", None)
+        if widget_amount_minor is not None and widget_amount_minor > 0:
+            amount_minor = widget_amount_minor
+            logger.warning(
+                "Pricing calculation failed, falling back to widget amount: %s (reservation=%s, error=%s)",
+                amount_minor,
+                widget_reservation_id,
+                pricing_exc,
+            )
+        else:
+            duration_hours_fallback = max(int((end_at - start_at).total_seconds() // 3600) or 1, 1)
+            amount_minor = duration_hours_fallback * 1500 * baggage_count  # 15 TL per hour per item in kuruş
+            logger.warning(
+                "Pricing calculation failed, using default fallback amount: %s (reservation=%s, error=%s)",
+                amount_minor,
+                widget_reservation_id,
+                pricing_exc,
+            )
+
+    # Calculate duration and pricing presentation fields
     duration_seconds = (end_at - start_at).total_seconds()
     duration_hours = max(duration_seconds / 3600.0, 0.01)
     

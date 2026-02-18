@@ -286,14 +286,16 @@ async def calculate_price_for_reservation(
     
     baggage_count = getattr(reservation, "baggage_count", 1) or getattr(reservation, "luggage_count", 1) or 1
     storage_id = getattr(reservation, "storage_id", None)
-    
+    location_id = getattr(reservation, "location_id", None)
+    if not location_id and getattr(reservation, "storage", None) is not None:
+        location_id = getattr(reservation.storage, "location_id", None)
+
     return await calculate_reservation_price(
         session=session,
         tenant_id=reservation.tenant_id,
         start_datetime=start_dt,
         end_datetime=end_dt,
         baggage_count=baggage_count,
-        location_id=reservation.location_id,
+        location_id=location_id,
         storage_id=storage_id,
     )
-
