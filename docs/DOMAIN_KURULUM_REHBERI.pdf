@@ -1,0 +1,324 @@
+%PDF-1.4
+%âãÏÓ
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 1852 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+14 TL
+(KYRADI-SAAS DOMAIN KURULUM REHBERI) Tj
+T*
+() Tj
+T*
+(Tarih: 18 ?ubat 2026) Tj
+T*
+(Kapsam: `app.kyradi.com`, `admin.kyradi.com`, `{tenant}.kyradi.com` ve custom domain) Tj
+T*
+() Tj
+T*
+(1\) MIMARI ÖZETI) Tj
+T*
+() Tj
+T*
+(- Frontend: Vercel \(`app/admin/tenant hostlar?`\)) Tj
+T*
+(- Backend API: Railway) Tj
+T*
+(- Auth: Cookie tabanl? \(`access_token`, `Domain=.kyradi.com`, `HttpOnly`, `Secure`,) Tj
+T*
+(`SameSite=Lax`\)) Tj
+T*
+(- Multi-tenant çözümleme: Host/subdomain üzerinden tenant resolver) Tj
+T*
+() Tj
+T*
+(2\) DNS GEREKSINIMLERI) Tj
+T*
+() Tj
+T*
+(Kök domain örne?i: `kyradi.com`) Tj
+T*
+() Tj
+T*
+(Zorunlu kay?tlar:) Tj
+T*
+() Tj
+T*
+(1. `app.kyradi.com` -> Vercel target) Tj
+T*
+(2. `admin.kyradi.com` -> Vercel target) Tj
+T*
+(3. `*.kyradi.com` \(wildcard\) -> Vercel target) Tj
+T*
+() Tj
+T*
+(Not:) Tj
+T*
+(- Wildcard tenant subdomainleri \(`demo-hotel.kyradi.com`\) için gereklidir.) Tj
+T*
+(- DNS propagation tamamlanmadan auth ve tenant çözümleme tutars?z olabilir.) Tj
+T*
+() Tj
+T*
+(3\) VERCEL DOMAIN AYARI) Tj
+T*
+() Tj
+T*
+(1. Vercel proje ayarlar?nda domainleri ekleyin:) Tj
+T*
+(   - `app.kyradi.com`) Tj
+T*
+(   - `admin.kyradi.com`) Tj
+T*
+(   - `*.kyradi.com`) Tj
+T*
+(2. SSL/TLS sertifikalar?n?n `Valid` oldu?undan emin olun.) Tj
+T*
+(3. Frontend `vercel.json` rewrite kurallar? API pathlerini backend?e yönlendirmeli, SPA) Tj
+T*
+(pathleri `index.html` fallback olmal?.) Tj
+T*
+() Tj
+T*
+(4\) RAILWAY / BACKEND AYARI) Tj
+T*
+() Tj
+T*
+(1. API public URL do?rulay?n \(ör. `https://kyradi-saas-canli-production.up.railway.app`\)) Tj
+T*
+(2. CORS allow list içinde en az:) Tj
+T*
+(   - `https://app.kyradi.com`) Tj
+T*
+(   - `https://admin.kyradi.com`) Tj
+T*
+(   - tenant hostlar? \(`https://*.kyradi.com`\) için middleware/pattern) Tj
+T*
+(3. Proxy header ve HTTPS ?emas? do?ru çal??mal? \(http redirect üretmemeli\).) Tj
+T*
+() Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+4 0 obj
+<< /Length 1591 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+14 TL
+(5\) AUTH COOKIE STANDARDI \(PROD\)) Tj
+T*
+() Tj
+T*
+(Backend set-cookie standard?:) Tj
+T*
+() Tj
+T*
+(- `key=access_token`) Tj
+T*
+(- `HttpOnly=true`) Tj
+T*
+(- `Secure=true`) Tj
+T*
+(- `Path=/`) Tj
+T*
+(- `Domain=.kyradi.com` \(kyradi subdomainleri aras? payla??m için\)) Tj
+T*
+(- `SameSite=Lax`) Tj
+T*
+() Tj
+T*
+(Custom domain notu:) Tj
+T*
+(- Custom domain \(`hotel-x.com`\) için `.kyradi.com` cookie geçmez.) Tj
+T*
+(- Bu durumda host-only cookie + token exchange ak??? gerekir.) Tj
+T*
+() Tj
+T*
+(6\) TENANT SUBDOMAIN YÖNLENDIRME) Tj
+T*
+() Tj
+T*
+(Hedef ak??:) Tj
+T*
+() Tj
+T*
+(1. Kullan?c? `app.kyradi.com` üzerinden partner login olur.) Tj
+T*
+(2. Login sonras? `/auth/me` ba?ar?l? do?rulan?r.) Tj
+T*
+(3. Tenant slug?a göre `https://{tenant}.kyradi.com/app` yönlendirilir.) Tj
+T*
+(4. Tenant host üzerinde `/auth/me` stabil `200` dönmelidir.) Tj
+T*
+() Tj
+T*
+(7\) DO?RULAMA KOMUTLARI) Tj
+T*
+() Tj
+T*
+(7.1 COOKIE JAR ILE LOGIN VE CROSS-SUBDOMAIN ME KONTROLÜ) Tj
+T*
+() Tj
+T*
+(```bash) Tj
+T*
+(curl -i -c /tmp/cj.txt -X POST "https://app.kyradi.com/auth/partner/login" \\) Tj
+T*
+(  -H "Content-Type: application/json" \\) Tj
+T*
+(  -d '{"email":"admin@demo.com","password":"***"}') Tj
+T*
+() Tj
+T*
+(curl -i -b /tmp/cj.txt "https://app.kyradi.com/auth/me") Tj
+T*
+(curl -i -b /tmp/cj.txt "https://demo-hotel.kyradi.com/auth/me") Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Beklenen:) Tj
+T*
+(- Login: `200`) Tj
+T*
+(- `app/auth/me`: `200`) Tj
+T*
+(- `tenant/auth/me`: `200`) Tj
+T*
+() Tj
+T*
+(7.2 OTOMATIK SMOKE SCRIPT) Tj
+T*
+() Tj
+T*
+(```bash) Tj
+T*
+(SAAS_BASE_URL="https://app.kyradi.com" \\) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 1416 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+14 TL
+(PARTNER_EMAIL="admin@demo.com" \\) Tj
+T*
+(PARTNER_PASSWORD="***" \\) Tj
+T*
+(ADMIN_EMAIL="superadmin@kyradi.com" \\) Tj
+T*
+(ADMIN_PASSWORD="***" \\) Tj
+T*
+(./scripts/smoke_e2e.sh) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(8\) SIK HATA VE ÇÖZÜM) Tj
+T*
+() Tj
+T*
+(1. `Tenant not found for custom domain`) Tj
+T*
+(   - Host yanl?? projeye dü?üyor olabilir, DNS/Vercel domain e?le?mesini kontrol edin.) Tj
+T*
+() Tj
+T*
+(2. `GET /auth/me 401` dalgalanmas?) Tj
+T*
+(   - Cookie propagation race olabilir; frontend retry/grace ak???n?n deploy edildi?ini) Tj
+T*
+(do?rulay?n.) Tj
+T*
+() Tj
+T*
+(3. `Not Found` dönü?leri) Tj
+T*
+(   - Rewrite path/backend route prefix e?le?mesini kontrol edin.) Tj
+T*
+() Tj
+T*
+(9\) YAYIN ÖNCESI KISA CHECKLIST) Tj
+T*
+() Tj
+T*
+(1. DNS kay?tlar? aktif) Tj
+T*
+(2. Vercel domainler `Valid`) Tj
+T*
+(3. Railway API eri?ilebilir) Tj
+T*
+(4. `app` ve `admin` login çal???yor) Tj
+T*
+(5. tenant yönlendirme do?ru hosta gidiyor) Tj
+T*
+(6. `/auth/me` hem app hem tenant hostta `200`) Tj
+T*
+(7. Smoke script PASS) Tj
+T*
+() Tj
+T*
+(10\) ROLLBACK) Tj
+T*
+() Tj
+T*
+(Sorun durumunda:) Tj
+T*
+() Tj
+T*
+(1. Yeni rewrite kural? varsa önce geri al?n.) Tj
+T*
+(2. Cookie domain/samesite de?i?ikli?i yap?ld?ysa bir önceki sürüme dönün.) Tj
+T*
+(3. Frontend son commit rollback ile önce auth ak???n? stabilize edin.) Tj
+T*
+(4. DNS de?i?ikliklerinde eski kay?tlar? restore edip propagation bekleyin.) Tj
+T*
+() Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R] /Count 3 >>
+endobj
+9 0 obj
+<< /Type /Catalog /Pages 8 0 R >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000085 00000 n 
+0000001989 00000 n 
+0000002115 00000 n 
+0000003758 00000 n 
+0000003884 00000 n 
+0000005352 00000 n 
+0000005478 00000 n 
+0000005547 00000 n 
+trailer
+<< /Size 10 /Root 9 0 R >>
+startxref
+5596
+%%EOF
