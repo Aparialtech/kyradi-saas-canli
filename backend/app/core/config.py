@@ -181,6 +181,36 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("PAYMENT_WEBHOOK_SECRET", "KYRADI_PAYMENT_WEBHOOK_SECRET"),
     )
+    transfer_gateway_provider: str = Field(
+        default="magicpay",
+        validation_alias=AliasChoices("TRANSFER_GATEWAY_PROVIDER", "KYRADI_TRANSFER_GATEWAY_PROVIDER"),
+        description="Partner->Admin transfer gateway provider name (e.g. magicpay).",
+    )
+    transfer_gateway_mode: str = Field(
+        default="demo",
+        validation_alias=AliasChoices("TRANSFER_GATEWAY_MODE", "KYRADI_TRANSFER_GATEWAY_MODE"),
+        description="Transfer gateway mode: demo or live.",
+    )
+    transfer_gateway_api_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("TRANSFER_GATEWAY_API_URL", "KYRADI_TRANSFER_GATEWAY_API_URL"),
+        description="Live transfer gateway base URL.",
+    )
+    transfer_gateway_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("TRANSFER_GATEWAY_API_KEY", "KYRADI_TRANSFER_GATEWAY_API_KEY"),
+        description="Live transfer gateway API key.",
+    )
+    transfer_gateway_api_secret: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("TRANSFER_GATEWAY_API_SECRET", "KYRADI_TRANSFER_GATEWAY_API_SECRET"),
+        description="Live transfer gateway API secret.",
+    )
+    transfer_gateway_timeout_ms: int = Field(
+        default=10000,
+        validation_alias=AliasChoices("TRANSFER_GATEWAY_TIMEOUT_MS", "KYRADI_TRANSFER_GATEWAY_TIMEOUT_MS"),
+        description="Timeout for live transfer gateway API calls.",
+    )
 
     # =========================================================================
     # SuperApp integration (server-to-server)

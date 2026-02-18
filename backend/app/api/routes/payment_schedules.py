@@ -3,7 +3,6 @@
 from typing import List, Optional
 from datetime import datetime, timezone
 from decimal import Decimal
-import uuid
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -16,6 +15,7 @@ from ...dependencies import require_tenant_operator, require_admin_user
 from ...models.tenant import User, Tenant
 from ...models.payment_schedule import PaymentSchedule, PaymentTransfer, PaymentPeriod, TransferStatus
 from ...services.audit import record_audit
+from ...services.transfer_gateway import get_transfer_gateway_client
 
 logger = logging.getLogger(__name__)
 
@@ -550,6 +550,8 @@ class MagicPayTransferResponse(BaseModel):
     amount: Decimal
     currency: str
     fee: Decimal = Decimal("0.00")
+    gateway_provider: Optional[str] = None
+    gateway_mode: Optional[str] = None
 
 
 class CommissionSummary(BaseModel):
@@ -638,54 +640,78 @@ async def process_transfer_with_magicpay(
             detail=f"Bu transfer zaten işlenmiş. Mevcut durum: {transfer.status}"
         )
     
-    # DEMO MODE: Simulate MagicPay API call
-    # In production, this would call the actual MagicPay API
-    demo_transaction_id = f"MPAY-{uuid.uuid4().hex[:12].upper()}"
-    demo_reference_id = f"REF-{uuid.uuid4().hex[:8].upper()}"
-    
-    logger.info(f"[MagicPay DEMO] Processing transfer {transfer_id}")
-    logger.info(f"[MagicPay DEMO] Amount: {transfer.net_amount} TRY")
-    logger.info(f"[MagicPay DEMO] Recipient IBAN: {transfer.bank_iban}")
-    logger.info(f"[MagicPay DEMO] Transaction ID: {demo_transaction_id}")
-    
-    # Simulate API response (always success in demo mode)
-    # In production, handle actual API response and errors
-    
-    # Update transfer status
+    gateway = get_transfer_gateway_client()
+    logger.info(
+        "Processing transfer via gateway: transfer_id=%s provider=%s mode=%s amount=%s",
+        transfer_id,
+        gateway.provider,
+        gateway.mode,
+        transfer.net_amount,
+    )
+
+    try:
+        result = await gateway.process_transfer(transfer)
+    except Exception as exc:
+        transfer.status = TransferStatus.FAILED.value
+        transfer.error_message = "Gateway transfer failed"
+        transfer.processed_by_id = current_user.id
+        transfer.processed_at = datetime.now(timezone.utc)
+
+        await record_audit(
+            session,
+            tenant_id=transfer.tenant_id,
+            actor_user_id=current_user.id,
+            action="payment_transfer.gateway_failed",
+            entity="payment_transfers",
+            entity_id=transfer.id,
+            meta={
+                "provider": gateway.provider,
+                "mode": gateway.mode,
+                "error": str(exc),
+            },
+        )
+        await session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Transfer gateway processing failed",
+        ) from exc
+
     transfer.status = TransferStatus.COMPLETED.value
-    transfer.transfer_date = datetime.now(timezone.utc)
-    transfer.reference_id = demo_reference_id
+    transfer.transfer_date = result.processed_at
+    transfer.reference_id = result.reference_id
     transfer.processed_by_id = current_user.id
-    transfer.processed_at = datetime.now(timezone.utc)
-    # Don't append transaction info to notes - keep only user's original note
-    
+    transfer.processed_at = result.processed_at
+    transfer.error_message = None
+
     await record_audit(
         session,
         tenant_id=transfer.tenant_id,
         actor_user_id=current_user.id,
-        action="payment_transfer.magicpay_processed",
+        action="payment_transfer.gateway_processed",
         entity="payment_transfers",
         entity_id=transfer.id,
         meta={
-            "demo_mode": True,
-            "transaction_id": demo_transaction_id,
-            "reference_id": demo_reference_id,
-            "amount": str(transfer.net_amount),
+            "provider": gateway.provider,
+            "mode": gateway.mode,
+            "transaction_id": result.transaction_id,
+            "reference_id": result.reference_id,
+            "amount": str(result.amount),
         },
     )
-    
     await session.commit()
-    
+
     return MagicPayTransferResponse(
-        success=True,
-        transaction_id=demo_transaction_id,
-        reference_id=demo_reference_id,
-        status="completed",
-        message="Transfer başarıyla işlendi (Demo Mod)",
-        processed_at=datetime.now(timezone.utc),
-        amount=transfer.net_amount,
-        currency="TRY",
-        fee=Decimal("0.00"),
+        success=result.success,
+        transaction_id=result.transaction_id,
+        reference_id=result.reference_id,
+        status=result.status,
+        message=result.message,
+        processed_at=result.processed_at,
+        amount=result.amount,
+        currency=result.currency,
+        fee=result.fee,
+        gateway_provider=gateway.provider,
+        gateway_mode=gateway.mode,
     )
 
 
@@ -794,16 +820,17 @@ async def get_magicpay_status(
     
     Returns demo mode status and configuration info.
     """
-    # In production, check actual API key configuration
     from ...core.config import settings
-    
-    api_key_configured = hasattr(settings, 'magicpay_api_key') and bool(getattr(settings, 'magicpay_api_key', None))
-    
+
+    gateway = get_transfer_gateway_client()
+    configured = bool(settings.transfer_gateway_api_key and settings.transfer_gateway_api_url)
+    is_demo_mode = gateway.mode != "live"
+
     return MagicPayConfigStatus(
-        is_demo_mode=not api_key_configured,
-        api_key_configured=api_key_configured,
+        is_demo_mode=is_demo_mode,
+        api_key_configured=configured,
         gateway_name="MagicPay",
-        gateway_status="active" if api_key_configured else "demo",
+        gateway_status="active" if (configured and gateway.mode == "live") else "demo",
         supported_currencies=["TRY", "USD", "EUR"],
         min_transfer_amount=Decimal("10.00"),
         max_transfer_amount=Decimal("100000.00"),
