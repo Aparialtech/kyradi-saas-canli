@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.exc import SQLAlchemyError, DisconnectionError
-from fastapi import HTTPException
+from fastapi import HTTPException as FastAPIHTTPException
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ..core.config import settings
 
@@ -78,9 +79,15 @@ async def get_session() -> AsyncIterator[AsyncSession]:
                     except Exception as rollback_exc:
                         db_logger.error(f"Failed to rollback session: {rollback_exc}")
                 raise
-            except HTTPException as exc:
+            except (FastAPIHTTPException, StarletteHTTPException) as exc:
                 status_code = getattr(exc, "status_code", None)
-                if status_code is not None and 400 <= status_code < 500:
+                if status_code == 401:
+                    db_logger.debug(
+                        "HTTPException in session (expected unauthorized): %s (status=%s)",
+                        exc.detail,
+                        status_code,
+                    )
+                elif status_code is not None and 400 <= status_code < 500:
                     db_logger.info(
                         "HTTPException in session: %s (status=%s)",
                         exc.detail,
@@ -114,9 +121,15 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         except Exception as dispose_exc:
             db_logger.error(f"Failed to dispose engine: {dispose_exc}")
         raise
-    except HTTPException as exc:
+    except (FastAPIHTTPException, StarletteHTTPException) as exc:
         status_code = getattr(exc, "status_code", None)
-        if status_code is not None and 400 <= status_code < 500:
+        if status_code == 401:
+            db_logger.debug(
+                "Session ended with HTTPException (expected unauthorized): %s (status=%s)",
+                exc.detail,
+                status_code,
+            )
+        elif status_code is not None and 400 <= status_code < 500:
             db_logger.info(
                 "Session ended with HTTPException: %s (status=%s)",
                 exc.detail,

@@ -36,11 +36,27 @@ logging.basicConfig(
 
 logger = logging.getLogger("kyradi")
 
+
+class UvicornAccessNoiseFilter(logging.Filter):
+    """Filter noisy access logs that are expected in production."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+        except Exception:
+            return True
+        # Expected bot/no-cookie probing; keep real endpoint failures visible.
+        if '"GET /auth/me HTTP/1.1" 401' in message:
+            return False
+        return True
+
 # Configure database error logger with more detail
 db_error_logger = logging.getLogger("kyradi.db_errors")
 db_error_logger.setLevel(logging.ERROR)
 db_session_logger = logging.getLogger("kyradi.db_session")
 db_session_logger.setLevel(logging.WARNING)
+uvicorn_access_logger = logging.getLogger("uvicorn.access")
+uvicorn_access_logger.addFilter(UvicornAccessNoiseFilter())
 
 # Static allowed origins
 STATIC_ORIGINS = {
