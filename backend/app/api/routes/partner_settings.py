@@ -122,7 +122,7 @@ async def get_partner_settings(
 
         if widget_config_row:
             response.widget_enabled = True
-            response.widget_public_key = widget_config_row.public_key
+            response.widget_public_key = widget_config_row.widget_public_key
 
         return response
     except Exception as e:
