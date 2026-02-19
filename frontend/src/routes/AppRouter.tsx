@@ -58,6 +58,7 @@ import { StaffEditPage } from "../pages/partner/staff/StaffEditPage";
 import { StorageEditPage } from "../pages/partner/storages/StorageEditPage";
 import { TicketsPage } from "../pages/partner/tickets/TicketsPage";
 import { TransfersPage } from "../pages/partner/transfers/TransfersPage";
+import { TransferGatewayDemoPage } from "../pages/partner/transfers/TransferGatewayDemoPage";
 import { PricingEditPage } from "../pages/partner/pricing/PricingEditPage";
 import { WidgetPreviewPage } from "../pages/partner/WidgetPreviewPage";
 import { MagicPayDemoPage } from "../pages/partner/magicpay/MagicPayDemoPage";
@@ -176,6 +177,7 @@ export function AppRouter() {
             <Route path="revenue" element={<PartnerRevenueDashboard />} />
             <Route path="settlements" element={<PartnerSettlementsPage />} />
             <Route path="transfers" element={<TransfersPage />} />
+            <Route path="transfers/gateway/:transferId" element={<TransferGatewayDemoPage />} />
           </Route>
           <Route
             element={<RequireAuth allowedRoles={["tenant_admin", "hotel_manager"]} redirectTo="/app" />}

@@ -94,14 +94,21 @@ export function TransfersPage() {
   const requestMutation = useMutation({
     mutationFn: (payload: { gross_amount: number; notes?: string }) =>
       paymentScheduleService.requestTransfer(payload),
-    onSuccess: () => {
-      push({ type: "success", title: "Başarılı", description: "Komisyon ödeme talebi oluşturuldu." });
+    onSuccess: (transfer) => {
+      push({
+        type: "success",
+        title: "Ödeme ekranına yönlendiriliyorsunuz",
+        description: "Gateway adımını tamamladıktan sonra transfer admin onayına düşer.",
+      });
       queryClient.invalidateQueries({ queryKey: ["payment-transfers"] });
       queryClient.invalidateQueries({ queryKey: ["payment-balance"] });
       queryClient.invalidateQueries({ queryKey: ["commission-summary"] });
       setShowRequestModal(false);
       setRequestAmount("");
       setRequestNotes("");
+      setTimeout(() => {
+        window.location.href = `/app/transfers/gateway/${transfer.id}?amount=${transfer.gross_amount}`;
+      }, 250);
     },
     onError: (error) => {
       push({ type: "error", title: "Hata", description: getErrorMessage(error) });

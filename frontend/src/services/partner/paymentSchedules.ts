@@ -224,6 +224,11 @@ export const paymentScheduleService = {
     return response.data;
   },
 
+  async confirmTransferPayment(transferId: string): Promise<PaymentTransfer> {
+    const response = await http.post<PaymentTransfer>(`/payment-schedules/transfers/${transferId}/confirm-payment`);
+    return response.data;
+  },
+
   async getMagicPayStatus(): Promise<MagicPayConfigStatus> {
     const response = await http.get<MagicPayConfigStatus>("/payment-schedules/magicpay/status");
     return response.data;

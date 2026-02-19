@@ -6,6 +6,7 @@ from decimal import Decimal
 import hashlib
 import hmac
 import logging
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from pydantic import BaseModel, Field
@@ -992,6 +993,55 @@ async def cancel_transfer(
     await session.commit()
     await session.refresh(transfer)
     
+    return PaymentTransferRead.model_validate(transfer)
+
+
+@router.post("/transfers/{transfer_id}/confirm-payment", response_model=PaymentTransferRead)
+async def confirm_transfer_payment(
+    transfer_id: str,
+    current_user: User = Depends(require_tenant_operator),
+    session: AsyncSession = Depends(get_session),
+) -> PaymentTransferRead:
+    """
+    Confirm partner-side gateway payment for a transfer request.
+
+    Keeps transfer in pending state so admin can still approve/reject.
+    """
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant bilgisi bulunamadı.")
+
+    stmt = select(PaymentTransfer).where(
+        PaymentTransfer.id == transfer_id,
+        PaymentTransfer.tenant_id == current_user.tenant_id,
+    )
+    transfer = (await session.execute(stmt)).scalar_one_or_none()
+
+    if not transfer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer bulunamadı.")
+
+    if transfer.status != TransferStatus.PENDING.value:
+        # Idempotent no-op behavior: if already processed/cancelled, return current state.
+        return PaymentTransferRead.model_validate(transfer)
+
+    if not transfer.reference_id:
+        transfer.reference_id = f"TRF-PAY-{secrets.token_hex(6).upper()}"
+
+    paid_note = "Gateway ödeme partner tarafından onaylandı"
+    transfer.notes = f"{paid_note}. {transfer.notes}".strip() if transfer.notes else paid_note
+    transfer.processed_at = datetime.now(timezone.utc)
+
+    await record_audit(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        action="payment_transfer.gateway_paid",
+        entity="payment_transfers",
+        entity_id=transfer.id,
+        meta={"reference_id": transfer.reference_id},
+    )
+
+    await session.commit()
+    await session.refresh(transfer)
     return PaymentTransferRead.model_validate(transfer)
 
 
