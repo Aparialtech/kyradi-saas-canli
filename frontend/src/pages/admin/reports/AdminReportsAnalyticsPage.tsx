@@ -44,6 +44,14 @@ export function AdminReportsAnalyticsPage() {
   const [reportFormat, setReportFormat] = useState<"csv" | "json" | "pdf" | "excel">("csv");
   const [selectedStorage, setSelectedStorage] = useState<AdminStorageUsage | null>(null);
   
+  // Location revenue table search, filter, sort, pagination
+  const [locationSearchTerm, setLocationSearchTerm] = useState("");
+  const debouncedLocationSearch = useDebounce(locationSearchTerm, 200);
+  const [locationSortBy, setLocationSortBy] = useState<"name" | "tenant" | "revenue" | "reservations">("revenue");
+  const [locationSortDir, setLocationSortDir] = useState<"asc" | "desc">("desc");
+  const [locationPage, setLocationPage] = useState(1);
+  const [locationPageSize, setLocationPageSize] = useState(10);
+
   // Storage table search, filter, sort, pagination
   const [storageSearchTerm, setStorageSearchTerm] = useState("");
   const debouncedStorageSearch = useDebounce(storageSearchTerm, 200);
@@ -116,6 +124,71 @@ export function AdminReportsAnalyticsPage() {
     }));
   }, [storageUsageQuery.data]);
 
+  // Aggregate storage usage into location-based revenue rows
+  const allLocationRevenueData = useMemo(() => {
+    const storages = Array.isArray(storageUsageQuery.data) ? storageUsageQuery.data : [];
+    if (storages.length === 0) return [];
+
+    const grouped = new Map<string, {
+      location_name: string;
+      tenant_name: string;
+      revenue_minor: number;
+      reservations: number;
+    }>();
+
+    for (const item of storages) {
+      const key = `${item.tenant_name}__${item.location_name}`;
+      const current = grouped.get(key);
+      if (current) {
+        current.revenue_minor += item.total_revenue_minor ?? 0;
+        current.reservations += item.reservations ?? 0;
+      } else {
+        grouped.set(key, {
+          location_name: item.location_name,
+          tenant_name: item.tenant_name,
+          revenue_minor: item.total_revenue_minor ?? 0,
+          reservations: item.reservations ?? 0,
+        });
+      }
+    }
+
+    let data = Array.from(grouped.values());
+
+    if (debouncedLocationSearch.trim()) {
+      const term = debouncedLocationSearch.toLowerCase();
+      data = data.filter((item) =>
+        item.location_name.toLowerCase().includes(term) ||
+        item.tenant_name.toLowerCase().includes(term)
+      );
+    }
+
+    data.sort((a, b) => {
+      let comparison = 0;
+      if (locationSortBy === "name") {
+        comparison = a.location_name.localeCompare(b.location_name);
+      } else if (locationSortBy === "tenant") {
+        comparison = a.tenant_name.localeCompare(b.tenant_name);
+      } else if (locationSortBy === "revenue") {
+        comparison = a.revenue_minor - b.revenue_minor;
+      } else {
+        comparison = a.reservations - b.reservations;
+      }
+      return locationSortDir === "asc" ? comparison : -comparison;
+    });
+
+    return data;
+  }, [storageUsageQuery.data, debouncedLocationSearch, locationSortBy, locationSortDir]);
+
+  const paginatedLocationRevenueData = useMemo(() => {
+    const startIndex = (locationPage - 1) * locationPageSize;
+    return allLocationRevenueData.slice(startIndex, startIndex + locationPageSize);
+  }, [allLocationRevenueData, locationPage, locationPageSize]);
+
+  const locationTotalPages = useMemo(
+    () => Math.ceil(allLocationRevenueData.length / locationPageSize),
+    [allLocationRevenueData.length, locationPageSize]
+  );
+
   // Get unique tenants from storage data for filter
   const storageUniqueTenants = useMemo(() => {
     const storages = Array.isArray(storageUsageQuery.data) ? storageUsageQuery.data : [];
@@ -186,6 +259,13 @@ export function AdminReportsAnalyticsPage() {
     setStoragePage(1);
   }, []);
 
+  const clearLocationFilters = useCallback(() => {
+    setLocationSearchTerm("");
+    setLocationSortBy("revenue");
+    setLocationSortDir("desc");
+    setLocationPage(1);
+  }, []);
+
   // Toggle sort helper
   const toggleStorageSort = useCallback((column: "code" | "location" | "tenant" | "occupancy" | "reservations") => {
     if (storageSortBy === column) {
@@ -196,7 +276,20 @@ export function AdminReportsAnalyticsPage() {
     }
   }, [storageSortBy]);
 
+  const toggleLocationSort = useCallback((column: "name" | "tenant" | "revenue" | "reservations") => {
+    if (locationSortBy === column) {
+      setLocationSortDir((prev) => prev === "asc" ? "desc" : "asc");
+    } else {
+      setLocationSortBy(column);
+      setLocationSortDir("desc");
+    }
+  }, [locationSortBy]);
+
   // Reset page when search/filter changes
+  useEffect(() => {
+    setLocationPage(1);
+  }, [debouncedLocationSearch, locationSortBy, locationSortDir]);
+
   useEffect(() => {
     setStoragePage(1);
   }, [debouncedStorageSearch, storageTenantFilter, storageSortBy, storageSortDir]);
@@ -751,6 +844,317 @@ export function AdminReportsAnalyticsPage() {
           </div>
         </ModernCard>
       </div>
+
+      {/* Location Revenue Table */}
+      {allLocationRevenueData.length > 0 && (
+        <ModernCard variant="glass" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: 'var(--space-4)',
+            flexWrap: 'wrap',
+            gap: 'var(--space-3)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: 'var(--radius-lg)',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <MapPin className="h-5 w-5" style={{ color: 'white' }} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                  Lokasyon Bazlı Gelir
+                </h3>
+                <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                  {allLocationRevenueData.length} lokasyon kaydı
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            gap: 'var(--space-3)',
+            marginBottom: 'var(--space-4)',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <div style={{ position: 'relative', flex: '1 1 250px', minWidth: '200px', maxWidth: '350px' }}>
+              <Search className="h-4 w-4" style={{
+                position: 'absolute',
+                left: 'var(--space-3)',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--text-tertiary)',
+                pointerEvents: 'none'
+              }} />
+              <input
+                type="text"
+                placeholder="Lokasyon veya tenant ara..."
+                value={locationSearchTerm}
+                onChange={(e) => setLocationSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: 'var(--space-2) var(--space-3) var(--space-2) var(--space-9)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  fontSize: 'var(--text-sm)',
+                }}
+              />
+              {locationSearchTerm && (
+                <button
+                  onClick={() => setLocationSearchTerm("")}
+                  style={{
+                    position: 'absolute',
+                    right: 'var(--space-2)',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'var(--bg-secondary)',
+                    border: 'none',
+                    borderRadius: 'var(--radius-full)',
+                    width: '20px',
+                    height: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'var(--text-tertiary)',
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            {(locationSearchTerm || locationSortBy !== "revenue" || locationSortDir !== "desc") && (
+              <ModernButton
+                variant="ghost"
+                size="sm"
+                onClick={clearLocationFilters}
+                leftIcon={<X className="h-4 w-4" />}
+              >
+                Temizle
+              </ModernButton>
+            )}
+          </div>
+
+          <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: 'var(--text-sm)'
+            }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-secondary)' }}>
+                  <th
+                    onClick={() => toggleLocationSort("name")}
+                    style={{
+                      textAlign: 'left',
+                      padding: 'var(--space-3) var(--space-4)',
+                      fontWeight: 'var(--font-semibold)',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      borderBottom: '2px solid var(--border-primary)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Lokasyon {locationSortBy === "name" && (locationSortDir === "asc" ? "↑" : "↓")}
+                  </th>
+                  <th
+                    onClick={() => toggleLocationSort("tenant")}
+                    style={{
+                      textAlign: 'left',
+                      padding: 'var(--space-3) var(--space-4)',
+                      fontWeight: 'var(--font-semibold)',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      borderBottom: '2px solid var(--border-primary)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Tenant {locationSortBy === "tenant" && (locationSortDir === "asc" ? "↑" : "↓")}
+                  </th>
+                  <th
+                    onClick={() => toggleLocationSort("reservations")}
+                    style={{
+                      textAlign: 'right',
+                      padding: 'var(--space-3) var(--space-4)',
+                      fontWeight: 'var(--font-semibold)',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      borderBottom: '2px solid var(--border-primary)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Rezervasyon {locationSortBy === "reservations" && (locationSortDir === "asc" ? "↑" : "↓")}
+                  </th>
+                  <th
+                    onClick={() => toggleLocationSort("revenue")}
+                    style={{
+                      textAlign: 'right',
+                      padding: 'var(--space-3) var(--space-4)',
+                      fontWeight: 'var(--font-semibold)',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      borderBottom: '2px solid var(--border-primary)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Toplam Ciro {locationSortBy === "revenue" && (locationSortDir === "asc" ? "↑" : "↓")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedLocationRevenueData.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
+                      <div style={{ color: 'var(--text-tertiary)' }}>
+                        <MapPin className="h-10 w-10" style={{ margin: '0 auto var(--space-3) auto', opacity: 0.4 }} />
+                        <p style={{ margin: '0 0 var(--space-2) 0', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
+                          Sonuç bulunamadı
+                        </p>
+                        <p style={{ margin: '0 0 var(--space-3) 0', fontSize: 'var(--text-sm)' }}>
+                          Arama kriterlerinize uygun lokasyon yok.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedLocationRevenueData.map((item, index) => (
+                    <tr
+                      key={`${item.tenant_name}-${item.location_name}-${index}`}
+                      style={{
+                        background: index % 2 === 0 ? 'transparent' : 'var(--bg-secondary)',
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      <td style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-secondary)' }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>{item.location_name}</strong>
+                      </td>
+                      <td style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-secondary)' }}>
+                        <span style={{
+                          background: 'var(--primary-100)',
+                          color: 'var(--primary-700)',
+                          padding: 'var(--space-1) var(--space-2)',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 'var(--font-medium)',
+                        }}>
+                          {item.tenant_name}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right', padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-secondary)' }}>
+                        {item.reservations}
+                      </td>
+                      <td style={{
+                        textAlign: 'right',
+                        padding: 'var(--space-3) var(--space-4)',
+                        borderBottom: '1px solid var(--border-secondary)',
+                        fontWeight: 'var(--font-semibold)',
+                        color: '#16a34a',
+                      }}>
+                        {formatCurrency(item.revenue_minor)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {locationTotalPages > 1 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 'var(--space-4)',
+              padding: 'var(--space-3) var(--space-4)',
+              background: 'var(--bg-secondary)',
+              borderRadius: 'var(--radius-lg)',
+              flexWrap: 'wrap',
+              gap: 'var(--space-3)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Sayfa başına:</span>
+                <select
+                  value={locationPageSize}
+                  onChange={(e) => { setLocationPageSize(Number(e.target.value)); setLocationPage(1); }}
+                  style={{
+                    padding: 'var(--space-1) var(--space-2)',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                    fontSize: 'var(--text-sm)',
+                  }}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                  {(locationPage - 1) * locationPageSize + 1} - {Math.min(locationPage * locationPageSize, allLocationRevenueData.length)} / {allLocationRevenueData.length}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <button
+                  onClick={() => setLocationPage((p) => Math.max(1, p - 1))}
+                  disabled={locationPage === 1}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '36px',
+                    height: '36px',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: 'var(--radius-md)',
+                    background: locationPage === 1 ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                    color: locationPage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                    cursor: locationPage === 1 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span style={{ padding: '0 var(--space-3)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
+                  {locationPage} / {locationTotalPages}
+                </span>
+                <button
+                  onClick={() => setLocationPage((p) => Math.min(locationTotalPages, p + 1))}
+                  disabled={locationPage === locationTotalPages}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '36px',
+                    height: '36px',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: 'var(--radius-md)',
+                    background: locationPage === locationTotalPages ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                    color: locationPage === locationTotalPages ? 'var(--text-muted)' : 'var(--text-primary)',
+                    cursor: locationPage === locationTotalPages ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </ModernCard>
+      )}
 
       {/* Storage Usage Table */}
       {storageUsageQuery.data && storageUsageQuery.data.length > 0 && (
