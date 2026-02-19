@@ -1075,84 +1075,83 @@ export function AdminReportsAnalyticsPage() {
             </table>
           </div>
 
-          {locationTotalPages > 1 && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginTop: 'var(--space-4)',
-              padding: 'var(--space-3) var(--space-4)',
-              background: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-lg)',
-              flexWrap: 'wrap',
-              gap: 'var(--space-3)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Sayfa başına:</span>
-                <select
-                  value={locationPageSize}
-                  onChange={(e) => { setLocationPageSize(Number(e.target.value)); setLocationPage(1); }}
-                  style={{
-                    padding: 'var(--space-1) var(--space-2)',
-                    border: '1px solid var(--border-primary)',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--bg-tertiary)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-sm)',
-                  }}
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                  {(locationPage - 1) * locationPageSize + 1} - {Math.min(locationPage * locationPageSize, allLocationRevenueData.length)} / {allLocationRevenueData.length}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <button
-                  onClick={() => setLocationPage((p) => Math.max(1, p - 1))}
-                  disabled={locationPage === 1}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
-                    border: '1px solid var(--border-primary)',
-                    borderRadius: 'var(--radius-md)',
-                    background: locationPage === 1 ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
-                    color: locationPage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
-                    cursor: locationPage === 1 ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span style={{ padding: '0 var(--space-3)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
-                  {locationPage} / {locationTotalPages}
-                </span>
-                <button
-                  onClick={() => setLocationPage((p) => Math.min(locationTotalPages, p + 1))}
-                  disabled={locationPage === locationTotalPages}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
-                    border: '1px solid var(--border-primary)',
-                    borderRadius: 'var(--radius-md)',
-                    background: locationPage === locationTotalPages ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
-                    color: locationPage === locationTotalPages ? 'var(--text-muted)' : 'var(--text-primary)',
-                    cursor: locationPage === locationTotalPages ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: 'var(--space-4)',
+            padding: 'var(--space-3) var(--space-4)',
+            background: 'var(--bg-secondary)',
+            borderRadius: 'var(--radius-lg)',
+            flexWrap: 'wrap',
+            gap: 'var(--space-3)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Sayfa başına:</span>
+              <select
+                value={locationPageSize}
+                onChange={(e) => { setLocationPageSize(Number(e.target.value)); setLocationPage(1); }}
+                style={{
+                  padding: 'var(--space-1) var(--space-2)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  fontSize: 'var(--text-sm)',
+                }}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                {(locationPage - 1) * locationPageSize + 1} - {Math.min(locationPage * locationPageSize, allLocationRevenueData.length)} / {allLocationRevenueData.length}
+              </span>
             </div>
-          )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <button
+                onClick={() => setLocationPage((p) => Math.max(1, p - 1))}
+                disabled={locationPage === 1}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-md)',
+                  background: locationPage === 1 ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                  color: locationPage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                  cursor: locationPage === 1 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span style={{ padding: '0 var(--space-3)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
+                {locationPage} / {locationTotalPages}
+              </span>
+              <button
+                onClick={() => setLocationPage((p) => Math.min(locationTotalPages, p + 1))}
+                disabled={locationPage === locationTotalPages}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-md)',
+                  background: locationPage === locationTotalPages ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                  color: locationPage === locationTotalPages ? 'var(--text-muted)' : 'var(--text-primary)',
+                  cursor: locationPage === locationTotalPages ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          
         </ModernCard>
       )}
 
@@ -1491,86 +1490,85 @@ export function AdminReportsAnalyticsPage() {
           </div>
           
           {/* Pagination */}
-          {storageTotalPages > 1 && (
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              marginTop: 'var(--space-4)',
-              padding: 'var(--space-3) var(--space-4)',
-              background: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-lg)',
-              flexWrap: 'wrap',
-              gap: 'var(--space-3)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                  Sayfa başına:
-                </span>
-                <select
-                  value={storagePageSize}
-                  onChange={(e) => { setStoragePageSize(Number(e.target.value)); setStoragePage(1); }}
-                  style={{
-                    padding: 'var(--space-1) var(--space-2)',
-                    border: '1px solid var(--border-primary)',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--bg-tertiary)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-sm)',
-                  }}
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                  {(storagePage - 1) * storagePageSize + 1} - {Math.min(storagePage * storagePageSize, allFilteredStorageData.length)} / {allFilteredStorageData.length}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <button
-                  onClick={() => setStoragePage(p => Math.max(1, p - 1))}
-                  disabled={storagePage === 1}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
-                    border: '1px solid var(--border-primary)',
-                    borderRadius: 'var(--radius-md)',
-                    background: storagePage === 1 ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
-                    color: storagePage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
-                    cursor: storagePage === 1 ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span style={{ padding: '0 var(--space-3)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
-                  {storagePage} / {storageTotalPages}
-                </span>
-                <button
-                  onClick={() => setStoragePage(p => Math.min(storageTotalPages, p + 1))}
-                  disabled={storagePage === storageTotalPages}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
-                    border: '1px solid var(--border-primary)',
-                    borderRadius: 'var(--radius-md)',
-                    background: storagePage === storageTotalPages ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
-                    color: storagePage === storageTotalPages ? 'var(--text-muted)' : 'var(--text-primary)',
-                    cursor: storagePage === storageTotalPages ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginTop: 'var(--space-4)',
+            padding: 'var(--space-3) var(--space-4)',
+            background: 'var(--bg-secondary)',
+            borderRadius: 'var(--radius-lg)',
+            flexWrap: 'wrap',
+            gap: 'var(--space-3)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                Sayfa başına:
+              </span>
+              <select
+                value={storagePageSize}
+                onChange={(e) => { setStoragePageSize(Number(e.target.value)); setStoragePage(1); }}
+                style={{
+                  padding: 'var(--space-1) var(--space-2)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  fontSize: 'var(--text-sm)',
+                }}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                {(storagePage - 1) * storagePageSize + 1} - {Math.min(storagePage * storagePageSize, allFilteredStorageData.length)} / {allFilteredStorageData.length}
+              </span>
             </div>
-          )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <button
+                onClick={() => setStoragePage(p => Math.max(1, p - 1))}
+                disabled={storagePage === 1}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-md)',
+                  background: storagePage === 1 ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                  color: storagePage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                  cursor: storagePage === 1 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span style={{ padding: '0 var(--space-3)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
+                {storagePage} / {storageTotalPages}
+              </span>
+              <button
+                onClick={() => setStoragePage(p => Math.min(storageTotalPages, p + 1))}
+                disabled={storagePage === storageTotalPages}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-md)',
+                  background: storagePage === storageTotalPages ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                  color: storagePage === storageTotalPages ? 'var(--text-muted)' : 'var(--text-primary)',
+                  cursor: storagePage === storageTotalPages ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          
         </ModernCard>
       )}
 
