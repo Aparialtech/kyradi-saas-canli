@@ -1,0 +1,73 @@
+/* DemoFlowPage Layout Fixes */
+.pageWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--content-max-width, 1400px);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-8);
+  gap: var(--space-6);
+}
+
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: 0;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #0f172a 0%, #334155 50%, #475569 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
+  line-height: 1.2;
+}
+
+.pageTitle::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  border-radius: var(--radius-full);
+  opacity: 0.8;
+}
+
+.pageSubtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-muted);
+  max-width: 600px;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.stepperPanel {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .pageWrapper {
+    padding: var(--space-4) var(--space-4) var(--space-6);
+    gap: var(--space-4);
+  }
+
+  .pageTitle {
+    font-size: 1.75rem;
+  }
+
+  .stepperPanel {
+    margin-top: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "rewrites": [
+    {
+      "source": "/auth/:path*",
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/auth/:path*"
+    },
+    {
+      "source": "/admin/:path*",
+      "has": [
+        { "type": "header", "key": "x-requested-with", "value": "XMLHttpRequest" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/admin/:path*"
+    },
+    {
+      "source": "/partners/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/partners/:path*"
+    },
+    {
+      "source": "/users/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/users/:path*"
+    },
+    {
+      "source": "/staff/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/staff/:path*"
+    },
+    {
+      "source": "/reports/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/reports/:path*"
+    },
+    {
+      "source": "/payment-schedules/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/payment-schedules/:path*"
+    },
+    {
+      "source": "/reservations/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/reservations/:path*"
+    },
+    {
+      "source": "/locations/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/locations/:path*"
+    },
+    {
+      "source": "/storages/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/storages/:path*"
+    },
+    {
+      "source": "/pricing-rules/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/pricing-rules/:path*"
+    },
+    {
+      "source": "/public/:path*",
+      "has": [
+        { "type": "host", "value": "^[a-z0-9-]+\\.kyradi\\.com$" }
+      ],
+      "destination": "https://kyradi-saas-canli-production.up.railway.app/public/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}

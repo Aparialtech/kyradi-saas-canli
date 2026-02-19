@@ -1,0 +1,21 @@
+.dashboardShell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background, #f8fafc);
+}
+
+.dashboardShell--partner {
+  --shell-accent: var(--color-primary, #00a389);
+}
+
+.dashboardShell--admin {
+  --shell-accent: var(--color-primary, #6366f1);
+}
+
+@media (max-width: 768px) {
+  .dashboardShell {
+    min-height: 100vh;
+  }
+}
+

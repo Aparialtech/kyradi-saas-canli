@@ -1,0 +1,222 @@
+import axios from "axios";
+import type { FormEvent } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
+
+import { useAuth } from "../../context/AuthContext";
+import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
+import { authService } from "../../services/auth";
+import { tokenStorage } from "../../lib/tokenStorage";
+import { errorLogger } from "../../lib/errorLogger";
+import { Lock, Mail, Eye, EyeOff, Shield, Database } from "../../lib/lucide";
+import { sanitizeRedirect } from "../../utils/safeRedirect";
+import styles from "./LoginPage.module.css";
+
+export function AdminLoginPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user, isLoading } = useAuth();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const rawRedirectUrl = searchParams.get("redirect");
+  const redirectUrl = useMemo(() => sanitizeRedirect(rawRedirectUrl, { defaultPath: "/admin" }), [rawRedirectUrl]);
+  const hasValidRedirect = useMemo(() => {
+    if (!rawRedirectUrl) return false;
+    return redirectUrl === rawRedirectUrl.trim();
+  }, [rawRedirectUrl, redirectUrl]);
+
+  // Redirect if already logged in as admin
+  useEffect(() => {
+    if (!isLoading && user) {
+      if (user.role === "super_admin" || user.role === "support") {
+        navigate("/admin", { replace: true });
+      }
+    }
+  }, [isLoading, user, navigate]);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
+
+    try {
+      // Use dedicated admin login endpoint
+      const response = await authService.loginAdmin({ email, password });
+
+      if (response.access_token) {
+        tokenStorage.set(response.access_token);
+        const target = hasValidRedirect ? redirectUrl : "/admin";
+        if (target.startsWith("/")) {
+          window.location.href = target;
+        } else {
+          window.location.href = target;
+        }
+      }
+    } catch (err) {
+      errorLogger.error(err, { component: "AdminLoginPage", action: "handleSubmit" });
+
+      if (axios.isAxiosError(err)) {
+        const detail = (err.response?.data as { detail?: string })?.detail;
+        setError(detail || "Giriş başarısız");
+      } else {
+        setError("Beklenmeyen bir hata oluştu");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className={`${styles.loginPage} ${styles.adminTheme}`}>
+      <div className={styles.languageSwitcher}>
+        <LanguageSwitcher />
+      </div>
+
+      <div className={styles.loginContainer}>
+        {/* Branding Panel */}
+        <motion.div
+          className={styles.brandingPanel}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className={styles.brandingContent}>
+            <motion.div
+              className={styles.logo}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+            >
+              <div className={styles.logoIcon}>
+                <img src="/kyradi_logo.png?v=20260214c" alt="Kyradi" className={styles.brandLogoImage} />
+              </div>
+              <h1 className={styles.brandName}>KYRADI</h1>
+            </motion.div>
+
+            <p className={styles.tagline}>
+              Yönetim Paneli
+            </p>
+            <p className={styles.themeHint}>
+              Merkezi tenant yönetimi, güvenlik denetimi ve finans kontrolleri.
+            </p>
+
+            <div className={styles.features}>
+              <motion.div
+                className={styles.feature}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Database className={styles.featureIcon} />
+                <span>Tüm otelleri yönetin</span>
+              </motion.div>
+              <motion.div
+                className={styles.feature}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Shield className={styles.featureIcon} />
+                <span>Güvenli admin erişimi</span>
+              </motion.div>
+            </div>
+
+            <div className={styles.gradientBlob} />
+          </div>
+        </motion.div>
+
+        {/* Form Panel */}
+        <motion.div
+          className={styles.formPanel}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className={styles.formContent}>
+            <div className={styles.formHeader}>
+              <h2 className={styles.formTitle}>Yönetici Girişi</h2>
+              <p className={styles.formSubtitle}>
+                Kyradi yönetim paneline giriş yapın
+              </p>
+            </div>
+
+            {error && (
+              <motion.div
+                className={styles.errorMessage}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {error}
+              </motion.div>
+            )}
+
+            <form className={styles.form} onSubmit={handleSubmit} autoComplete="on">
+              <div className={styles.formField}>
+                <label className={styles.label}>
+                  <Mail className={styles.labelIcon} />
+                  E-posta
+                </label>
+                <input
+                  type="email"
+                  className={styles.input}
+                  placeholder="admin@kyradi.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  name="email"
+                  autoComplete="email"
+                  required
+                />
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.label}>
+                  <Lock className={styles.labelIcon} />
+                  Şifre
+                </label>
+                <div className={styles.passwordInput}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className={styles.input}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    name="password"
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className={styles.passwordToggle}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className={styles.submitButton}
+                disabled={submitting}
+              >
+                {submitting ? "Giriş yapılıyor..." : "Yönetici Girişi"}
+              </button>
+            </form>
+
+            <div className={styles.formFooter}>
+              <Link to="/admin/forgot-password" className={styles.footerLink}>
+                Şifremi unuttum
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
