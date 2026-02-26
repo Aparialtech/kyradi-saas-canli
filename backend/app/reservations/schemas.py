@@ -76,6 +76,8 @@ class WidgetReservationRead(BaseModel):
     tenant_id: str
     checkin_date: Optional[date] = None
     checkout_date: Optional[date] = None
+    start_datetime: Optional[datetime] = None
+    end_datetime: Optional[datetime] = None
     baggage_count: Optional[int] = None
     luggage_count: Optional[int] = None
     locker_size: Optional[str] = None
@@ -152,4 +154,3 @@ class WidgetConfigRead(WidgetConfigBase):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-

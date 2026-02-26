@@ -50,6 +50,8 @@ class WidgetReservation(Base):
     source: Mapped[str] = mapped_column(String(32), default="widget", nullable=False)
     checkin_date: Mapped[Optional[date]] = mapped_column(Date, default=None)
     checkout_date: Mapped[Optional[date]] = mapped_column(Date, default=None)
+    start_datetime: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), default=None)
+    end_datetime: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), default=None)
     baggage_count: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     locker_size: Mapped[Optional[str]] = mapped_column(String(16), default=None)
     guest_name: Mapped[Optional[str]] = mapped_column(String(255), default=None)
@@ -94,4 +96,3 @@ class WebhookDelivery(Base):
     status_code: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     error: Mapped[Optional[str]] = mapped_column(Text, default=None)
     delivered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-

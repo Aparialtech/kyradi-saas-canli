@@ -156,6 +156,8 @@ async def _apply_widget_ddl(conn) -> None:
     statements = [
         # Widget reservations pricing fields (required for widget submissions)
         "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS amount_minor INTEGER",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS start_datetime TIMESTAMPTZ",
+        "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS end_datetime TIMESTAMPTZ",
         "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS pricing_rule_id VARCHAR(36)",
         "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS pricing_type VARCHAR(32)",
         "ALTER TABLE widget_reservations ADD COLUMN IF NOT EXISTS currency VARCHAR(3) NOT NULL DEFAULT 'TRY'",

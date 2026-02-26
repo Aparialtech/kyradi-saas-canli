@@ -263,12 +263,20 @@ async def create_reservation(
         now = datetime.now(timezone.utc)
         start_dt = now.replace(second=0, microsecond=0)
         end_dt = start_dt.replace(hour=start_dt.hour + 1) if start_dt.hour < 23 else start_dt.replace(day=start_dt.day + 1, hour=0)
+
+    # Keep legacy date fields populated for backward compatibility/filtering
+    if checkin_date is None and start_dt is not None:
+        checkin_date = start_dt.date()
+    if checkout_date is None and end_dt is not None:
+        checkout_date = end_dt.date()
     
     reservation = WidgetReservation(
         tenant_id=tenant_id,
         config_id=config.id,
         checkin_date=checkin_date,  # Legacy: keep for backward compatibility
         checkout_date=checkout_date,  # Legacy: keep for backward compatibility
+        start_datetime=start_dt,
+        end_datetime=end_dt,
         baggage_count=luggage_count,
         luggage_count=luggage_count,
         locker_size=payload.get("locker_size"),
