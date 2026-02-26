@@ -23,6 +23,7 @@ const JUST_LOGGED_IN_COOKIE_KEY = "kyradi_just_logged_in";
 const JUST_LOGGED_IN_WINDOW_MS = 10_000;
 const LOGOUT_AT_KEY = "kyradi.logoutAt";
 const LOGOUT_GRACE_MS = 3_000;
+const LOGOUT_REQUEST_TIMEOUT_MS = 2_000;
 const BOOTSTRAP_RETRY_DELAYS_MS = [150, 300, 600];
 
 function markJustLoggedIn(): void {
@@ -75,6 +76,15 @@ function isWithinJustLoggedInWindow(): boolean {
 
 async function wait(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("logout_request_timeout")), timeoutMs),
+    ),
+  ]);
 }
 
 interface AuthContextValue {
@@ -195,9 +205,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const logout = useCallback(() => {
-    void authService.logout().catch((error) => {
-      errorLogger.warn(error, { component: "AuthContext", action: "logout" });
-    });
+    const hostType = detectHostType();
     clearJustLoggedIn();
     try {
       localStorage.setItem(LOGOUT_AT_KEY, Date.now().toString());
@@ -207,12 +215,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     tokenStorage.clear();
     setToken(null);
     setUser(null);
-    const hostType = detectHostType();
-    if (hostType === "admin") {
-      navigate("/admin/login");
-      return;
-    }
-    navigate("/partner/login");
+    setAuthState("unauthenticated");
+
+    void (async () => {
+      try {
+        await withTimeout(authService.logout(), LOGOUT_REQUEST_TIMEOUT_MS);
+      } catch (error) {
+        errorLogger.warn(error, { component: "AuthContext", action: "logout" });
+      } finally {
+        if (hostType === "admin") {
+          navigate("/admin/login");
+          return;
+        }
+        navigate("/partner/login");
+      }
+    })();
   }, [navigate]);
 
   // Register the 401 handler callback
