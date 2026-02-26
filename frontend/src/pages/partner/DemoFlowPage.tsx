@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Lock, CheckCircle2 } from "../../lib/lucide";
 
 import { env } from "../../config/env";
 import { partnerWidgetService } from "../../services/partner/widgetConfig";
-import { demoService, type Storage } from "../../services/partner/demo";
+import { demoService } from "../../services/partner/demo";
 import { magicpayService } from "../../services/partner/magicpay";
 import { locationService } from "../../services/partner/locations";
+import { storageService } from "../../services/partner/storages";
 import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
@@ -951,6 +952,9 @@ function StorageSelectionModal({
   onCancel,
   isLoading,
 }: StorageSelectionModalProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
 
   // Calculate start_at and end_at from dates (use start of day for checkin, end of day for checkout)
   const startAt = checkinDate ? new Date(checkinDate + "T00:00:00").toISOString() : new Date().toISOString();
@@ -962,15 +966,70 @@ function StorageSelectionModal({
     enabled: !!checkinDate && !!checkoutDate,
   });
 
+  const allStoragesQuery = useQuery({
+    queryKey: ["all-storages"],
+    queryFn: () => storageService.list(),
+  });
+
   const locationsQuery = useQuery({
     queryKey: ["locations"],
     queryFn: () => locationService.list(),
   });
 
+  const availableStorageIds = useMemo(() => {
+    const ids = new Set<string>();
+    (availableStoragesQuery.data ?? []).forEach((storage) => ids.add(storage.id));
+    return ids;
+  }, [availableStoragesQuery.data]);
+
   const getLocationName = (locationId: string) => {
     const location = locationsQuery.data?.find((loc) => loc.id === locationId);
     return location?.name || locationId;
   };
+
+  const allStorages = useMemo(() => {
+    return (allStoragesQuery.data ?? []).map((storage) => {
+      const isIdle = storage.status === "idle";
+      const isAvailableForRange = availableStorageIds.has(storage.id);
+      const isAssignable = isIdle && isAvailableForRange;
+      return {
+        ...storage,
+        locationName: getLocationName(storage.location_id),
+        isAssignable,
+        availabilityLabel: isAssignable
+          ? "Boş"
+          : isIdle
+            ? "Tarih Aralığında Dolu"
+            : "Dolu",
+      };
+    });
+  }, [allStoragesQuery.data, availableStorageIds, locationsQuery.data]);
+
+  const filteredStorages = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return allStorages;
+    return allStorages.filter((storage) => {
+      return (
+        storage.code.toLowerCase().includes(term) ||
+        storage.locationName.toLowerCase().includes(term) ||
+        storage.availabilityLabel.toLowerCase().includes(term)
+      );
+    });
+  }, [allStorages, searchTerm]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredStorages.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedStorages = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredStorages.slice(startIndex, startIndex + pageSize);
+  }, [filteredStorages, currentPage, pageSize]);
+
+  const selectedStorage = allStorages.find((storage) => storage.id === selectedStorageId);
+  const canAssignSelectedStorage = !!selectedStorage && selectedStorage.isAssignable;
 
   return (
     <div
@@ -1008,24 +1067,63 @@ function StorageSelectionModal({
           </p>
         </div>
 
-        {availableStoragesQuery.isLoading ? (
+        {(availableStoragesQuery.isLoading || allStoragesQuery.isLoading) ? (
           <div className="empty-state">Yükleniyor...</div>
-        ) : availableStoragesQuery.isError ? (
+        ) : (availableStoragesQuery.isError || allStoragesQuery.isError) ? (
           <div className="empty-state" style={{ color: "#dc2626" }}>
-            Depolar yüklenemedi: {getErrorMessage(availableStoragesQuery.error)}
+            Depolar yüklenemedi: {getErrorMessage(availableStoragesQuery.error ?? allStoragesQuery.error)}
           </div>
-        ) : availableStoragesQuery.data && availableStoragesQuery.data.length > 0 ? (
+        ) : allStorages.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {availableStoragesQuery.data.map((storage: Storage) => (
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "0.25rem", flexWrap: "wrap" }}>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Depo kodu / lokasyon ara..."
+                style={{
+                  flex: 1,
+                  minWidth: "240px",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  padding: "0.6rem 0.75rem",
+                  fontSize: "0.9rem",
+                }}
+              />
+              <select
+                value={String(pageSize)}
+                onChange={(event) => setPageSize(Number(event.target.value))}
+                style={{
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  padding: "0.55rem 0.6rem",
+                  fontSize: "0.85rem",
+                  backgroundColor: "#fff",
+                }}
+              >
+                <option value="8">8 / sayfa</option>
+                <option value="12">12 / sayfa</option>
+                <option value="20">20 / sayfa</option>
+              </select>
+            </div>
+
+            <div style={{ fontSize: "0.85rem", color: "#475569", marginBottom: "0.25rem" }}>
+              Toplam {filteredStorages.length} depo listeleniyor
+            </div>
+
+            {paginatedStorages.map((storage) => (
               <div
                 key={storage.id}
-                onClick={() => onSelectStorage(storage.id)}
+                onClick={() => {
+                  if (storage.isAssignable) onSelectStorage(storage.id);
+                }}
                 style={{
                   padding: "1rem",
-                  border: selectedStorageId === storage.id ? "2px solid #16a34a" : "1px solid #e2e8f0",
+                  border: selectedStorageId === storage.id && storage.isAssignable ? "2px solid #16a34a" : "1px solid #e2e8f0",
                   borderRadius: "8px",
-                  cursor: "pointer",
-                  backgroundColor: selectedStorageId === storage.id ? "#f0fdf4" : "white",
+                  cursor: storage.isAssignable ? "pointer" : "not-allowed",
+                  backgroundColor: selectedStorageId === storage.id && storage.isAssignable ? "#f0fdf4" : "white",
+                  opacity: storage.isAssignable ? 1 : 0.72,
                   transition: "all 0.2s",
                 }}
               >
@@ -1035,7 +1133,7 @@ function StorageSelectionModal({
                       Depo {storage.code}
                     </div>
                     <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
-                      {getLocationName(storage.location_id)}
+                      {storage.locationName}
                     </div>
                   </div>
                   <div
@@ -1044,15 +1142,44 @@ function StorageSelectionModal({
                       borderRadius: "4px",
                       fontSize: "0.75rem",
                       fontWeight: 500,
-                      backgroundColor: storage.status === "idle" ? "#dcfce7" : storage.status === "occupied" ? "#fee2e2" : "#fef3c7",
-                      color: storage.status === "idle" ? "#166534" : storage.status === "occupied" ? "#dc2626" : "#92400e",
+                      backgroundColor: storage.isAssignable ? "#dcfce7" : "#fee2e2",
+                      color: storage.isAssignable ? "#166534" : "#dc2626",
                     }}
                   >
-                    {storage.status === "idle" ? "Boş" : storage.status === "occupied" ? "Dolu" : storage.status}
+                    {storage.availabilityLabel}
                   </div>
                 </div>
               </div>
             ))}
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.5rem", gap: "0.75rem", flexWrap: "wrap" }}>
+              <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredStorages.length)} / {filteredStorages.length}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <button
+                  type="button"
+                  className="btn btn--outline"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  style={{ padding: "0.4rem 0.65rem", minWidth: "72px" }}
+                >
+                  Önceki
+                </button>
+                <span style={{ fontSize: "0.85rem", color: "#334155", minWidth: "64px", textAlign: "center" }}>
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn--outline"
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{ padding: "0.4rem 0.65rem", minWidth: "72px" }}
+                >
+                  Sonraki
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="empty-state">
@@ -1071,9 +1198,18 @@ function StorageSelectionModal({
             type="button"
             className="btn btn--primary"
             onClick={onConfirm}
-            disabled={isLoading || (availableStoragesQuery.data && availableStoragesQuery.data.length > 0 && !selectedStorageId)}
+            disabled={
+              isLoading ||
+              (selectedStorageId !== null && !canAssignSelectedStorage)
+            }
           >
-            {isLoading ? "İşleniyor..." : selectedStorageId ? "Seçili Depoyu Ata" : "Otomatik Ata"}
+            {isLoading
+              ? "İşleniyor..."
+              : selectedStorageId
+                ? canAssignSelectedStorage
+                  ? "Seçili Depoyu Ata"
+                  : "Bu Depo Atanamaz"
+                : "Otomatik Ata"}
           </button>
         </div>
       </div>
