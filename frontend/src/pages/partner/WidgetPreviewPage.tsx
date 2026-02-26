@@ -23,6 +23,7 @@ import {
 
 import { getApiBase } from "../../utils/apiBase";
 import { partnerWidgetService } from "../../services/partner/widgetConfig";
+import { pricingService, type PriceEstimateResponse } from "../../services/public/pricing";
 import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/common/ToastContainer";
 import { getErrorMessage } from "../../lib/httpError";
@@ -98,6 +99,8 @@ export function WidgetPreviewPage() {
   const [copied, setCopied] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
   const [showEmbedCode, setShowEmbedCode] = useState(false);
+  const [priceEstimate, setPriceEstimate] = useState<PriceEstimateResponse | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
   const { t, locale } = useTranslation();
 
   const [formData, setFormData] = useState<FormData>({
@@ -141,6 +144,41 @@ export function WidgetPreviewPage() {
       });
     }
   }, [tenantQuery.isError]);
+
+  useEffect(() => {
+    const tenantId = tenantQuery.data?.tenant_id;
+    const { checkIn, checkOut, baggageCount } = formData;
+    if (!tenantId || !checkIn || !checkOut) {
+      setPriceEstimate(null);
+      return;
+    }
+
+    const start = new Date(checkIn).getTime();
+    const end = new Date(checkOut).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      setPriceEstimate(null);
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      setPriceLoading(true);
+      try {
+        const estimate = await pricingService.estimatePrice({
+          tenant_id: tenantId,
+          start_datetime: checkIn,
+          end_datetime: checkOut,
+          baggage_count: baggageCount || 1,
+        });
+        setPriceEstimate(estimate);
+      } catch {
+        setPriceEstimate(null);
+      } finally {
+        setPriceLoading(false);
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [tenantQuery.data?.tenant_id, formData.checkIn, formData.checkOut, formData.baggageCount]);
 
   const handleKvkkScroll = useCallback(() => {
     const el = kvkkRef.current;
@@ -502,6 +540,13 @@ export function WidgetPreviewPage() {
                             if (days > 0) return `${days} gün ${hours % 24} saat`;
                             return `${hours} saat`;
                           })()}
+                        </div>
+                        <div style={{ marginTop: "6px", fontSize: "var(--text-sm)", color: "var(--text-secondary)", fontWeight: 600 }}>
+                          {priceLoading
+                            ? "Toplam Ücret: Hesaplanıyor..."
+                            : priceEstimate
+                              ? `Toplam Ücret: ${(priceEstimate.total_minor / 100).toFixed(2)} ₺`
+                              : "Toplam Ücret: -"}
                         </div>
                       </div>
                     </motion.div>
