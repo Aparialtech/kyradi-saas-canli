@@ -989,18 +989,21 @@ function StorageSelectionModal({
 
   const allStorages = useMemo(() => {
     return (allStoragesQuery.data ?? []).map((storage) => {
-      const isIdle = storage.status === "idle";
       const isAvailableForRange = availableStorageIds.has(storage.id);
-      const isAssignable = isIdle && isAvailableForRange;
+      const isAssignable = isAvailableForRange;
       return {
         ...storage,
         locationName: getLocationName(storage.location_id),
         isAssignable,
         availabilityLabel: isAssignable
           ? "Boş"
-          : isIdle
-            ? "Tarih Aralığında Dolu"
-            : "Dolu",
+          : "Dolu",
+        statusLabel:
+          storage.status === "idle"
+            ? "Durum: Boş"
+            : storage.status === "occupied"
+              ? "Durum: Dolu"
+              : `Durum: ${storage.status}`,
       };
     });
   }, [allStoragesQuery.data, availableStorageIds, locationsQuery.data]);
@@ -1134,6 +1137,9 @@ function StorageSelectionModal({
                     </div>
                     <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
                       {storage.locationName}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.2rem" }}>
+                      {storage.statusLabel}
                     </div>
                   </div>
                   <div
