@@ -5,7 +5,6 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import { useAuth } from "../../context/AuthContext";
-import { LanguageSwitcher } from "../../components/common/LanguageSwitcher";
 import { authService } from "../../services/auth";
 import { partnerSettingsService } from "../../services/partner/settings";
 import { tokenStorage } from "../../lib/tokenStorage";
@@ -240,10 +239,6 @@ export function PartnerLoginPage() {
 
   return (
     <div className={`${styles.loginPage} ${styles.partnerTheme}`}>
-      <div className={styles.languageSwitcher}>
-        <LanguageSwitcher />
-      </div>
-
       <div className={styles.loginContainer}>
         {/* Branding Panel */}
         <motion.div
