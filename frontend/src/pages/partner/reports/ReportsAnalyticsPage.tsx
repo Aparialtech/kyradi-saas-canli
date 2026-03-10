@@ -73,6 +73,8 @@ export function ReportsAnalyticsPage() {
       }),
   });
 
+
+
   const [occupancyLocationFilter, setOccupancyLocationFilter] = useState<string>("");
   
   // Location Revenue Table - Search & Filter State

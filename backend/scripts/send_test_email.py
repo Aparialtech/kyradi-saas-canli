@@ -63,7 +63,7 @@ async def test_email():
         print(f"\n❌ HATA: {e}")
         import traceback
         traceback.print_exc()
-
+       
 
 if __name__ == "__main__":
     asyncio.run(test_email())
